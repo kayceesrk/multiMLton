@@ -1,0 +1,6 @@
+#Input :: NB_index_1000conn_6iot_8/COLLECT.txt
+#Rate[conn/s]	Total time[ms]	Connection rate[conn/s]	Request rate[replies/s]	Reply rate[replies/s]	Resp time[ms]	Transfer time[ms]	Avg conn time[ms]	Max conn time[ms]	Conn time stddev[ms]	IO[KBps]	Errors
+800	1.877	532.8	532.8	532.76505061268	315.6	3.7	319.2	632.0	194.7	683.3	0
+900.0	1.873	533.9	533.9	533.902829684997	465.9	3.2	469.2	778.9	238.0	686.0	0
+1000.0	1.040	961.8	961.8	961.538461538462	34.4	5.9	40.3	68.2	12.0	1232.0	0
+1200.0	3.853	259.6	259.6	259.53802232027	89.3	8.8	161.2	3022.4	420.9	332.9	0

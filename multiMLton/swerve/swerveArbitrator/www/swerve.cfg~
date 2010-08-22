@@ -1,0 +1,22 @@
+Server
+{
+    ServerRoot = /home/chandras/multiMLton/swerve/swerveAcmlNB/www;
+    ServerName = "e";
+    Listen     = e:8084;
+    ErrorLog   = "/home/chandras/multiMLton/swerve/swerveAcmlNB/www/var/swerveAcmlNB.errs";
+    Timeout    = 20;
+    MaxClients = 2000;
+}
+
+Node /
+{
+    Directory = "/home/chandras/multiMLton/swerve/swerveAcmlNB/www/htdocs";
+    Options   = all +WithSubDirs;
+}
+
+Node /cgi-bin
+{
+    Directory = "/home/chandras/multiMLton/swerve/swerveAcmlNB/www/cgi-bin";
+    Options   = all +execcgi +WithSubDirs;
+}
+

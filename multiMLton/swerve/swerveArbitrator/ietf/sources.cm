@@ -1,0 +1,20 @@
+(*  Copyright (c) 2001 Anthony L Shipman *)
+
+
+group is
+    /src/smlnj/current/lib/cml-lib.cm
+    /src/smlnj/current/lib/cml.cm
+
+    ../common/sources.cm
+    ../config/sources.cm
+
+    ietf.lex
+
+    entity.sml
+    http_header.sml
+    http_msg.sml
+    http_status.sml
+    ietf_line.sml
+    ietf_part.sml
+    ietf_utils.sml
+

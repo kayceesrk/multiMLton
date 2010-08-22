@@ -1,0 +1,24 @@
+HTTPERF RATE 100 :::
+httperf --timeout=10 --client=0/1 --server=e --port=9000 --uri=/primes_multicast --rate=100 --send-buffer=4096 --recv-buffer=16384 --num-conns=1000 --num-calls=1
+Maximum connect burst length: 1
+
+Total: connections 929 requests 14 replies 0 test-duration 9.289 s
+
+Connection rate: 100.0 conn/s (10.0 ms/conn, <=14 concurrent connections)
+Connection time [ms]: min 0.0 avg 0.0 max 0.0 median 0.0 stddev 0.0
+Connection time [ms]: connect 0.0
+Connection length [replies/conn]: 0.000
+
+Request rate: 1.5 req/s (663.5 ms/req)
+Request size [B]: 70.0
+
+Reply rate [replies/s]: min 0.0 avg 0.0 max 0.0 stddev 0.0 (1 samples)
+Reply time [ms]: response 0.0 transfer 0.0
+Reply size [B]: header 0.0 content 0.0 footer 0.0 (total 0.0)
+Reply status: 1xx=0 2xx=0 3xx=0 4xx=0 5xx=0
+
+CPU time [s]: user 2.26 system 7.02 (user 24.3% system 75.6% total 99.9%)
+Net I/O: 0.1 KB/s (0.0*10^6 bps)
+
+Errors: total 929 client-timo 0 socket-timo 0 connrefused 915 connreset 14
+Errors: fd-unavail 0 addrunavail 0 ftab-full 0 other 0

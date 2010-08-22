@@ -1,0 +1,4 @@
+local
+in
+   print.sml
+end

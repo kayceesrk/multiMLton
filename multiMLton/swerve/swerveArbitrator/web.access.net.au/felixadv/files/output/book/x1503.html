@@ -1,0 +1,826 @@
+<HTML
+><HEAD
+><TITLE
+>The SMLofNJ API</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The SML/NJ Extensions"
+HREF="c1357.html"><LINK
+REL="PREVIOUS"
+TITLE="Signals"
+HREF="x1452.html"><LINK
+REL="NEXT"
+TITLE="The Socket API"
+HREF="x1626.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x1452.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 4. The SML/NJ Extensions</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x1626.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN1503"
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>SMLofNJ</TT
+> API</A
+></H1
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>SMLofNJ</TT
+> structure is a miscellaneous collection of non-standard
+functions supplied with the SML/NJ compiler.  In version 110.0.7 it
+provides:</P
+><P
+></P
+><UL
+><LI
+><P
+>   the manipulation of continuations with a Scheme-like call/cc API.</P
+></LI
+><LI
+><P
+>   an interval timer to deliver a periodic trigger to an application.</P
+></LI
+><LI
+><P
+>   a little control over the garbage collector.</P
+></LI
+><LI
+><P
+>   execution time profiling.</P
+></LI
+><LI
+><P
+>   some operating system information.</P
+></LI
+><LI
+><P
+>   utilities for lazy evaluation of a function.</P
+></LI
+><LI
+><P
+>   weak pointers for the garbage collector.</P
+></LI
+><LI
+><P
+>   exporting the heap. This has already been discussed in <A
+HREF="c131.html#ASSEMBLEHW"
+>the section called <I
+>Assembling the Hello World Program</I
+> in Chapter 2</A
+>.</P
+></LI
+><LI
+><P
+>   access to an exception history list for debugging.</P
+></LI
+></UL
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN1528"
+>Call/cc</A
+></H2
+><P
+>The call/cc API is in the <TT
+CLASS="COMPUTEROUTPUT"
+>SMLofNJ.Cont</TT
+> structure. It is described
+in more detail in <A
+HREF="c2344.html#CONTINUATIONS"
+>the section called <I
+>Continuations</I
+> in Chapter 6</A
+>.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="INTERVALTIMER"
+>The Interval Timer</A
+></H2
+><P
+>You can set the interval timer to produce alarm signals
+(<TT
+CLASS="COMPUTEROUTPUT"
+>Signals.sigALRM</TT
+>) at periodic intervals.  This can be used to
+trigger activity in your application.  The Concurrent ML library uses
+it to trigger pre-emptive scheduling of threads so you won't be able to
+use the interval timer if you are using Concurrent ML. But if you aren't
+you could write something like the following program.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun alarm_handler(signal, n, cont) =
+let
+in
+    print(concat["tick at ", Time.toString(Time.now()), "\n"]);
+    cont
+end
+
+fun main(arg0, argv) =
+let
+    fun loop() = (Signals.pause(); loop())
+in
+    Signals.setHandler(
+        Signals.sigALRM,
+        Signals.HANDLER alarm_handler);
+
+    SMLofNJ.IntervalTimer.setIntTimer
+        (SOME(Time.fromSeconds 1));
+
+    loop();
+
+    OS.Process.success
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>By returning a different continuation you can have your program switch
+to different code on each clock tick.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN1539"
+>Garbage Collection Control</A
+></H2
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>SMLofNJ.Internals.GC</TT
+> provides two functions for control of the
+garbage collection. Calling <TT
+CLASS="COMPUTEROUTPUT"
+>SMLofNJ.Internals.GC.doGC n</TT
+> with <TT
+CLASS="COMPUTEROUTPUT"
+>n</TT
+> =
+0 will trigger a minor collection.  With a large value of <TT
+CLASS="COMPUTEROUTPUT"
+>n</TT
+>, say 10,
+it will trigger a major collection of all of the generations to reduce
+the memory usage to a minimum.</P
+><P
+>You can also turn on or off the collection tracing messages.  These are
+off by default in your programs.  Calling <TT
+CLASS="COMPUTEROUTPUT"
+>SMLofNJ.Internals.GC.messages
+true</TT
+> will turn them on.  You will see messages looking like</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>GC #0.1.2.5.6.43:   (60 ms)
+GC #1.2.3.6.7.66:   (60 ms)</PRE
+></TD
+></TR
+></TABLE
+><P
+>A message is produced for each major collection.  The numbers show
+the number of collections that have been performed in each generation.
+The oldest generation is on the left.  The right-most number is the number
+of minor collections.  The time is the duration of the major collection.
+The messages can give you some idea of the amount of memory activity in
+your program and the typical pause times during the collections.</P
+><P
+>There is more discussion on the SML/NJ implementation of garbage
+collection in <A
+HREF="c2882.html#PERFGC"
+>the section called <I
+>Garbage Collection Basics</I
+> in Chapter 7</A
+>.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="PROFILING"
+>Execution Time Profiling</A
+></H2
+><P
+>You access execution time profiling through the <TT
+CLASS="COMPUTEROUTPUT"
+>Compiler.Profile</TT
+>
+structure, which is separate from the <TT
+CLASS="COMPUTEROUTPUT"
+>SMLofNJ</TT
+> structure.
+However the profiling uses the low-level control functions in
+<TT
+CLASS="COMPUTEROUTPUT"
+>SMLofNJ.Internals.ProfControl</TT
+>.</P
+><P
+>To get profiling you have to compile your program for profiling.  Then
+when it runs it must explicitly turn on the profiling.  To compile with
+profiling using the Compilation Manager you need an extra command. For
+the example profile program:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>&#62; CM_ROOT=profile.cm sml
+Standard ML of New Jersey, Version 110.0.7, September 28, 2000
+- Compiler.Profile.setProfMode true;
+- CM.make();</PRE
+></TD
+></TR
+></TABLE
+><P
+>It is a good idea to force the recompilation of all of your source
+when you do this.  A simple way to do this is to delete the <TT
+CLASS="COMPUTEROUTPUT"
+>CM</TT
+>
+directories in each of the source directories of your program.
+This deletes the cached <TT
+CLASS="COMPUTEROUTPUT"
+>.bin</TT
+> files and they have to be recompiled.</P
+><P
+>Here is the profile program which just sorts a large list.  </P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun main(arg0, argv) =
+let
+    fun sort() =
+    let
+        val gen    = Rand.mkRandom 0w123
+        val data   = List.tabulate(100000,
+                            (fn _ =&#62; gen()))
+        val sorted = ListMergeSort.sort (op &#62;) data
+    in
+        ()
+    end
+in
+    (* SMLofNJ.Internals.GC.messages true; *)
+    Compiler.Profile.setTimingMode true;
+    sort();
+    Compiler.Profile.setTimingMode false;
+    Compiler.Profile.report TextIO.stdOut;
+
+    OS.Process.success
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>Here are the performance results on my 1GHz Athlon machine.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>%time cumsec  #call  name
+42.85    .18      1  Main.&#60;tempStr&#62;.main.main.sort.sort
+26.19    .29      0  Major GC
+23.80    .39      0  Minor GC
+ 9.52    .42 100000  Main.&#60;tempStr&#62;.main.main.sort.sort.data
+  .00    .42      1  Main.&#60;tempStr&#62;.main.main</PRE
+></TD
+></TR
+></TABLE
+><P
+>This shows the program spent 9% building the list of 100000 random
+numbers, 42% in the sort, and 50% doing garbage collection of all of
+that data.  Memory usage peaked at 11MB.  SML/NJ likes to use lots of
+heap space to save on garbage collection.  I can get some control over
+the peak heap size by changing the allocation size used by the garbage
+collector.  The default is 256KB.  You can change this by adding a command
+line argument to the SML runtime in the script that runs the program.
+For example if I add <TT
+CLASS="COMPUTEROUTPUT"
+>@SMLalloc=1024</TT
+> then the allocation size is 1MB
+and the peak heap usage goes up to 22MB but the collection time drops
+to 29%.  If I reduce it to 100KB then the peak usage is around 9MB but
+the collection rises to 64%.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN1569"
+>Operating System Information</A
+></H2
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>SMLofNJ.SysInfo</TT
+> structure provides a collection of functions to
+return the configuration of the compiler and the platform.  If you know
+that it's a Unix system then the Posix API is likely to be available. If
+you want to know the endian-ness then the target architecture will
+tell you.  In the 110.0.7 version of SML/NJ the <TT
+CLASS="COMPUTEROUTPUT"
+>getOSVersion</TT
+>
+function does not work. It always returns <TT
+CLASS="COMPUTEROUTPUT"
+>&quot;&lt;unknown&#62;&quot;</TT
+>.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="LAZYSUSP"
+>Lazy Suspensions</A
+></H2
+><P
+>Lazy suspensions allow you to &quot;memoise&quot; a function.  This means that
+the function is evaluated at most once.  On subsequent calls the result
+from the first call is returned.  This could be useful to initialise an
+imperative data structure only if actually needed at runtime.</P
+><P
+>In the <TT
+CLASS="COMPUTEROUTPUT"
+>getopt</TT
+> example of <A
+HREF="x443.html#GETOPTHASH"
+>the section called <I
+>Using a Hash Table</I
+> in Chapter 2</A
+> the option
+table was built when the <TT
+CLASS="COMPUTEROUTPUT"
+>Global</TT
+> structure was compiled.
+It appeared in the heap file. This would be inefficient if the table
+is very large.  Also if the data structure you want to build depends
+on some parameter supplied at run-time then you need to build the data
+structure imperatively after the program starts running.  You can do
+this with a reference variable but a suspension is more convenient.</P
+><P
+>The following example uses the string table structures from
+<A
+HREF="x443.html#GETOPTHASH"
+>the section called <I
+>Using a Hash Table</I
+> in Chapter 2</A
+>.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>structure Table:
+    sig
+        val set:    string * string -&#62; unit
+        val get:    string -&#62; string option
+    end =
+struct
+    open Common
+
+    type Table = string STRT.hash_table
+
+    val susp = SMLofNJ.Susp.delay(fn () =&#62;
+                STRT.mkTable(101, NotFound): Table)
+
+    fun table() = SMLofNJ.Susp.force susp
+
+    fun set (k, v) = STRT.insert (table()) (k, v)
+    fun get k      = STRT.find (table()) k
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>I've defined a <TT
+CLASS="COMPUTEROUTPUT"
+>Table</TT
+> structure with <TT
+CLASS="COMPUTEROUTPUT"
+>get</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>set</TT
+>
+functions. I've used an unnamed signature constraint to only export these
+functions.  The value <TT
+CLASS="COMPUTEROUTPUT"
+>susp</TT
+> is built during the compilation of the
+structure and leaves a suspension in the heap file.  This suspension will
+be forced to a concrete value the first time that either the <TT
+CLASS="COMPUTEROUTPUT"
+>get</TT
+>
+or <TT
+CLASS="COMPUTEROUTPUT"
+>set</TT
+> functions is called.  This will cause the table to be built.
+The same table will be used by all calls to the <TT
+CLASS="COMPUTEROUTPUT"
+>get</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>set</TT
+>
+functions which is important since it is updated in place.</P
+><P
+>The type constraint on the <TT
+CLASS="COMPUTEROUTPUT"
+>mkTable</TT
+> call is needed to fix the type of
+the table for the suspension.  The <I
+CLASS="EMPHASIS"
+>value restriction</I
+> rule of SML does
+not allow a value at the level of a structure declaration to have a
+polymorphic type (i.e. one with an unresolved type variable).</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="WEAKPOINTERS"
+>Weak Pointers</A
+></H2
+><P
+>Normally the garbage collector deems a  heap object to be garbage
+once all pointers to the object have been deleted.  Sometimes it is
+convenient to retain a pointer to an object while still allowing the
+object to be collected.  For example you may have a cache of objects
+that you have fetched from some file. If memory becomes tight you may
+want the objects to be removed from the cache and collected since you
+can fetch them again if you really need them.  (Unfortunately you can't
+prioritise the collection.  All weakly referenced objects in a generation
+will be collected).</P
+><P
+>A weak pointer is a pointer that is ignored by the garbage collector when
+deciding whether a heap object is garbage.  Normal pointers are called
+strong pointers.  Once all of the strong pointers have disappeared the
+object can be collected.  Then all weak pointers to that object are
+marked invalid to indicate that they now dangle.  You can test if the
+weak pointer is still valid.</P
+><P
+>Another use for weak pointers is to do some finalisation after the
+object has been collected.  If you can arrange to scan all weak pointers
+after each collection then you can detect which objects have been
+collected because their weak pointers will be invalid.  You can trigger
+a scan of the weak pointers with a signal handler for the <TT
+CLASS="COMPUTEROUTPUT"
+>sigGC</TT
+>
+pseudo-signal.  (See <A
+HREF="x1452.html"
+>the section called <I
+>Signals</I
+></A
+>).</P
+><P
+>There is a problem with weak pointers and compiler optimisation. Since,
+with immutable data structures, copy by value and copy by reference are
+the same, there can be some ambiguity about whether the various pointers
+are all pointing to the same copy of an object.  You should only use
+weak pointers to reference variables.  This ensures that there is no
+hidden replication of the object pointed to by the reference variable.</P
+><P
+>Here is a mickey-mouse example that caches the Unix environment variables
+in a global hash table for faster access.  This of course assumes that
+the environment isn't changed while the program runs (which it probably
+won't do since there is no <TT
+CLASS="COMPUTEROUTPUT"
+>putenv</TT
+> operation).  </P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>structure Environ:
+    sig
+        val get:    string -&#62; string option
+    end =
+struct
+    open Common
+    open SMLofNJ.Weak
+
+    type Table = string STRT.hash_table
+
+    val cache: (Table option) ref weak ref = ref (weak (ref NONE))
+
+    fun table() : Table =
+    let
+        (*  This takes a NAME=VALUE string *)
+        fun fill tbl env =
+        let
+            val ss = Substring.all env
+            val str = Substring.string
+            val fields = Substring.fields
+                            (fn c =&#62; c = #"=") ss
+        in
+            case fields of
+              [n, v] =&#62; STRT.insert tbl (str n, str v)
+            | [n]    =&#62; STRT.insert tbl (str n, "")
+            | _      =&#62; ()      (* unrecognisable *)
+        end
+
+        fun build() =
+        let
+            val tbl = STRT.mkTable(101, NotFound)
+        in
+            print "building\n";
+            app (fill tbl) (Posix.ProcEnv.environ());
+            cache := weak (ref (SOME tbl));
+            tbl
+        end
+    in
+        case strong (!cache) of
+          NONE =&#62; build()       (* has been collected *)
+
+        | SOME rtbl =&#62;
+        (
+            case !rtbl of
+              NONE     =&#62; build() (* is not yet built *)
+            | SOME tbl =&#62; tbl     (* table is available *)
+        )
+    end
+
+    fun get k = STRT.find (table()) k
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>Instead of a suspension as I did in <A
+HREF="x1503.html#LAZYSUSP"
+>the section called <I
+>Lazy Suspensions</I
+></A
+> I've used a
+reference variable.  With one of those I can have the variable initialised
+to the <TT
+CLASS="COMPUTEROUTPUT"
+>NONE</TT
+> state so that the table isn't built until called for.
+The <TT
+CLASS="COMPUTEROUTPUT"
+>table</TT
+> function fetches the table or builds/rebuilds it if it
+is not available. The <TT
+CLASS="COMPUTEROUTPUT"
+>weak</TT
+> function creates a weak pointer to the
+reference. The <TT
+CLASS="COMPUTEROUTPUT"
+>strong</TT
+> function returns the reference if it is
+still available.  Since the type of <TT
+CLASS="COMPUTEROUTPUT"
+>strong</TT
+> is <TT
+CLASS="COMPUTEROUTPUT"
+>'a weak -&#62;
+'a option</TT
+> the value in the case expression has the type <TT
+CLASS="COMPUTEROUTPUT"
+>(Table
+option) option</TT
+> which gives us the three cases.  After building the table
+a weak reference to it is assigned to the cache. Note the extra <TT
+CLASS="COMPUTEROUTPUT"
+>ref</TT
+>
+between the weak reference in the table. This is just to ensure that we
+only have weak references to <TT
+CLASS="COMPUTEROUTPUT"
+>ref</TT
+> types.</P
+><P
+>Here is the main function that I use to test it. I build a big list
+in between two calls to get an environment variable.  This triggers a
+garbage collection and I can see that the build is done twice.  If I
+comment out the call to <TT
+CLASS="COMPUTEROUTPUT"
+>data</TT
+> then the build only happens once.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun main(arg0, argv) =
+let
+    fun data() = ignore(List.tabulate(100000, fn n =&#62; n))
+in
+    SMLofNJ.Internals.GC.messages true;
+    print(concat["The PATH is ",
+                 valOf(Environ.get "PATH"), "\n"]);
+    data();
+    print(concat["The PATH is ",
+                 valOf(Environ.get "PATH"), "\n"]);
+
+    OS.Process.success
+end</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="EXNHISTORY"
+>The Exception History List</A
+></H2
+><P
+>Getting access to the exception history list is a new feature which
+has crept in to the compiler in the 110.0 version.  It shows the source
+location where the exception was raised.  Here is an example of it in
+the top-level uncaught exception handler.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun main(arg0, argv) =
+let
+    fun bad() = raise Fail "bye"
+in
+    bad();
+    OS.Process.success
+end
+handle x =&#62; (
+    toErr(concat["Uncaught exception: ",
+                 exnMessage x, " from\n"]);
+
+    app (fn s =&#62; (print "\t"; print s; print "\n"))
+            (SMLofNJ.exnHistory x);
+
+    OS.Process.failure
+    )</PRE
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x1452.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x1626.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Signals</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c1357.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>The Socket API</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

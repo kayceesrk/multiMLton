@@ -1,0 +1,229 @@
+<HTML
+><HEAD
+><TITLE
+>Option</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The Basis Library"
+HREF="c710.html"><LINK
+REL="PREVIOUS"
+TITLE="General"
+HREF="x740.html"><LINK
+REL="NEXT"
+TITLE="Bool"
+HREF="x789.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x740.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 3. The Basis Library</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x789.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN766"
+>Option</A
+></H1
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>Option</TT
+> structure provides some useful functions for dealing
+with optional values.  For any value <TT
+CLASS="COMPUTEROUTPUT"
+>v</TT
+> the expression <TT
+CLASS="COMPUTEROUTPUT"
+>(SOME
+v)</TT
+> represents the value being present and <TT
+CLASS="COMPUTEROUTPUT"
+>NONE</TT
+> for an absent
+value.</P
+><P
+>When a function returns an optional value you can use <TT
+CLASS="COMPUTEROUTPUT"
+>getOpt</TT
+>
+to reduce it to a definite value.  It does this by providing a default
+if the optional value is omitted.  For example to look up a name in a
+translation table and return the original name if it isn't present write
+something like <TT
+CLASS="COMPUTEROUTPUT"
+>getOpt(STRT.find table name, name)</TT
+>.</P
+><P
+>If you are 100% confident that the optional result from a function is
+present you can use <TT
+CLASS="COMPUTEROUTPUT"
+>valOf</TT
+> to reduce it to a definite value. It
+will raise the <TT
+CLASS="COMPUTEROUTPUT"
+>Option</TT
+> exception if you are wrong.</P
+><P
+>The isSome function can be useful to detect if an optional value is
+present.  If the base type of the option is an equality type you could
+write <TT
+CLASS="COMPUTEROUTPUT"
+>(f x) = NONE</TT
+>. But this won't work for all types for example,
+at the top level:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>- val z = SOME (fn x =&#62; x);
+val z = SOME fn : ('a -&#62; 'a) option
+- z = NONE;
+stdIn:25.1-25.9 Error: operator and operand
+don't agree [equality type required]
+  operator domain: ''Z * ''Z
+  operand:         ('Y -&#62; 'Y) option * 'X option
+  in expression:
+    z = NONE
+- Option.isSome z;
+val it = true : bool</PRE
+></TD
+></TR
+></TABLE
+><P
+>Here <TT
+CLASS="COMPUTEROUTPUT"
+>z</TT
+> is an optional function and you can't test two functions to
+see if they are the same so you can't write <TT
+CLASS="COMPUTEROUTPUT"
+>z = NONE</TT
+> either.
+You must either use <TT
+CLASS="COMPUTEROUTPUT"
+>isSome</TT
+> or use a case expression.</P
+><P
+>The other functions in the <TT
+CLASS="COMPUTEROUTPUT"
+>Option</TT
+> structure might be useful in special
+circumstances.  The <TT
+CLASS="COMPUTEROUTPUT"
+>map</TT
+> function looks to be the most useful.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x740.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x789.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>General</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c710.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Bool</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

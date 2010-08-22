@@ -1,0 +1,23 @@
+httperf --timeout=10 --client=0/1 --server=e --port=8083 --uri=/primes_multicast --rate=600 --send-buffer=4096 --recv-buffer=16384 --num-conns=10 --num-calls=1
+Maximum connect burst length: 1
+
+Total: connections 10 requests 10 replies 10 test-duration 0.220 s
+
+Connection rate: 45.4 conn/s (22.0 ms/conn, <=9 concurrent connections)
+Connection time [ms]: min 11.3 avg 107.7 max 206.1 median 102.5 stddev 74.2
+Connection time [ms]: connect 0.0
+Connection length [replies/conn]: 1.000
+
+Request rate: 45.4 req/s (22.0 ms/req)
+Request size [B]: 70.0
+
+Reply rate [replies/s]: min 0.0 avg 0.0 max 0.0 stddev 0.0 (0 samples)
+Reply time [ms]: response 76.7 transfer 31.0
+Reply size [B]: header 68.0 content 50.0 footer 0.0 (total 118.0)
+Reply status: 1xx=0 2xx=0 3xx=0 4xx=10 5xx=0
+
+CPU time [s]: user 0.05 system 0.16 (user 23.6% system 72.7% total 96.3%)
+Net I/O: 8.3 KB/s (0.1*10^6 bps)
+
+Errors: total 0 client-timo 0 socket-timo 0 connrefused 0 connreset 0
+Errors: fd-unavail 0 addrunavail 0 ftab-full 0 other 0

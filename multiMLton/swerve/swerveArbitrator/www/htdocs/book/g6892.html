@@ -1,0 +1,624 @@
+<HTML
+><HEAD
+><TITLE
+>Glossary</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Bibliography"
+HREF="b6666.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="GLOSSARY"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="b6666.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+>&nbsp;</TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="GLOSSARY"
+><H1
+><A
+NAME="AEN6892"
+>Glossary</A
+></H1
+><DL
+><DT
+><B
+>Blurb</B
+></DT
+><DD
+><P
+>	This is any text of little value or interest.</P
+></DD
+><DT
+><B
+>CM</B
+></DT
+><DD
+><P
+>	This stands for the SML/NJ Compilation Manager.  It also refers
+	to the input files used by the manager.</P
+></DD
+><DT
+><B
+>CML</B
+></DT
+><DD
+><P
+>	This is the Concurrent ML library. It adds operations 
+	for concurrent programming to SML/NJ.</P
+></DD
+><DT
+><B
+>continuation</B
+></DT
+><DD
+><P
+>	A continuation is a virtual function that represents the rest
+	of the computation of the program. By virtual I mean that it
+	is behaves like a function that can be called from SML but
+	underneath it just represents a transfer of control to other
+	parts of the program.</P
+></DD
+><DT
+><B
+>copy by reference</B
+></DT
+><DD
+><P
+>	When a data object is copied by reference the object itself is
+	not duplicated. Instead a pointer to it is created. The copy
+	and the original share the same memory locations.  A change
+	made to the original will result in the copy changing too.
+	</P
+><P
+><EM
+>See Also: </EM
+>copy by value.</P
+></DD
+><DT
+><B
+>copy by value</B
+></DT
+><DD
+><P
+>	When a data object is copied by value the object itself is
+	duplicated. The copy and the original occupy different memory
+	locations.  A change made to the original will not result in a
+	change to the copy.  </P
+><P
+><EM
+>See Also: </EM
+>copy by reference.</P
+></DD
+><DT
+><B
+>currying</B
+></DT
+><DD
+><P
+>	This refers to how a function with multiple inputs can be treated
+	as a cascade of functions each called with a single input. For
+	example the expression <TT
+CLASS="COMPUTEROUTPUT"
+>(f a b)</TT
+> means <TT
+CLASS="COMPUTEROUTPUT"
+>(g b)</TT
+> where
+	<TT
+CLASS="COMPUTEROUTPUT"
+>g = (f a)</TT
+>.</P
+></DD
+><DT
+><B
+>datatype</B
+></DT
+><DD
+><P
+>	This is a kind of type declaration in SML.  It plays
+	the role of enumeration and union types of C or C++.</P
+></DD
+><DT
+><B
+>dynamic</B
+></DT
+><DD
+><P
+>	This refers to any information that cannot be known about
+	a program until it is running.  The information depends on
+	the data it is processing.
+	</P
+><P
+><EM
+>See Also: </EM
+>static.</P
+></DD
+><DT
+><B
+>finalisation</B
+></DT
+><DD
+><P
+>	This is a post-processing step applied to a data object after
+	it has been collected by the garbage collector.  For example a
+	file object should be finalised by closing it since it can no
+	longer be used by the program.
+	</P
+><P
+><EM
+>See Also: </EM
+>garbage collector.</P
+></DD
+><DT
+><B
+>functional programming</B
+></DT
+><DD
+><P
+>	This style of programming proceeds by computing new
+	values from existing values without changing any of the
+	existing values.
+	</P
+><P
+><EM
+>See Also: </EM
+>imperative programming<EM
+>, </EM
+>pure function.</P
+></DD
+><DT
+><B
+>functor</B
+></DT
+><DD
+><P
+>	This is a generic module in SML. It can be thought of as a
+	function that generates a structure from one or more input structures.
+	</P
+><P
+><EM
+>See Also: </EM
+>generic<EM
+>, </EM
+>module<EM
+>, </EM
+>structure.</P
+></DD
+><DT
+><B
+>garbage collector</B
+></DT
+><DD
+><P
+>	This is a part of the SML/NJ run-time that locates data objects
+	that can no longer be used and makes their memory available
+	for reuse.</P
+></DD
+><DT
+><B
+>generic</B
+></DT
+><DD
+><P
+>	A piece of code is generic if it can be easily customised in the
+	language to different kinds of input.  This is similar to the
+	idea of polymorphism but it handles a wider variety of kinds.
+	The functor is the mechanism in SML for writing generic code.
+	Templates are the corresponding mechanism in C++.
+	</P
+><P
+><EM
+>See Also: </EM
+>functor.</P
+></DD
+><DT
+><B
+>immutable</B
+></DT
+><DD
+><P
+>	A variable is immutable if the value it represents can never change.
+	This is normal for functional programs. In imperative programs variables
+	are normally mutable.
+	</P
+><P
+><EM
+>See Also: </EM
+>functional programming.</P
+></DD
+><DT
+><B
+>imperative programming</B
+></DT
+><DD
+><P
+>	This style of programming proceeds by altering values
+	stored in variables.
+	</P
+><P
+><EM
+>See Also: </EM
+>functional programming<EM
+>, </EM
+>sneak path.</P
+></DD
+><DT
+><B
+>lex</B
+></DT
+><DD
+><P
+>	This is the traditional lexical scanner generator available on Unix.
+	</P
+><P
+><EM
+>See Also: </EM
+>yacc.</P
+></DD
+><DT
+><B
+>live data</B
+></DT
+><DD
+><P
+>	Any piece of data that can still be used by the program is called
+	live.  Dead data will eventually be collected by the garbage collector.
+	</P
+><P
+><EM
+>See Also: </EM
+>garbage collector.</P
+></DD
+><DT
+><B
+>mickey-mouse</B
+></DT
+><DD
+><P
+>	A toy example.</P
+></DD
+><DT
+><B
+>module</B
+></DT
+><DD
+><P
+>	In SML this refers to either a structure or a functor.  The compiler
+	compiles modules separately.
+	</P
+><P
+><EM
+>See Also: </EM
+>structure<EM
+>, </EM
+>functor.</P
+></DD
+><DT
+><B
+>monomorphic</B
+></DT
+><DD
+><P
+>	A function is monomorphic if it only operates on data of one type.
+	For example the <TT
+CLASS="COMPUTEROUTPUT"
+>String.concat</TT
+> function only concatenates
+	lists of strings.
+	</P
+><P
+><EM
+>See Also: </EM
+>polymorphic.</P
+></DD
+><DT
+><B
+>polymorphic</B
+></DT
+><DD
+><P
+>	A function is polymorphic if it performs the same operation on
+	a family of types.  For example the <TT
+CLASS="COMPUTEROUTPUT"
+>List.length</TT
+> function
+	determines the length of any list without regard to the type of
+	its elements.  </P
+><P
+><EM
+>See Also: </EM
+>monomorphic.</P
+></DD
+><DT
+><B
+>primitive</B
+></DT
+><DD
+><P
+>	This refers to something at the lowest level of detail; elemental.
+	For example to a program, addition is a primitive operation of
+	the hardware.  Although from the point of view of the hardware
+	it may be complex.</P
+></DD
+><DT
+><B
+>pure function</B
+></DT
+><DD
+><P
+>	A pure function always produces the same result for the same
+	explicit inputs.  Its behaviour is not dependent on some program
+	state that can vary between calls to the function.
+	</P
+><P
+><EM
+>See Also: </EM
+>functional programming.</P
+></DD
+><DT
+><B
+>reference type</B
+></DT
+><DD
+><P
+>	This is a kind of type in SML. Values of this type are mutable
+	variables.</P
+></DD
+><DT
+><B
+>run-time</B
+></DT
+><DD
+><P
+>	This refers to the part of the SML/NJ system that is written
+	in C and shared by all SML/NJ programs.</P
+></DD
+><DT
+><B
+>SML</B
+></DT
+><DD
+><P
+>	This is an abbreviation for Standard ML.
+	</P
+><P
+><EM
+>See Also: </EM
+>SML/NJ<EM
+>, </EM
+>CML.</P
+></DD
+><DT
+><B
+>SML/NJ</B
+></DT
+><DD
+><P
+>	This is the New Jersey implementation of the Standard ML language.
+	</P
+><P
+><EM
+>See Also: </EM
+>SML.</P
+></DD
+><DT
+><B
+>stdin, stdout, stderr</B
+></DT
+><DD
+><P
+>	These are the predefined UNIX file descriptors: standard input,
+	standard output and standard error.</P
+></DD
+><DT
+><B
+>signature</B
+></DT
+><DD
+><P
+>	In SML this is a collection of declarations for types and values
+	that a structure exports to the rest of the program.</P
+></DD
+><DT
+><B
+>sneak path</B
+></DT
+><DD
+><P
+>	This is what I call it when two parts of a program communicate
+	by reading and writing a shared variable in some obscure way.
+	An example in C would be if two functions in different files
+	passed data through a global variable.</P
+></DD
+><DT
+><B
+>static</B
+></DT
+><DD
+><P
+>	This refers to any information that is known
+	about a program before it is run.
+	</P
+><P
+><EM
+>See Also: </EM
+>dynamic.</P
+></DD
+><DT
+><B
+>strong pointer</B
+></DT
+><DD
+><P
+>	This is a pointer (or reference) to a data object that is
+	taken seriously by the garbage collector.  If an object has one or
+	more strong pointers to it then is considered to be live.
+	</P
+><P
+><EM
+>See Also: </EM
+>weak pointer<EM
+>, </EM
+>live data.</P
+></DD
+><DT
+><B
+>structure</B
+></DT
+><DD
+><P
+>	In SML this is a named collection of declarations.
+	</P
+><P
+><EM
+>See Also: </EM
+>module<EM
+>, </EM
+>functor.</P
+></DD
+><DT
+><B
+>tuple</B
+></DT
+><DD
+><P
+>	In SML, this is a group of anonymous data values travelling
+	together.  The word is a generalisation of the sequence: couple,
+	triple, quadruple, quintuple, sextuple etc.</P
+></DD
+><DT
+><B
+>weak pointer</B
+></DT
+><DD
+><P
+>	This is a pointer (or reference) to a data object that is not
+	taken seriously by the garbage collector.  If an object only has
+	weak pointers to it then it is no longer considered to be live.
+	</P
+><P
+><EM
+>See Also: </EM
+>live data<EM
+>, </EM
+>strong pointer.</P
+></DD
+><DT
+><B
+>yacc</B
+></DT
+><DD
+><P
+>	This is the traditional parser generator available on Unix.
+	The name stands for Yet Another Compiler Compiler. A compiler
+	compiler is a mythical tool that generates a compiler for a 
+	programming language given a description of the language. They
+	were a hot topic in computer science in the 1960s and 1970s.
+	</P
+><P
+><EM
+>See Also: </EM
+>lex.</P
+></DD
+></DL
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="b6666.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>&nbsp;</TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Bibliography</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>&nbsp;</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

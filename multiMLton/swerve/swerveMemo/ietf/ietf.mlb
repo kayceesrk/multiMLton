@@ -1,0 +1,55 @@
+$(MLTON_ROOT)/basis/basis.mlb
+$(MLTON_ROOT)/cml/cml.mlb
+(*/home/chandras/MLton/svn-mlton/lib/cml/cml.mlb*)
+
+local
+	../externallibs/utils/util.mlb
+
+	../common/common.mlb
+	../config/config.mlb
+
+	encoding.sig
+	encoding.sml
+
+	mimetype.sig
+	mimetype.sml
+
+	ietfpart.sig
+	ietfpart.sml
+
+	ietf.lex.sml
+
+	ietfline.sig
+	ietfline.sml
+
+	base64.sig
+	base64.sml
+
+	encoding.sig
+	encoding.sml
+
+	info.sml
+
+	entity.sml
+
+	http_status.sml
+	http_header.sml
+	http_msg.sml
+
+	ietf.lex.sml
+
+
+in
+	structure Entity
+	structure Info
+
+	signature MIME_TYPE
+	structure MimeType
+
+	structure HTTPHeader
+	structure HTTPMsg
+	structure HTTPStatus
+
+	signature IETF_LINE
+	structure IETFLine
+end

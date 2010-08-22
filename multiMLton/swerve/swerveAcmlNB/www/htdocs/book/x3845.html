@@ -1,0 +1,3095 @@
+<HTML
+><HEAD
+><TITLE
+>Building and Testing the Server</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The Swerve Web Server"
+HREF="c3253.html"><LINK
+REL="PREVIOUS"
+TITLE="The Architecture of the Server"
+HREF="x3709.html"><LINK
+REL="NEXT"
+TITLE="The Swerve Detailed Design"
+HREF="c4671.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x3709.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 8. The Swerve Web Server</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="c4671.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN3845"
+>Building and Testing the Server</A
+></H1
+><P
+>In the source code directory you will find a directory called
+<TT
+CLASS="COMPUTEROUTPUT"
+>swerve</TT
+> that contains the source of the server and some simple
+test cases.  For details on the source code see <A
+HREF="x4677.html"
+>the section called <I
+>The Organisation of the Code</I
+> in Chapter 9</A
+>.
+To build the server just type <TT
+CLASS="COMPUTEROUTPUT"
+>make</TT
+> in this directory.  This will
+run the SML compiler, assuming that it is in your PATH.</P
+><P
+>The resulting heap and executable files can be found in the <TT
+CLASS="COMPUTEROUTPUT"
+>main</TT
+>
+subdirectory. You will need to edit the <TT
+CLASS="COMPUTEROUTPUT"
+>main/swerve</TT
+> script to
+set the path variables.  The <TT
+CLASS="COMPUTEROUTPUT"
+>libdir</TT
+> variable is the absolute path
+where the heap file is found. This will be the main directory until you
+install the server somewhere else.  The <TT
+CLASS="COMPUTEROUTPUT"
+>smlbin</TT
+> variable is the
+absolute path where you have installed the SML/NJ binaries.</P
+><P
+>There is a server configuration in the <TT
+CLASS="COMPUTEROUTPUT"
+>tests/tree_norm</TT
+>
+subdirectory.  This contains some test cases for manual testing of
+the server.  (The &quot;norm&quot; refers to testing the normal behaviour of
+the server).  The configuration file is <TT
+CLASS="COMPUTEROUTPUT"
+>norm.cfg</TT
+>.  Before you
+can run the server you must edit the <TT
+CLASS="COMPUTEROUTPUT"
+>ServerRoot</TT
+> parameter to be
+the absolute path to the <TT
+CLASS="COMPUTEROUTPUT"
+>tree_norm</TT
+> directory.  You may want to
+change the port number too.</P
+><P
+>The test tree implements the notable URL paths shown in <A
+HREF="x3845.html#NORMURLS"
+>Table 8-1</A
+>.</P
+><DIV
+CLASS="TABLE"
+><A
+NAME="NORMURLS"
+></A
+><P
+><B
+>Table 8-1. The Notable Norm URLs.</B
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Path</P
+></TH
+><TH
+WIDTH="425"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Purpose</P
+></TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>/</P
+></TD
+><TD
+WIDTH="425"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This returns <TT
+CLASS="COMPUTEROUTPUT"
+>index.html</TT
+> in the <TT
+CLASS="COMPUTEROUTPUT"
+>htdocs</TT
+> directory.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>/secure</P
+></TD
+><TD
+WIDTH="425"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This returns <TT
+CLASS="COMPUTEROUTPUT"
+>index.html</TT
+> in the
+		<TT
+CLASS="COMPUTEROUTPUT"
+>htdocs/secure</TT
+> directory.  This is for testing
+		user authorisation.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>/sub</P
+></TD
+><TD
+WIDTH="425"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This returns a list of the files in
+		<TT
+CLASS="COMPUTEROUTPUT"
+>htdocs/sub</TT
+> directory.  Selecting page.html tests
+		some image handling on a complex page.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>/hw</P
+></TD
+><TD
+WIDTH="425"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This runs a built-in handler that just returns a &quot;hello
+		world&quot; message.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>/sleep?3</P
+></TD
+><TD
+WIDTH="425"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This runs the &quot;sleep&quot; built-in handler that delays for the
+		number of seconds given in the query. This is used to test 
+		simultaneous requests to the same handler. </P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>/icons</P
+></TD
+><TD
+WIDTH="425"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>The fancy indexing of directories refers to icons with
+		this path. The icons are in the <TT
+CLASS="COMPUTEROUTPUT"
+>kit/icons</TT
+> directory.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>/tmp</P
+></TD
+><TD
+WIDTH="425"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This path points to the <TT
+CLASS="COMPUTEROUTPUT"
+>/tmp</TT
+> directory on
+		your system.  On mine, having run KDE and sometimes
+		Gnome, there are lots of weird files to exercise the
+		fancy indexing of the server.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>/cgi/env</P
+></TD
+><TD
+WIDTH="425"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This path runs the <TT
+CLASS="COMPUTEROUTPUT"
+>cgi-bin/printenv</TT
+> shell script.
+		This is the traditional example CGI script that prints all of the
+		environment variables that the server passes to CGI scripts.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>/cgi/test-post</P
+></TD
+><TD
+WIDTH="425"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This runs the <TT
+CLASS="COMPUTEROUTPUT"
+>cgi-bin/test-post</TT
+> shell
+		script. This is similar to <TT
+CLASS="COMPUTEROUTPUT"
+>printenv</TT
+> except that
+		it echoes stdin so that posted form data can be seen.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>/cgi/form-handler</P
+></TD
+><TD
+WIDTH="425"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This runs the <TT
+CLASS="COMPUTEROUTPUT"
+>cgi-bin/form-handler</TT
+> Perl
+		script.  This script runs a simple form that asks for
+		your name and echoes it.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>/cgi/line-counter</P
+></TD
+><TD
+WIDTH="425"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This runs the <TT
+CLASS="COMPUTEROUTPUT"
+>cgi-bin/line-count</TT
+> Perl script.
+		This is used to test the uploading of a text file. The
+		script returns the number of lines in the file.</P
+></TD
+></TR
+></TBODY
+></TABLE
+></DIV
+><P
+>To start the server go to the <TT
+CLASS="COMPUTEROUTPUT"
+>tests/tree_norm</TT
+> directory and use
+the <TT
+CLASS="COMPUTEROUTPUT"
+>run</TT
+> script.  The configuration file sets the log level to
+Debug. The debug messages will appear in the <TT
+CLASS="COMPUTEROUTPUT"
+>var/errors</TT
+> log file.
+There are enough for you to trace the operation of the server.  Note that
+the file continues to grow over successive runs of the server unless
+you delete it.  </P
+><P
+>After you stop the server you should check that the <TT
+CLASS="COMPUTEROUTPUT"
+>tmp</TT
+> directory
+is empty and the <TT
+CLASS="COMPUTEROUTPUT"
+>var</TT
+> directory only contains the log file.</P
+><P
+>The test plan so far has been casual. Most of the tests consist of just
+poking at the links.  The testing of multiple requests and authorisation
+is more involved.  The following sections describe the test plan.
+I've tested it with both Netscape 4.76 and Konqueror 2.1.1.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="BASICTESTING"
+>Basic Testing</A
+></H2
+><P
+>Try out each of the following steps from the main menu, in any order.</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>	Go the main page at <TT
+CLASS="COMPUTEROUTPUT"
+>http://localhost:2020/</TT
+> (or whatever
+	port you have chosen).	You should see &quot;Welcome to the Swerve
+	Web Server&quot; along with a menu.</P
+></LI
+><LI
+><P
+>	Click on &quot;hello world&quot;. You should see a single line of text
+	saying &quot;hello world&quot;.  This uses the <TT
+CLASS="COMPUTEROUTPUT"
+>text/plain</TT
+> MIME type.</P
+></LI
+><LI
+><P
+>	Click on &quot;5 second sleep&quot;. The browser should twiddle its thumbs
+	for 5 seconds and then you see &quot;Slept for 5 seconds&quot;. This is
+	more useful for multiple request testing below. </P
+></LI
+><LI
+><P
+>	Click on &quot;sub-directory&quot;. This shows a fancy index of the
+	<TT
+CLASS="COMPUTEROUTPUT"
+>htdocs/sub</TT
+> directory.  There should be a folder icon with
+	the <TT
+CLASS="COMPUTEROUTPUT"
+>empty</TT
+> directory. Click on it to see the absence of
+	contents. Clicking on the &quot;Up to higher level directory&quot; will
+	take you back.</P
+><P
+>	Examine the README and image files.  Clicking on <TT
+CLASS="COMPUTEROUTPUT"
+>page.html</TT
+>
+	will show a page containing all of the image files. </P
+></LI
+><LI
+><P
+>	Click on &quot;/tmp&quot;. This will show an index of your /tmp directory.
+	Mine contains various weird files such as sockets for KDE and X11.
+	For example clicking on the socket in <TT
+CLASS="COMPUTEROUTPUT"
+>.X11-unix/X0</TT
+> will
+	result in a &quot;Not Found&quot; error since the file is inaccessible.
+	You can probably find a file that is not readable by you. Clicking
+	on it should result in the &quot;Access Denied&quot; error.  </P
+></LI
+><LI
+><P
+>	Click on &quot;printenv&quot;. This should return a list of all of the
+	CGI variables passed to the script. The <TT
+CLASS="COMPUTEROUTPUT"
+>HTTP_USER_AGENT</TT
+>
+	variable will describe your browser. The <TT
+CLASS="COMPUTEROUTPUT"
+>SERVER_SOFTWARE</TT
+>
+	variable describes the version of the server.  Your
+	<TT
+CLASS="COMPUTEROUTPUT"
+>PATH</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>SHELL</TT
+> should also appear.  If you
+	click on &quot;printenv with a query&quot; you will see that the
+	<TT
+CLASS="COMPUTEROUTPUT"
+>QUERY_STRING</TT
+> variable appears. It should contain
+	<TT
+CLASS="COMPUTEROUTPUT"
+>name=fred%20flintstone&amp;page=3</TT
+>. </P
+></LI
+><LI
+><P
+>	Click on &quot;simple form&quot;.  This returns the <TT
+CLASS="COMPUTEROUTPUT"
+>testform.html</TT
+>
+	page.  This contains a simple form that requests you to
+	enter your name.  If you enter Fred Flintstone and click
+	Send the result should show that stdin contained the string
+	<TT
+CLASS="COMPUTEROUTPUT"
+>given=Flintstone&amp;family=Fred&amp;Submit=Send</TT
+>. </P
+></LI
+><LI
+><P
+>	Click on &quot;real CGI form&quot;. This form is generated on-the-fly by
+	the <TT
+CLASS="COMPUTEROUTPUT"
+>form-handler</TT
+> Perl CGI script.  When you send your
+	name the page is updated with the name. </P
+></LI
+><LI
+><P
+>	Click on &quot;file line counter&quot;. This shows a form that invites
+	you to enter a file name. This should be the path of a text
+	file that is around 100KB long. This is plenty large enough to
+	ensure that the uploaded file is saved to disk in the <TT
+CLASS="COMPUTEROUTPUT"
+>tmp</TT
+>
+	directory. You can check this in the debug messages in the
+	<TT
+CLASS="COMPUTEROUTPUT"
+>var/errors</TT
+> file. Look for the line with &quot;TmpFile allocate
+	file&quot; followed by the path to the temporary file.  Check that the
+	reported length of the file is correct. </P
+></LI
+></OL
+><P
+>Congratulations. It basically works.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN3991"
+>Testing Multiple Requests</A
+></H2
+><P
+>This testing is fairly slight. The first part relies on the browser
+using multiple connections to load the <TT
+CLASS="COMPUTEROUTPUT"
+>page.html</TT
+> file in the
+sub-directory of <A
+HREF="x3845.html#BASICTESTING"
+>the section called <I
+>Basic Testing</I
+></A
+>.  Both Netscape and Konqueror
+will open several simultaneous connections to the server to load all of
+the images.</P
+><P
+>Stop the server and edit the <TT
+CLASS="COMPUTEROUTPUT"
+>norm.cfg</TT
+> file to set MaxClients to 1.
+Restart the server and follow the sub-directory link from the main menu.
+You should see problems such as missing icons.  If you click on the
+<TT
+CLASS="COMPUTEROUTPUT"
+>page.html</TT
+> file then images are broken.  Click on Reload a few
+times.  Two of the images are missing. If you study the log file it will
+not show any connection requesting the missing images. This is because
+the requests are going to extra connections which are being refused by
+the server.  If you increase MaxClients to 2 then only one of the images
+will be missing.  At 3, all of the images reappear.</P
+><P
+>This test has demonstrated that the server rejects connections according
+to the MaxClients parameter.  If you study the log file you will see
+multiple simultaneous connections.  Using Konqueror to reload the image
+page I get this pattern of Info messages:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>2001 Sep 19 05:31:26 Info: New connection from 127.0.0.1:2525
+2001 Sep 19 05:31:26 Info: New connection from 127.0.0.1:2526
+2001 Sep 19 05:31:26 Info: New connection from 127.0.0.1:2527
+2001 Sep 19 05:31:26 Info: End of connection from 127.0.0.1:2525
+2001 Sep 19 05:31:26 Info: End of connection from 127.0.0.1:2527
+2001 Sep 19 05:31:26 Info: End of connection from 127.0.0.1:2526
+2001 Sep 19 05:31:26 Info: New connection from 127.0.0.1:2528
+2001 Sep 19 05:31:26 Info: End of connection from 127.0.0.1:2528</PRE
+></TD
+></TR
+></TABLE
+><P
+>This shows three simultaneous connections followed by a separate one
+for the background image.</P
+><P
+>A different concurrent path through the server can be tested using
+the <TT
+CLASS="COMPUTEROUTPUT"
+>sleep</TT
+> built-in handler.  For this you will need two browser
+windows side-by-side showing the main menu. Click on 5 second sleep in
+both browser windows rapidly one after the other. The first window will
+return the &quot;Slept for 5 seconds&quot; message after 5 seconds.  The second
+will return it after 10 seconds.  This is because the handler is
+single-threaded. The second request waits in a queue for the first one
+to finish.  Then it starts its own 5 second delay.  This test demonstrates
+multiple simultaneous requests routed through the resource store to the
+same handler and handled in turn.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN4004"
+>Testing Authorisation</A
+></H2
+><P
+>In the <TT
+CLASS="COMPUTEROUTPUT"
+>tests/tree_norm/conf</TT
+> directory you will find a password
+file, <TT
+CLASS="COMPUTEROUTPUT"
+>admin.pwd</TT
+>, and a group file, <TT
+CLASS="COMPUTEROUTPUT"
+>admin.grp</TT
+>,  for testing
+the authorisation. (See <A
+HREF="x3464.html#NODEPARAMETERS"
+>the section called <I
+>The Node Parameters</I
+></A
+>).  Here is the
+password file.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fred:rocks
+wilma:pebbles
+barney:bowling
+betty:mink</PRE
+></TD
+></TR
+></TABLE
+><P
+>Here is the group file.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>Rubble: barney betty</PRE
+></TD
+></TR
+></TABLE
+><P
+>These files are used by the authorisation configuration in the <TT
+CLASS="COMPUTEROUTPUT"
+>htdocs/secure/.swerve</TT
+>
+file.  Here is the file.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>#   This allows fred directly and barney via the group.
+#   Wilma should be barred.
+AuthType        =       Basic;
+AuthName        =       "admin";
+AuthUserFile    =       conf/admin.pwd;
+AuthGroupFile   =       conf/admin.grp;
+AuthAllowUsers  =       fred;
+AuthAllowGroups =       Rubble;</PRE
+></TD
+></TR
+></TABLE
+><P
+>This allows users fred, barney and betty.</P
+><P
+>From the main test page (see <A
+HREF="x3845.html#BASICTESTING"
+>the section called <I
+>Basic Testing</I
+></A
+>) click on
+&quot;secure admin&quot;.  You will be prompted for a user name and password.
+You should be able to demonstrate that you cannot gain access for users
+<TT
+CLASS="COMPUTEROUTPUT"
+>fred</TT
+>, <TT
+CLASS="COMPUTEROUTPUT"
+>barney</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>betty</TT
+> except with the correct
+password and user <TT
+CLASS="COMPUTEROUTPUT"
+>wilma</TT
+> cannot gain access at all.  Since your
+browser probably remembers the user name and password for the realm
+(from the <TT
+CLASS="COMPUTEROUTPUT"
+>AuthName</TT
+> parameter) you will need to stop and restart
+your browser after each successful try.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN4025"
+>Testing the Performance</A
+></H2
+><P
+>Now for the big question. How does it perform?  Not bad actually.
+To test it I used the <TT
+CLASS="COMPUTEROUTPUT"
+>httperf</TT
+> program which is available from Hewlett-Packard 
+Research Labs<A
+NAME="AEN4029"
+HREF="#FTN.AEN4029"
+>[1]</A
+>.</P
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>httperf</TT
+> program can generate a load for the server at a fixed
+number of connections per second. It reports the number of connections per
+second that the server has actually achieved along with some statistics
+such as the number of concurrent connections, milliseconds per connection.
+The program must be run on a different machine to the server to get an
+accurate measure of its performance. This is because it consumes a large
+amount of CPU time itself in order to keep its timing accurate. But for
+these tests I've run it on the same machine as server.</P
+><P
+>These tests have been run on an AMD Athlon 1GHz processor with PC133
+RAM.  The kernel is Linux 2.2.19.  The machine was idle while running
+the tests.  The performance is compared with a standard installation of
+Apache 1.3.19.  Both servers have logging disabled so that disk writes
+don't slow them down.</P
+><P
+>These performance figures were made after the improvements from profiling
+described in <A
+HREF="x3845.html#PROFILESERVER"
+>the section called <I
+>Profiling the Server</I
+></A
+>.</P
+><P
+>The tests fetch the index page of the <TT
+CLASS="COMPUTEROUTPUT"
+>tree_norm</TT
+> directory. This
+totals 957 bytes for Swerve and 1092 bytes for Apache.</P
+><P
+>The first test just tests the sequential performance.  The client makes
+connections one after the other as fast as possible and the number of
+connections per second achieved is reported. The results are shown in
+<A
+HREF="x3845.html#SEQSPEED"
+>Table 8-2</A
+>.</P
+><DIV
+CLASS="TABLE"
+><A
+NAME="SEQSPEED"
+></A
+><P
+><B
+>Table 8-2. Sequential Server Performance</B
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+WIDTH="113"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Server</P
+></TH
+><TH
+WIDTH="113"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Conn/sec</P
+></TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+WIDTH="113"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Swerve</P
+></TD
+><TD
+WIDTH="113"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>50</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="113"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Apache</P
+></TD
+><TD
+WIDTH="113"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>680</P
+></TD
+></TR
+></TBODY
+></TABLE
+></DIV
+><P
+>The speed of Swerve here is terrible. But notice how it is managing
+exactly 20 milliseconds per connection. The default time slice for the
+threading in CML is 20 milliseconds.  This points to a bug either in
+the server or the CML implementation that needs further investigation.</P
+><P
+>The next test has the client generating new connections at a fixed rate
+for a total of 4000 connections. If the server can keep up then it will
+serve them all and the number of concurrent connections it handles will be
+low.  If it can't keep up then the number of concurrent connections will
+rise until it hits a limit which is 1012 connections on my machine. This
+limit comes from the maximum number of sockets that the client can open
+at one time.  If this limit is reached then the performance figure can
+be ignored and the server be deemed to be completely swamped.</P
+><P
+>The Swerve configuration has a Timeout of 10 seconds and MaxClients of
+1100.  The LogLevel is Warn so that no connection messages are written
+to the log file. I wait at least 10 seconds between tests to let the
+time-outs in the Swerve server complete. This starts each run from a
+clean state.</P
+><P
+><A
+HREF="x3845.html#CONCSPEEDSWERVE"
+>Table 8-3</A
+> shows the figures (connections/second)
+for Swerve. When the server starts falling behind I run multiple tests
+to get an idea of how variable the performance is.  The <TT
+CLASS="COMPUTEROUTPUT"
+>httperf</TT
+>
+command line used is</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>httperf --timeout=15   --client=0/1       --server=brahms --port=2020
+    --uri=/index.html  --http-version=1.0 --rate=350 
+    --send-buffer=4096 --recv-buffer=16384 
+    --num-conns=4000   --num-calls=1</PRE
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="TABLE"
+><A
+NAME="CONCSPEEDSWERVE"
+></A
+><P
+><B
+>Table 8-3. Concurrent Swerve Performance</B
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Offered Rate</P
+></TH
+><TH
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Actual Rate</P
+></TH
+><TH
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Max Connections</P
+></TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>100</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>100</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>8</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>130</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>130</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>11</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>150</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>150</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>28</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>170</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>170</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>14</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>190</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>186</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>21</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>190</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>181</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>19</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>190</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>175</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>16</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>190</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>170</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>18</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>200</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>195</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>20</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>200</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>191</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>19</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>200</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>192</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>30</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>200</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>189</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>21</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>210</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>197</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>21</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>210</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>198</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>24</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>210</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>195</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>22</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>210</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>193</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>26</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>220</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>212</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>39</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>240</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>206</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>33</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>240</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>203</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>32</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>240</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>170</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>29</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>240</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>200</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>29</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>260</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>160</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>28</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>260</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>201</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>64</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>260</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>197</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>30</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>260</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>138</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>36</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>280</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>206</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>41</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>280</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>202</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>31</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>280</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>219</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>35</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>280</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>202</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>57</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>300</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>215</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>44</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>300</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>216</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>91</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>300</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>228</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>41</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>300</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>229</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>42</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>320</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>182</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>52</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>320</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>195</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>52</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>320</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>173</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>33</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>320</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>230</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>34</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>350</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>123</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>906</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>350</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>189</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>96</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>350</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>238</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>40</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>350</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>154</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>47</P
+></TD
+></TR
+></TBODY
+></TABLE
+></DIV
+><P
+>You can see that the throughput increases linearly up to 190 conn/sec
+and then starts to falter.  As the load increases it peaks at around
+an average of 210 connections per second.  At a load of 350 conn/sec,
+connections were starting to time-out and the server was definitely
+overloaded.</P
+><P
+><A
+HREF="x3845.html#CONCSPEEDAPACHE"
+>Table 8-4</A
+> shows the figures for Apache.</P
+><DIV
+CLASS="TABLE"
+><A
+NAME="CONCSPEEDAPACHE"
+></A
+><P
+><B
+>Table 8-4. Concurrent Apache Performance</B
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Offered Rate</P
+></TH
+><TH
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Actual Rate</P
+></TH
+><TH
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Max Connections</P
+></TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>100</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>100</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>13</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>130</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>130</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>7</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>150</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>150</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>8</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>170</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>170</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>10</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>190</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>190</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>12</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>200</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>200</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>145</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>200</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>200</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>133</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>210</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>210</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>33</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>210</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>210</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>123</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>220</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>220</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>76</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>240</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>240</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>165</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>260</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>260</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>178</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>280</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>280</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>199</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>300</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>190</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>1012</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>300</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>300</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>132</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>300</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>245</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>142</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>300</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>300</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>189</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>320</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>215</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>760</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>320</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>202</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>1012</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>320</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>258</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>547</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>320</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>210</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>760</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>350</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>220</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>1012</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>350</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>277</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>629</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>350</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>132</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>1012</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>350</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>243</P
+></TD
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>1012</P
+></TD
+></TR
+></TBODY
+></TABLE
+></DIV
+><P
+>With Apache, the through-put increases linearly up to 300 conn/sec and
+then starts to falter.  At higher loads the throughput struggles to get
+up to around 270 conn/sec at best and at worst many cases of complete
+overload.</P
+><P
+>Comparing the two servers I can reasonably claim that the performance
+of Swerve is around 2/3 of Apache. That's not bad for a home-grown server
+written in SML.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="PROFILESERVER"
+>Profiling the Server</A
+></H2
+><P
+>I did some investigation of the internal timing of the Swerve server
+to see what improvements could be made.  The performance figures in the
+previous section were obtained after the improvements from profiling.</P
+><P
+>I've had performance problems from the handling of time-outs. I
+need to have a flag that is set on a time-out and that can be tested.
+(See <A
+HREF="x3709.html#TIMEOUTDESIGN"
+>the section called <I
+>Time-outs</I
+></A
+> for more details).  In an earlier
+implementation I created a new thread for each connection to wait for the
+time-out.  The thread then set the flag. The trouble with this was that
+the time-out thread would hang around in the server after the connection
+was closed, until the time-out expired. This would result in thousands
+of threads in the server which clogged the CML run-time. The time
+taken to spawn a new thread rose to over 15 milliseconds.  The current
+implementation, described in <A
+HREF="x5914.html#ABORTMODULE"
+>the section called <I
+>The Abort Module</I
+> in Chapter 9</A
+>, only uses one
+thread and is much faster.</P
+><P
+>I've left some timing code in the server which can be enabled with the
+<TT
+CLASS="COMPUTEROUTPUT"
+>-T Timing</TT
+> command line option and a log level of Debug.  The timing
+code uses the <TT
+CLASS="COMPUTEROUTPUT"
+>MyProfile.timeIt</TT
+> function to measure the wall-time
+execution of a function, in microseconds. (See <A
+HREF="x5914.html#DTLPROFILE"
+>the section called <I
+>The MyProfile Module</I
+> in Chapter 9</A
+>).
+Here are some typical figures for the fetching of the index page of the
+<TT
+CLASS="COMPUTEROUTPUT"
+>tree_norm</TT
+> test suite.  (The page has been fetched several times
+to get it into the Linux cache).</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>Timing abort request 18
+Timing abort create 47
+Timing Listener setupConn 67
+Timing HTTP_1_0 get 618
+Timing GenNode request 165
+Timing HTTP_1_0 stream_entity 641
+Timing HTTP_1_0 response 764
+Timing HTTP_1_0 to_store 959
+Timing Listener talk 1586
+Timing Listener close 53
+Timing Listener release 11
+Timing Listener run 1733
+Timing Listener died 74
+Timing Listener connection 2263</PRE
+></TD
+></TR
+></TABLE
+><P
+>The measurement points are described in <A
+HREF="x3845.html#TIMINGPOINTS"
+>Table 8-5</A
+>.
+You should study the <A
+HREF="c4671.html"
+>Chapter 9</A
+> for more information on
+what is happening in the server.</P
+><P
+>What the numbers tell me is that the server can process a request in 2.2
+milliseconds and so should be able to handle 450 requests per second.
+But now if I run the server with 120 requests/second to get 3 or more
+concurrent connections  I get numbers like these:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>Timing abort request 17
+Timing abort request 7
+Timing abort create 184
+Timing Listener setupConn 201
+Timing HTTP_1_0 get 236
+Timing abort request 7
+Timing abort create 557
+Timing Listener setupConn 564
+Timing HTTP_1_0 get 150
+Timing GenNode request 460
+Timing abort create 465
+Timing Listener setupConn 474
+Timing HTTP_1_0 get 149
+Timing GenNode request 226
+Timing GenNode request 7
+Timing HTTP_1_0 stream_entity 1890
+Timing HTTP_1_0 response 2003
+Timing HTTP_1_0 to_store 2495
+Timing Listener talk 2740
+Timing Listener close 66
+Timing Listener release 39
+Timing Listener run 3062
+Timing HTTP_1_0 stream_entity 1695
+Timing HTTP_1_0 response 1759
+Timing HTTP_1_0 to_store 2477
+Timing Listener talk 2633
+Timing Listener close 35
+Timing Listener died 140
+Timing Listener connection 3678
+Timing Listener release 13
+Timing Listener run 3258
+Timing HTTP_1_0 stream_entity 1723
+Timing HTTP_1_0 response 1784
+Timing HTTP_1_0 to_store 2347
+Timing Listener talk 2501
+Timing Listener close 32
+Timing Listener release 47
+Timing Listener run 3067
+Timing Listener died 134
+Timing Listener connection 3955
+Timing Listener died 35
+Timing Listener connection 3820</PRE
+></TD
+></TR
+></TABLE
+><P
+>Now the performance has dropped to an average of 261 connections/sec.
+The time to setup a connection has jumped due to the increased time
+to setup the time-out.  This comes from the extra overhead of the CML
+operations when there are more events and threads in the server. The
+time to send a file to the connection has doubled since this involves
+lots of message sending which is now slower.</P
+><DIV
+CLASS="TABLE"
+><A
+NAME="TIMINGPOINTS"
+></A
+><P
+><B
+>Table 8-5. Timing Measurement Points.</B
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+WIDTH="170"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Name</P
+></TH
+><TH
+WIDTH="397"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Description</P
+></TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+WIDTH="170"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>abort request</P
+></TD
+><TD
+WIDTH="397"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>    This measures the time for the server in the Abort module to process
+    a request to add a new time-out.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="170"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>abort create</P
+></TD
+><TD
+WIDTH="397"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>    This measures the time for the <TT
+CLASS="COMPUTEROUTPUT"
+>Abort.create</TT
+> function to run. It
+    includes the time to send the message to the server without waiting
+    for any reply.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="170"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Listener setupConn</P
+></TD
+><TD
+WIDTH="397"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>    This measures the time to create the connection object when a new
+    connection arrives.  This mainly consists of setting a socket option
+    and starting the time-out by creating an Abort value.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="170"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>HTTP_1_0 get</P
+></TD
+><TD
+WIDTH="397"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>    This measures the time to read in the GET request from the socket
+    including parsing all of the headers.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="170"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>GenNode request</P
+></TD
+><TD
+WIDTH="397"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>    This measures the time for the resource store to forward the request
+    through to the handler. It does not include the time for the directory
+    node handler to run.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="170"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>HTTP_1_0 stream_entity</P
+></TD
+><TD
+WIDTH="397"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>    This measures the time for the <TT
+CLASS="COMPUTEROUTPUT"
+>stream_entity</TT
+> function to run
+    which transfers the contents of the page to the socket. This includes
+    the time for reading the page from disk.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="170"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>HTTP_1_0 response</P
+></TD
+><TD
+WIDTH="397"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>    This measures the total time to process a response. This includes
+    the <TT
+CLASS="COMPUTEROUTPUT"
+>stream_entity</TT
+> time above along with the time to write
+    the status and headers.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="170"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>HTTP_1_0 to_store</P
+></TD
+><TD
+WIDTH="397"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>    This measures the total time to process a request including the time to send it to
+    the store and the time to process the response (above).</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="170"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Listener talk</P
+></TD
+><TD
+WIDTH="397"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>    This measures the total time to run the HTTP protocol for a connection including all
+    request and response processing.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="170"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Listener close</P
+></TD
+><TD
+WIDTH="397"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>    This measures the time to close the socket after the response has been sent.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="170"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Listener release</P
+></TD
+><TD
+WIDTH="397"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>    This measures the time to clean-up any temporary files.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="170"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Listener run</P
+></TD
+><TD
+WIDTH="397"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>    This measures the total time for a connection including all of the above Listener
+    measurement points.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="170"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Listener died</P
+></TD
+><TD
+WIDTH="397"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>    This measures the time to tell the connection manager that a connection has
+    terminated.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="170"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Listener connection</P
+></TD
+><TD
+WIDTH="397"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>    This measures the total time for a connection from after the socket's
+    creation until its close.</P
+></TD
+></TR
+></TBODY
+></TABLE
+></DIV
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN4029"
+HREF="x3845.html#AEN4029"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>The URL is <A
+HREF="ftp://ftp.hpl.hp.com/pub/httperf"
+TARGET="_top"
+><TT
+CLASS="COMPUTEROUTPUT"
+>ftp://ftp.hpl.hp.com/pub/httperf</TT
+></A
+></P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x3709.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="c4671.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>The Architecture of the Server</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c3253.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>The Swerve Detailed Design</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

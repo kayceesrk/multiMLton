@@ -1,0 +1,442 @@
+<HTML
+><HEAD
+><TITLE
+>The Portable I/O API</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The Basis Library"
+HREF="c710.html"><LINK
+REL="PREVIOUS"
+TITLE="Arrays and Vectors"
+HREF="x979.html"><LINK
+REL="NEXT"
+TITLE="The Portable OS API"
+HREF="x1065.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x979.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 3. The Basis Library</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x1065.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="PORTABLEIO"
+>The Portable I/O API</A
+></H1
+><P
+>The Basis library provides a portable I/O API built on top of the
+operating system facilities. The source for most of the API can be found
+in the <TT
+CLASS="COMPUTEROUTPUT"
+>boot/IO</TT
+> directory of the compiler.  The OS-dependent part of the
+implementation can be found in the <TT
+CLASS="COMPUTEROUTPUT"
+>boot/Unix</TT
+> directory for Posix-based
+Unix systems.</P
+><P
+><A
+HREF="x1003.html#IOSIGS"
+>Figure 3-2</A
+> shows the major interfaces of the I/O API.
+(The notation is based on UML).  SML signatures are pure interfaces and
+are extended by refinement which adds new features and by specialisation
+which makes abstract types concrete.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="IOSIGS"
+></A
+><P
+><B
+>Figure 3-2. The Major Signatures of the Portable I/O API</B
+></P
+><DIV
+CLASS="MEDIAOBJECT"
+><P
+><center><IMG
+SRC="basis/ioSigs.png"
+></center></IMG
+></P
+></DIV
+></DIV
+><P
+>The lowest level interface is <TT
+CLASS="COMPUTEROUTPUT"
+>PRIM_IO</TT
+>.  It abstracts the basic
+operations of reading and writing over some I/O channel.  The <TT
+CLASS="COMPUTEROUTPUT"
+>OS_PRIM_IO</TT
+>
+interface extends this with some functions for associating a channel
+with a file via some sort of OS-dependent file descriptor or handle.</P
+><P
+>The next level up is the <TT
+CLASS="COMPUTEROUTPUT"
+>STREAM_IO</TT
+> interface.  It wraps buffering
+operations around the I/O channels and calls them streams. It is abstract
+over any implementation of I/O channels and any type of data element.
+(The <TT
+CLASS="COMPUTEROUTPUT"
+>PRIM_IO</TT
+> interface will be used to provide an implementation
+for <TT
+CLASS="COMPUTEROUTPUT"
+>STREAM_IO</TT
+> later).  </P
+><P
+>Input streams are handled in a lazy functional manner. This means that
+streams are read from only upon demand (as you would expect) and the
+read returns a stream updated at a new position.  So you can read from
+the same stream value multiple times and it always returns the same data
+from the same position.  Output streams are imperative. Each write will
+append new data to the output stream.</P
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>TEXT_STREAM_IO</TT
+> interface specialises <TT
+CLASS="COMPUTEROUTPUT"
+>STREAM_IO</TT
+> for
+characters and extends it with a function to read a line of text and to
+write from substrings (see the <TT
+CLASS="COMPUTEROUTPUT"
+>Substring</TT
+> structure).</P
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>IMPERATIVE_IO</TT
+> interface wraps around the <TT
+CLASS="COMPUTEROUTPUT"
+>STREAM_IO</TT
+>
+and provides an interface using imperative streams.  This means that
+the position of a stream is a hidden state variable which is updated
+after each read operation.  The <TT
+CLASS="COMPUTEROUTPUT"
+>IMPERATIVE_IO</TT
+> is then specialised
+into binary and text I/O.  The <TT
+CLASS="COMPUTEROUTPUT"
+>BIN_IO</TT
+> interface fixes the data
+type to be bytes. The <TT
+CLASS="COMPUTEROUTPUT"
+>TEXT_IO</TT
+> fixes it to be characters with
+an understanding of text conventions such as line splitting.  It also
+gets knowledge of the Unix stdin, stdout and stderr text streams.  The
+underlying <TT
+CLASS="COMPUTEROUTPUT"
+>STREAM_IO</TT
+> interface is made visible in <TT
+CLASS="COMPUTEROUTPUT"
+>TEXT_IO</TT
+>
+for when you want to use a functional I/O style.</P
+><P
+>The implementation hierarchy is shown in <A
+HREF="x1003.html#IOIMPL"
+>Figure 3-3</A
+>.
+The <TT
+CLASS="COMPUTEROUTPUT"
+>PrimIO</TT
+> structure mainly defines some types and utility
+routines which represent buffered I/O.  These are specialised by having
+the I/O types bound to either bytes (<TT
+CLASS="COMPUTEROUTPUT"
+>Word8.word</TT
+>) or characters.
+This results in the structures <TT
+CLASS="COMPUTEROUTPUT"
+>BinPrimIO</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>TextPrimIO</TT
+>
+respectively.  The <TT
+CLASS="COMPUTEROUTPUT"
+>PosixBinPrimIO</TT
+> structure adds an implementation
+of binary I/O using the I/O functions in <TT
+CLASS="COMPUTEROUTPUT"
+>Posix.IO</TT
+>.
+(See <A
+HREF="x1164.html#POSIXIO"
+>the section called <I
+><TT
+CLASS="COMPUTEROUTPUT"
+>Posix.IO</TT
+></I
+></A
+>).  Then the <TT
+CLASS="COMPUTEROUTPUT"
+>PosixTextPrimIO</TT
+>
+structure casts the binary I/O to text I/O and this results in the
+<TT
+CLASS="COMPUTEROUTPUT"
+>TextIO</TT
+> structure.  </P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="IOIMPL"
+></A
+><P
+><B
+>Figure 3-3. The Major Structures Implementing the Portable I/O API</B
+></P
+><DIV
+CLASS="MEDIAOBJECT"
+><P
+><center><IMG
+SRC="basis/ioImpl.png"
+></center></IMG
+></P
+></DIV
+></DIV
+><P
+>For binary I/O there is a matching <TT
+CLASS="COMPUTEROUTPUT"
+>BinIO</TT
+> structure that reads
+and writes streams of bytes.</P
+><P
+>There is an <TT
+CLASS="COMPUTEROUTPUT"
+>IO</TT
+> structure that defines some common exceptions
+and types.  The <TT
+CLASS="COMPUTEROUTPUT"
+>IO.Io </TT
+>exception is the main error reporting
+mechanism for the portable I/O API.</P
+><P
+>Here is a simple example that counts characters, words and lines in
+a file.  It does the job of the Unix <TT
+CLASS="COMPUTEROUTPUT"
+>wc</TT
+> command but without the
+command line options.  Here is the main function.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun main(arg0, argv) =
+let
+in
+    case argv of
+      [] =&#62; count TextIO.stdIn ""
+
+    | (file::_) =&#62;
+        let
+            val strm = TextIO.openIn file
+        in
+            (count strm file) handle x =&#62;
+                (TextIO.closeIn strm; raise x);
+            TextIO.closeIn strm
+        end;
+
+    OS.Process.success
+end
+handle
+  IO.Io {name, function, cause} =&#62;
+    (
+        toErr(concat["IO Error: ", name,
+                     ", ", exnMessage cause, "\n"]);
+        OS.Process.failure
+    )
+
+| x =&#62; (toErr(concat["Uncaught exception: ", exnMessage x,"\n"]);
+        OS.Process.failure)</PRE
+></TD
+></TR
+></TABLE
+><P
+>If there are no command line arguments then I read from stdin.
+If there are some then I take the first one and ignore the rest.
+Any I/O exception from the count function for a file is caught so that
+we can close the file.  This is not strictly necessary since the file
+will get closed anyway when the program exits but I included it as an
+example of catching and reraising an exception.  An I/O exception from
+anywhere else will be caught in the outermost handlers down the bottom.</P
+><P
+>Here is the <TT
+CLASS="COMPUTEROUTPUT"
+>count</TT
+> function. It is just a simple loop which
+terminates when the <TT
+CLASS="COMPUTEROUTPUT"
+>inputLine</TT
+> function returns an empty string.
+An empty line does not terminate the loop since it will have a new-line
+character in it.  The <TT
+CLASS="COMPUTEROUTPUT"
+>inputLine</TT
+> function also returns a new-line
+in the case of an unterminated last line in a file.  So the program will
+count an extra character in this case.  Words are counted by splitting
+the line into tokens at white space and counting how many we get.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun count strm file =
+let
+    fun read (nchars, nwords, nlines) =
+    (
+        (* This ensures the line ends with a \n
+           unless we are at eof.
+        *)
+        case TextIO.inputLine strm of
+          "" =&#62; (nchars, nwords, nlines)
+
+        | line =&#62;
+            let
+                val words = String.tokens Char.isSpace line
+            in
+                read (nchars + size line,
+                      nwords + length words,
+                      nlines + 1)
+            end
+    )
+
+    val (nchars, nwords, nlines) = read (0, 0, 0)
+in
+    print(concat[Int.toString nlines, " ",
+                 Int.toString nwords, " ",
+                 Int.toString nchars, " ",
+                 file, "\n"])
+end</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x979.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x1065.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Arrays and Vectors</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c710.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>The Portable OS API</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

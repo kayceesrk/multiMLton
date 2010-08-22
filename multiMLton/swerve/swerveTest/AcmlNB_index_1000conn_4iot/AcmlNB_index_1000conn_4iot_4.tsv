@@ -1,0 +1,7 @@
+#Input :: AcmlNB_index_1000conn_4iot_4/COLLECT.txt
+#Rate[conn/s]	Total time[ms]	Connection rate[conn/s]	Request rate[replies/s]	Reply rate[replies/s]	Resp time[ms]	Transfer time[ms]	Avg conn time[ms]	Max conn time[ms]	Conn time stddev[ms]	IO[KBps]	Errors
+800	1.257	795.8	795.8	795.544948289578	4.6	3.6	8.2	43.4	5.3	1018.1	0
+1000	1.002	997.7	997.7	998.003992015968	2.5	1.4	3.9	13.8	1.4	1276.4	0
+1200	0.836	1196.2	1196.2	1196.17224880383	3.1	2.0	5.2	13.0	1.8	1530.5	0
+1400	0.855	1169.8	1169.8	1169.59064327485	4.3	68.8	73.2	154.1	49.5	1496.8	0
+1600	0.952	1050.0	1050.0	1050.42016806723	5.5	150.1	155.8	331.9	112.0	1343.5	0

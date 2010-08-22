@@ -1,0 +1,73 @@
+#! /usr/bin/env bash
+
+# This script creates a static library (archive).
+# It is invoked as: static-library TARGET OS OUTPUT objects* libraries*
+# eg: static-library self mingw foo.a /tmp/obj1.o /tmp/obj2.o /lib/libmlton.a
+
+# A safe fallback for unsupported platforms is:
+#  rm -f foo.a
+#  ar rc foo.a /tmp/obj1.o /tmp/obj2.o
+#  ranlib foo.a
+
+# However, this script tries to mimic the behaviour of shared libraries as
+# closely as possible. It links in the required bits of dependent libraries,
+# links together the given objects, and then hides all non-public symbols.
+#
+# The end result of this process is that two MLton produced static libraries
+# can safely be used at the same time since their symbols don't overlap. It
+# is even possible to use libraries produced using different versions of the
+# runtime.
+
+set -e
+
+target="$1"
+shift
+os="$1"
+shift
+output="$1"
+shift
+
+if [ "$target" = "self" ]; then target=""; else target="$target-"; fi
+
+# Change this to false is partial linking does not work on your platform
+partialLink='true'
+
+rm -f "${output}"
+
+if "$partialLink"; then
+  # Localize all but export symbols. Platform dependent.
+  if [ "$os" = "darwin" ]; then
+    "${target}ld" -r -o "$output.o" "$@"
+    # The osx linker already makes hidden symbols local
+  elif [ "$os" = "mingw" -o "$os" = "cygwin" ]; then
+    # Link allowing _address of stdcall function fixups
+    # Preserve the export list (.drectve section)
+    "${target}ld" -r --unique=.drectve --enable-stdcall-fixup -o "$output.o" "$@"
+    # Extract the list of exports to make only them global
+    "${target}dlltool" --output-def "$output.def" "$output.o"
+    grep '@' "$output.def" \
+      | sed 's/^[[:space:]]*\([^[:space:]]*\).*$/_\1/' \
+      > "$output.globals"
+    "${target}objcopy" --keep-global-symbols "$output.globals" "$output.o"
+    rm "$output.def" "$output.globals"
+  else
+    "${target}ld" -r -o "$output.o" "$@"
+    # ELF systems are all the same... localize hidden symbols
+    # Be careful not to localize gcc PIC's common section thunks
+    "${target}objdump" -t "$output.o" \
+      | grep ' \.hidden ' \
+      | grep -v get_pc_thunk \
+      | sed 's/^.* \.hidden //' \
+      > "$output.locals"
+    "${target}objcopy" --localize-symbols "$output.locals" "$output.o"
+    rm "$output.locals"
+  fi
+
+  # Create the final archive
+  "${target}ar" rc "$output" "$output.o"
+  "${target}ranlib" "$output"
+  rm "$output.o"
+else
+  "${target}ar" rc "$output" "$@"
+  "${target}ranlib" "$output"
+fi

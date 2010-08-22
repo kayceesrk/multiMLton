@@ -1,0 +1,7 @@
+#Input :: NB_851K_rerun_400conn_1iot_4/COLLECT.txt
+#Rate[conn/s]	Total time[ms]	Connection rate[conn/s]	Request rate[replies/s]	Reply rate[replies/s]	Resp time[ms]	Transfer time[ms]	Avg conn time[ms]	Max conn time[ms]	Conn time stddev[ms]	IO[KBps]	Errors
+120.0	3.452	115.9	115.9	115.874855156431	8.9	117.3	126.3	247.5	30.0	98600.8	0
+140.0	4.490	89.1	89.1	89.086859688196	364.4	962.4	1327.0	2022.9	585.6	75792.9	0
+160.0	5.519	72.5	72.5	72.4768979887661	559.4	1021.0	1640.6	3047.7	656.6	61671.7	0
+180.0	5.252	76.2	76.2	76.1614623000762	592.5	1002.4	1782.7	3044.7	733.0	64798.6	0
+200.0	5.030	79.5	79.5	79.5228628230616	581.6	944.5	1916.7	3076.2	749.6	67663.1	0

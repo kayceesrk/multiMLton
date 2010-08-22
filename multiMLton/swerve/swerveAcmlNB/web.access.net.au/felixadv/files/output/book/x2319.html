@@ -1,0 +1,236 @@
+<HTML
+><HEAD
+><TITLE
+>Other Utilities</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The Utility Libraries"
+HREF="c1812.html"><LINK
+REL="PREVIOUS"
+TITLE="Regular Expressions"
+HREF="x2239.html"><LINK
+REL="NEXT"
+TITLE="Concurrency"
+HREF="c2344.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x2239.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 5. The Utility Libraries</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="c2344.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN2319"
+>Other Utilities</A
+></H1
+><P
+>I will only briefly mention the remaining sections of the SML/NJ utilities
+library.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN2322"
+>Parsing HTML</A
+></H2
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>HTML</TT
+> directory contains a parser for HTML. It follows version
+3.2 of HTML fairly strictly.  It won't cope with non-standard tags and
+attributes the way a browser would.  In a program it might be useful
+for reading and displaying help files or on-line documentation. Such
+files could be trusted to use a restricted safe form of HTML.  There is
+a <TT
+CLASS="COMPUTEROUTPUT"
+>test-parser.sml</TT
+> source file which demonstrates using the parser.
+For debugging, there is a pretty-printer for the parsed HTML.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN2327"
+>INet</A
+></H2
+><P
+>The INet directory contains some utility functions for handling sockets.
+These utilities aren't written for a CML environment so I didn't use
+them in the web server.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN2330"
+>Pretty-Printing</A
+></H2
+><P
+>Pretty-printing means formatting a data structure such as a tree ready to
+print to a file.  The formatting can involve indenting to show structure
+and styles such as a bold font or colour where possible.  A pretty-printer
+is important in a compiler to format an expression into an error message.
+You might find similar uses for it in your applications.</P
+><P
+>The pretty-printer is in the <TT
+CLASS="COMPUTEROUTPUT"
+>PP</TT
+> source directory.  The formatter
+is generic over different kinds of &quot;output device&quot;.  For example there
+is an output device for producing HTML.  The <TT
+CLASS="COMPUTEROUTPUT"
+>tests</TT
+> directory
+contains some example code.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN2336"
+>Reactive</A
+></H2
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>Reactive</TT
+> directory contains a fragment of a system for
+implementing a reactive programming language.  The README says it all.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN2340"
+>Unix</A
+></H2
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>Unix</TT
+> directory contains some minor functions for manipulating
+Unix environment variable lists and directory path lists.  The environment
+variable functions could be useful when building the environment for a
+child process.
+&#13;</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x2239.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="c2344.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Regular Expressions</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c1812.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Concurrency</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

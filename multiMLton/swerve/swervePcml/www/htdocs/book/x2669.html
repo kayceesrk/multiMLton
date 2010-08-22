@@ -1,0 +1,256 @@
+<HTML
+><HEAD
+><TITLE
+>Getting the Value through an Event</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Concurrency"
+HREF="c2344.html"><LINK
+REL="PREVIOUS"
+TITLE="Getting the Counter's Value"
+HREF="x2622.html"><LINK
+REL="NEXT"
+TITLE="Getting the Value with a Time-Out"
+HREF="x2690.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x2622.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 6. Concurrency</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x2690.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="COUNTEREVENT"
+>Getting the Value through an Event</A
+></H1
+><P
+>In the previous section I have the client blocking while waiting for
+a reply from an interaction with the counter object.  This does not
+mesh with the style of CML which is to separate the construction of an
+interaction from waiting for it to complete.  What I need is to have
+a Get request return an event which the client can wait on. Then the
+client has the option of, for example, timing-out the reply or waiting
+for replies from multiple sources.</P
+><P
+>Events will typically be used with the CML <TT
+CLASS="COMPUTEROUTPUT"
+>select</TT
+> or <TT
+CLASS="COMPUTEROUTPUT"
+>choose</TT
+>
+function to decide among several interactions.  When an event is chosen
+the program becomes commited to that choice.  The event is said to
+represent the <I
+CLASS="EMPHASIS"
+>commit point</I
+> in the interaction.  </P
+><P
+>For the simple request-reply interaction of the counter object there are
+two places I can put the commit point.  The simplest and most direct
+is to put it in the request phase of the interaction. This means that
+the event will be enabled when the counter is ready to accept a request.
+Once the event is chosen and synchronised then the program is committed
+to waiting for the reply.  If the client were to use a time-out with
+this kind of event it would be timing-out waiting for the counter to
+become ready to accept the request, which is probably not what's intended.</P
+><P
+>Alternatively the commit point can be put in the reply phase. The event
+becomes enabled when the reply is received. This would allow the client
+to wait for a reply or for a time-out.</P
+><P
+>For the counter object, committing in the request phase will be fine
+since the object will reply quickly.  The following example shows the
+counter object with an event that commits in the request.  I have added
+a <TT
+CLASS="COMPUTEROUTPUT"
+>getEvt</TT
+> function to the counter's interface.  This returns an
+event that will deliver the counter's value when synchronised.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>signature COUNTER =
+sig
+    type Counter
+
+    val new:    int -&#62; Counter 
+    val incr:   Counter -&#62; int -&#62; unit
+    val get:    Counter -&#62; int
+    val getEvt: Counter -&#62; int CML.event
+
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>Here is the implementation of the Get interaction.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun getEvt (Counter {req_chan, rpl_chan}) =
+let
+    fun recv() =
+    (
+        case CML.recv rpl_chan of
+          ReplyIsCount n =&#62; n
+    )
+in
+    CML.wrap(CML.sendEvt(req_chan, ReqIsGet), recv)
+end
+
+fun get counter = CML.sync(getEvt counter)</PRE
+></TD
+></TR
+></TABLE
+><P
+>In the <TT
+CLASS="COMPUTEROUTPUT"
+>getEvt</TT
+> function I use <TT
+CLASS="COMPUTEROUTPUT"
+>sendEvt</TT
+> to get an event that
+is enabled when the request has been passed to the counter.  This event
+is wrapped with the <TT
+CLASS="COMPUTEROUTPUT"
+>recv</TT
+> function which will wait for the reply
+and return it.  The original <TT
+CLASS="COMPUTEROUTPUT"
+>get</TT
+> function becomes a simple
+synchronisation on the Get event.</P
+><P
+>Because of the synchronous nature of channel communication the
+<TT
+CLASS="COMPUTEROUTPUT"
+>ReqIsGet</TT
+> message won't pass to the counter until the client has
+synchronised on the send event and the counter is waiting to receive.
+When the message is passed the client immediately goes on to wait for
+the reply and the counter immediately sends the reply so there is no
+further delay.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x2622.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x2690.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Getting the Counter's Value</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c2344.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Getting the Value with a Time-Out</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

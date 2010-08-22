@@ -1,0 +1,2730 @@
+<HTML
+><HEAD
+><TITLE
+>The Store Layer</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The Swerve Detailed Design"
+HREF="c4671.html"><LINK
+REL="PREVIOUS"
+TITLE="The Server Layer"
+HREF="x5056.html"><LINK
+REL="NEXT"
+TITLE="The IETF Layer"
+HREF="x5496.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x5056.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 9. The Swerve Detailed Design</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x5496.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN5210"
+>The Store Layer</A
+></H1
+><P
+>This layer implements the resource store with all of the handlers.
+I describe the modules in roughly logical order.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="DTLSTORE"
+>The Store Module</A
+></H2
+><P
+>This is the front door to the resource store.  It exports one function
+for the HTTP protocol module to deliver a request.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and deliver req =
+let
+    val Req.Request  {url, ...}  = req
+    val URL.HTTP_URL {path, ...} = url
+
+    val msg = Node.HTTPRequest {
+                request = req,
+                segs    = Cfg.URLPathToList path
+                }
+in
+    Node.send (get_root()) msg
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The request is packaged along with an abstraction of the list of segments
+in the path of the URL. This segment list is used for routing the message
+through the store. Then the message is sent on to the root node.</P
+><P
+>A node is implemented by a backbone thread as described in
+<A
+HREF="x3709.html#RESOURCEDESIGN"
+>the section called <I
+>Resource Store Nodes</I
+> in Chapter 8</A
+>. Here is the type definition.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>datatype Node = Node of {
+        name:       string,
+        in_mbox:    NodeMsg Mailbox.mbox
+        }</PRE
+></TD
+></TR
+></TABLE
+><P
+>The input to the node is a mailbox which has unlimited buffering. This
+prevents a slow resource node from congesting the tree above it. I am
+relying on the server's connection limit to prevent these mailboxes from
+filling with a huge number of messages if a resource becomes congested.
+Each node also has a name which is the same as the last segment of the
+path that leads to the node. Message routing is done by comparing the
+segments in the message with the names of the nodes. </P
+><P
+>The root node is stored as a singleton object. The resource tree is
+built on demand by the <TT
+CLASS="COMPUTEROUTPUT"
+>build_node_tree</TT
+> function when the first
+request arrives.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and build_node_tree() : Node.Node =
+let
+    fun add_paths (c as Cfg.NodeConfig {path, ...}) = (path, c)
+
+    val all_configs = Cfg.getNodeConfigs()
+    val with_paths  = map add_paths all_configs
+    val root        = build_level [] (Node.initOptions false) with_paths
+in
+    root
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>build_node_tree</TT
+> function is just a wrapper around the
+<TT
+CLASS="COMPUTEROUTPUT"
+>build_level</TT
+> function which recurses to build all of the levels
+of the tree.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and build_level path options config_pairs : Node.Node =
+let
+    val () = Log.testInform Globals.TestStoreBuild Log.Debug
+                (fn() =&#62; TF.L ["Installing resource ",
+                               Cfg.listToString path]);
+
+    type Pair = (string list * Cfg.NodeConfig)
+
+    val table: Pair list STRT.hash_table = STRT.mkTable(101, NotFound)
+
+    fun add (remainder, config) =
+    (
+        case remainder of
+          [] =&#62; ()
+
+        | (h::t) =&#62; 
+        (
+            case STRT.find table h of
+              NONE     =&#62; STRT.insert table (h, [(t, config)])
+            | SOME lst =&#62; STRT.insert table (h, (t, config)::lst)
+        )
+    )
+
+    (*  If there is no config for this node then we fake a node
+        that always rejects an attempt to access it.
+
+        There may not be a config if this level is an intermediate segment
+        of a config path.  E.g. node /cgi/env {...}
+    *)
+    val self_config =
+        case Cfg.findNodeConfig path of
+          NONE   =&#62; U.builtinConfig path "reject"
+        | SOME c =&#62; c
+
+
+    (*  Compute the option flags for this node.
+    *)
+    val self_options =
+        let
+            val Cfg.NodeConfig {options = formula, ...} = self_config
+        in
+            Node.performFormula options formula
+        end
+
+
+    fun build (name, pairs) =
+    let
+        val prefix = path @ [name]
+    in
+        build_level prefix self_options pairs
+    end
+
+    val () = app add config_pairs;
+    val items: (string * Pair list) list = STRT.listItemsi table
+    val children = map build items
+
+    val the_node =
+            NodeFactory.create {
+                config    = self_config,
+                children  = children,
+                options   = self_options
+                }
+in
+    getOpt(the_node, make_rejecter path)
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>path</TT
+> argument is the path down to the node being built. The
+<TT
+CLASS="COMPUTEROUTPUT"
+>options</TT
+> argument is a set of node options derived from the options
+in the server configuration file. The inheritance of options between
+nodes is performed during this building process. </P
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>config_pairs</TT
+> argument is a list of node configurations for
+all nodes that will be in the sub-tree below the node being built.
+The path from each configuration has been separated out
+into a pair with the configuration.  The path is in the form of a list of
+strings and is relative to the node being built.  So for example for a
+node with path <TT
+CLASS="COMPUTEROUTPUT"
+>/a/b/c</TT
+> at the initial call to <TT
+CLASS="COMPUTEROUTPUT"
+>build_level</TT
+>,
+the pair will be <TT
+CLASS="COMPUTEROUTPUT"
+>([&quot;a&quot;, &quot;b&quot;, &quot;c&quot;], config)</TT
+>.</P
+><P
+>The algorithm is to sort the node configurations according to the first
+part of their paths and group them according to this part. For example
+for the paths <TT
+CLASS="COMPUTEROUTPUT"
+>/a/b/c</TT
+>, <TT
+CLASS="COMPUTEROUTPUT"
+>/a/d </TT
+>and <TT
+CLASS="COMPUTEROUTPUT"
+>/e</TT
+> I want these groups:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>"a"     -&#62;      [ (["b", "c"], config1), (["d"], config2) ]
+"e"     -&#62;      [ ([], config3) ]</PRE
+></TD
+></TR
+></TABLE
+><P
+>This tells me that there will be two child nodes named &quot;a&quot; and &quot;e&quot;. The
+&quot;a&quot; node will in turn have children with sub-paths of <TT
+CLASS="COMPUTEROUTPUT"
+>b/c</TT
+> and
+<TT
+CLASS="COMPUTEROUTPUT"
+>d</TT
+>.  The &quot;e&quot; node will have no children.  I've implemented the
+grouping using a hash table. It maps from the leading part to a list
+of those pairs that share the path. The <TT
+CLASS="COMPUTEROUTPUT"
+>add</TT
+> function inserts
+each configuration pair into the table.  The <TT
+CLASS="COMPUTEROUTPUT"
+>listItemsi</TT
+> function
+extracts all of the entries from the table in the form of pairs of key
+and value where the key is the leading part and the value is the list
+of pairs.  These are the groups.  For each group I build a child node
+by recursing into <TT
+CLASS="COMPUTEROUTPUT"
+>build_level</TT
+>.</P
+><P
+>Once I have the child nodes I can build the node in question by calling
+the node factory (see <A
+HREF="x5210.html#DTLNODEFACTORY"
+>the section called <I
+>The Node Factory</I
+></A
+>).  The configuration
+for the node, in <TT
+CLASS="COMPUTEROUTPUT"
+>self_config</TT
+>, is looked up from the path
+being built.  This checks that the path corresponds to a real node.
+For example if the server's configuration only contains the paths
+<TT
+CLASS="COMPUTEROUTPUT"
+>/a</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>/a/b/c</TT
+> then there is no node that corresponds to
+the path <TT
+CLASS="COMPUTEROUTPUT"
+>/a/b</TT
+> and it won't have a configuration.  In this case
+a dummy node is built for the path <TT
+CLASS="COMPUTEROUTPUT"
+>/a/b</TT
+> that just rejects all
+requests to it.  The <TT
+CLASS="COMPUTEROUTPUT"
+>builtinConfig</TT
+> function creates a dummy
+configuration for the rejecting node.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and make_rejecter path =
+let
+    val node =
+        NodeFactory.create {
+            config    = U.builtinConfig path "reject",
+            children  = [],
+            options   = Node.initOptions false
+            }
+in
+    case node of
+      NONE =&#62; (     (* something wrong if we can't do this *)
+        Log.fatal ["Cannot create a rejecter node."];
+        Common.fail()
+        )
+
+    | SOME n =&#62; n
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>If the factory fails to create the node and returns NONE then I try
+again to make a node with the dummy rejecting configuration.  If this
+fails then the server is not able to make any kind of node and it gives
+up with a fatal error.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="DTLNODEFACTORY"
+>The Node Factory</A
+></H2
+><P
+>The NodeFactory module encapsulates the creating of different kinds of
+resource nodes.  The factory function is described by the following type
+from the Node module.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>type NodeCreator = {
+        config:     Config.NodeConfig,  (* URL path that reaches this node. *)
+        children:   Node list,          (* child nodes *)
+        options:    Options
+        } -&#62;
+        Node option</PRE
+></TD
+></TR
+></TABLE
+><P
+>It creates a node given its configuration and its children (so the tree
+of nodes is built from the bottom up).  The options are flags that are
+derived from the node configuration (see <A
+HREF="x3464.html#NODEPARAMETERS"
+>the section called <I
+>The Node Parameters</I
+> in Chapter 8</A
+>).
+The caller is responsible for performing the inheritance of
+options from parent nodes, for example see the store building in
+<A
+HREF="x5210.html#DTLSTORE"
+>the section called <I
+>The Store Module</I
+></A
+>).</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>datatype Options = Options of {
+        exec_cgi:       bool,
+        follow_sym:     bool,
+        with_subdirs:   bool
+        }</PRE
+></TD
+></TR
+></TABLE
+><P
+>It is in the NodeFactory module that the different kinds of nodes are
+assembled.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>structure DirNode = GenericNodeFn(
+                structure Handler = DirNodeHandler)
+
+structure CgiNode = GenericNodeFn(
+                structure Handler = CgiNodeHandler)
+
+structure SimpleBuiltinNode = GenericNodeFn(
+                structure Handler = SimpleBuiltinHandler)</PRE
+></TD
+></TR
+></TABLE
+><P
+>Each kind is assembled from the generic node functor, which implements
+the backbone thread, and the handler which implements the handler thread.
+This allows the backbone thread to be specialised to the needs of the
+handler (see <A
+HREF="x5210.html#DTLGENNODE"
+>the section called <I
+>The Generic Node</I
+></A
+>).</P
+><P
+>Here is the <TT
+CLASS="COMPUTEROUTPUT"
+>create</TT
+> function of the factory.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun create {config, children, options} =
+let
+    val Cfg.NodeConfig {path, kind, ...} = config
+
+    val () = Log.testInform Globals.TestStoreBuild Log.Debug
+            (fn() =&#62; TF.L ["Creating node ", Cfg.listToString path]);
+
+    (*  This name is used for locating children from path segments.
+        See GenericNodeFn.forward_child.
+    *)
+    val node_name = if null path then "/" else List.last path
+in
+    case kind of
+      Cfg.NodeIsDir {path} =&#62;
+        DirNode.create {
+            name     = node_name,
+            arg      = path,
+            config   = config,
+            options  = options,
+            factory  = create,
+            children = children
+            }
+
+    | Cfg.NodeIsBuiltin {name} =&#62;
+        SimpleBuiltinNode.create {
+            name     = node_name,
+            arg      = name,
+            config   = config,
+            options  = options,
+            factory  = create,
+            children = children
+            }
+
+    | Cfg.NodeIsScript {path} =&#62;
+        CgiNode.create {
+            name     = node_name,
+            arg      = path,
+            config   = config,
+            options  = options,
+            factory  = create,
+            children = children
+            }
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>What is note-worthy here is that the factory is itself passed down to
+the create functions for each kind of node.  This gets around a problem
+of circular dependencies between modules. The directory node handler
+needs to be able to create nodes on demand for the sub-directories that
+it encounters.  So it wants to call the factory. But the factory must
+be able to call the <TT
+CLASS="COMPUTEROUTPUT"
+>create</TT
+> function for the directory node. My
+solution to this is to pass the factory's <TT
+CLASS="COMPUTEROUTPUT"
+>create</TT
+> function down
+to the directory node handler so that it can call it back (call up).</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="DTLGENNODE"
+>The Generic Node</A
+></H2
+><P
+>The GenericNodeFn generic node functor exports a <TT
+CLASS="COMPUTEROUTPUT"
+>create</TT
+> function
+to create a store node.  Each kind of node takes its own type of extra
+arguments when creating a node.  For example the CGI node needs the path
+to the CGI script.  This means that the type of the create function
+varies with the kind of handler. This tells me to use a functor and
+specialise it with the handler.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>functor GenericNodeFn(
+    structure Handler: NODE_HANDLER
+    ): GENERIC_NODE =
+struct</PRE
+></TD
+></TR
+></TABLE
+><P
+>Here is the signature that a handler module must export.  The comments
+say it all.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>signature NODE_HANDLER =
+sig
+
+    (*  A value of this type is passed to the create function for the
+        handler.
+    *)
+    type CreateArg
+
+    (*  Create the thread for the handler. Optionally a new
+        node configuration can be returned to update the original
+        configuration.  All security-related initialisation must be
+        done in here so that the master node will be blocked until
+        it is ready.
+
+        The caller should be prepared to handle exceptions from here if
+        the creation fails.
+    *)
+    val init:   CreateArg -&#62; Node.HndMbox * (Config.SwerveConfig option)
+
+
+    (*  This tests if the handler will take the last segment
+        of the URL path. For example a directory node wants
+        the last segment as a file name.
+    *)
+    val canTakeLast:    Config.NodeConfig -&#62; bool
+
+
+    (*  This tests if the handler will take all of the
+        rest of the URL path if there are no child nodes.
+    *)
+    val canTakeRest:    Config.NodeConfig -&#62; bool
+
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>Communication between the backbone and handler threads is done through
+a mailbox, which has unlimited buffering of messages. This ensures that
+a slow handler can't cause congestion by having messages back-up into
+the tree of backbone threads.  The mailbox is created by the handler
+thread and returned to the backbone thread from the <TT
+CLASS="COMPUTEROUTPUT"
+>init</TT
+> function.
+Here are the types for a message to a handler and the reply.  The protocol
+is described in more detail below.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>datatype HndMsg = HndReq of {
+            factory:    NodeCreator,
+            config:     Config.NodeConfig,
+            options:    Options,
+            request:    HTTPMsg.Request,
+            segs:       string list,    (* remaining path segments *)
+            rchan:      HndReply CML.chan
+            }</PRE
+></TD
+></TR
+></TABLE
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and HndReply =
+        HndResponse of HndMsg * HTTPMsg.Response 
+    |   HndSprout   of HndMsg * Node </PRE
+></TD
+></TR
+></TABLE
+><P
+>Directory nodes can have extra configuration parameters
+supplied in a <TT
+CLASS="COMPUTEROUTPUT"
+>.swerve</TT
+> file in the directory (see
+<A
+HREF="x3464.html#NODEPARAMETERS"
+>the section called <I
+>The Node Parameters</I
+> in Chapter 8</A
+>). Typically these are authorisation
+parameters. If the <TT
+CLASS="COMPUTEROUTPUT"
+>init</TT
+> function for a directory node returns a
+<TT
+CLASS="COMPUTEROUTPUT"
+>SwerveConfig</TT
+> record then the generic code will incorporate it into
+its node information.</P
+><P
+>Here is the generic <TT
+CLASS="COMPUTEROUTPUT"
+>create</TT
+> function. (The &quot;H&quot; structure is an
+abbreviation for the <TT
+CLASS="COMPUTEROUTPUT"
+>Handler</TT
+> argument to the functor).</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun create {name, arg, config, factory, options, children} =
+let
+    val Cfg.NodeConfig {auth, ...} = config
+
+    val in_mbox = M.mailbox()
+    val node    = Node {name = name, in_mbox = in_mbox}
+
+    val (h_mbox, h_config_opt) = H.init arg
+
+    (*  Update the options and authorisation from the node
+        handler.
+    *)
+    val (final_auth, final_options) =
+        case h_config_opt of
+          NONE     =&#62; (auth, options)
+        | SOME cfg =&#62; merge_config cfg auth options
+
+    val impl = NodeImpl {
+                    name     = name,
+                    in_mbox  = in_mbox,
+                    hnd_mbox = h_mbox,
+                    hnd_reply= CML.channel(),
+                    config   = config,
+                    auth     = final_auth,
+                    options  = final_options,
+                    factory  = factory
+                    }
+
+    val gstate = GenState {
+                    children = children
+                    }
+in
+    CML.spawn (node_server impl gstate);
+    SOME node
+end
+handle x =&#62; (Log.logExn x; NONE)</PRE
+></TD
+></TR
+></TABLE
+><P
+>The function produces three results. There is static data about a node
+in the <TT
+CLASS="COMPUTEROUTPUT"
+>NodeImpl</TT
+> record.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>datatype NodeImpl = NodeImpl of {
+    name:           string,
+    in_mbox:        NodeMsg M.mbox,
+    hnd_mbox:       HndMbox,            (* msgs to the handler *)
+    hnd_reply:      HndReply CML.chan,  (* replies from the handler *)
+    config:         Cfg.NodeConfig,     (* the original *)
+    auth:           Cfg.NodeAuth,
+    options:        Node.Options,
+    factory:        Node.NodeCreator
+    }</PRE
+></TD
+></TR
+></TABLE
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>options</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>auth</TT
+> fields may differ from the original
+configuration if the contents of a <TT
+CLASS="COMPUTEROUTPUT"
+>.swerve</TT
+> file was merged in.</P
+><P
+>The second result is the dynamic state for a node. At the moment this
+only contains the list of children for a node. Since directory nodes
+create sub-directory nodes on demand the list of children may change.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and GenState = GenState of {
+    children:       Node list
+    }</PRE
+></TD
+></TR
+></TABLE
+><P
+>The third result is the <TT
+CLASS="COMPUTEROUTPUT"
+>Node</TT
+> value itself which is the input
+interface to the node.  The static and dynamic node data are retained
+by the backbone thread (running the <TT
+CLASS="COMPUTEROUTPUT"
+>node_server</TT
+> function).
+The <TT
+CLASS="COMPUTEROUTPUT"
+>Node</TT
+> value is returned to the caller.</P
+><P
+>The server for the backbone thread is a simple dispatcher. It received
+messages from the parent node through its input mailbox and also receives
+replies from the handler thread.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and node_server impl gstate () =
+let
+    val NodeImpl {in_mbox, hnd_reply, ...} = impl
+
+    fun loop (state: GenState) =
+    let
+        val new_state =
+            CML.select[
+                CML.wrap(M.recvEvt in_mbox,
+                    MyProfile.timeIt "GenNode request"
+                        (handle_request impl state)),
+
+                CML.wrap(CML.recvEvt hnd_reply, handler_reply impl state)
+                ]
+    in
+        loop new_state
+    end
+in
+    loop gstate
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>Here is the body of the function for handling a request from the parent node.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and handle_request impl gstate in_msg : GenState =
+let
+    val HTTPRequest {request, segs} = in_msg
+
+    val NodeImpl {name, config, factory, options,
+                    hnd_mbox, hnd_reply, auth, ...} = impl
+
+... omitted material ...
+in
+    NodeAuth.checkAuth auth request;    (* raises Respond on error *)
+
+    case segs of
+      []          =&#62; handle_it()
+    | (key::rest) =&#62; forward_child key rest;
+
+    gstate
+end
+handle
+  Respond resp =&#62;
+    let
+        val HTTPRequest {request, ...} = in_msg
+    in
+        U.return request resp;
+        gstate
+    end
+
+| x =&#62;
+    let
+        val HTTPRequest {request, ...} = in_msg
+    in
+        Log.logExn x;
+        U.return request (U.mkServerFail());
+        gstate
+    end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The authorisation is always checked first.  If this fails then a
+<TT
+CLASS="COMPUTEROUTPUT"
+>Node.Respond</TT
+> exception will be raised. This contains a HTTP response
+describing the failure.  The exception handler passes the response
+back to the HTTP protocol handler using the <TT
+CLASS="COMPUTEROUTPUT"
+>ResponseUtils.return</TT
+>
+utility function.</P
+><P
+>If the request is authorised then it is time to see if it is destined
+for this node or a child node. If the list of remaining segments is
+empty then the request has reached its target node.
+The <TT
+CLASS="COMPUTEROUTPUT"
+>handle_it</TT
+> function passes the
+request to the handler thread.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun handle_it() =
+let
+    val () = Log.testInform G.TestStoreProto Log.Debug
+                (fn() =&#62; TF.L ["Node ", name, " handles it"])
+
+    val msg = HndReq {
+                factory     = factory,
+                config      = config,
+                options     = options,
+                request     = request,
+                segs        = segs,
+                rchan       = hnd_reply
+                }
+in
+    M.send(hnd_mbox, msg)
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>If the segment list is not empty then it may be destined for a child
+node. This is dealt with in the <TT
+CLASS="COMPUTEROUTPUT"
+>forward_child</TT
+> function.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and forward_child key rest =
+let
+    val () = Log.testInform G.TestStoreProto Log.Debug
+        (fn() =&#62; TF.L [
+            "Forwarding to child for key ", key,
+            ", rest=", Cfg.listToString rest])
+
+    val GenState {children, ...}  = gstate
+
+    fun match (Node {name, ...}) = (name = key)
+in
+    case List.find match children of
+      NONE       =&#62; no_child key rest
+    | SOME child =&#62; pass_to child request rest 
+end
+
+
+
+and no_child key rest =
+let
+    val () = Log.testInform G.TestStoreProto Log.Debug
+        (fn() =&#62; TF.L [
+            "No child for key ", key,
+            ", rest=", Cfg.listToString rest])
+in
+    if H.canTakeRest config orelse
+        (null rest andalso H.canTakeLast config)
+    then
+        handle_it()
+    else
+        U.return request (U.mkNotFound())
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>If the head of the list matches the name of a child node then the
+request will be routed down to the child node along with the tail of
+the segment list.</P
+><P
+>If the request doesn't match a child node then it could be that the
+handler wants to trap it anyway. For example if the URL path is &quot;/a/b&quot;
+and &quot;/a&quot; is a directory then &quot;b&quot; may be a file in the directory.  I don't
+create distinct resource nodes for each file.  Instead the directory
+node handles all of the files in the directory.  Directory handlers
+trap file names by returning true from the <TT
+CLASS="COMPUTEROUTPUT"
+>canTakeLast</TT
+> function.
+Other kinds of nodes may want to perform their own intepretation of the
+trailing part of a path, in which case they will return true from the
+<TT
+CLASS="COMPUTEROUTPUT"
+>canTakeRest</TT
+> function.  The directory node also does this so that
+it can follow sub-directories.  If neither a child node nor the handler
+wants the message then a &quot;404 Not Found&quot; response is generated.</P
+><P
+>Note carefully that an existing child node takes precedence when
+routing. A URL path will only be passed to a handler if there is
+no child node that could take it.  The directory node handler in
+<A
+HREF="x5210.html#DTLDIRNODE"
+>the section called <I
+>The Directory Node Handler</I
+></A
+> expects this.  It may decide to create a new
+child node to implement a sub-directory. Subsequent requests for this
+sub-directory must be routed through to the child node.</P
+><P
+>Replies from the handler thread are dealt with in the <TT
+CLASS="COMPUTEROUTPUT"
+>handler_reply</TT
+>
+function.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and handler_reply impl gstate reply : GenState =
+let
+    val NodeImpl {name, config, factory, options, ...} = impl
+in
+    case reply of
+      HndResponse (h_req, resp) =&#62;
+        let
+            val HndReq {request, ...} = h_req
+        in
+            U.return request resp;
+            gstate
+        end
+
+    | HndSprout (h_req, child) =&#62;
+        let
+            val HndReq {request, segs, ...} = h_req
+
+            val GenState {children} = gstate
+
+            val new_gstate = GenState {
+                    children = child::children
+                    }
+
+            val rest = if null segs then [] else tl segs
+        in
+            pass_to child request rest;
+            new_gstate
+        end
+
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>A reply from a handler could be either a response to a HTTP request or
+a request to sprout a new child node. HTTP responses are shipped off
+immediately to the HTTP protocol handler.</P
+><P
+>The directory node handler creates new child nodes for sub-directories
+on demand.  These have to be added to the resource node tree. The
+<TT
+CLASS="COMPUTEROUTPUT"
+>HndSprout</TT
+> reply from the handler tells the backbone thread to
+add the child to the list of children for the node.  The original HTTP
+request is then passed along to the new child node.  Passing a HTTP
+request to a child node is just a matter of re-packaging.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and pass_to node req rest : unit =
+let
+    val new_msg = HTTPRequest {
+                    request = req,
+                    segs    = rest
+                    }
+in
+    Node.send node new_msg
+end</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="DTLDIRNODE"
+>The Directory Node Handler</A
+></H2
+><P
+>This implements resources that map to regular files in directories.
+If the <TT
+CLASS="COMPUTEROUTPUT"
+>WithSubDirs</TT
+> option is enabled it effectively mounts a
+directory tree onto the URL resource tree.</P
+><P
+>The story starts with some types.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>datatype State = State of {
+        dir:    string      (* the directory path *)
+        }
+    
+type CreateArg  = string    (* the directory path *)
+
+
+(*  We can take the rest in order to try to create a chain of 
+    child directories.
+*)
+fun canTakeRest _ = true
+fun canTakeLast _ = true</PRE
+></TD
+></TR
+></TABLE
+><P
+>I've included the directory's disk path into a state type although
+it is really static.  It avoids having a separate type and value
+being passed through the rest of the code. The <TT
+CLASS="COMPUTEROUTPUT"
+>CreateArg</TT
+>
+type is required by the module interface. It is the type for the
+disk path argument to the <TT
+CLASS="COMPUTEROUTPUT"
+>create</TT
+> function used by the node
+factory (in <A
+HREF="x5210.html#DTLNODEFACTORY"
+>the section called <I
+>The Node Factory</I
+></A
+>).  The <TT
+CLASS="COMPUTEROUTPUT"
+>canTakeRest</TT
+> and
+<TT
+CLASS="COMPUTEROUTPUT"
+>canTakeLast</TT
+> functions always return true to catch all URL paths
+that reach the node as explained in <A
+HREF="x5210.html#DTLGENNODE"
+>the section called <I
+>The Generic Node</I
+></A
+>.</P
+><P
+>The handler is initialised with the <TT
+CLASS="COMPUTEROUTPUT"
+>init</TT
+> function.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun init dir_path =
+let
+    val file = Files.appendFile dir_path ".swerve"
+
+    val opt_config = 
+        if Files.exists file
+        then
+            Cfg.processNodeFile file
+        else
+            NONE
+
+    val state = State {dir = dir_path}
+    val mbox  = M.mailbox()
+in
+    CML.spawn (server mbox state);
+    (mbox, opt_config)
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>This reads the <TT
+CLASS="COMPUTEROUTPUT"
+>.swerve</TT
+> file in the directory, if it exists. Then
+it starts the handler thread. The <TT
+CLASS="COMPUTEROUTPUT"
+>.swerve</TT
+> configuration and a
+mailbox for the thread are returned to the backbone thread.  The thread
+runs a trivial server function that dispatches incoming messages to the
+<TT
+CLASS="COMPUTEROUTPUT"
+>handle_request</TT
+> function.  Here is the body of the function.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and handle_request 
+        (msg as HndReq {factory, config, options, request, segs, rchan})
+        state =
+let
+    val Cfg.NodeConfig {path = node_path, ...} = config
+    val Req.Request  {url, abort, ...} = request
+    val URL.HTTP_URL {path = url_path, ...} = url
+
+... omitted material ...
+    (*  If we are not at the end of a path then we can only
+        try to sprout a child directory.
+    *)
+    and do_segs []           = index_dir()
+    |   do_segs [file]       = do_file false file
+    |   do_segs (file::rest) = do_file true file
+
+in
+    do_segs segs;
+    state
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>segs</TT
+> argument in the message is the list of trailing segments
+for the URL path. For example if the URL path is &quot;/a/b/c&quot; and the node
+implements the path &quot;/a&quot; then the segment list will be [&quot;b&quot;, &quot;c&quot;].
+So if the segment list is empty I have the case of a URL path that leads
+to the directory with no file name. An index of the directory will be
+generated by the <TT
+CLASS="COMPUTEROUTPUT"
+>index_dir</TT
+> function.  The index could be either
+the <TT
+CLASS="COMPUTEROUTPUT"
+>index.html</TT
+> file if it exists or a listing of the files in
+the directory.  Indexing is described below.</P
+><P
+>If the segment list contains one element then it is probably the name of
+a file in the directory although it could be the name of a sub-directory.
+If there is more than one element then the first must definitely be the
+name of a directory.  The <TT
+CLASS="COMPUTEROUTPUT"
+>do_file</TT
+> function handles these cases. </P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun do_file dir_only file =
+let
+    val State {dir, ...} = state
+    val Options {follow_sym, with_subdirs, ...} = options
+
+    val file_path = Files.appendFile dir file
+
+    val () = Log.testInform Globals.TestStoreProto Log.Debug
+        (fn() =&#62; TF.L ["Looking at file ", file_path]);
+in
+    if not follow_sym andalso Files.isSym file_path
+    then
+        bad()
+    else
+    if not dir_only andalso Files.isReg file_path
+    then
+    (
+        if Files.readableReg file_path
+        then
+            reply_response(send_file file_path request)
+        else
+            reply_response(U.mkForbidden())
+    )
+    else
+    if Files.isDir file_path
+    then
+    (
+        if with_subdirs andalso Files.accessibleDir file_path
+        then
+            let
+                val new_node_path = node_path @ [file]
+            in
+                case sprout_child factory new_node_path file_path of
+                  NONE       =&#62; reply_response(U.mkServerFail())
+                | SOME child =&#62; reply_sprout child
+            end
+        else
+            reply_response(U.mkForbidden())
+    )
+    else
+        bad()
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>Whether the file argument is a regular file or a directory, its path on
+disk is built from the disk path of the node's directory.  Then we check
+what kind of file it really is.  Symbolic links are followed by default
+when opening files so, if they are not to be, I must filter them out
+first. If the path is a regular file and this is reasonable, because
+there are no more URL segments after the file name and the server has
+permission to read the file, then I can send it to the client.</P
+><P
+>If the file is a directory and the <TT
+CLASS="COMPUTEROUTPUT"
+>WithSubDirs</TT
+> configuration option
+has been specified then the sub-directory must be automatically made
+into a new node in the resource store.  The new node is created by the
+<TT
+CLASS="COMPUTEROUTPUT"
+>sprout_child</TT
+> function and then sent back to the backbone thread to
+be inserted into the resource tree.  Then the backbone thread will route
+the original request to the new node and the story starts all over again.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and sprout_child factory node_path dir_path : Node.Node option =
+let
+    val options = Options {
+        exec_cgi        = false,
+        follow_sym      = false,
+        with_subdirs    = true
+        }
+
+    val child_config = Cfg.NodeConfig {
+            path    = node_path,
+            kind    = Cfg.NodeIsDir {path = dir_path},
+            options = [],           (* passed directly to the factory *)
+            auth    = Cfg.NodeNoAuth
+            }
+in
+    factory {
+        config    = child_config,
+        children  = [],
+        options   = options
+        }
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>sprout_child</TT
+> function is a wrapper around a call to the
+node factory.  The sub-directory doesn't have an entry in the server
+configuration otherwise the node would already exist in the tree and
+there would be no sprouting. So I have to synthesise a configuration
+that describes a directory node.  At the moment I am not doing any
+inheritance of options in the synthetic configuration except that
+the <TT
+CLASS="COMPUTEROUTPUT"
+>WithSubDirs</TT
+> option must be true all the way down to get
+the entire tree under the sub-directory.  Although I've specified
+<TT
+CLASS="COMPUTEROUTPUT"
+>NodeNoAuth</TT
+> for the authorisation, if the sub-directory has a
+<TT
+CLASS="COMPUTEROUTPUT"
+>.swerve</TT
+> file that specifies some authorisation control it will be
+merged in when the new node is created (see the <TT
+CLASS="COMPUTEROUTPUT"
+>create</TT
+> function
+in <A
+HREF="x5210.html#DTLGENNODE"
+>the section called <I
+>The Generic Node</I
+></A
+>).</P
+><P
+>Here is the <TT
+CLASS="COMPUTEROUTPUT"
+>send_file</TT
+> function that returns a regular file to the client.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and send_file file_path req : Req.Response =
+let
+    val () = Log.testInform Globals.TestStoreProto Log.Debug
+        (fn() =&#62; TF.L ["dir_node sends file ", file_path]);
+
+    fun file_response() =
+    let
+        val entity = Entity.Entity {
+                    info = Entity.emptyInfo,
+                    body = Entity.fileProducer file_path
+                    }
+    in
+        Req.Response {
+            status  = Status.OK,
+            headers = [],
+            entity  = entity
+            }
+    end
+
+in
+    if Files.readableReg file_path
+    then
+        file_response()
+    else
+        U.mkForbidden()
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>All it has to do is create an entity that represents the file on disk
+and wrap it into a HTTP response record.  The <TT
+CLASS="COMPUTEROUTPUT"
+>Entity.fileProducer</TT
+>
+function makes a producer that can deliver from disk.  The producer will
+fill in the file length and last modification date so I don't have to
+do it here.</P
+><P
+>The indexing of directories is controlled by the <TT
+CLASS="COMPUTEROUTPUT"
+>index_dir</TT
+>
+function mentioned above.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and index_dir() =
+let
+    val State {dir, ...} = state
+    val Options {follow_sym, ...} = options
+    val Cfg.ServerConfig {dir_index, ...} = Cfg.getServerConfig()
+
+    val file_path = Files.appendFile dir dir_index
+
+    val () = Log.testInform Globals.TestStoreProto Log.Debug
+        (fn() =&#62; TF.L ["Indexing directory ", file_path]);
+in
+    if not follow_sym andalso Files.isSym file_path
+    then
+        bad()
+    else
+    if Files.isReg file_path
+    then
+        reply_response(send_file file_path request)
+    else
+        reply_response(fancy_index abort url dir)
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The function looks to see if there is an <TT
+CLASS="COMPUTEROUTPUT"
+>index.html</TT
+> file in the
+directory.  (The name <TT
+CLASS="COMPUTEROUTPUT"
+>index.html</TT
+> actually comes from the
+server configuration).  If the file exists and is readable then it is
+returned.  If the file does not exist then the contents of the directory
+is listed and formatted as HTML and returned (again if accessible).
+The result is similar to Netscape's directory indexing. This is done by
+the <TT
+CLASS="COMPUTEROUTPUT"
+>fancy_index</TT
+> function.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and fancy_index abort url dir : Req.Response =
+let
+    val URL.HTTP_URL {host, port, userinfo, path = url_path, ...} = url
+    val URL.URLPath  {segs, absolute} = url_path
+
+
+    fun build entries =
+    let
+        val text = TF.C [header(), translate entries, trailer()]
+    in
+        U.mkHTML Status.OK text
+    end
+
+... omitted material ...
+in
+    Log.testInform Globals.TestStoreProto Log.Debug (fn() =&#62; TF.L [
+                "dir_node accessibleDir of ", dir, 
+                " is ", Bool.toString(Files.accessibleDir dir)
+                ]);
+
+    if Files.accessibleDir dir
+    then
+    (
+        (build(FileIO.listDir abort dir))
+            handle _ =&#62; U.mkServerFail()
+    )
+    else
+        U.mkForbidden()
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The listing of the directory requires reading from a file descriptor so it
+must go through the Open File Manager and may be aborted by a time-out.
+The building of the HTML is a messy bit of text formatting using the
+<TT
+CLASS="COMPUTEROUTPUT"
+>TextFrag</TT
+> module.  The code assumes that there is a &quot;/icons&quot; URL
+path in the server to fetch icons from.  I'll omit the gory details.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="DTLCGINODE"
+>The CGI Node Handler</A
+></H2
+><P
+>This module handles requests that run CGI scripts. It conforms fairly
+closely to the CGI version 1.1 specification. The differences are</P
+><P
+></P
+><UL
+><LI
+><P
+>	The REMOTE_HOST environment variable is not set. This would
+	require a DNS reverse lookup even if the CGI script is not
+	interested.  Instead only REMOTE_ADDR is supplied. This actually
+	conforms to the specification but may be unusual.</P
+></LI
+><LI
+><P
+>	The authorisation type will not be accurate unless it is set
+	directly on the CGI node by the node's configuration.
+	Authorisation inherited from higher nodes is not reported. This
+	is a design problem.</P
+></LI
+><LI
+><P
+>	The command line is never set. It would only be used for ISINDEX
+	queries which the server does not support.</P
+></LI
+></UL
+><P
+>The CGI interface has been tested with some simple Perl scripts using
+the CGI.pm module.  </P
+><P
+>The initialisation of the node is similar to that of the directory node
+in <A
+HREF="x5210.html#DTLDIRNODE"
+>the section called <I
+>The Directory Node Handler</I
+></A
+> so I won't repeat it here.  Instead the
+story starts with the <TT
+CLASS="COMPUTEROUTPUT"
+>handle_request</TT
+> function.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and handle_request 
+        (msg as HndReq {config, rchan, request, segs, ...})
+        script =
+let
+    val env  = build_environ config request (length segs)
+    val resp = run_script script env request
+in
+    CML.send(rchan, HndResponse(msg, resp))
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>This is simple enough: build the set of environment variables; run the
+script and send back the response. The <TT
+CLASS="COMPUTEROUTPUT"
+>build_environ</TT
+> function is large
+and I'll describe it in pieces.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and build_environ config request num_left =
+let
+    val Cfg.NodeConfig {auth, ...} = config
+
+    val Req.Request {url, headers, method, protocol, client, ...}
+                                                      = request
+    val URL.HTTP_URL {path, query, fragment, ...} = url
+    val URL.URLPath {segs, ...} = path
+
+    val script_path = URL.URLPath {
+                        segs = List.take(segs, length segs - num_left),
+                        absolute = false
+                        }
+
+    val trail_path = URL.URLPath {
+                        segs = List.drop(segs, length segs - num_left),
+                        absolute = false
+                        }
+
+    (*  Copy across approved variables.
+    *)
+    fun copy n =
+    (
+        case OS.Process.getEnv n of
+          NONE   =&#62; NONE
+        | SOME v =&#62; SOME(concat[n, "=", v])
+    )
+
+    val copied = List.mapPartial copy
+                    ["PATH", "HOSTNAME", "LANG", "LOGNAME", 
+                     "HOME", "LD_LIBRARY_PATH", "SHELL"]</PRE
+></TD
+></TR
+></TABLE
+><P
+>This first section unpacks the arguments and copies variables out
+of the server's environment.   Only those variables that are likely
+to be useful to a script and that are reasonably safe are copied.
+The <TT
+CLASS="COMPUTEROUTPUT"
+>mapPartial</TT
+> function suppresses variables that aren't set in
+the server's environment.  The result is a list of strings of the form
+&quot;name=value&quot;.</P
+><P
+>This next section adds in the unconditional CGI variables. (The <TT
+CLASS="COMPUTEROUTPUT"
+>^</TT
+>
+is the infix string concatenation operator).</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>val Cfg.ServerConfig {server_name, listen_port, ...} =
+        Cfg.getServerConfig()
+
+val basics = [
+        "SERVER_NAME="     ^ server_name,
+        "SERVER_PORT="     ^ (Int.toString listen_port),
+        "SERVER_SOFTWARE=" ^ Globals.cgi_version,
+        "REQUEST_METHOD="  ^ (Req.methodToString method),
+        "SERVER_PROTOCOL=" ^ protocol,
+        "GATEWAY_INTERFACE=CGI/1.1",
+        "PATH_INFO="       ^ (URL.pathToString trail_path),
+        "SCRIPT_NAME="     ^ (URL.pathToString script_path),
+
+        (*  We don't set REMOTE_HOST, the script can find
+            it if it wants.
+        *)
+        "REMOTE_ADDR="     ^ (NetHostDB.toString client)
+        ]</PRE
+></TD
+></TR
+></TABLE
+><P
+>The next section builds the optional variables.  Each value is a list
+containing a single &quot;name=value&quot; string. The list is empty if the
+variable is not being set.  The variables can then be easily merged by
+concatenating the lists.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>val auth_env : string list =
+        case auth of
+          Cfg.NodeNoAuth  =&#62; []
+        | Cfg.NodeBasic _ =&#62; ["AUTH_TYPE=Basic"]
+
+val user_env : string list =
+        case Hdr.getAuth headers of
+          NONE =&#62; []
+        | SOME (Hdr.AuthBasic (opt_id, pwd)) =&#62;
+        (
+            case opt_id of
+              NONE =&#62; []
+            | SOME id =&#62; ["REMOTE_USER=" ^ id]
+        )
+
+val ctype_env : string list =
+        case Hdr.getContentType headers of
+          NONE       =&#62; []
+        | SOME mtype =&#62; ["CONTENT_TYPE=" ^
+                (TF.toString TF.UseLf (E.formatType mtype))]
+
+val clen_env : string list =
+        case Hdr.getContentLength headers of
+          NONE     =&#62; []
+        | SOME len =&#62; ["CONTENT_LENGTH=" ^ (Int.toString len)]
+
+val query_env : string list =
+        case query of
+          NONE   =&#62; []
+        | SOME q =&#62; ["QUERY_STRING=" ^ q]</PRE
+></TD
+></TR
+></TABLE
+><P
+>Next all request headers that haven't been covered must be translated
+to CGI variables.  The translation converts a header name such as
+&quot;User-Agent&quot; to the variable name HTTP_USER_AGENT.  The header has to
+be reconstituted as a string to get the name.  Finally the headers are
+joined together to build the complete list.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun hdr_copy (Hdr.HdrAuthorization _) = NONE
+|   hdr_copy (Hdr.HdrConLen _)        = NONE
+|   hdr_copy (Hdr.HdrConType _)       = NONE
+|   hdr_copy (Hdr.HdrChallenge _)     = NONE
+|   hdr_copy (Hdr.HdrBad _)           = NONE
+|   hdr_copy header = 
+let
+    (*  Find the initial colon, split off any white space after it.
+        Header names become uppercase with hyphens mapped to
+        underscores.
+    *)
+    val text = SS.all(TF.toString TF.UseLf (Hdr.formatHeader header))
+    val (left, right) = SS.splitl (isntVal #":") text
+
+    fun cvt #"-" = "_"
+    |   cvt c    = str(Char.toUpper c)
+
+    val ename  = SS.translate cvt left
+    val evalue = SS.dropl Char.isSpace (SS.triml 1 right)
+in
+    SOME(concat["HTTP_", ename, "=", SS.string evalue])
+end
+
+val other_headers = List.mapPartial hdr_copy headers
+
+val final_headers = List.concat[copied, basics, auth_env,
+                      user_env, ctype_env, clen_env, query_env,
+                      other_headers]</PRE
+></TD
+></TR
+></TABLE
+><P
+>Here is the run_script function. </P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and run_script script env request : Req.Response =
+let
+    (*  The Aborted exception can be raised in here. *)
+    val Req.Request {abort, ...} = request
+
+
+    fun talk holder =
+    let
+        val (proc, _) = ExecReader.get holder
+        val ()        = send_entity abort proc request
+        val headers   = get_headers abort proc script
+
+        (*  We don't pass these to the client.
+            The last four are handled by the Entity Info.
+        *)
+        fun select (Hdr.HdrStatus _)        = false
+        |   select (Hdr.HdrConType _)       = false
+        |   select (Hdr.HdrConLen _)        = false
+        |   select (Hdr.HdrConEnc _)        = false
+        |   select (Hdr.HdrLastModified _)  = false
+        |   select _ = true
+
+
+        val status =
+            case Hdr.getStatus headers of
+              NONE   =&#62; Status.OK
+            | SOME s =&#62; s
+
+
+        (*  This includes error responses from the script.
+        *)
+        fun normal_response() =
+        let
+            val () = Log.testInform Globals.TestCGIProto Log.Debug
+                            (fn()=&#62;TF.S "CGI normal_response")
+
+            val entity = Entity.Entity {
+                            info = Hdr.toEntityInfo headers,
+                            body = Entity.procProducer holder
+                            }
+        in
+            Req.Response {
+                status  = status,
+                headers = List.filter select headers,
+                entity  = entity
+                }
+        end
+    in
+        normal_response()
+    end
+    handle _ =&#62;
+        (
+            kill (#1(ExecReader.get holder));
+            U.mkServerFail()        (* REVISIT - should be ReqTimeout *)
+        )
+
+in
+    (*  The holder will be closed in procProducer after the response
+        body has been delivered.  If there is an error then the
+        holder will eventually be finalised.
+    *)
+    case ExecReader.openIt abort (script, [], env) of
+      NONE        =&#62; U.mkServerFail()  (* error already reported *)
+    | SOME holder =&#62; talk holder
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The forking and execing of the script is handled by the <TT
+CLASS="COMPUTEROUTPUT"
+>ExecReader</TT
+>
+module which is described in <A
+HREF="x5914.html#OPENFILEMGR"
+>the section called <I
+>The Open File Manager</I
+></A
+>.  This module
+waits for enough file descriptors before proceeding. It provides for
+finalisation to kill and reap the child if there is a time-out.</P
+><P
+>If the script is successfully started then the <TT
+CLASS="COMPUTEROUTPUT"
+>talk</TT
+> function
+sends any entity body to the <TT
+CLASS="COMPUTEROUTPUT"
+>stdin</TT
+> of the script.  Then it
+reads the headers that come back from the script on <TT
+CLASS="COMPUTEROUTPUT"
+>stdout</TT
+> and
+constructs a normal response. (The <TT
+CLASS="COMPUTEROUTPUT"
+>normal_response</TT
+> function is
+a left-over of more complex code that I simplified).   The status and
+entity-specific headers are separated out. An <TT
+CLASS="COMPUTEROUTPUT"
+>Entity</TT
+> value is
+constructed to represent the body that may or may not be still waiting
+on <TT
+CLASS="COMPUTEROUTPUT"
+>stdout</TT
+> to be read.  The body won't be read until the response
+is being written to the socket of the connection, as described in
+<A
+HREF="x3709.html#CONNPROTOCOL"
+>the section called <I
+>The Connection Protocol</I
+> in Chapter 8</A
+>.  The <TT
+CLASS="COMPUTEROUTPUT"
+>get_headers</TT
+> function can raise
+the local <TT
+CLASS="COMPUTEROUTPUT"
+>Aborted</TT
+> exception if it detects an abort condition.
+I make an attempt to ensure that the child process is killed quickly
+rather than wait for finalisation.</P
+><P
+>Here is the <TT
+CLASS="COMPUTEROUTPUT"
+>send_entity</TT
+> function.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and send_entity abort proc request =
+let
+    val Req.Request {entity, ...} = request
+    val (_, ostream) = Unix.streamsOf proc
+
+    val consumer = CML.channel()
+
+    val () = Log.testInform Globals.TestCGIProto Log.Debug
+                (fn()=&#62;TF.S "CGI send_entity")
+
+    fun send_it() =
+    (
+        case CML.recv consumer of
+          E.XferInfo _ =&#62; send_it()
+
+        | E.XferBytes vec =&#62; 
+            (
+                TextIO.output(ostream, Byte.bytesToString vec);
+                send_it()
+            )
+
+        | E.XferDone  =&#62; done()
+        | E.XferAbort =&#62; done()
+    )
+
+    and done() =
+    (
+        TextIO.closeOut ostream
+    )
+in
+    E.startProducer abort entity consumer;
+    CML.spawn send_it;
+    ()
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The sending has to be done in a separate thread because there is no
+guarantee that the CGI script will even read its <TT
+CLASS="COMPUTEROUTPUT"
+>stdin</TT
+> let alone
+consume it all strictly before attempting to write to <TT
+CLASS="COMPUTEROUTPUT"
+>stdout</TT
+>.
+If the script doesn't read its stdin then the sending thread will block
+indefinitely and will eventually be caught by the garbage collector
+after the child process has been reaped and all files closed.  To send
+the entity the thread acts as a consumer of the transfer procotol.</P
+><P
+>Here is the <TT
+CLASS="COMPUTEROUTPUT"
+>get_headers</TT
+> function.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and get_headers abort proc script =
+let
+    val (istream, _) = Unix.streamsOf proc
+    val () = Log.testInform Globals.TestCGIProto Log.Debug
+                (fn()=&#62;TF.S "CGI get_headers")
+
+    (*  This must match Connect.readLine.
+        We strip the terminating \r\n.
+    *)
+    fun readLine() = 
+    (
+        if Abort.aborted abort
+        then
+            NONE
+        else
+        (
+            case TextIO.inputLine istream of
+              ""   =&#62; NONE
+
+            | line =&#62;
+                let
+                    val l = size line
+                in
+                    if l &#62; 1 andalso String.sub(line, l-2) = #"\r"
+                    then
+                        SOME(String.substring(line, 0, l-2))
+                    else
+                    if l &#62; 0 andalso String.sub(line, l-1) = #"\n"
+                    then
+                        SOME(String.substring(line, 0, l-1))
+                    else
+                        SOME line
+                end
+        )
+    )
+
+
+    (*  Log any bad headers and discard them. *)
+    fun check [] out = out
+    |   check ((Hdr.HdrBad h)::rest) out =
+    (
+        Log.error ["CGI ", script, " returned bad header: ", h];
+        check rest out
+    )
+    |   check (h::rest) out = check rest (h::out)
+
+
+    (*  Try to read some headers. This will return early on
+        an abort.
+    *)
+    val headers = Hdr.readAllHeaders readLine
+in
+    if Abort.aborted abort
+    then
+        raise Aborted
+    else
+        check headers []
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>This is mainly a wrapper around the common <TT
+CLASS="COMPUTEROUTPUT"
+>Hdr.readAllHeaders</TT
+>
+function.  The messy bit is emulating the handling of CR-LF that the
+<TT
+CLASS="COMPUTEROUTPUT"
+>Connect</TT
+> module does.  If a time-out happens while the script is
+running then it is most likely to be detected while waiting for the
+headers.  I check for an abort condition before each header line and
+after the headers have been read. The <TT
+CLASS="COMPUTEROUTPUT"
+>Aborted</TT
+> exception breaks
+out of the <TT
+CLASS="COMPUTEROUTPUT"
+>run_script</TT
+> function.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="DTLBLTNODE"
+>The Builtin Node Handler</A
+></H2
+><P
+>This module implements some simple built-in kinds of nodes. They are used
+for testing.  If you were to use the server as a front-end for an SML
+application then the interface between the server and the application
+would be modeled on this module.</P
+><P
+>The code in this module is fairly generic. It consists of a framework for running a
+function that creates the response to a request. This is shown here.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and handle_request 
+        (msg as HndReq {config, rchan, request, ...})
+        =
+let
+    val Cfg.NodeConfig {kind, ...} = config
+
+    fun reply response =
+    (
+        CML.send(rchan, HndResponse(msg, response))
+    )
+in
+    case kind of
+      Cfg.NodeIsBuiltin {name} =&#62;
+    (
+        case get_maker name of
+          NONE   =&#62; reply (U.mkServerFail())
+        | SOME f =&#62; reply (f request)
+    )
+
+    | _ =&#62; raise InternalError "SimpleBuiltin,handleRequest"
+end
+
+
+
+and get_maker name =
+(
+    case name of
+      "hw"      =&#62; SOME (fn _ =&#62; U.mkHelloWorld())
+    | "reject"  =&#62; SOME (fn _ =&#62; U.mkNotFound())
+    | "sleep"   =&#62; SOME sleep
+    | _         =&#62; NONE
+)</PRE
+></TD
+></TR
+></TABLE
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>get_maker</TT
+> function selects a response-building function
+depending on the kind of the built-in node as specified in the node's
+configuration.  The hello world and reject nodes return fixed responses.
+The sleep node delays for a number of seconds specified by the value in
+the query. If you configure a node as follows:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>Node /sleep
+{
+    #  Pass a timeout as a query e.g. /sleep?3
+    BuiltIn = "sleep";
+}</PRE
+></TD
+></TR
+></TABLE
+><P
+>then the URL <TT
+CLASS="COMPUTEROUTPUT"
+>http://.../sleep?3</TT
+> will return a response 3 seconds
+later.  Here is the <TT
+CLASS="COMPUTEROUTPUT"
+>sleep</TT
+> function.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and sleep request =
+let
+    val Req.Request  {url, abort, ...} = request
+    val URL.HTTP_URL {query, ...} = url
+
+    val timeout = 
+        case query of
+          NONE =&#62; 1
+        | SOME q =&#62; getOpt(Int.fromString q, 1)
+
+    val t_evt = CML.timeOutEvt(Time.fromSeconds(Int.toLarge timeout))
+in
+    CML.select[
+        CML.wrap(t_evt, fn _ =&#62; ()),
+        CML.wrap(Abort.evt abort, fn _ =&#62; ())
+        ];
+
+    U.mkHTML Status.OK (TF.L [
+            "&#60;html&#62;&#60;body&#62;&#60;p&#62;", 
+            "Slept for ", Int.toString timeout, " seconds",
+            "&#60;/body&#62;&#60;/html&#62;"])
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>First it gets the time-out from the query string or defaults to 1 second
+if it isn't available or readable. Then it uses a <TT
+CLASS="COMPUTEROUTPUT"
+>CML.select</TT
+>
+to wait for the desired time-out. This must also abort on a request
+time-out.  The <TT
+CLASS="COMPUTEROUTPUT"
+>mkHTML</TT
+> function builds a simple response containing
+some HTML. See <A
+HREF="x5210.html#DTLRESPUTILS"
+>the section called <I
+>The ResponseUtils Module</I
+></A
+>.  Note that this handler is
+single-threaded. So if two requests come in at the same time the second
+one will start its delay after the first one has finished.  The handler
+should process these requests concurrently but I only use this function
+for testing at the moment so I'm not bothered.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="DTLRESPUTILS"
+>The ResponseUtils Module</A
+></H2
+><P
+>This module contains a collection of miscellaneous functions, mainly for
+creating HTTP responses.  Here's a simple one that returns plain text.
+It uses a <TT
+CLASS="COMPUTEROUTPUT"
+>textProducer</TT
+> to deliver the entity body out of a string
+in memory.  TF is the TextFrag module described in <A
+HREF="x5914.html#DTLTEXT"
+>the section called <I
+>The Text Module</I
+></A
+>.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and mkHelloWorld() : Req.Response =
+let
+    val info = Entity.Info {
+                etype       = SOME (Entity.simpleType "text" "plain"),
+                encoding    = NONE,
+                length      = NONE,
+                last_mod    = NONE
+                }
+
+    val entity = Entity.Entity {
+                info = info,
+                body = Entity.textProducer(TF.C
+                            [TF.S "hello world", TF.Nl])
+                }
+in
+    Req.Response {
+        status  = Status.OK,
+        headers = [],
+        entity  = entity
+        }
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>This next one has a little help to generate HTML.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and mkForbidden() =
+(
+    mkHTML Status.Forbidden 
+        (lines_to_text [
+            "&#60;html&#62;&#60;body&#62;", 
+            "&#60;em&#62;Access Denied&#60;/em&#62;",
+            "&#60;/body&#62;&#60;/html&#62;"
+            ])
+)
+
+
+and lines_to_text lst =
+(
+    TF.C(map (fn l =&#62; TF.C [TF.S l, TF.Nl]) lst)
+)
+
+
+
+and mkHTML status frag =
+let
+    val info = Entity.Info {
+                etype       = SOME (Entity.simpleType "text" "html"),
+                encoding    = NONE,
+                length      = NONE,
+                last_mod    = NONE
+                }
+
+    val entity = Entity.Entity {
+                info = info,
+                body = Entity.textProducer frag
+                }
+in
+    Req.Response {
+        status  = status,
+        headers = [],
+        entity  = entity
+        }
+end</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="DTLNODEAUTH"
+>The NodeAuth Module</A
+></H2
+><P
+>This module checks the client's credentials. It only uses the Basic
+authorisation type.  The implementation is quite simple-minded. The
+user name and password are looked up each time by reading through the
+authorisation files. This could be done more efficiently by caching
+the file contents in memory. But then I would have to have some control
+mechanism to reload the cache if I change a password or add a user.</P
+><P
+>The interface is a single function.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun checkAuth auth (req: Req.Request) =
+let
+in
+    case auth of
+      Cfg.NodeNoAuth    =&#62; ()       (* pass *)
+    | Cfg.NodeBasic au  =&#62; validate_basic au req
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>If the authorisation fails this function constructs a response and
+returns it via the <TT
+CLASS="COMPUTEROUTPUT"
+>Node.Respond</TT
+> exception.  This is caught in
+the GenericNodeFn functor. See <A
+HREF="x5210.html#DTLGENNODE"
+>the section called <I
+>The Generic Node</I
+></A
+>.</P
+><P
+>Here is the top-level of the Basic validation.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and validate_basic
+        (auth as {realm, user_file, group_file, users, groups})
+        req
+        : unit =
+let
+    val () = Log.testInform G.TestAuth Log.Debug (fn() =&#62; TF.L [
+                "Basic auth for realm ", realm])
+
+    val Req.Request {headers, abort, ...} = req
+
+
+    (*  Generate a challenge response to prompt for a password.  *)
+    fun challenge() =
+    let
+        val () = Log.testInform G.TestAuth Log.Debug (fn() =&#62; TF.L [
+                    "Returning challenge for realm ", realm])
+
+        val resp = Req.Response {
+                status  = Status.UnAuth,
+                headers = [Hdr.HdrChallenge(Hdr.ChallBasic realm)],
+                entity  = Entity.None
+                }
+    in
+        raise Node.Respond resp
+    end
+
+
+    fun reject() =
+    let
+        val resp = Req.Response {
+                status  = Status.UnAuth,
+                headers = [],
+                entity  = Entity.None
+                }
+    in
+        raise Node.Respond resp
+    end
+
+in
+    case Hdr.getAuth headers of
+      NONE =&#62; challenge()
+
+    | SOME (Hdr.AuthBasic (opt_id, pwd)) =&#62;
+    (
+        case opt_id of
+          NONE    =&#62; reject()
+        | SOME id =&#62; validate_user abort auth reject id pwd
+    )
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>To get to this function the node must require (Basic) authorisation. So if
+the request does not have one then the response will contain a challenge
+header which will make a browser prompt the user for a password and
+resend the request.  If the request has some authorisation then it must
+have both a user name and password and these are validated against
+the files.  Since reading files takes time there must be a check for an
+aborted connection. The <TT
+CLASS="COMPUTEROUTPUT"
+>abort</TT
+> value is passed down through the
+validation code.  The <TT
+CLASS="COMPUTEROUTPUT"
+>reject</TT
+> function raises a &quot;401 UnAuthorized&quot;
+reponse and is passed along to the validation routines.</P
+><P
+>Here is the top-level of the user validation.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and validate_user 
+        abort
+        {realm, user_file, group_file, users, groups}
+        rejecter id pwd 
+        : unit =
+let
+    val () = Log.testInform G.TestAuth Log.Debug (fn() =&#62; TF.L [
+                "Validate user=", id, " for realm=", realm])
+
+    val all_users = add_group_users abort users group_file groups
+in
+    if List.exists (isVal id) all_users
+       andalso validate_pwd abort user_file id pwd
+    then
+        ()
+    else
+        rejecter()
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The group names in the authorisation record are expanded by
+<TT
+CLASS="COMPUTEROUTPUT"
+>add_group_users</TT
+> to a list of user names and added to the user name
+list. Then if the user name is in this list the password must be checked.
+(The <TT
+CLASS="COMPUTEROUTPUT"
+>isVal</TT
+> function is in the Common module).  I'll skip the
+<TT
+CLASS="COMPUTEROUTPUT"
+>add_group_users</TT
+> function which is a messy bit of file reading
+and go on to the <TT
+CLASS="COMPUTEROUTPUT"
+>validate_pwd</TT
+> function. This is a simpler bit of
+file reading.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and validate_pwd abort user_file id pwd : bool =
+let
+    val () = Log.testInform G.TestAuth Log.Debug (fn() =&#62; TF.L [
+                "Validate pwd for user=", id, " pwd=", pwd])
+
+    fun loop lnum strm =
+    let
+        val line = TextIO.inputLine strm
+    in
+        if line = ""
+        then
+            false           (* eof so failed *)
+        else
+            if check_line line lnum
+            then
+                true
+            else
+                loop (lnum+1) strm
+    end
+
+
+    and check_line line lnum =
+    let
+        val (left, right) =
+            SS.splitl (isntVal #":") (SS.all line)
+
+        fun clean s = SS.dropr Char.isSpace (SS.dropl Char.isSpace s)
+
+        (*  Trim off leading and trailing white space from the names. *)
+        val user     = SS.string(clean left)
+        val password = SS.string(clean(SS.triml 1 right))
+
+        val () = Log.testInform G.TestAuth Log.Debug (fn() =&#62; TF.L [
+                "Found user=", user, " pwd=", password])
+    in
+        user = id andalso password = pwd
+    end
+in
+    FileIO.withTextIn abort user_file false (loop 1)
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>FileIO.withTextIn</TT
+> function takes care of opening and closing
+the file including waiting for a file descriptor to be available.
+It passes a text stream to the <TT
+CLASS="COMPUTEROUTPUT"
+>loop</TT
+> function which reads the lines.
+The <TT
+CLASS="COMPUTEROUTPUT"
+>false</TT
+> value is a default in case the file could not be read.
+A line is of the form &quot;user: pwd&quot; with white space allowed around the
+user name and the password.  The <TT
+CLASS="COMPUTEROUTPUT"
+>clean</TT
+> function trims off this
+white space.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x5056.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x5496.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>The Server Layer</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c4671.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>The IETF Layer</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

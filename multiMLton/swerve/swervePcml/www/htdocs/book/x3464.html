@@ -1,0 +1,853 @@
+<HTML
+><HEAD
+><TITLE
+>Server Configuration</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The Swerve Web Server"
+HREF="c3253.html"><LINK
+REL="PREVIOUS"
+TITLE="The Resource Store"
+HREF="x3442.html"><LINK
+REL="NEXT"
+TITLE="The Architecture of the Server"
+HREF="x3709.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x3442.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 8. The Swerve Web Server</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x3709.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN3464"
+>Server Configuration</A
+></H1
+><P
+>This section describes how the server will be installed on a platform and how it is
+configured.</P
+><P
+>A typical server installation will include the following directories
+and files underneath the server root directory.</P
+><DIV
+CLASS="INFORMALTABLE"
+><A
+NAME="AEN3468"
+></A
+><P
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><TBODY
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+><TT
+CLASS="COMPUTEROUTPUT"
+>swerve.cfg</TT
+></P
+></TD
+><TD
+WIDTH="425"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>The main server configuration file is in the root 
+			directory.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+><TT
+CLASS="COMPUTEROUTPUT"
+>bin/</TT
+></P
+></TD
+><TD
+WIDTH="425"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This will contain the swerve program.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+><TT
+CLASS="COMPUTEROUTPUT"
+>conf/</TT
+></P
+></TD
+><TD
+WIDTH="425"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This will contain various configuration files such as the
+	<TT
+CLASS="COMPUTEROUTPUT"
+>mime.types</TT
+> file.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+><TT
+CLASS="COMPUTEROUTPUT"
+>conf/icons/</TT
+></P
+></TD
+><TD
+WIDTH="425"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>The standard Apache icons will be kept here.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+><TT
+CLASS="COMPUTEROUTPUT"
+>cgi-bin/</TT
+></P
+></TD
+><TD
+WIDTH="425"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This will contain any CGI-BIN scripts. Access to these scripts will
+	have to be individually configured.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+><TT
+CLASS="COMPUTEROUTPUT"
+>htdocs/</TT
+></P
+></TD
+><TD
+WIDTH="425"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This is the root of the documentation tree.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+><TT
+CLASS="COMPUTEROUTPUT"
+>var/</TT
+></P
+></TD
+><TD
+WIDTH="425"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Files created by the server at run-time will be written here.
+	This directory must not reside on an NFS-mounted file system to
+	avoid file locking problems.</P
+><P
+>	Log files will be written in this directory. The space
+	requirements are expected to be small.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+><TT
+CLASS="COMPUTEROUTPUT"
+>var/lock</TT
+></P
+></TD
+><TD
+WIDTH="425"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>The lock file prevents multiple executions of the server.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+><TT
+CLASS="COMPUTEROUTPUT"
+>var/pid</TT
+></P
+></TD
+><TD
+WIDTH="425"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>The pid file contains the process ID of the server.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="142"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+><TT
+CLASS="COMPUTEROUTPUT"
+>tmp/</TT
+></P
+></TD
+><TD
+WIDTH="425"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Uploaded files and data will be cached here.  Lots of space
+	may be required here.  This directory must not reside on an
+	NFS-mounted file system to avoid file locking problems.
+	</P
+></TD
+></TR
+></TBODY
+></TABLE
+><P
+></P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN3535"
+>Configuration File Syntax</A
+></H2
+><P
+>A configuration file contains sections consisting of a section name
+followed by parameters enclosed in braces and terminated by semicolons.
+For example</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>Server
+{
+    ServerRoot = /home/swerve;
+    Listen     = localhost:80;
+}</PRE
+></TD
+></TR
+></TABLE
+><P
+>Free use of white space will be allowed as usual.  Comments begin with
+a <TT
+CLASS="COMPUTEROUTPUT"
+>#</TT
+> character.  If the value of a parameter is not enclosed
+in double quotes then leading white space after the equals sign and
+trailing white space will be stripped. </P
+><P
+>Backslash quoting is allowed within quoted strings for the double-quote
+character and also <TT
+CLASS="COMPUTEROUTPUT"
+>\n</TT
+> for a new-line and <TT
+CLASS="COMPUTEROUTPUT"
+>\t</TT
+> for a tab. A
+backslash at the end of a line will continue a quoted string to the
+next line.</P
+><P
+>The names of the parameters and the sections are case-insensitive.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="SERVERPARAMS"
+>The Server Parameters</A
+></H2
+><P
+>The following server parameters apply to the server as a whole.
+Where allowed, relative paths are relative to the server root unless
+specified otherwise.</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>ServerRoot</DT
+><DD
+><P
+>	This is the path to the server installation. It must be an
+	absolute path.	The configuration directory is expected to be
+	at <TT
+CLASS="COMPUTEROUTPUT"
+>&lt;ServerRoot&#62;/conf</TT
+>.</P
+></DD
+><DT
+>VarDir</DT
+><DD
+><P
+>	This is the directory where run-time files are kept.  It must
+	be an absolute path and not on an NFS-mounted file system.
+	For security this should be accessible only by the user
+	that the server is running as.	The default location is
+	<TT
+CLASS="COMPUTEROUTPUT"
+>&lt;ServerRoot&#62;/var</TT
+>.</P
+></DD
+><DT
+>TmpDir</DT
+><DD
+><P
+>	This is the directory where temporary files are kept.  It must
+	be an absolute path and not on an NFS-mounted file system.
+	For security this should be accessible only by the user
+	that the server is running as.	The default location is
+	<TT
+CLASS="COMPUTEROUTPUT"
+>&lt;ServerRoot&#62;/tmp</TT
+>.</P
+></DD
+><DT
+>Timeout</DT
+><DD
+><P
+>	The value is the number of seconds to time-out a connection if
+	a request or response is not completed.</P
+></DD
+><DT
+>MaxClients</DT
+><DD
+><P
+>	The value is the maximum number of connections that will be
+	allowed at a time.</P
+></DD
+><DT
+>MaxTmpSpace</DT
+><DD
+><P
+>	The value is the maximum total size in bytes that temporary
+	files in TmpDir are allowed to consume.  Connections that try
+	to upload more than this limit will be paused until space is
+	available or they time-out.</P
+></DD
+><DT
+>MaxReqSize</DT
+><DD
+><P
+>	The value is the maximum size in bytes that an entity in a request
+	is allowed to have.  These entities, such as uploaded files or
+	form data, are saved in temporary files in TmpDir (if they are
+	too large to be held in memory).  By setting this limit you can
+	stop one client from filling the temporary disk space.</P
+></DD
+><DT
+>Listen</DT
+><DD
+><P
+>	This sets the port to listen on. This differs from Apache. The
+	possible values are <TT
+CLASS="COMPUTEROUTPUT"
+>localhost:&lt;port&#62;</TT
+> or just
+	<TT
+CLASS="COMPUTEROUTPUT"
+>:&lt;port&#62;</TT
+>.</P
+></DD
+><DT
+>ServerName</DT
+><DD
+><P
+>	This sets the web address of the server. It is used for URLs
+	generated by the server that refer to its own resources, for
+	example icons.	It is required.</P
+></DD
+><DT
+>User, Group</DT
+><DD
+><P
+>	These set the user and group name to run as, if the server is
+	started as root.</P
+></DD
+><DT
+>DirectoryIndex</DT
+><DD
+><P
+>	This sets the name of the file in each directory that implements
+	a node, which will be used as the index for the node.  The default
+	is <TT
+CLASS="COMPUTEROUTPUT"
+>index.html</TT
+></P
+></DD
+><DT
+>TypesConfig</DT
+><DD
+><P
+>	This sets the path to the <TT
+CLASS="COMPUTEROUTPUT"
+>mime.types</TT
+> file. This file maps
+	from file extensions to mime types the same way as Apache. The
+	default is <TT
+CLASS="COMPUTEROUTPUT"
+>&lt;ServerRoot&#62;/conf/mime.types</TT
+>.</P
+><P
+>	The default type for an unrecognised file will be fixed at
+	<TT
+CLASS="COMPUTEROUTPUT"
+>text/plain</TT
+>.</P
+></DD
+><DT
+>ErrorLog</DT
+><DD
+><P
+>	This sets the path to the error log file. It must be an absolute
+	path.  The default is <TT
+CLASS="COMPUTEROUTPUT"
+>&lt;ServerRoot&#62;/var/errors</TT
+>.
+	Unlike Apache, the log format will be fixed.</P
+></DD
+><DT
+>LogLevel</DT
+><DD
+><P
+>	This sets the logging level.  The possible values are:
+	<TT
+CLASS="COMPUTEROUTPUT"
+>debug</TT
+>, <TT
+CLASS="COMPUTEROUTPUT"
+>info</TT
+>, <TT
+CLASS="COMPUTEROUTPUT"
+>warn</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>error</TT
+>.
+	They are case-insensitive.  The levels are ordered e.g. a level
+	of <TT
+CLASS="COMPUTEROUTPUT"
+>warn</TT
+> includes all error messages as well.</P
+></DD
+></DL
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="NODEPARAMETERS"
+>The Node Parameters</A
+></H2
+><P
+>The contents of the resource store is described by a series of node
+sections.  Each legal URL path is described by a node section. The section
+describes how the path is implemented and what access controls apply.</P
+><P
+>An implementation of a path can be either:</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>a file-system directory;</DT
+><DD
+><P
+>	When a file-system directory implements a path then
+	optionally all subdirectories will implement extensions of the
+	path. That is, if the URL path <TT
+CLASS="COMPUTEROUTPUT"
+>/a</TT
+> is implemented by the
+	directory <TT
+CLASS="COMPUTEROUTPUT"
+>/home/swerve/htdocs/a</TT
+> then the subdirectory
+	<TT
+CLASS="COMPUTEROUTPUT"
+>/home/swerve/htdocs/a/b</TT
+> will implement the path
+	<TT
+CLASS="COMPUTEROUTPUT"
+>/a/b</TT
+>.  See the WithSubDirs option below.</P
+></DD
+><DT
+>a CGI-BIN script;</DT
+><DD
+><P
+>	The section will specify the path to a CGI-BIN script.</P
+></DD
+><DT
+>some built-in handler.</DT
+><DD
+><P
+>	The server may have some built-in handlers which can be associated
+	with nodes.</P
+></DD
+></DL
+></DIV
+><P
+>A node section looks like this.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>Node /
+{
+    Directory = /home/swerve/htdocs;
+    WithSubDirs = yes;
+}</PRE
+></TD
+></TR
+></TABLE
+><P
+>The URL path to the node follows the Node keyword.  The root node
+is described by the path <TT
+CLASS="COMPUTEROUTPUT"
+>/</TT
+>. URL &quot;percent escapes&quot; are allowed
+in the path.  Remember that URL paths are case-sensitive.  The node
+parameters follow.</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>Directory = path</DT
+><DD
+><P
+>	This specifies that the node is implemented as a disk
+	directory. If the path is relative then it is relative to
+	<TT
+CLASS="COMPUTEROUTPUT"
+>&lt;ServerRoot&#62;/htdocs</TT
+>.</P
+><P
+>	The node will read a file named <TT
+CLASS="COMPUTEROUTPUT"
+>.swerve</TT
+> in its directory
+	to look for new authorisation or option parameters. If it finds
+	authorisation parameters then they must supply a complete valid
+	authorisation which will replace that in the configuration
+	section. If it finds an Options parameter then these will add
+	to or override options in the configuration section.</P
+></DD
+><DT
+>BuiltIn = name</DT
+><DD
+><P
+>	This specifies that the node is implemented by some built-in
+	handler in the server.</P
+></DD
+><DT
+>Script = path</DT
+><DD
+><P
+>	This specifies that the node is implemented by a CGI-BIN
+	script. If the path is relative then it is relative to
+	<TT
+CLASS="COMPUTEROUTPUT"
+>&lt;ServerRoot&#62;/cgi-bin</TT
+>.</P
+><P
+>	Exaclty one of Directory, BuiltIn or Script must appear in each
+	node section.</P
+></DD
+><DT
+>Options = [inherit|all|none] *{[+-] [FollowSymLinks|WithSubDirs]}</DT
+><DD
+><P
+>	This specifies extra options that apply to the node.
+	The keywords are case-insensitive.</P
+><P
+>	The first keyword can be &quot;all&quot; to enable all options, &quot;none&quot;
+	to disable all options or &quot;inherit&quot; to inherit options from
+	the next higher node.  Only the WithSubDirs and FollowSymLinks
+	options can be inherited.</P
+><P
+>	If this Options line appears in a <TT
+CLASS="COMPUTEROUTPUT"
+>.swerve</TT
+> file then the
+	inherited options include changes made by an Options line in the
+	configuration file's node section for the corresponding URL path.</P
+><P
+>	If this parameter is omitted in the configuration file then
+	&quot;none&quot; is assumed. If it is omitted in the <TT
+CLASS="COMPUTEROUTPUT"
+>.swerve</TT
+> file
+	then no change is made to the node's options.</P
+><P
+>	Subsequent keywords are preceded by a &quot;+&quot; or a &quot;-&quot; to enable or
+	disable the option for this node.</P
+><P
+>	The FollowSymLinks option allows symbolic links in directories
+	to be followed (without affecting the URL path).</P
+><P
+>	The WithSubDirs option allows each subdirectory to automatically
+	implement an extension of the URL path of the node as described
+	above for the Directory option.</P
+></DD
+><DT
+>AuthType = Basic</DT
+><DD
+><P
+>	This specifies the &quot;Basic&quot; authentication scheme which checks
+	user names and passwords.  This parameter is required to enable
+	authentication for access to the node.</P
+></DD
+><DT
+>AuthName = &quot;Realm&quot;</DT
+><DD
+><P
+>	This specifies the realm name for basic authentication. A client
+	typically maintains separate user name and password pairs for
+	each realm.</P
+></DD
+><DT
+>AuthUserFile = /web/users</DT
+><DD
+><P
+>	This specifies the path to a file that lists user names and
+	their passwords. If the path is relative then it is relative
+	to the server root.</P
+><P
+>	The format is the same as for Apache i.e. each
+	line is &lt;user&#62;:&lt;password&#62; except that the passwords are not
+	encrypted. Since they aren't encrypted colons are not allowed
+	in passwords.</P
+><P
+>	There is no encryption since the Unix <TT
+CLASS="COMPUTEROUTPUT"
+>crypt()</TT
+> function
+	is not available in the SML/NJ libraries and it's not important
+	for this web server.</P
+></DD
+><DT
+>AuthGroupFile = /web/groups</DT
+><DD
+><P
+>	This specifies the path to a file that lists user groups. If the
+	path is relative then it is relative to the server root.</P
+><P
+>	The file format is the same as for Apache. Each line of the
+	group file contains a groupname followed by a colon, followed
+	by the member usernames separated by spaces for example:</P
+><P
+>	mygroup: bob joe anne</P
+></DD
+><DT
+>AuthAllowUsers = bob joe</DT
+><DD
+><P
+>	This specifies a list of user names, separated by spaces,
+	that are allowed to access the node, if they are authenticated.</P
+></DD
+><DT
+>AuthAllowGroups = mygroup</DT
+><DD
+><P
+>	This specifies a list of group names, separated by spaces, that
+	are allowed to access the node.  All users in the group are
+	allowed access if they are authenticated.</P
+></DD
+></DL
+></DIV
+><P
+>The AuthAllowUsers and AuthAllowGroups parameters together produce a list
+of user names.  If this list is empty then all users will be allowed if
+their password is authenticated.  To disallow all users just provide a
+dummy user name in AuthAllowUsers that has no password since this user
+can never be authenticated.</P
+><P
+>The contents of the user or group files will be read each time a request
+is received.  This allows changes to the files to be immediately available
+but it will be a bit slow.</P
+><P
+>In <A
+HREF="x3442.html"
+>the section called <I
+>The Resource Store</I
+></A
+> I describe how URLs are interpreted by
+being passed down through the tree of resource nodes.  The URL must
+pass authentication at each node that requires it. This allows the
+authentication scheme at a higher node to block access to allow lower
+nodes.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x3442.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x3709.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>The Resource Store</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c3253.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>The Architecture of the Server</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

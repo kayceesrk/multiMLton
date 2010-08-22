@@ -1,0 +1,1376 @@
+<HTML
+><HEAD
+><TITLE
+>The Server Layer</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The Swerve Detailed Design"
+HREF="c4671.html"><LINK
+REL="PREVIOUS"
+TITLE="The Main Layer"
+HREF="x4989.html"><LINK
+REL="NEXT"
+TITLE="The Store Layer"
+HREF="x5210.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x4989.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 9. The Swerve Detailed Design</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x5210.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN5056"
+>The Server Layer</A
+></H1
+><P
+>This layer contains code for managing the sockets and running
+the HTTP protocol over a client connection.  </P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN5059"
+>The Listener Module</A
+></H2
+><P
+>As explained in <A
+HREF="x3709.html"
+>the section called <I
+>The Architecture of the Server</I
+> in Chapter 8</A
+> each socket is handled by a
+separate thread.  The listener thread waits for a new connection and
+then spawns a thread for the new connection.</P
+><P
+>The listener thread counts the connection threads and refuses new
+connections when the configured limit is reached.  There are two ways
+to implement this.  In both cases the central issue is how the listener
+thread discovers when a connection has terminated.  The straightforward
+approach is to wait on a join event for each connection thread together
+with an accept event for a new connection.  The code would be something
+like this.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun server threads =
+let
+    fun join thread = 
+    let
+        fun keep t = not(CML.sameTid(t, thread))
+        fun remove() = List.filter keep threads
+    in
+        CML.wrap(CML.joinEvt thread, remove)
+    end
+
+    val ac_evt = CML.wrap(Socket.acceptEvt listener, new_connection threads)
+    val join_evts = map join threads
+
+    val new_threads = CML.select (ac_evt::join_evts)
+in
+    server new_threads
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>This is a server loop for a listener. The state is the list of connection
+threads.  Here the <TT
+CLASS="COMPUTEROUTPUT"
+>join</TT
+> function associates each connection thread
+with a <TT
+CLASS="COMPUTEROUTPUT"
+>remove</TT
+> function that removes the thread from the list.
+At the same time it waits for an <TT
+CLASS="COMPUTEROUTPUT"
+>accept</TT
+> event on the listening
+socket. (The <TT
+CLASS="COMPUTEROUTPUT"
+>acceptEvt</TT
+> function is a CML extension of the Socket
+module).</P
+><P
+>My concern with this implementation is the overhead if the number of
+connections is large.  If I dream of my server one day running a site with
+hundreds of connections then I'm not keen on all this processing over
+long lists of threads.  All I really need to do is count the connection
+threads. So I have a connection thread send a message to the listener
+thread when it terminates.  Here is the body of the listener thread which
+runs as the main thread of the server.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and serve listener max_clients conn_timeout =
+let
+    val lchan: ListenMsg CML.chan = CML.channel()
+
+    fun loop num_connects =
+    let
+        (*  If we have too many then we will refuse the new
+            connection.  We require each connection thread to tell
+            us when it dies.
+
+            We won't log the connection refusals to avoid the log
+            overflowing on a DOS attack.
+        *)
+        fun new_connect (conn, conn_addr) =
+        (
+            if (isSome max_clients) andalso
+                    num_connects &#62;= (valOf max_clients)
+            then
+            (
+                Socket.close conn;
+                num_connects
+            )
+            else
+            (
+                FileIO.setCloseExec(Socket.pollDesc conn);
+
+                CML.spawn(MyProfile.timeIt "Listener connection"
+                    (connection lchan conn conn_addr conn_timeout));
+
+                num_connects+1
+            )
+        )
+        handle x =&#62;
+            (
+                (Socket.close conn) handle _ =&#62; ();
+                Log.logExn x;
+                num_connects
+            )
+
+        fun msg ConnDied = num_connects - 1
+
+        val new_num = CML.select[
+            CML.wrap(S.acceptEvt listener, new_connect),
+            CML.wrap(CML.recvEvt lchan, msg)
+            ]
+    in
+        loop new_num
+    end
+in
+    loop 0
+end
+handle x =&#62;
+    (
+        Socket.close listener;
+        Log.logExn x;
+        raise FatalX
+    )</PRE
+></TD
+></TR
+></TABLE
+><P
+>The arguments <TT
+CLASS="COMPUTEROUTPUT"
+>max_clients</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>conn_timeout</TT
+> are
+configuration parameters and <TT
+CLASS="COMPUTEROUTPUT"
+>listener</TT
+> is the socket to listen
+on.  The configuration parameters are integer option values from the
+<TT
+CLASS="COMPUTEROUTPUT"
+>Config.ServerConfig</TT
+> type.  (See the <TT
+CLASS="COMPUTEROUTPUT"
+>run</TT
+> function below).</P
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>loop</TT
+> function implements a state machine with
+the number of connections as the state.  The action happens at the call
+to <TT
+CLASS="COMPUTEROUTPUT"
+>CML.select</TT
+>.  This waits for either a new connection on the
+listener socket or a message over the manager channel.  The result from the event
+dispatch is a new state value, the new number of connections.</P
+><P
+>When a new connection arrives it is accepted and the socket and client's
+IP address are passed to the <TT
+CLASS="COMPUTEROUTPUT"
+>new_connect</TT
+> function.  If a maximum
+number of clients is configured and the limit is exceeded then the
+connection is immediately closed. There is no change to the number
+of connections in this case.  I could send back a HTTP status saying
+&quot;503 Service Unavailable&quot; but it is legal to just close the connection.
+If I have a connection limit then I'm worried about the load on the server
+and I won't want to waste more time telling the client to go away nicely.</P
+><P
+>If the connection is accepted then I spawn a thread to run the
+connection. The socket is marked as close-on-exec so that CGI child
+processes don't inherit it.</P
+><P
+>If there is an exception at this stage then I log it and close the
+channel. I'm careful here to not let another exception break the server
+loop.</P
+><P
+>If a <TT
+CLASS="COMPUTEROUTPUT"
+>ConnDied</TT
+> message comes in from a connection thread then this
+just decrements the number of connections.</P
+><P
+>Here is the <TT
+CLASS="COMPUTEROUTPUT"
+>run</TT
+> function which is called from main. It creates
+the listener socket and calls the above <TT
+CLASS="COMPUTEROUTPUT"
+>serve</TT
+> function.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun run() =
+let
+    val ServerConfig {
+            conn_timeout: int option,
+            max_clients:  int option,
+            listen_host,
+            listen_port,
+            ...
+            } = getServerConfig()
+
+    (*  Build an address for listening.
+    *)
+    val listen_addr =
+        case listen_host of
+          NONE =&#62; INetSock.any listen_port
+
+        | SOME host =&#62;
+        (
+            (*  The configuration is supposed to have validated
+                the host.
+            *)
+            case NetHostDB.getByName host of
+              NONE       =&#62; raise InternalError "invalid host"
+            | SOME entry =&#62;
+                INetSock.toAddr(NetHostDB.addr entry, listen_port)
+        )
+
+    val listener = INetSock.TCP.socket()
+in
+    (*  Doing these fixes the type of the socket as passive. *)
+    Socket.Ctl.setREUSEADDR(listener, true);
+    Socket.bind(listener, listen_addr);
+    Socket.listen(listener, 9);
+    FileIO.setCloseExec(Socket.pollDesc listener);
+
+    serve listener max_clients conn_timeout
+end
+handle x =&#62; (Log.logExn x; raise FatalX)</PRE
+></TD
+></TR
+></TABLE
+><P
+>The server's configuration provides a port to listen on and optionally
+an IP address to bind the port to.  This could be &quot;localhost&quot; for
+private use but it could be the address of a particular interface on
+a server.  The <TT
+CLASS="COMPUTEROUTPUT"
+>getByName</TT
+> function is the equivalent of the C
+<TT
+CLASS="COMPUTEROUTPUT"
+>gethostbyname()</TT
+> function.  The <TT
+CLASS="COMPUTEROUTPUT"
+>INetSock.toAddr</TT
+> function
+constructs the address for an internet socket. This address value is
+equivalent to the C <TT
+CLASS="COMPUTEROUTPUT"
+>sockaddr_in</TT
+> struct.  The remainder of the
+steps are conventional for setting up a listener socket.</P
+><P
+>It's worth looking again at how the type of the listener socket is
+fixed by these function calls (see <A
+HREF="x1626.html#SPECIFICSOCK"
+>the section called <I
+>The Specific Socket Types</I
+> in Chapter 4</A
+>). The
+<TT
+CLASS="COMPUTEROUTPUT"
+>INetSock.TCP.socket</TT
+> function involves these types in the INetSock
+structure. (I've added parentheses in <TT
+CLASS="COMPUTEROUTPUT"
+>stream_sock</TT
+> to show the
+precedence).</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>...
+type 'a sock = (inet, 'a) Socket.sock
+type 'a stream_sock = ('a Socket.stream) sock
+...
+structure TCP : sig
+    val socket  : unit -&#62; 'a stream_sock
+    ...
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>Substituting these type equations gives the intermediate type for the
+socket as</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>(INetSock.inet, 'a Socket.stream) Socket.sock</PRE
+></TD
+></TR
+></TABLE
+><P
+>In this type <TT
+CLASS="COMPUTEROUTPUT"
+>'a</TT
+> is a place holder for the passive/active mode. The
+type of the <TT
+CLASS="COMPUTEROUTPUT"
+>listen</TT
+> function will constrain this variable to be
+<TT
+CLASS="COMPUTEROUTPUT"
+>Socket.passive</TT
+> giving the final type for a listening socket.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>(INetSock.inet, Socket.passive Socket.stream) Socket.sock</PRE
+></TD
+></TR
+></TABLE
+><P
+>This is the only type that the <TT
+CLASS="COMPUTEROUTPUT"
+>Socket.accept</TT
+> function will
+accept. So the type system ensures that you don't forget to call the
+<TT
+CLASS="COMPUTEROUTPUT"
+>listen</TT
+> function and similarly you can't accidentally accept on
+a connected socket.</P
+><P
+>Finally here is the code that controls the connection.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and connection lchan sock sock_addr conn_timeout () =
+let
+    fun run() =
+    let
+        val conn = MyProfile.timeIt "Listener setupConn"
+                    Connect.setupConn{
+                        socket  = sock,
+                        sock_addr = sock_addr,
+                        timeout = conn_timeout
+                        }
+    in
+        MyProfile.timeIt "Listener talk" 
+            HTTP_1_0.talk conn;
+
+        MyProfile.timeIt "Listener close" 
+            Connect.close conn;
+
+        Log.testInform G.TestConnect Log.Debug
+            (fn()=&#62;TF.S "Connection closed");
+
+        MyProfile.timeIt "Listener release" 
+            TmpFile.releasePort(Connect.getPort conn);
+
+        Log.testInform G.TestConnect Log.Debug
+            (fn()=&#62;TF.S "TmpFiles released")
+    end
+
+in
+    Log.inform Log.Info (fn()=&#62;TF.C [TF.S "New connection from ",
+                                format_addr sock_addr]);
+
+    MyProfile.timeIt "Listener run" 
+        run();
+
+    Log.inform Log.Info (fn()=&#62;TF.C [TF.S "End of connection from ",
+                                format_addr sock_addr]);
+
+    MyProfile.timeIt "Listener died" 
+        CML.send(lchan, ConnDied)
+end
+handle x =&#62;
+    let
+        (*  See also Connect.getPort *)
+        val (_, port) = INetSock.fromAddr sock_addr
+    in
+        (
+            Socket.close sock;
+            TmpFile.releasePort port
+        ) handle _ =&#62; ();           (* being paranoid *)
+        Log.logExn x;
+        CML.send(lchan, ConnDied)
+    end</PRE
+></TD
+></TR
+></TABLE
+><P
+>Most of the bulk of the code is for handling contingencies.  (The <TT
+CLASS="COMPUTEROUTPUT"
+>timeIt</TT
+>
+calls are there for performance testing). Essentially it runs the
+<TT
+CLASS="COMPUTEROUTPUT"
+>talk</TT
+> function in the HTTP protocol module and then closes the
+connection. The <TT
+CLASS="COMPUTEROUTPUT"
+>Connect.setupConn</TT
+> function wraps up the socket
+details into a connection value. It also starts a time-out for the
+connection if the server is configured for this.  This time-out applies
+to the entire interval from the acceptance of the connection through to
+the closing including the running of any CGI scripts.  An overview of
+the time-out handling can be found in <A
+HREF="x3709.html#TIMEOUTDESIGN"
+>the section called <I
+>Time-outs</I
+> in Chapter 8</A
+>.</P
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>TmpFile.releasePort</TT
+> function deletes any temporary files that
+have been created for the connection. They would typically contain posted
+HTTP entities for CGI scripts to read.  The cleanup must be carefully
+repeated if any exception is caught.  No exceptions can be allowed to
+get around the connection thread sending the <TT
+CLASS="COMPUTEROUTPUT"
+>ConnDied</TT
+> message or
+else the listener thread would slowly leak connection capacity.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="CONNECTMODULE"
+>The Connect Module</A
+></H2
+><P
+>This module contains functions for I/O over a connection socket while
+looking out for a time-out condition.</P
+><P
+>The header of a HTTP request is line-oriented but there is no defined
+line-length limit. Even if there was, a robust server must be able to cope
+with arbitrarily long lines without a &quot;buffer overflow&quot; or filling memory.
+So I've decided on a line-length limit of 10000 which should be enough
+for header lines.  Characters beyond the limit are discarded.</P
+><P
+>Since lines are usually terminated with a CR-LF sequence, custom
+line-reading code is required. This requires a buffer to accumulate
+chunks of characters from the socket until a complete line is received.
+See the <TT
+CLASS="COMPUTEROUTPUT"
+>readLine</TT
+> function for the code for the line splitting.
+In the rest of this section I'll only describe the lower-level details.</P
+><P
+>Here is the type for a connection.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>datatype Conn = Conn of {
+        socket:     Socket.active INetSock.stream_sock,
+        port:       int,
+        addr:       NetHostDB.in_addr,
+
+        is_open:    bool ref,
+        rdbuf:      string ref,
+        rdlen:      int ref,        (* number of chars left *)
+        rdoff:      int ref,        (* offset to next avail char *)
+
+        (*  This transmits abort messages to all receivers. *)
+        abort:      Abort.Abort
+        }</PRE
+></TD
+></TR
+></TABLE
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>rdbuf</TT
+> field is a string buffer that is updated in place.
+The <TT
+CLASS="COMPUTEROUTPUT"
+>rdlen</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>rdoff</TT
+> fields point to a range of characters
+in the buffer that have not be processed yet.  The <TT
+CLASS="COMPUTEROUTPUT"
+>abort</TT
+> field
+propagates a time-out condition to any party interested in the connection.
+Here is the function to create a connection value.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun setupConn {socket, sock_addr, timeout} =
+let
+    (*  Apache has special linger handling but SO_LINGER works
+        on Linux.
+    *)
+    val _ = S.Ctl.setLINGER(socket, SOME(Time.fromSeconds 2))
+
+    val (addr, port) = INetSock.fromAddr sock_addr
+
+    val abort =
+        case timeout of
+          NONE   =&#62; Abort.never()
+        | SOME t =&#62; Abort.create t
+in
+    Conn {
+        socket  = socket,
+        port    = port,
+        addr    = addr,
+        is_open = ref true,
+        rdbuf   = ref "",
+        rdlen   = ref 0,
+        rdoff   = ref 0,
+        abort   = abort
+        }
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The LINGER option makes a close of the socket wait until the socket has
+finished sending all of the response back to the client (or until the 2
+second time-out I've specified is reached).  The alternative is that the
+close returns immediately and the socket drains in the background. But
+in this case during this draining it would not be counted against the
+server's connection limit.  You could imagine a busy server accumulating
+an unlimited number of lingering sockets if they weren't counted.</P
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>Abort.create</TT
+> function creates an abort object for the given
+time-out value. If no time-out is required then <TT
+CLASS="COMPUTEROUTPUT"
+>Abort.never</TT
+>
+creates a similar object that never times-out but can still be forced
+into the time-out state. If the connection is broken a time-out is forced
+so the server only has to test for the one condition.</P
+><P
+>The I/O functions raise the <TT
+CLASS="COMPUTEROUTPUT"
+>Timeout</TT
+> exception if they detect an
+attempt to read or write after a time-out. Here is the <TT
+CLASS="COMPUTEROUTPUT"
+>fill_buf</TT
+>
+function which is the core of the reading code.  The various reading
+functions call <TT
+CLASS="COMPUTEROUTPUT"
+>fill_buf</TT
+> to get the next chunk of characters from
+the socket.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and fill_buf (Conn {socket, rdbuf, rdlen, rdoff, abort, ...}) =
+let
+    fun takeVec v =
+    let
+        val s = Byte.bytesToString v
+    in
+        rdbuf := s;
+        rdlen := size s;
+        rdoff := 0
+    end
+in
+    CML.select [
+        CML.wrap(Abort.evt abort, (fn() =&#62; raise Timeout)),
+        CML.wrap(S.recvVecEvt(socket, 1024), takeVec)
+        ]
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>It waits for a chunk of up to 1024 characters from the socket or
+until a time-out.  The chunk is a vector of bytes which I convert to
+a string and place into the buffer.  The <TT
+CLASS="COMPUTEROUTPUT"
+>Byte.bytesToString</TT
+> and
+<TT
+CLASS="COMPUTEROUTPUT"
+>Byte.stringToBytes</TT
+> functions are actually internally just type
+casts between a vector of bytes and a vector of characters. They don't
+have any run-time cost.</P
+><P
+>The opposite is the <TT
+CLASS="COMPUTEROUTPUT"
+>write</TT
+> function to send a string to a socket.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and write (conn as Conn {socket, is_open, ...}) msg =
+(
+    if !is_open 
+    then
+    let
+        val bytes = Byte.stringToBytes msg
+        val len   = size msg
+
+        (*  n is the number of bytes written so far. *)
+        fun loop n =
+        (
+            if aborted conn
+            then
+                raise Timeout
+            else
+            let
+                (* val _ = toErr(concat["Connect.write sendVec n=", 
+                            Int.toString n, " len=",
+                            Int.toString len, "\n"]) *)
+                val buf = {buf=bytes, i=n, sz=NONE}
+                val sent = n + (S.sendVec(socket, buf))
+            in
+                if sent &#62;= len
+                then
+                    ()
+                else
+                    loop sent
+            end
+        )
+    in
+        loop 0
+    end
+    else
+        ()
+)</PRE
+></TD
+></TR
+></TABLE
+><P
+>Remember from <A
+HREF="x3709.html#TIMEOUTDESIGN"
+>the section called <I
+>Time-outs</I
+> in Chapter 8</A
+> that after a time-out some
+of the request processing may linger until the garbage collector cleans
+it up. The time-out will quickly force the socket to be closed via the
+<TT
+CLASS="COMPUTEROUTPUT"
+>Timeout</TT
+> exception being propagated into the HTTP_1_0 module.
+But the connection object may linger for some time and there may be
+further attempts to write to the connection.  So all I/O functions check
+that the socket is still open and there hasn't been an abort condition
+before proceeding.</P
+><P
+>When sending to the socket there is the risk of a partial write.  I need a
+loop to keep sending until all of the string is sent.  The <TT
+CLASS="COMPUTEROUTPUT"
+>sendVec</TT
+>
+function makes it easy to send a message in chunks using the <TT
+CLASS="COMPUTEROUTPUT"
+>buf</TT
+>
+record type.  A time-out is checked before each attempt.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN5156"
+>The HTTP_1_0 Module</A
+></H2
+><P
+>This module runs the HTTP version 1.0 protocol.  This consists of reading
+in and parsing a request from the connection socket and writing back
+the response.  It exports the one function <TT
+CLASS="COMPUTEROUTPUT"
+>talk</TT
+>.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun talk conn =
+let
+    val req = MyProfile.timeIt "HTTP_1_0 get" get_request conn
+in
+    if G.testing G.TestShowRequest
+    then
+        (Req.dumpRequest req)
+    else
+        ();
+
+    MyProfile.timeIt "HTTP_1_0 to_store" (fn()=&#62;to_store conn req) ()
+end
+handle Bad status =&#62; send_status conn status</PRE
+></TD
+></TR
+></TABLE
+><P
+>This just gets the request and sends it to the resource store. The
+store is expected to send a response back at some later time.  If there
+is an error while reading the request the <TT
+CLASS="COMPUTEROUTPUT"
+>Bad</TT
+> exception will be
+raised and it will contain a status that can be sent back to the client.
+Usually this is just the &quot;400 Bad Request&quot; or &quot;500 Server Fail&quot; status.</P
+><P
+>Here is the <TT
+CLASS="COMPUTEROUTPUT"
+>get_request</TT
+> function.  It reads the parts of a
+request in a straight-forward manner and builds the <TT
+CLASS="COMPUTEROUTPUT"
+>Request</TT
+> value.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and get_request conn : Req.Request =
+let
+    val (method, url, protocol) = get_request_line conn
+    val headers = get_all_headers conn
+    val entity  = get_entity headers conn
+in
+    Log.testInform G.TestShowRequest Log.Debug
+        (fn()=&#62;TF.S "got a request");
+
+    Req.Request {
+        method  = method,
+        url     = url,
+        protocol= protocol,
+        headers = headers,
+        entity  = entity,
+
+        port    = Connect.getPort conn,
+        client  = Connect.getAddress conn,
+
+        rvar    = Sy.iVar(),
+        abort   = Connect.getAbort conn
+        }
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>I won't show the <TT
+CLASS="COMPUTEROUTPUT"
+>get_request_line</TT
+> function as it is just a simple
+bit of string splitting. The <TT
+CLASS="COMPUTEROUTPUT"
+>get_all_headers</TT
+> function is just a
+wrapper for the <TT
+CLASS="COMPUTEROUTPUT"
+>readAllHeaders</TT
+> function of the <TT
+CLASS="COMPUTEROUTPUT"
+>HTTP_Header</TT
+>
+module (see <A
+HREF="x5496.html#DTLHEADER"
+>the section called <I
+>The HTTPHeader Module</I
+></A
+>). The <TT
+CLASS="COMPUTEROUTPUT"
+>get_entity</TT
+> function is
+more interesting.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and get_entity headers conn : Entity.Entity =
+let
+    val Config.ServerConfig {max_req_size, ...} = Config.getServerConfig()
+    val chunk_size = 8192
+
+    fun read_file len =
+    let
+        val _ = Log.testInform G.TestShowRequest Log.Debug
+            (fn()=&#62;TF.L ["HTTP reading into file len=",
+                         Int.toString len])
+
+        val (tmp_file, writer) = create_body_file conn len
+        val strm = BinIOWriter.get writer
+
+        fun loop 0 = ()
+        |   loop n =
+        (
+            case Connect.read conn chunk_size of
+              NONE        =&#62; Log.log Log.Warn (TF.S "short body")
+            | SOME (s, _) =&#62;
+            (
+                BinIO.output(strm, Byte.stringToBytes s);
+                loop (n-(size s))
+            )
+        )
+    in
+        loop len;
+        BinIOWriter.closeIt writer;
+        Entity.tmpProducer tmp_file
+    end
+    handle x =&#62; (Log.logExn x; raise Bad Status.ServerFail)
+
+
+    fun read_mem len =
+    let
+        val _ = Log.testInform G.TestShowRequest Log.Debug
+            (fn()=&#62;TF.L ["HTTP reading into mem len=",
+                         Int.toString len])
+
+        val (frag, _) = Connect.readAll conn len
+    in
+        Entity.textProducer frag
+    end
+    handle x =&#62; (Log.logExn x; raise Bad Status.ServerFail)
+
+
+    (*  ReqTooLarge is v1.1 only but it's too good to avoid. *)
+    fun check_req_limit len =
+    (
+        case max_req_size of
+          NONE   =&#62; ()
+        | SOME m =&#62; if len &#62; m then
+                        raise Bad Status.ReqTooLarge else ()
+    )
+
+    val einfo = Hdr.toEntityInfo headers
+    val Entity.Info {length, ...} = einfo
+in
+    case length of
+      NONE   =&#62; Entity.None
+
+    | SOME n =&#62; 
+        let
+            val () = check_req_limit n
+
+            val body =
+                if n &#62; body_limit
+                then
+                    read_file n
+                else
+                    read_mem n
+        in
+            Entity.Entity {
+                info    = einfo,
+                body    = body
+                }
+        end
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>All of the entity body is read in. First the headers are studied to get
+those relevant to the entity, in particular its length.  If the length
+is 10000 (<TT
+CLASS="COMPUTEROUTPUT"
+>body_limit</TT
+>) bytes or less then I copy it into a string
+in memory.  Everything from the socket is read in and passed to the
+<TT
+CLASS="COMPUTEROUTPUT"
+>textProducer</TT
+> function. This creates an entity with a producer
+function (see <A
+HREF="x3709.html#ENTITYDESIGN"
+>the section called <I
+>Entities, Producers and Consumers</I
+> in Chapter 8</A
+>) which can deliver the content of
+the string.</P
+><P
+>If the file is larger than 10000 bytes then I copy it to a temporary file.
+Temporary files go into the directory specified by the <TT
+CLASS="COMPUTEROUTPUT"
+>TmpDir</TT
+>
+configuration parameter (see <A
+HREF="x3464.html#SERVERPARAMS"
+>the section called <I
+>The Server Parameters</I
+> in Chapter 8</A
+>).  The file name
+includes the port number so that it is easy to clean up all temporary
+files associated with a connection.  The <TT
+CLASS="COMPUTEROUTPUT"
+>create_body_file</TT
+> function
+(below) will create and open the temporary file.  A loop transfers the
+entity to the file in chunks. It reads only exactly the number of bytes
+expected from the Length header.  An entity is created with a producer
+that can deliver from a temporary file.</P
+><P
+>Here is the <TT
+CLASS="COMPUTEROUTPUT"
+>create_body_file</TT
+> function. It will block until there
+is enough disk space and file descriptors for the write to proceed.
+See <A
+HREF="x5914.html#OPENFILEMGR"
+>the section called <I
+>The Open File Manager</I
+></A
+> for more details on this.  The blocking
+may be aborted by a time-out condition.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and create_body_file conn len :(TmpFile.TmpFile * BinIOWriter.Holder)=
+let
+    val Config.ServerConfig {tmp_dir, ...} = Config.getServerConfig()
+    val port  = Connect.getPort conn
+    val abort = Connect.getAbort conn
+in
+    case TmpFile.newBodyFile abort tmp_dir len port of
+      (* errors have already been logged *)
+      NONE =&#62; raise Bad Status.ServerFail
+
+    | SOME tmp =&#62;
+        (tmp, valOf(BinIOWriter.openIt abort (TmpFile.getName tmp)))
+            handle x =&#62; raise Bad Status.ServerFail
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>Once the request is read it is send off to the resource store.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and to_store conn req =
+let
+    val Req.Request {rvar, abort, ...} = req
+in
+    Log.testInform G.TestStoreProto Log.Debug
+        (fn()=&#62;TF.S "HTTP: sending to the store");
+
+    Store.deliver req;
+
+    (*  Get a response or do nothing if there is an abort condition.
+    *)
+    CML.select[
+        CML.wrap(Abort.evt abort, fn () =&#62; ()),
+
+        CML.wrap(Sy.iGetEvt rvar,
+                MyProfile.timeIt "HTTP_1_0 response"
+                    (handle_response conn req))
+        ]
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>to_store</TT
+> function delivers it to the store and then
+blocks waiting for a response.  The store processes multiple requests
+concurrently so it must send the response over the reply channel when it
+is ready.  If a response is received it goes to <TT
+CLASS="COMPUTEROUTPUT"
+>handle_response</TT
+>. If
+there is a time-out before the response comes back then nothing is done
+and <TT
+CLASS="COMPUTEROUTPUT"
+>to_store</TT
+> returns immediately to the <TT
+CLASS="COMPUTEROUTPUT"
+>talk</TT
+> function which
+returns to the connection handler with nothing written to the socket.
+(Note that I haven't implemented Redirect requests from CGI scripts yet.)</P
+><P
+>A normal response is handled by this function.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and handle_response conn req response : unit =
+let
+    val Req.Request {method, abort, ...} = req
+    val Req.Response {status, headers, entity} = response
+in
+    Log.testInform G.TestShowResponse Log.Debug
+        (fn()=&#62;TF.S "HTTP Protocol got a response");
+
+    (
+        send_status  conn status;
+        send_headers conn headers;
+
+        MyProfile.timeIt "HTTP_1_0 stream_entity"
+            (fn() =&#62; stream_entity abort conn entity 
+                    (method = Req.HEAD)
+                    (Status.needsBody status)) 
+            ()
+    )
+    handle
+      Connect.Timeout =&#62; (Abort.force abort)
+    | x =&#62; (Log.logExn x; Abort.force abort)
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>It just delivers the parts of the response to the connection: the status,
+headers and entity.  Since there is writing to the connection there
+may be a <TT
+CLASS="COMPUTEROUTPUT"
+>Timeout</TT
+> exception (see <A
+HREF="x5056.html#CONNECTMODULE"
+>the section called <I
+>The Connect Module</I
+></A
+>).
+I force the abort condition on any exception to make sure that it is
+broadcast to all interested parties.</P
+><P
+>Sending the status and headers of the response is
+straight-forward. Sending the entity is more interesting.  As explained
+in <A
+HREF="x3709.html#CONNPROTOCOL"
+>the section called <I
+>The Connection Protocol</I
+> in Chapter 8</A
+> the entity is streamed out using a pair
+of producer and consumer.  Here is the <TT
+CLASS="COMPUTEROUTPUT"
+>stream_entity</TT
+> function.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and stream_entity abort conn entity head_method needs_body =
+let
+    val csmr: Entity.Consumer = CML.channel()
+
+    fun receiver() =
+    (
+        case CML.recv csmr of
+          Entity.XferInfo info   =&#62; (send_info info; receiver())
+        | Entity.XferBytes bytes =&#62; (send_bytes bytes; receiver())
+        | Entity.XferDone        =&#62; ()
+        | Entity.XferAbort       =&#62; ()
+    )
+
+
+    (*  Send the entity headers. *)
+    and send_info info =
+    let
+        val hdrs = from_entity_info info
+    in
+        send_headers conn hdrs;
+        end_headers conn
+    end
+
+
+    and send_bytes bytes =
+    (
+        if head_method
+        then
+            ()
+        else
+            Connect.write conn (Byte.bytesToString  bytes)
+    )
+in
+    case entity of
+      Entity.None =&#62; 
+        (
+            if needs_body                   (* see RFC1945 7.2 *)
+            then
+                Connect.write conn "Content-Length: 0\r\n"
+            else
+                ();
+            end_headers conn
+        )
+
+    | _ =&#62;
+    let
+        val pthread = Entity.startProducer abort entity csmr
+        (* val _  = TraceCML.watch("producer", pthread) *)
+    in
+        (*  Don't skip the join. The producer must be allowed to
+            clean up a CGI process nicely.
+        *)
+        receiver() handle x =&#62; Log.logExn x;
+        CML.sync(CML.joinEvt pthread)  (* wait for producer to stop *)
+    end
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>receiver</TT
+> function behaves as a consumer receiving the entity
+transfer protocol over the <TT
+CLASS="COMPUTEROUTPUT"
+>csmr</TT
+> channel.  Down the bottom of
+the function is the call to <TT
+CLASS="COMPUTEROUTPUT"
+>Entity.startProducer</TT
+>, for non-empty
+entities.  This spawns a new thread to run the producer function. The
+receiver runs in the thread of the HTTP protocol code which is the same
+thread as manages the connection.</P
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>head_method</TT
+> flag indicates that the request used the HEAD
+method therefore the body of the entity must be suppressed. It is
+necessary to run the transfer protocol to the end so that the producer,
+which may be a CGI script, can terminate properly.  The <TT
+CLASS="COMPUTEROUTPUT"
+>needs_body</TT
+>
+flag indicates that the status code that is being returned requires an
+entity body.  This is true for all informational statuses (in the 1xx
+range) and also &quot;204 No Content&quot; and &quot;304 Not Modified&quot;.  So if the entity
+happens not to have a body I have to insert an empty one.
+&#13;</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x4989.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x5210.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>The Main Layer</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c4671.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>The Store Layer</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

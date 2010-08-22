@@ -1,0 +1,12 @@
+$(MLTON_ROOT)/basis/basis.mlb
+
+local
+	../common/common.mlb
+	../config/config.mlb
+	../server/server.mlb
+
+	startup.sml
+	main.sml
+in
+	structure Main
+end

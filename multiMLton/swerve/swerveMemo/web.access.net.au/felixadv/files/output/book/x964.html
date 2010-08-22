@@ -1,0 +1,188 @@
+<HTML
+><HEAD
+><TITLE
+>Lists</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The Basis Library"
+HREF="c710.html"><LINK
+REL="PREVIOUS"
+TITLE="Reals"
+HREF="x935.html"><LINK
+REL="NEXT"
+TITLE="Arrays and Vectors"
+HREF="x979.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x935.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 3. The Basis Library</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x979.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="BASISLIST"
+>Lists</A
+></H1
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>List</TT
+> structure provides a typical collection of list operations.</P
+><P
+>The &quot;<TT
+CLASS="COMPUTEROUTPUT"
+>@</TT
+>&quot; operator will append two lists but this will result in
+copying the first list in order that it remain immutable. Only prepending
+an element with &quot;<TT
+CLASS="COMPUTEROUTPUT"
+>::</TT
+>&quot; is cheap.  You can prepend in bulk using
+the <TT
+CLASS="COMPUTEROUTPUT"
+>revAppend</TT
+> function. This will push all of the elements of the first
+list onto the front of the second.  This is useful when building lists
+in reverse in tail-recursive functions.</P
+><P
+>The apply function, <TT
+CLASS="COMPUTEROUTPUT"
+>app</TT
+>, applies a function only for side-effects.
+These might be for writing to an output stream or updating an imperative
+table.</P
+><P
+>The tabulate function can be useful for creating lists of a given length.
+For example </P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>implode(List.tabulate(100, fn _ =&#62; #" "))</PRE
+></TD
+></TR
+></TABLE
+><P
+>will make a string of 100 blanks.</P
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>ListPair</TT
+> structure adds some functions for dealing with lists of pairs.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x935.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x979.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Reals</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c710.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Arrays and Vectors</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

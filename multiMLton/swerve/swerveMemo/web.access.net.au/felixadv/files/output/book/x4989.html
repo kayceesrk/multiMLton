@@ -1,0 +1,536 @@
+<HTML
+><HEAD
+><TITLE
+>The Main Layer</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The Swerve Detailed Design"
+HREF="c4671.html"><LINK
+REL="PREVIOUS"
+TITLE="The Organisation of the Code"
+HREF="x4677.html"><LINK
+REL="NEXT"
+TITLE="The Server Layer"
+HREF="x5056.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x4677.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 9. The Swerve Detailed Design</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x5056.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN4989"
+>The Main Layer</A
+></H1
+><P
+>This layer contains the <TT
+CLASS="COMPUTEROUTPUT"
+>main</TT
+> function, command line parsing  and
+the server startup code.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="MAINMODULE"
+>The Main Module</A
+></H2
+><P
+>This is a conventional main file with command line processing.  Here is
+the <TT
+CLASS="COMPUTEROUTPUT"
+>usage</TT
+> function to show the command line options.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun usage () = (
+    print "Usage: swerve [options]\n";
+    print "Options:\n";
+    print "  -f file     : (required) specify the server configuration file\n";
+    print "  -h          : print this help message\n";
+    print "  -T id       : enable test messages according to the id\n";
+    print "  -D level    : set the logging level to Debug immediately\n";
+    ()
+    )</PRE
+></TD
+></TR
+></TABLE
+><P
+>The configuration file must be provided and it is immediately parsed. Any
+errors are written to <TT
+CLASS="COMPUTEROUTPUT"
+>stdout</TT
+> during the parsing.</P
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>main</TT
+> function starts up CML and jumps to the command line
+processing. I have to set up the multicast channels in the signal manager
+before the configuration file is parsed.  Otherwise the file I/O handling
+with finalisation, which depends on the garbage collector signal, will
+hang when attaching to the signal.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun main(arg0, argv) =
+let
+    fun run() =
+    (
+        SignalMgr.init();   (* required by OpenMgr *)
+        process_args argv
+    )
+in
+    RunCML.doit(run, NONE)
+end
+
+val _ = SMLofNJ.exportFn("swerve", main)</PRE
+></TD
+></TR
+></TABLE
+><P
+>After the command line options have been processed comes the <TT
+CLASS="COMPUTEROUTPUT"
+>run</TT
+> function.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun run() =
+let
+in
+    TraceCML.setUncaughtFn fatal_exception; 
+    (* TraceCML.setTraceFile TraceCML.TraceToErr; *)
+
+    StartUp.startup();
+
+    (*  Make CML run our finish() function at every shutdown. *)
+    ignore(RunCML.addCleaner("finish", [RunCML.AtShutdown], 
+                    fn _ =&#62; StartUp.finish()));
+
+    Listener.run();
+    success()               (* shouldn't get here *)
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The two main-line steps are to run the startup code and then start
+the listener.  I also arrange for the <TT
+CLASS="COMPUTEROUTPUT"
+>StartUp.finish</TT
+> function to
+be run when CML is shutdown.  CML has a system of &quot;cleaner&quot; functions
+that can be run at various points. The <TT
+CLASS="COMPUTEROUTPUT"
+>AtShutdown</TT
+> point ensures that
+the cleaner will be run whether the server exits normally or fails on
+a fatal exception. The only way the cleaner won't run is a crash of
+the run-time. More information on cleaners can be found in the CML source code in
+the file <TT
+CLASS="COMPUTEROUTPUT"
+>core-cml/cml-cleanup-sig.sml</TT
+>.</P
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>run</TT
+> function never returns normally. Instead the server is
+shutdown by calling the <TT
+CLASS="COMPUTEROUTPUT"
+>RunCML.shutdown </TT
+>function. This is done
+through either of the <TT
+CLASS="COMPUTEROUTPUT"
+>success</TT
+> or <TT
+CLASS="COMPUTEROUTPUT"
+>fail</TT
+> functions in the
+<TT
+CLASS="COMPUTEROUTPUT"
+>Common</TT
+> module.  If there is an exception out of the <TT
+CLASS="COMPUTEROUTPUT"
+>run</TT
+>
+function then it will be caught in the <TT
+CLASS="COMPUTEROUTPUT"
+>process_args</TT
+> function
+which will call <TT
+CLASS="COMPUTEROUTPUT"
+>fail</TT
+>.</P
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>run</TT
+> function also contains some commented-out debugging
+code which uses the <TT
+CLASS="COMPUTEROUTPUT"
+>TraceCML</TT
+> module. I used this during
+debugging to trace the termination of threads. For an example see the
+<TT
+CLASS="COMPUTEROUTPUT"
+>HTTP_1_0</TT
+> module.  Uncaught exceptions in a thread are reported
+via the <TT
+CLASS="COMPUTEROUTPUT"
+>fatal_exception</TT
+> function (not shown here).</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="DTLSTARTUP"
+>The Startup Module</A
+></H2
+><P
+>Here is the <TT
+CLASS="COMPUTEROUTPUT"
+>startup</TT
+> function.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun startup() =
+let
+in
+    MyProfile.start();
+
+    if Cfg.haveServerConfig()
+    then
+        ()
+    else
+    (
+        Log.error ["The server configuration has not been specified."];
+        raise FatalX
+    );
+
+    (*  Give up if there have been errors already. *)
+    if Log.numErrors() &#62; 0 then raise FatalX else ();
+
+    (*  The configuration code checks that all of the files and
+        directories exist.
+    *)
+    setuid();
+    create_lock();
+
+    (*  Give up again. *)
+    if Log.numErrors() &#62; 0 then raise FatalX else ();
+
+    ()
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>It checks that the configuration has been successfully read. If the
+configuration file was not specified or if there were any errors while
+processing the configuration then the server will exit with a fatal error.
+The <TT
+CLASS="COMPUTEROUTPUT"
+>FatalX</TT
+> exception is defined in the <TT
+CLASS="COMPUTEROUTPUT"
+>Common</TT
+> module and
+caught as explained above.</P
+><P
+>Next the <TT
+CLASS="COMPUTEROUTPUT"
+>startup</TT
+> function sets the user and group ids if configured
+and creates the lock and pid files.  If there are any more errors from
+doing this then it is also a fatal error. The <TT
+CLASS="COMPUTEROUTPUT"
+>Startup.finish</TT
+>
+function, called at shutdown time, removes the lock and pid files.
+I'll skip the code for setting the ids and show the locking functions.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and create_lock() =
+let
+    val Cfg.ServerConfig {var_dir, ...} = Cfg.getServerConfig()
+    val lock_file = Files.appendFile var_dir "lock"
+    val pid_file  = Files.appendFile var_dir "pid"
+in
+    Log.inform Log.Debug (fn() =&#62; TF.L ["Creating lock file ", lock_file]);
+
+    if FileIO.exclCreate lock_file
+    then
+        let
+            val strm = TextIO.openOut pid_file
+            val pid = Posix.ProcEnv.getpid()
+            val w   = Posix.Process.pidToWord pid
+        in
+            TextIO.output(strm, SysWord.fmt StringCvt.DEC w);
+            TextIO.output(strm, "\n");
+            TextIO.closeOut(strm)
+        end
+        handle x =&#62; (Log.logExn x; raise x)
+    else
+    (
+        Log.error ["Another server is already running."];
+        raise FatalX
+    )
+end
+handle _ =&#62; raise FatalX
+
+
+
+and remove_lock() =
+let
+    val Cfg.ServerConfig {var_dir, ...} = Cfg.getServerConfig()
+    val lock_file = Files.appendFile var_dir "lock"
+    val pid_file  = Files.appendFile var_dir "pid"
+in
+    FileIO.removeFile pid_file;
+    FileIO.removeFile lock_file
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>Here is the <TT
+CLASS="COMPUTEROUTPUT"
+>FileIO.exclCreate</TT
+> function.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun exclCreate file =
+(
+    IO.close(FS.createf(file, FS.O_WRONLY, FS.O.excl,
+               FS.S.flags[FS.S.irusr, FS.S.iwusr]));
+    true
+)
+handle
+  x as OS.SysErr (_, eopt) =&#62;
+    (if isSome eopt andalso valOf eopt = Posix.Error.exist
+     then 
+        false       (* failed to exclusively create *)
+     else
+        (Log.logExnArg file x; raise x) (* failed with error *)
+    )
+
+| x =&#62; (Log.logExnArg file x; raise x)</PRE
+></TD
+></TR
+></TABLE
+><P
+>I've settled for creating a lock file with the
+<TT
+CLASS="COMPUTEROUTPUT"
+>Posix.FileSys.createf</TT
+> function using the <TT
+CLASS="COMPUTEROUTPUT"
+>excl</TT
+> flag.
+In UNIX terms this means using the <TT
+CLASS="COMPUTEROUTPUT"
+>open</TT
+> system call with the
+<TT
+CLASS="COMPUTEROUTPUT"
+>O_CREAT</TT
+>, <TT
+CLASS="COMPUTEROUTPUT"
+>O_WRONLY</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>O_EXCL</TT
+> flags and mode 0600.
+This will work fine as long as the directory containing the lock
+file is not mounted via NFS. I've made it a requirement in the server
+configuration that this be so.</P
+><P
+>I can check for the <TT
+CLASS="COMPUTEROUTPUT"
+>EEXIST</TT
+> errno code by catching
+the <TT
+CLASS="COMPUTEROUTPUT"
+>OS.SysErr</TT
+> exception.  It just so happens that
+the <TT
+CLASS="COMPUTEROUTPUT"
+>OS.syserror</TT
+> type it contains is the same as the
+<TT
+CLASS="COMPUTEROUTPUT"
+>Posix.Error.syserror</TT
+> type and the <TT
+CLASS="COMPUTEROUTPUT"
+>Posix.Error</TT
+> module
+contains example values for each error code.</P
+><P
+>Any other error while creating the lock file will be logged and propagated
+as an exception.</P
+><P
+>Once the lock file is created I can write the process' pid into a
+file straightforwardly. The only tricky bit is tracking down the right
+type conversion functions.  The SML basis documentation doesn't make
+it explicit that the <TT
+CLASS="COMPUTEROUTPUT"
+>Posix.ProcEnv.pid</TT
+> type is the same as the
+<TT
+CLASS="COMPUTEROUTPUT"
+>Posix.Process.pid</TT
+> type.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x4677.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x5056.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>The Organisation of the Code</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c4671.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>The Server Layer</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

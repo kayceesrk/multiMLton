@@ -1,0 +1,294 @@
+<HTML
+><HEAD
+><TITLE
+>Integers</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The Basis Library"
+HREF="c710.html"><LINK
+REL="PREVIOUS"
+TITLE="Text"
+HREF="x801.html"><LINK
+REL="NEXT"
+TITLE="Reals"
+HREF="x935.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x801.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 3. The Basis Library</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x935.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="BASISINT"
+>Integers</A
+></H1
+><P
+>The Basis library allows for multiple modules for signed integers of
+different sizes.  These all satisfy the common signature <TT
+CLASS="COMPUTEROUTPUT"
+>INTEGER</TT
+>.
+On 32 bit architectures SML/NJ only supplies 31 and 32 bit signed
+integers.</P
+><P
+>The 31 bit size looks strange but it is designed to help the garbage
+collector (GC).  The GC needs to scan each word in the heap and tell
+whether it is a pointer or not.  The SML/NJ solution is to use the
+least significant bit (LSB) to tell the difference.  If you want a 32
+bit integer then it must be allocated in a separate heap record with a
+type tag.  (See <A
+HREF="c2882.html#PERFOBJLAYOUT"
+>the section called <I
+>Heap Object Layout</I
+> in Chapter 7</A
+> for details).  You should
+use 31 bit integers wherever possible for more efficient storage.</P
+><P
+>The structures <TT
+CLASS="COMPUTEROUTPUT"
+>Int</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>Int31</TT
+> are both 31 bit integers and
+the top-level type <TT
+CLASS="COMPUTEROUTPUT"
+>int</TT
+> is the same as <TT
+CLASS="COMPUTEROUTPUT"
+>Int.int</TT
+>.  Use the
+<TT
+CLASS="COMPUTEROUTPUT"
+>Int32</TT
+> structure for 32 bit integers.  There is also a structure
+called <TT
+CLASS="COMPUTEROUTPUT"
+>LargeInt</TT
+> which is supposed to be the largest integer
+type that the hardware implements.  It is used as an intermediary when
+converting between integers of other sizes. The <TT
+CLASS="COMPUTEROUTPUT"
+>bind-largest.sml</TT
+>
+file in the compiler's <TT
+CLASS="COMPUTEROUTPUT"
+>boot</TT
+> directory shows the definitions
+of the various integer types in terms of sizes.  (The <TT
+CLASS="COMPUTEROUTPUT"
+>Position</TT
+>
+type is used for file positions in the Posix functions).</P
+><P
+>To get an integer literal of a type other than Int.int you will need
+a type constraint e.g. write <TT
+CLASS="COMPUTEROUTPUT"
+>(23: Int32.int)</TT
+> to get the 32 bit
+integer value 23.  You can use a <TT
+CLASS="COMPUTEROUTPUT"
+>0x</TT
+> prefix for hexadecimal, like in C.</P
+><P
+>All integer operations check for overflow, unlike C.  The <TT
+CLASS="COMPUTEROUTPUT"
+>Overflow</TT
+>
+exception is raised if there is any integer overflow or underflow.</P
+><P
+>There are also matching unsigned integer structures, <TT
+CLASS="COMPUTEROUTPUT"
+>Word</TT
+>,
+<TT
+CLASS="COMPUTEROUTPUT"
+>Word8</TT
+>, <TT
+CLASS="COMPUTEROUTPUT"
+>Word31</TT
+>, <TT
+CLASS="COMPUTEROUTPUT"
+>Word32</TT
+>, <TT
+CLASS="COMPUTEROUTPUT"
+>LargeWord</TT
+> and
+<TT
+CLASS="COMPUTEROUTPUT"
+>SysWord</TT
+>.  These are of sizes 8, 31 and 32 bits as you would expect.
+Use a <TT
+CLASS="COMPUTEROUTPUT"
+>0w</TT
+> prefix for word values and <TT
+CLASS="COMPUTEROUTPUT"
+>0wx</TT
+> for word values
+in hexadecimal. Arithmetic on unsigned integers does not raise the
+Overflow exception.</P
+><P
+>The unsigned integer structures conform to the <TT
+CLASS="COMPUTEROUTPUT"
+>WORD</TT
+> signature which adds
+bit-wise operations to the usual integer operations.</P
+><P
+>Finally there is an infinite precision integer structure <TT
+CLASS="COMPUTEROUTPUT"
+>IntInf</TT
+>.
+This represents numbers with any number of digits.  To input a
+literal <TT
+CLASS="COMPUTEROUTPUT"
+>IntInf.int</TT
+> value you need to use <TT
+CLASS="COMPUTEROUTPUT"
+>fromString</TT
+> i.e. write</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>valOf(IntInf.fromString "123456789876543210000000000")</PRE
+></TD
+></TR
+></TABLE
+><P
+>Words can be serialised into byte arrays using the <TT
+CLASS="COMPUTEROUTPUT"
+>PACK_WORD</TT
+>
+structures.  These implement 16 and 32 bit serialisation in big
+or little endian order in the <TT
+CLASS="COMPUTEROUTPUT"
+>Pack16Big</TT
+>, <TT
+CLASS="COMPUTEROUTPUT"
+>Pack32Big</TT
+>,
+<TT
+CLASS="COMPUTEROUTPUT"
+>Pack16Little</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>Pack32Little</TT
+> structures.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x801.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x935.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Text</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c710.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Reals</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

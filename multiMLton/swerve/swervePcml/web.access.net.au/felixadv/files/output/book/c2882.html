@@ -1,0 +1,654 @@
+<HTML
+><HEAD
+><TITLE
+>Under the Hood</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Programming with Standard ML"
+HREF="p31.html"><LINK
+REL="PREVIOUS"
+TITLE="Semaphores via Synchronous Variables"
+HREF="x2844.html"><LINK
+REL="NEXT"
+TITLE="Performance"
+HREF="x3010.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="CHAPTER"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x2844.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x3010.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="CHAPTER"
+><H1
+><A
+NAME="AEN2882"
+>Chapter 7. Under the Hood</A
+></H1
+><DIV
+CLASS="TOC"
+><DL
+><DT
+><B
+>Table of Contents</B
+></DT
+><DT
+><A
+HREF="c2882.html#AEN2885"
+>Memory Management</A
+></DT
+><DT
+><A
+HREF="x3010.html"
+>Performance</A
+></DT
+></DL
+></DIV
+><P
+>This chapter discusses what goes on underneath the hood of SML/NJ
+and CML.  First I will spend a little time discussing how memory is
+used in the SML/NJ run-time.  Then I will examine the performance of
+some test programs.  My goal is to give you a feel for the performance
+of the SML/NJ system in comparison with the C language.</P
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN2885"
+>Memory Management</A
+></H1
+><P
+>This section describes the design of the SML/NJ heap system. It is based
+on a multi-generational copying garbage collector (GC).</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="PERFGC"
+>Garbage Collection Basics</A
+></H2
+><P
+>A copying garbage collector works by having two memory spaces, a &quot;from&quot;
+and a &quot;to&quot; space.  Heap objects are allocated in the &quot;from&quot; space
+until it is full.  Then objects that are still live are copied to the
+&quot;to&quot; space.  Then the &quot;from&quot; and &quot;to&quot; spaces are swapped. The result
+of the swap is a &quot;from&quot; space with all of the live objects and the &quot;to&quot;
+space is empty again.</P
+><P
+><A
+HREF="c2882.html#COPYGCFIG"
+>Figure 7-1</A
+> illustrates these steps. Memory is allocated
+from the top of the &quot;from&quot; space advancing downwards.  The arrow marked
+&quot;next&quot; is the position for new objects. The arrow is advanced down by the
+size of the object.  When it reaches the bottom the &quot;from&quot; space is full.</P
+><P
+>The grey regions are live objects.  A live object is any object that
+can be reached by following pointers starting from any of several
+root objects.  All other objects are garbage to be removed. As the GC
+visits each live object it copies it to the &quot;to&quot; space. Then the &quot;to&quot;
+space is relabelled the &quot;from&quot; space and the &quot;to&quot; space becomes empty
+again. The &quot;next&quot; arrow is reset to the end of the copied objects ready
+for new objects to be allocated.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="COPYGCFIG"
+></A
+><P
+><B
+>Figure 7-1. Steps in Copying Collection.</B
+></P
+><DIV
+CLASS="MEDIAOBJECT"
+><P
+><center><IMG
+SRC="perf/copygc.png"
+></center></IMG
+></P
+></DIV
+></DIV
+><P
+>It might seem that copying the live objects would make the GC slow. But
+actually it's quite fast compared to other kinds of collectors.
+The reasons for this are:</P
+><P
+></P
+><UL
+><LI
+><P
+>	Only live objects are visited while tracing the pointers and
+	only live objects are copied.  The fraction of the &quot;from&quot; space
+	that is live can be quite small for functional languages like
+	SML which allocate many transient objects, perhaps around 10%.
+	Since the dead objects are never visited the cost for deleting
+	them is zero.</P
+></LI
+><LI
+><P
+>	The allocation is very fast. It only takes a few machine
+	instructions to compare the &quot;next&quot; pointer with the bottom of the
+	&quot;from&quot; space and advance it by the size of the object.</P
+></LI
+><LI
+><P
+>	After a collection the live objects have been coalesced into one
+	memory region.	This reduces the number of virtual memory
+	pages occupied by the heap which can help with the program's
+	performance.</P
+></LI
+></UL
+><P
+>When the cost of the copying is amortized over all objects that were
+allocated in the &quot;from&quot; space the cost per object is very low. It's
+low enough that SML/NJ does not use a separate stack for the activation
+records of called functions (which contain the local variables). Instead
+everything is allocated in the heap and the speed is competitive with
+stack allocation. (See [<SPAN
+CLASS="CITATION"
+><A
+HREF="b6666.html#BIBE.APPEL1"
+><I
+>Appel1</I
+></A
+></SPAN
+>] for a detailed analysis
+of the costs).  Compare this with C where you are taught that allocating
+objects in the heap is much slower than allocating on the stack.</P
+><P
+>Allocating activation records in the heap makes the implementation of
+continuations very easy and fast which in turn makes CML efficient.
+In effect the heap contains the stacks of each of the threads. Thread
+switching is fast and the GC will clean up when they terminate.</P
+><P
+>You might be worried that the copying collector wastes memory since only
+half of the heap space, the &quot;from&quot; space, is used for allocation. But
+no physical memory needs to be allocated to the &quot;to&quot; space until the
+copying starts and it can be removed again when the spaces are swapped.
+The peak amount of memory used is the size of the &quot;from&quot; space plus the
+size of the live objects (as they fill the &quot;to&quot; space).</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="PERFMULTIGC"
+>Multi-Generational Garbage Collection</A
+></H2
+><P
+>Even though the copying of live objects in the basic copying collector
+is not that slow, as explained above, it can still be improved upon.
+SML/NJ actually uses a multi-generational copying collector (MGGC).</P
+><P
+>The idea is that most objects are either transient and die soon or
+else they are long-lived.  A MGGC attempts to identify the long-lived
+objects and copy them less often.  The GC has multiple heaps called
+generations. A new object is allocated into the first generation.  If it
+persists for some number of collection cycles then it is promoted into
+the second generation.  For example there might be only one scan of the
+second generation for 10 scans of the first generation. This reduces
+the number of times that long-lived objects are copied at the cost of
+delaying their eventual collection and increasing the peak memory usage.</P
+><P
+>SML/NJ version 110.0.7 uses 5 generations.  Each generation is a copying
+GC with a &quot;from&quot; space and a &quot;to&quot; space. Each older generation is scanned
+5 times less often than the previous one. Persistent objects slowly
+migrate to the oldest generation.  A &quot;minor&quot; collection just scans the
+first generation.  A &quot;major&quot; collection scans the older generations and
+looks for opportunities to promote objects to the next older generation.</P
+><P
+>The SML/NJ GC has other optimisations too. Each generation is actually
+divided into arenas that group together objects according to their kind:
+records, list cells, strings and arrays.  There is a separate area for
+&quot;big&quot; objects which are never copied.  Currently the only big objects
+are those containing compiled code.</P
+><P
+>On most Unix systems the memory for the heap spaces is allocated using
+the <TT
+CLASS="COMPUTEROUTPUT"
+>mmap</TT
+> system call. The C <TT
+CLASS="COMPUTEROUTPUT"
+>malloc</TT
+> function continues to
+work separately for interfacing with the standard C library.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="PERFRUNARGS"
+>Run-Time Arguments for the Garbage Collector</A
+></H2
+><P
+>The SML/NJ run-time takes the following arguments for the garbage collector.</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>@SMLalloc=&lt;size&#62;</DT
+><DD
+><P
+>This sets the size of the area where new objects are allocated,
+    in generation 0. The size can have a scale of K or M appended. The
+    default is 256K bytes.  Increasing this will improve the performance
+    for programs requiring lots of memory.  You will need to experiment
+    to find the best value.  </P
+></DD
+><DT
+>@SMLngens=&lt;int&#62;</DT
+><DD
+><P
+>This sets the number of generations. The default is 5. You cannot set more than 14.
+     Increasing the number of generations should reduce the amount of copying at the cost
+     of consuming more memory.  You probably don't need to change this.
+    </P
+></DD
+><DT
+>@SMLvmcache=&lt;int&#62;</DT
+><DD
+><P
+>When the &quot;from&quot; space is emptied the memory can either be returned to the operating
+    system or kept by the run-time. This argument controls this.  The default value is 2
+    meaning that the &quot;from&quot; space memory for the first 2 generations is not returned to
+    the operating system after the copying is done.  This avoids the overhead of
+    frequently freeing and reallocating the memory.  You probably don't need to change
+    this.
+    </P
+></DD
+></DL
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="PERFOBJLAYOUT"
+>Heap Object Layout</A
+></H2
+><P
+>In this section I describe the layout of the different kinds of heap
+objects: records, list cells, strings and arrays. I won't include complete
+details, just the gist of it so that you can get an idea of the memory
+usage for SML types.</P
+><P
+>The biggest influence on the object layout is the need for the GC to be
+able to find all of the pointers in an object without having the details
+of the SML type that the object represents.  This is achieved through
+two features of the layout:</P
+><P
+></P
+><UL
+><LI
+><P
+> every object is preceded by a descriptor word that contains some
+    type information for the whole object;</P
+></LI
+><LI
+><P
+> every word in the object can be identified from a descriptor or
+    its contents as being either data or a pointer.</P
+></LI
+></UL
+><P
+>The contents of strings and numeric values are known to be data just
+from the descriptor.  In a record each field is a single 32 bit word.
+The pointers in the record fields are distinguished by examining the
+low-order 2 bits of each word.  The possible combinations are:</P
+><DIV
+CLASS="TABLE"
+><A
+NAME="HEAPWORDBITS"
+></A
+><P
+><B
+>Table 7-1. The Low-Order Bits of a Record Field.</B
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+WIDTH="57"
+ALIGN="CENTER"
+VALIGN="TOP"
+><P
+>B1</P
+></TH
+><TH
+WIDTH="57"
+ALIGN="CENTER"
+VALIGN="TOP"
+><P
+>B0</P
+></TH
+><TH
+WIDTH="454"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Description</P
+></TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+WIDTH="57"
+ALIGN="CENTER"
+VALIGN="TOP"
+><P
+>0</P
+></TD
+><TD
+WIDTH="57"
+ALIGN="CENTER"
+VALIGN="TOP"
+><P
+>0</P
+></TD
+><TD
+WIDTH="454"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>The field is a pointer with 32-bit alignment.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="57"
+ALIGN="CENTER"
+VALIGN="TOP"
+><P
+>1</P
+></TD
+><TD
+WIDTH="57"
+ALIGN="CENTER"
+VALIGN="TOP"
+><P
+>0</P
+></TD
+><TD
+WIDTH="454"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>The field contains an object descriptor.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="57"
+ALIGN="CENTER"
+VALIGN="TOP"
+><P
+>x</P
+></TD
+><TD
+WIDTH="57"
+ALIGN="CENTER"
+VALIGN="TOP"
+><P
+>1</P
+></TD
+><TD
+WIDTH="454"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>The field contains a data value in the upper 31 bits, for example
+	the <TT
+CLASS="COMPUTEROUTPUT"
+>Int.int</TT
+> type.</P
+></TD
+></TR
+></TBODY
+></TABLE
+></DIV
+><P
+>So all data values in a record field must occupy at most 31 bits.
+Anything larger must be in a separate object on the heap pointed to from
+the first record.  The first case is called an <I
+CLASS="EMPHASIS"
+>unboxed</I
+> value and
+the second is called <I
+CLASS="EMPHASIS"
+>boxed</I
+>.</P
+><P
+>The SML type <TT
+CLASS="COMPUTEROUTPUT"
+>Int.int</TT
+> is a 31 bit integer that is stored
+shifted left by 1 bit with the lower bit containing a 1 as shown in
+<A
+HREF="c2882.html#HEAPWORDBITS"
+>Table 7-1</A
+>. You might think that it would be expensive
+to manipulate these integers since the machine code would have to shift
+the integer right when extracting it from the word and shift it left
+to store it again. But most of these shift operations can be avoided.
+No shifting is required to copy or compare the integers. Addition and
+subtraction only require that one of the words have its bit 0 cleared
+before proceeding. This is easy to arrange at no cost when one of the
+operands is a constant.  The remaining operations including multiplication
+and division are relatively rare.</P
+><P
+>Since pointers are always word-aligned their low 2 bits are always zero
+so this fits the scheme at no extra cost.</P
+><P
+>The pointer to an object points to the first word after the descriptor.
+Descriptors are distinguished from all other words by their low 2 bits
+so that you can have a pointer into the middle of an object. The GC can
+always scan backwards from the pointer to find the descriptor at the top.
+The next 4 bits, at positions 2-5, contain a tag that indicates if the
+object is a record, string, array, list pair, floating point (double
+precision) or other kind of object.</P
+><P
+>Some objects, such as records, strings and arrays have a built-in
+length. This is stored in the remaining 26 bits of the descriptor word.
+The memory usage of a string is rounded up to a multiple of 4 bytes. This
+includes a terminal NUL character for compatibility with C. The length
+does not count the descriptor.</P
+><P
+><A
+HREF="c2882.html#OBJLAYOUT"
+>Figure 7-2</A
+> shows the layout of the objects corresponding
+to the SML this record value:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>val x = {a = 2, b = 3:Int32.int, c = "abc", d = 3.14159}</PRE
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="FIGURE"
+><A
+NAME="OBJLAYOUT"
+></A
+><P
+><B
+>Figure 7-2. The Layout of a Record.</B
+></P
+><DIV
+CLASS="MEDIAOBJECT"
+><P
+><center><IMG
+SRC="perf/objlayout.png"
+></center></IMG
+></P
+></DIV
+></DIV
+><P
+>The 32 bit integer is stored boxed as a byte vector, similar to a
+string. Real numbers are stored as 64 bit double precision floating point
+(and the length field is unused).</P
+><P
+>So the expression</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>Array.array(10, 1): Int32.int Array.array</PRE
+></TD
+></TR
+></TABLE
+><P
+>will allocate 11 words for the array and 10*2 words for each boxed
+element for a total of 31 words.  The size would be only 11 words if
+the element type was <TT
+CLASS="COMPUTEROUTPUT"
+>Int.int</TT
+>.</P
+><P
+>List cells are similar to records with two words for the head and tail and
+a descriptor.  The empty list is represented by a zero pointer.  The SML
+<TT
+CLASS="COMPUTEROUTPUT"
+>option</TT
+> type is similar. The <TT
+CLASS="COMPUTEROUTPUT"
+>NONE</TT
+> value is represented
+by a zero pointer while (<TT
+CLASS="COMPUTEROUTPUT"
+>SOME</TT
+> a) is represented by a record of
+length one containing the value.  Datatypes are also like records with
+an extra discriminant field for the constructor. I don't have any more
+details on their representation.&#13;</P
+></DIV
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x2844.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x3010.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Semaphores via Synchronous Variables</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="p31.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Performance</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,606 @@
+<HTML
+><HEAD
+><TITLE
+>Hello World</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Programming with Standard ML"
+HREF="p31.html"><LINK
+REL="PREVIOUS"
+TITLE="Introduction"
+HREF="c33.html"><LINK
+REL="NEXT"
+TITLE="The echo Program"
+HREF="x212.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="CHAPTER"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="c33.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x212.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="CHAPTER"
+><H1
+><A
+NAME="AEN131"
+>Chapter 2. Hello World</A
+></H1
+><DIV
+CLASS="TOC"
+><DL
+><DT
+><B
+>Table of Contents</B
+></DT
+><DT
+><A
+HREF="c131.html#ASSEMBLEHW"
+>Assembling the Hello World Program</A
+></DT
+><DT
+><A
+HREF="x212.html"
+>The <I
+CLASS="EMPHASIS"
+>echo</I
+> Program</A
+></DT
+><DT
+><A
+HREF="x237.html"
+>Loops and Recursion</A
+></DT
+><DT
+><A
+HREF="x443.html"
+>The <I
+CLASS="EMPHASIS"
+>getopt</I
+> Programs</A
+></DT
+></DL
+></DIV
+><P
+>In this chapter I will show the basics of running simple SML programs. I
+will start with the classic <I
+CLASS="EMPHASIS"
+>hello world</I
+> program to show how to
+build a complete runnable program.  Then I will move on to more elaborate
+programs following the classic development with programs like <I
+CLASS="EMPHASIS"
+>echo</I
+>
+and <I
+CLASS="EMPHASIS"
+>word count</I
+>.</P
+><P
+>During this development I will stop to examine some of the programming
+idioms that are peculiar to functional programming and that often give an
+imperative programmer difficulties.  I will pay particular attention to
+loops, using recursion, which is one of the biggest differences between
+imperative and functional programming.</P
+><P
+>By the time you get here you should have studied one of the texts or
+tutorials on SML cited in <A
+HREF="a6410.html"
+>Appendix A</A
+>.</P
+><P
+>All programming examples are available as complete source files that you
+can run.  I only cite pieces of each program in the text.  You should
+also read the complete programs.</P
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="ASSEMBLEHW"
+>Assembling the Hello World Program</A
+></H1
+><P
+>The least you have to do to make SML say &quot;hello world&quot; is to use the
+<I
+CLASS="EMPHASIS"
+>top level</I
+>. This is a classic Read-Eval-Print loop where you type
+in an SML declaration and it is immediately evaluated.  For example</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>&#62; sml
+Standard ML of New Jersey, Version 110.0.7
+- print "hello world\n";
+hello world
+val it = () : unit
+- ^D </PRE
+></TD
+></TR
+></TABLE
+><P
+>You type in the  <TT
+CLASS="COMPUTEROUTPUT"
+>print</TT
+> expression at the prompt and terminate
+it with a semicolon.  It gets evaluated which has the side-effect of
+printing the string.  Then the compiler shows the return value which is
+<TT
+CLASS="COMPUTEROUTPUT"
+>()</TT
+> of type <TT
+CLASS="COMPUTEROUTPUT"
+>unit</TT
+> and is assigned to the special variable
+<TT
+CLASS="COMPUTEROUTPUT"
+>it</TT
+>. The type <TT
+CLASS="COMPUTEROUTPUT"
+>unit</TT
+> plays the same role as <TT
+CLASS="COMPUTEROUTPUT"
+>void</TT
+> in C.
+Use a Control-D to exit from the compiler.</P
+><P
+>But this doesn't get you a program that you can run as a command. For
+this you need to do some more work.  The SML/NJ system can save a program
+in an (almost) ready-to-run form called a heap file.  The steps it goes
+through are shown in <A
+HREF="c131.html#COMPILEHEAP"
+>Figure 2-1</A
+></P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="COMPILEHEAP"
+></A
+><P
+><B
+>Figure 2-1. Compiling and Running a Program</B
+></P
+><DIV
+CLASS="MEDIAOBJECT"
+><P
+><center><IMG
+SRC="hw/compileheap.png"
+></center></IMG
+></P
+></DIV
+></DIV
+><P
+>When you run the <TT
+CLASS="COMPUTEROUTPUT"
+>sml</TT
+> command you start off with the runtime, which
+is a C executable, and a heap containing the compiler.  The compiler
+compiles your source file to one or more modules, here A, B and C, which
+are left in the heap.  Then you arrange for the contents of the heap
+to be dumped into a file using the built-in <TT
+CLASS="COMPUTEROUTPUT"
+>exportFn</TT
+> function.
+Just before the heap is dumped a garbage collection is performed which
+removes all objects in the heap that are not reachable from your program.
+This will get rid of the compiler.</P
+><P
+>Later you can run your program by starting another copy of the runtime
+and loading your program into its heap.</P
+><P
+>You can find out where the runtime executable is on your computer by
+looking for where the <TT
+CLASS="COMPUTEROUTPUT"
+>sml</TT
+> command is kept.  In my installation
+I have these files.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>&#62; which sml
+/usr/local/bin/sml
+
+&#62; ls -l /usr/local/bin/sml
+... /usr/local/bin/sml -&#62; /src/smlnj/current/bin/sml
+
+&#62; cd /src/smlnj/current/bin
+&#62; ls -a
+./
+../
+.arch-n-opsys*
+.heap/
+.run/
+.run-sml*
+ml-burg -&#62; .run-sml*
+ml-lex -&#62; .run-sml*
+ml-yacc -&#62; .run-sml*
+sml -&#62; .run-sml*
+sml-cm -&#62; .run-sml*</PRE
+></TD
+></TR
+></TABLE
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>sml</TT
+> command leads back to the <TT
+CLASS="COMPUTEROUTPUT"
+>.run-sml</TT
+> shell script.
+This script runs the executable in the <TT
+CLASS="COMPUTEROUTPUT"
+>.run</TT
+> subdirectory with
+a heap file that contains the compiler, found in the <TT
+CLASS="COMPUTEROUTPUT"
+>.heap</TT
+>
+subdirectory.</P
+><P
+>To build your own program you need to duplicate this arrangement.
+Here is a basic <I
+CLASS="EMPHASIS"
+>hello world</I
+> program.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>structure Main=
+struct
+
+    fun main(arg0, argv) =
+    (
+        print "hello world\n";
+        OS.Process.success
+    )
+
+    val _ = SMLofNJ.exportFn("hw", main)
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>All compiled programs are divided into modules called
+<I
+CLASS="EMPHASIS"
+>structures</I
+>. Here I've called it <TT
+CLASS="COMPUTEROUTPUT"
+>Main</TT
+> but the name doesn't
+matter. After the structure is compiled each of its declarations will
+be evaluated.  Evaluating the function <TT
+CLASS="COMPUTEROUTPUT"
+>main</TT
+> doesn't do anything
+but say that this is a function.  But when the <TT
+CLASS="COMPUTEROUTPUT"
+>val</TT
+> declaration
+is evaluated the <TT
+CLASS="COMPUTEROUTPUT"
+>exportFn</TT
+> function (in the built-in structure
+<TT
+CLASS="COMPUTEROUTPUT"
+>SMLofNJ</TT
+>) will be called. This will write the heap into a file
+named <TT
+CLASS="COMPUTEROUTPUT"
+>hw</TT
+> with a suffix that depends on the kind of operating
+system and architecture you are using.  For Linux on ix86 the file name
+will be <TT
+CLASS="COMPUTEROUTPUT"
+>hw.x86-linux</TT
+>.</P
+><P
+>The second argument to <TT
+CLASS="COMPUTEROUTPUT"
+>exportFn</TT
+> names the function that will be
+called when the heap file is read back in.  This function must return
+a success or fail code which becomes the exit code (0 or 1) of the program.
+These codes are defined in the built-in <TT
+CLASS="COMPUTEROUTPUT"
+>OS.Process</TT
+> structure.</P
+><P
+>The next step is to compile this program.  The SML/NJ system comes
+with a built-in compilation manager that does a job similar to the Unix
+<TT
+CLASS="COMPUTEROUTPUT"
+>make</TT
+> command.  First you need a CM file that describes what you are
+going to compile.  Call it <TT
+CLASS="COMPUTEROUTPUT"
+>hw.cm</TT
+>. The least it needs to contain is</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>group is 
+    hw.sml</PRE
+></TD
+></TR
+></TABLE
+><P
+>Then compile the program as follows<A
+NAME="AEN192"
+HREF="#FTN.AEN192"
+>[1]</A
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>&#62; CM_ROOT=hw.cm sml
+Standard ML of New Jersey, Version 110.0.7, September 28, 2000
+- CM.make();
+[starting dependency analysis]
+[scanning hw.cm]
+[checking CM/x86-unix/hw.cm.stable ... not usable]
+[parsing hw.sml]
+[Creating directory CM/DEPEND ...]
+[dependency analysis completed]
+[compiling hw.sml -&#62; CM/x86-unix/hw.sml.bin]
+[Creating directory CM/x86-unix ...]
+[wrote CM/x86-unix/hw.sml.bin]
+GC #1.1.1.1.1.10:   (10 ms)
+write 1,0: 1356 bytes [0x40cd0000..0x40cd054c) @ 0x1000
+........ stuff deleted
+write 5,0: 28 big objects (271 pages) @ 0x15410</PRE
+></TD
+></TR
+></TABLE
+><P
+>The most convenient way to pass in the name of the CM file is through the
+<TT
+CLASS="COMPUTEROUTPUT"
+>CM_ROOT</TT
+> environment variable.  (If you don't set <TT
+CLASS="COMPUTEROUTPUT"
+>CM_ROOT</TT
+>
+then a default of <TT
+CLASS="COMPUTEROUTPUT"
+>sources.cm</TT
+> is used.)  At the prompt type
+<TT
+CLASS="COMPUTEROUTPUT"
+>CM.make();</TT
+>. This runs the compilation manager.  Don't forget
+the semicolon.  You will be prompted until you enter it.</P
+><P
+>The messages you get show the compilation manager figuring out that it
+needs to recompile the source file.  It then caches the compiled form
+in the <TT
+CLASS="COMPUTEROUTPUT"
+>CM/x86-unix/hw.sml.bin</TT
+> file.  Then the export step writes
+lots of stuff to the heap file.</P
+><P
+>Now that you have the heap file you need a shell script to run it.
+Here is a generic script.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>heap=`basename $0`
+install=.
+smlbin=/src/smlnj/current/bin
+
+exec $smlbin/.run-sml @SMLload=$install/${heap}.x86-linux "$@"&#13;</PRE
+></TD
+></TR
+></TABLE
+><P
+>This script starts the runtime and specifies the heap file to load.
+This is taken from the name of the script so that the same script can
+be used for different programs by adding links or just copying it.
+The <TT
+CLASS="COMPUTEROUTPUT"
+>install</TT
+> variable allows you to move the heap file to some
+installation directory.  Any command line arguments will be passed
+through to the SML main function.</P
+><P
+>Now you can run it</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>&#62; hw
+hello world</PRE
+></TD
+></TR
+></TABLE
+><P
+>Don't be too worried about the large size of the heap file for such a
+small program.  Some people argue that there is something wrong with a
+language if a program as small as this doesn't produce a correspondingly
+small executable and cry <I
+CLASS="EMPHASIS"
+>Bloat!</I
+>.  But few people write <I
+CLASS="EMPHASIS"
+>hello
+world</I
+> programs.  The overhead in the heap file becomes much more modest
+in proportion when you develop programs of a serious size.</P
+><P
+>That's a fair bit of work to get a single program going but you only
+have to do it once and copy it as a template for future programs.</P
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN192"
+HREF="c131.html#AEN192"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>The details of specifying
+the CM file name will change in a future release of SML/NJ.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="c33.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x212.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Introduction</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="p31.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>The <I
+CLASS="EMPHASIS"
+>echo</I
+> Program</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

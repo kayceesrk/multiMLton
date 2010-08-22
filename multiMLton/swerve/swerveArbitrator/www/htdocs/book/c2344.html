@@ -1,0 +1,476 @@
+<HTML
+><HEAD
+><TITLE
+>Concurrency</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Programming with Standard ML"
+HREF="p31.html"><LINK
+REL="PREVIOUS"
+TITLE="Other Utilities"
+HREF="x2319.html"><LINK
+REL="NEXT"
+TITLE="Coroutines"
+HREF="x2405.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="CHAPTER"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x2319.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x2405.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="CHAPTER"
+><H1
+><A
+NAME="CONCURRENCY"
+>Chapter 6. Concurrency</A
+></H1
+><DIV
+CLASS="TOC"
+><DL
+><DT
+><B
+>Table of Contents</B
+></DT
+><DT
+><A
+HREF="c2344.html#CONTINUATIONS"
+>Continuations</A
+></DT
+><DT
+><A
+HREF="x2405.html"
+>Coroutines</A
+></DT
+><DT
+><A
+HREF="x2442.html"
+>The CML Model</A
+></DT
+><DT
+><A
+HREF="x2564.html"
+>A Counter Object</A
+></DT
+><DT
+><A
+HREF="x2608.html"
+>Some Tips on Using CML</A
+></DT
+><DT
+><A
+HREF="x2622.html"
+>Getting the Counter's Value</A
+></DT
+><DT
+><A
+HREF="x2669.html"
+>Getting the Value through an Event</A
+></DT
+><DT
+><A
+HREF="x2690.html"
+>Getting the Value with a Time-Out</A
+></DT
+><DT
+><A
+HREF="x2739.html"
+>More on Time-Outs</A
+></DT
+><DT
+><A
+HREF="x2758.html"
+>Semaphores</A
+></DT
+><DT
+><A
+HREF="x2844.html"
+>Semaphores via Synchronous Variables</A
+></DT
+></DL
+></DIV
+><P
+>This chapter introduces the concurrency mechanisms of the Concurrent ML
+library, or CML for short(see [<SPAN
+CLASS="CITATION"
+><A
+HREF="b6666.html#BIBE.CML"
+><I
+>CML</I
+></A
+></SPAN
+>]).  The concurrency model
+is based around a collection of threads which communicate by sending
+messages (rather than sharing access to variables).  CML does not use the
+&quot;kernel&quot; threads of the operating system.  Instead its implementation
+is based on coroutines.  However a timer mechanism triggers pre-emptive
+scheduling of the threads.  The coroutine mechanism is in turn based on
+the idea of continuations.</P
+><P
+>The CML library adds a collection of modules containing concurrent
+operations and also replaces some of the Basis and Utility library modules
+with thread-safe versions.  There is some reference documentation provided
+with the library in HTML and Postscript formats.  The text book on CML
+is [<SPAN
+CLASS="CITATION"
+><A
+HREF="b6666.html#BIBE.REPPY"
+><I
+>Reppy</I
+></A
+></SPAN
+>].  This chapter will cover the concepts in enough
+detail to carry on with the project in part II.</P
+><P
+>There is a bug in the version of CML distributed with SML/NJ
+110.0.7. You will need to get a copy from the CML home page dated
+later than 14 Jan 2001 to run all of these examples successfully.
+The <A
+HREF="a6548.html"
+>Appendix C</A
+> explains how to do this.</P
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="CONTINUATIONS"
+>Continuations</A
+></H1
+><P
+>In <A
+HREF="x237.html#TAILASITER"
+>the section called <I
+>Tail Recursion as Iteration</I
+> in Chapter 2</A
+> and <A
+HREF="x237.html#TAILFSM"
+>the section called <I
+>Tail Recursion for Finite State Machines</I
+> in Chapter 2</A
+> we saw how a function
+call can be equivalent to and as light-weight as the <TT
+CLASS="COMPUTEROUTPUT"
+>goto</TT
+> of
+a language like C.  Turning our view-point around we can represent any
+transfer of control as a call to some function.  In the simple flow-chart
+of <A
+HREF="c2344.html#SIMPLEFLOW"
+>Figure 6-1</A
+>(a) there are implicit transfers of control
+from one block to the next. Data values are also passed (implicitly),
+for example the value of <TT
+CLASS="COMPUTEROUTPUT"
+>x</TT
+> is passed to the addition in the second block. </P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="SIMPLEFLOW"
+></A
+><P
+><B
+>Figure 6-1. A Simple Flow Chart</B
+></P
+><DIV
+CLASS="MEDIAOBJECT"
+><P
+><center><IMG
+SRC="concur/simpleFlow.png"
+></center></IMG
+></P
+></DIV
+></DIV
+><P
+>The transfer from the first to the second block can be modeled as a
+function call by considering everything that happens from the second
+block onwards as being the computation of a function.  This function
+will be passed the value of <TT
+CLASS="COMPUTEROUTPUT"
+>x</TT
+> as an argument.  The function is
+said to continue the execution of the program after the first block.
+This continuation function is shown in <A
+HREF="c2344.html#SIMPLEFLOW"
+>Figure 6-1</A
+>(b)
+as the function <TT
+CLASS="COMPUTEROUTPUT"
+>C</TT
+>.  The assignment to <TT
+CLASS="COMPUTEROUTPUT"
+>x</TT
+> can be reduced
+to a call to <TT
+CLASS="COMPUTEROUTPUT"
+>C</TT
+> passing the value 3 as the argument <TT
+CLASS="COMPUTEROUTPUT"
+>x</TT
+> of
+the continuation.  The transfers of control inside the function <TT
+CLASS="COMPUTEROUTPUT"
+>C</TT
+>
+can be further decomposed into calls to continuation functions.</P
+><P
+>Since this function <TT
+CLASS="COMPUTEROUTPUT"
+>C</TT
+> represents all the rest of the execution
+of the program it never returns. So any call to it must be a tail call.
+These are the essential characteristics of a continuation:  <I
+CLASS="EMPHASIS"
+>a tail
+call is made to a continuation to continue the rest of the execution of
+the program, passing as arguments all the values that will be used by
+the rest of the program</I
+>.  A continuation function is often passed in
+as an argument to a function to give greater flexibility in the choice
+of direction for the program.</P
+><P
+>Continuations were introduced in the study of the semantics of
+programming languages.  A notation called Denotational Semantics was
+developed in the late 1960s and 1970s by Scott and Strachey among
+others to describe formally the semantics of programming languages.
+See [<SPAN
+CLASS="CITATION"
+><A
+HREF="b6666.html#BIBE.ALLISON"
+><I
+>Allison</I
+></A
+></SPAN
+>] for an introduction.
+Denotational semantics was based on lambda calculus which gave it a
+functional style.  This created the problem of how to represent the
+control-flow of an imperative language. Continuations were invented
+to model control-flow in lambda calculus.  They are a primitive notion
+that can be used to model any flow of control, including long-distance
+transfers such as raising exceptions.  For example an <TT
+CLASS="COMPUTEROUTPUT"
+>if</TT
+> statement
+in C has a <I
+CLASS="EMPHASIS"
+>then</I
+> and an <I
+CLASS="EMPHASIS"
+>else</I
+> part and control is transferred
+to one of them.  This can be modeled by having two continuations. The
+first contains the execution of the <I
+CLASS="EMPHASIS"
+>then</I
+> part followed by the rest
+of the program. The second contains the execution of the <I
+CLASS="EMPHASIS"
+>else</I
+> part
+followed  by the rest of the program.  The predicate of the <TT
+CLASS="COMPUTEROUTPUT"
+>if</TT
+>
+statement chooses which continuation to call.</P
+><P
+>At any point in the execution of the program we can define a <I
+CLASS="EMPHASIS"
+>current
+continuation</I
+>. This is a hypothetical continuation function that
+represents the rest of the execution after that point in the program.
+If we could capture the current continuation as a real function we
+would obtain a snapshot of the execution of the program at that point.
+Some programming languages provide this feature, called <I
+CLASS="EMPHASIS"
+>call with
+current continuation</I
+> or <TT
+CLASS="COMPUTEROUTPUT"
+>call/cc</TT
+>.  Scheme for example provides
+this.  So does SML/NJ.  The <TT
+CLASS="COMPUTEROUTPUT"
+>call/cc</TT
+> operation captures the
+current continuation, from the point after the <TT
+CLASS="COMPUTEROUTPUT"
+>call/cc</TT
+>, and passes it
+as a function value to a function that you provide.  Your function can
+do anything with the continuation including storing it for later use.
+If the program later calls the continuation it results in a resumption
+of execution from after the <TT
+CLASS="COMPUTEROUTPUT"
+>call/cc</TT
+>.</P
+><P
+>When you continue a program by calling a continuation function you will
+probably be continuing the execution of a number of called functions
+which have piled up on the call stack.  The continued execution will
+include returning from called functions to functions higher up the call
+stack.  So the contents of the call stack are an essential part of the
+snapshot represented by the continuation.  But as an extra complication
+you can call a continuation more than once, just as you can call any
+function more than once.  This results in the mind-bending possibility
+of rerunning parts of your program, possibly restarting in arbitrary
+locations in the middle of functions.  You could call a function once
+but it returns twice.  So when <TT
+CLASS="COMPUTEROUTPUT"
+>call/cc</TT
+> makes its snapshot it,
+at least in principle, needs to save a copy of the call stack.  This can
+be expensive.  Some implementations of Scheme do exactly this.</P
+><P
+>The implementation of <TT
+CLASS="COMPUTEROUTPUT"
+>call/cc</TT
+> in SML/NJ is much simpler.
+The language is implemented using continuations.  The compiler identifies
+all continuations in the program before generating machine code for each
+continuation.  See [<SPAN
+CLASS="CITATION"
+><A
+HREF="b6666.html#BIBE.APPEL2"
+><I
+>Appel2</I
+></A
+></SPAN
+>] for the details. The call stack is maintained
+in the heap so that it does not need to be destroyed as functions return,
+as happens in the C language.  So it costs nothing to save the call
+stack when a <TT
+CLASS="COMPUTEROUTPUT"
+>call/cc</TT
+> is done, since it is already in the heap.
+It is only necessary to retain a pointer to the top of the call stack
+so that the garbage collector does not take it.</P
+><P
+>With <TT
+CLASS="COMPUTEROUTPUT"
+>call/cc</TT
+> being almost zero cost in SML/NJ you can use it
+frequently for all sorts of tricks. But unless you are careful you
+will get code that is as spaghetti in nature as the worst Fortran
+or assembly language program.  I won't use <TT
+CLASS="COMPUTEROUTPUT"
+>call/cc</TT
+> directly
+in this book. Instead its use will be stereotyped by CML.  CML uses
+<TT
+CLASS="COMPUTEROUTPUT"
+>call/cc</TT
+> to implement switching execution between threads.
+The stereotyped pattern is the coroutine.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x2319.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x2405.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Other Utilities</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="p31.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Coroutines</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

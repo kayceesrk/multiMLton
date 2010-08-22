@@ -1,0 +1,420 @@
+<HTML
+><HEAD
+><TITLE
+>Semaphores via Synchronous Variables</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Concurrency"
+HREF="c2344.html"><LINK
+REL="PREVIOUS"
+TITLE="Semaphores"
+HREF="x2758.html"><LINK
+REL="NEXT"
+TITLE="Under the Hood"
+HREF="c2882.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x2758.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 6. Concurrency</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="c2882.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="SEMAVAR"
+>Semaphores via Synchronous Variables</A
+></H1
+><P
+>In this section I present an alternative implementation of semaphores
+using the M-variables that were introduced in <A
+HREF="x2442.html#CMLSYNCVARS"
+>the section called <I
+>Synchronous Variables</I
+></A
+>.
+This implementation is closer to the traditional implementation
+of languages like Java where multiple threads cooperate as peers to
+guarantee the safety of the critical section.  This contrasts with the
+implementation presented in <A
+HREF="x2758.html"
+>the section called <I
+>Semaphores</I
+></A
+> which relies on a central
+manager thread.</P
+><P
+>The simplest case is the <I
+CLASS="EMPHASIS"
+>mutex</I
+> which protects a critical section
+of code so that no more than one thread can perform the code at a time.
+A mutex is a binary semaphore, that is one with a count of only 0 or 1.
+The resource is the critical section and only one copy is available
+for use.  Here is an implementation of a mutex using an M-variable.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>structure Mutex: MUTEX =
+struct
+    structure SV = SyncVar
+
+    type Mutex = bool SV.mvar
+
+
+    fun create() = SV.mVarInit true
+
+
+    fun lock mutex func =
+    (
+        SV.mTake mutex;
+        let
+            val r = func()
+        in
+            SV.mPut(mutex, true);
+            r
+        end
+        handle x =&#62; (
+            SV.mPut(mutex, true);
+            raise x
+            )
+    )
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The M-variable either holds a value or it is empty. It doesn't matter
+what that value is.  I've used a <TT
+CLASS="COMPUTEROUTPUT"
+>bool</TT
+>.  The critical section is
+represented by the body of a function that is passed as an argument. The
+function doesn't call the acquire and release operations itself. This ensures
+that every acquire is matched by a release.</P
+><P
+>When a thread calls the <TT
+CLASS="COMPUTEROUTPUT"
+>lock</TT
+> function it attempts to take the value
+out of the mutex. If it succeeds then it can go on to run the argument
+function. It puts the value back into the mutex to release the lock.
+Other threads that call <TT
+CLASS="COMPUTEROUTPUT"
+>lock</TT
+> at the same time will block since
+the mutex is already empty.  The <TT
+CLASS="COMPUTEROUTPUT"
+>lock</TT
+> function must be careful
+to release the mutex if the argument function raises an exception.</P
+><P
+>Next I would like to generalise this for counting semaphores.  At first
+glance you might try to use an M-variable with an integer value containing
+the number of available copies of the resource.  When the count drops
+to zero leave the M-variable empty so that acquirers are forced to
+block when they read the count.  But this creates a problem for the
+release operation.  The release mustn't block on an empty M-variable
+and it can't test if the M-variable is empty without a race condition
+or using some other mutex around the M-variable.</P
+><P
+>In the following implementation I don't let the M-variable become
+empty. Instead I introduce a condition variable for acquirers to block on.
+The design is similar to the basic Java implementation which looks
+something like the following (see [<SPAN
+CLASS="CITATION"
+><A
+HREF="b6666.html#BIBE.HOLUB"
+><I
+>Holub</I
+></A
+></SPAN
+>]).</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>public synchronized void acquire()
+{
+    while (count_ &#60;= 0)
+    {
+        wait();
+    }
+
+    count_--;
+}
+
+public synchronized void release()
+{
+    if (count_++ == 0)
+    {
+        notify();
+    }
+}</PRE
+></TD
+></TR
+></TABLE
+><P
+>The methods are synchronised to protect access to the count. If the count
+is zero then the calling thread is blocked and put onto a wait queue for
+the semaphore.  The <TT
+CLASS="COMPUTEROUTPUT"
+>release</TT
+> method sends a notification to wake
+one of the waiting threads.  It only does this when the count increments
+from zero since that is when there are acquirers waiting.</P
+><P
+>For the CML implementation I've reverted to having separate <TT
+CLASS="COMPUTEROUTPUT"
+>acquire</TT
+>
+and <TT
+CLASS="COMPUTEROUTPUT"
+>release</TT
+> functions, rather than the argument function of the
+mutex above.  This is because there must be multiple sections of code
+in different threads using the acquired resources.  I've also ignored
+time-outs to simplify the code. Here is the definition of the semaphore.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>structure Sema: SEMAPHORE =
+struct
+    structure SV = SyncVar
+
+    datatype Sema = Sema of {
+        rsrc:   int SV.mvar,    (* count of resources avail *)
+        cond:   unit CML.chan   (* signals a resource is avail *)
+        }
+
+    fun new n =
+    (
+        Sema {
+            rsrc = SV.mVarInit(Int.max(0, n)),
+            cond = CML.channel()
+            }
+    )</PRE
+></TD
+></TR
+></TABLE
+><P
+>I use a channel to send notifications to waiting acquirers. This lets
+there be multiple outstanding notifications and waiting acquirers and
+each notification will wake one acquirer.  Here is the <TT
+CLASS="COMPUTEROUTPUT"
+>acquire</TT
+>
+function.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun acquire (sema as Sema {rsrc, cond}) =
+let
+    val n = SV.mTake rsrc
+in
+    if n = 0
+    then
+        (SV.mPut(rsrc, n); CML.recv cond; acquire sema)
+    else
+        SV.mPut(rsrc, n-1)
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The decrement of the count is synchronised by taking it out of the
+M-variable.  Any other thread trying to acquire will be forced to wait
+on the M-variable.  If the count is zero then the zero is put back
+into the M-variable to release it and the acquirer blocks waiting for
+a notification on the channel.  When it is notified it tries to acquire
+the semaphore again.  Here is the <TT
+CLASS="COMPUTEROUTPUT"
+>release</TT
+> function.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun release (Sema {rsrc, cond}) = 
+let
+    fun notify() = ignore(CML.spawn(fn() =&#62; CML.send(cond, ())))
+    val n = SV.mTake rsrc
+in
+    SV.mPut(rsrc, n+1);
+    if n = 0 then notify() else ()
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>Again it takes the count out of the M-variable for synchronisation and
+puts the incremented value back in. If the count was zero then it sends
+a notification on the channel. This is done with an auxillary thread so
+that the release does not block.  The notifications are queued by simply
+leaving auxillary threads waiting for the opportunity to send.</P
+><P
+>An essential property of a correct implementation is that there be no
+waiting acquirers while the count is greater than zero.  But proving this
+is rather tricky.  All the different interleaving of steps over multiple
+acquirers and releasers must be considered.  For example what happens if
+one or more releases happen in between the <TT
+CLASS="COMPUTEROUTPUT"
+>mPut</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>recv
+cond</TT
+> in the <TT
+CLASS="COMPUTEROUTPUT"
+>acquire</TT
+> function?  It appears to work correctly
+but I'm not certain.  If I allowed time-outs it would be worse. If a
+waiting acquirer disappeared because of a time-out there would be an
+excess of notifications.  Would the semaphore still work correctly?</P
+><P
+>I'm more confident that the implementation of <A
+HREF="x2758.html"
+>the section called <I
+>Semaphores</I
+></A
+>
+is correct.  The protocol for dealing with the count and the waiting
+acquirers is implemented within a sequential manager thread.  This is
+much easier to reason about.  This is the strength of the CML paradigm.
+Within the boundary of a manager thread of a concurrent object the
+interactions between client threads are kept strictly sequential and
+therefore much easier to understand.  </P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x2758.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="c2882.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Semaphores</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c2344.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Under the Hood</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,217 @@
+<HTML
+><HEAD
+><TITLE
+>Arrays and Vectors</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The Basis Library"
+HREF="c710.html"><LINK
+REL="PREVIOUS"
+TITLE="Lists"
+HREF="x964.html"><LINK
+REL="NEXT"
+TITLE="The Portable I/O API"
+HREF="x1003.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x964.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 3. The Basis Library</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x1003.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="BASISARRAYS"
+>Arrays and Vectors</A
+></H1
+><P
+>Arrays are the only other mutable data structure after the <TT
+CLASS="COMPUTEROUTPUT"
+>ref</TT
+>
+type. They are similar to C arrays.  Entries are indexed from 0. All
+index operations are range checked.  The top level <TT
+CLASS="COMPUTEROUTPUT"
+>array</TT
+> type
+can contain entries of any type (as long as they are all the same type
+of course).  In addition SML/NJ provides arrays specialised to a fixed
+entry type: <TT
+CLASS="COMPUTEROUTPUT"
+>CharArray</TT
+>, <TT
+CLASS="COMPUTEROUTPUT"
+>Word8Array</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>Real64Array</TT
+>.
+You could use <TT
+CLASS="COMPUTEROUTPUT"
+>CharArray</TT
+> as a text buffer or <TT
+CLASS="COMPUTEROUTPUT"
+>Word8Array</TT
+>
+as a byte buffer.  These conform to the <TT
+CLASS="COMPUTEROUTPUT"
+>MONO_ARRAY</TT
+> signature.</P
+><P
+>If you want faster access without range checking then there are some
+unsafe versions of these structures in <TT
+CLASS="COMPUTEROUTPUT"
+>Unsafe.CharArray</TT
+>,
+<TT
+CLASS="COMPUTEROUTPUT"
+>Unsafe.Word8Array</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>Unsafe.Real64Array</TT
+>.  See
+<A
+HREF="c1357.html#UNSAFEAPI"
+>the section called <I
+>The Unsafe API</I
+> in Chapter 4</A
+>.</P
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>Array2</TT
+> structure provides two-dimensional arrays.</P
+><P
+>Vector types are like arrays but they are immutable.  The most useful
+forms of vectors are the monomorphic structures: <TT
+CLASS="COMPUTEROUTPUT"
+>CharVector</TT
+>,
+<TT
+CLASS="COMPUTEROUTPUT"
+>Word8Vector</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>Real64Vector</TT
+>.  The <TT
+CLASS="COMPUTEROUTPUT"
+>CharVector.vector</TT
+> type
+is defined to be the same as the top-level string type so you can use
+its functions on strings.  The <TT
+CLASS="COMPUTEROUTPUT"
+>Word8Vector.vector</TT
+> provides a byte string
+that is used for binary I/O in other parts of the Basis library.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x964.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x1003.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Lists</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c710.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>The Portable I/O API</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

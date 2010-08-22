@@ -1,0 +1,284 @@
+<HTML
+><HEAD
+><TITLE
+>The echo Program</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Hello World"
+HREF="c131.html"><LINK
+REL="PREVIOUS"
+TITLE="Hello World"
+HREF="c131.html"><LINK
+REL="NEXT"
+TITLE="Loops and Recursion"
+HREF="x237.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="c131.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 2. Hello World</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x237.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN212"
+>The <I
+CLASS="EMPHASIS"
+>echo</I
+> Program</A
+></H1
+><P
+>The <I
+CLASS="EMPHASIS"
+>echo</I
+> program will just echo its arguments.  It's a simple
+extension to <I
+CLASS="EMPHASIS"
+>hello world</I
+> that demonstrates using the command line
+arguments.  Here is the program.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>structure Main=
+struct
+
+    fun main(arg0, argv) =
+    (
+        case argv of
+          [] =&#62; ()
+
+        | (first::rest) =&#62;
+        (
+            print first;
+            app (fn arg =&#62; (print " "; print arg)) rest;
+            print "\n"
+        );
+
+        OS.Process.success
+    )
+
+    val _ = SMLofNJ.exportFn("echo", main)
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The name of the program is supplied to the main function as the
+first argument, <TT
+CLASS="COMPUTEROUTPUT"
+>arg0</TT
+> of type <TT
+CLASS="COMPUTEROUTPUT"
+>string</TT
+>.  This is the same
+as <TT
+CLASS="COMPUTEROUTPUT"
+>argv[0]</TT
+> in a C main function.  The remaining command line
+arguments are supplied as a list of strings in <TT
+CLASS="COMPUTEROUTPUT"
+>argv</TT
+>.</P
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>case</TT
+> expression reads as follows.  If the argument list is
+empty then print nothing.  Otherwise if it is non-empty then print the
+first one and then print the rest of them preceded by a single blank.
+The <TT
+CLASS="COMPUTEROUTPUT"
+>app</TT
+> applies the function to each of the strings in the list
+<TT
+CLASS="COMPUTEROUTPUT"
+>rest</TT
+>.  This function prints the blank and then the argument.</P
+><P
+>Be careful that you only put semicolons <I
+CLASS="EMPHASIS"
+>between</I
+> imperative
+statements. If you were to put a semicolon after the new-line print you
+would get this error message from the compiler.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>echo.sml:14.2 Error: syntax error: inserting  EQUALOP</PRE
+></TD
+></TR
+></TABLE
+><P
+>This is because the parser in the compiler attempts to correct syntax
+errors in order to continue compiling for as long as possible.  Sometimes
+this works.  In this case it decides that it needs another expression
+after the semicolon and chooses an equals operator to be the expression.
+The error message points to the line after where the surplus semicolon
+is, here line 14, character 2.  See <A
+HREF="a6445.html"
+>Appendix B</A
+> for more
+information on the compiler's error messages.</P
+><P
+>For this program I've used a more elaborate run script since there is
+a bug in the standard one in that it does not pass empty command line
+arguments through to the SML program.  For the <I
+CLASS="EMPHASIS"
+>echo</I
+> program to
+be exactly right we need to see the empty arguments too.  This script
+copies in more of the SML/NJ <TT
+CLASS="COMPUTEROUTPUT"
+>.run-sml</TT
+> script.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>&#13;install=.
+smlbin=/src/smlnj/current/bin
+
+arg0=$0
+cmd=`basename $0`
+
+ARCH_N_OPSYS=`$smlbin/.arch-n-opsys`
+if [ "$?" != "0" ]; then
+    echo "$cmd: unable to determine architecture/operating system"
+    exit 1
+fi
+eval $ARCH_N_OPSYS
+suffix=$ARCH-$OPSYS
+
+exec $smlbin/.run/run.$ARCH-$OPSYS @SMLcommand=$arg0 \
+        @SMLload=$install/${cmd}.$HEAP_SUFFIX "$@"
+&#13;</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="c131.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x237.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Hello World</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c131.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Loops and Recursion</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

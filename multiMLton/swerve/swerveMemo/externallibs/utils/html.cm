@@ -1,0 +1,16 @@
+Library
+
+	structure Attribute
+	structure Html
+	structure Test
+	structure HtmlPrint
+
+is
+
+	html-sig.sml
+	html.sml
+	
+	htmlprint-sig.sml
+	htmlprint.sml
+
+	$/smlnj-lib.cm

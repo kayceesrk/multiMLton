@@ -1,0 +1,27 @@
+
+structure Main =
+struct
+   open CML
+   structure B = MLton.Parallel.Basic
+   fun loop n = if n=0 then ()
+                else
+                  loop (n-1)
+  fun print' msg =
+  let
+    val _ = print (msg^" Before "^Int.toString(B.processorNumber()))
+    val _ = loop 9000000
+    (*val res = S.readyAndSwitchToNext(fn () => ())*)
+  in
+    ()(*print (msg^" After  "^Int.toString(B.processorNumber()))*)
+  end
+
+
+   fun doit' n = if n=0 then ()
+                 else
+                    (spawn( fn () => print' ("\nThread"^Int.toString(n)))
+                    ; doit' (n-1))
+   fun doit n =
+     (print "\nIn Main.doit";
+     RunCML.doit ( fn () =>
+       doit' n, NONE))
+end

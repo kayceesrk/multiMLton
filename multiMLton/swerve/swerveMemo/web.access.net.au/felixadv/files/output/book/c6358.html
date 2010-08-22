@@ -1,0 +1,348 @@
+<HTML
+><HEAD
+><TITLE
+>Conclusion</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="The Common Layer"
+HREF="x5914.html"><LINK
+REL="NEXT"
+TITLE="Related Languages"
+HREF="x6396.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="CHAPTER"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x5914.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x6396.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="CHAPTER"
+><H1
+><A
+NAME="AEN6358"
+>Chapter 10. Conclusion</A
+></H1
+><DIV
+CLASS="TOC"
+><DL
+><DT
+><B
+>Table of Contents</B
+></DT
+><DT
+><A
+HREF="c6358.html#AEN6361"
+>SML/NJ vs Real-World Needs</A
+></DT
+><DT
+><A
+HREF="x6396.html"
+>Related Languages</A
+></DT
+><DT
+><A
+HREF="x6407.html"
+>To Finish</A
+></DT
+></DL
+></DIV
+><P
+>The aim of this book has been to demonstrate that functional languages,
+in particular SML, can be used to build the kind of real-world projects
+that you might ordinarily only think of using C or C++ for.  In the
+following I will discuss some of the lessons learned from developing
+the web server project in SML/NJ. I'll also point you at some related
+languages to look into.</P
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN6361"
+>SML/NJ vs Real-World Needs</A
+></H1
+><P
+>To tackle real-world projects a language and its environment needs to:</P
+><P
+></P
+><UL
+><LI
+><P
+>	scale to large quantities of code;</P
+></LI
+><LI
+><P
+>	have the performance to handle real-world loads;</P
+></LI
+><LI
+><P
+>	interface with infrastructure such as databases, graphics etc.</P
+></LI
+></UL
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN6371"
+>Large-scale Development</A
+></H2
+><P
+>Functional languages certainly scale to the size of real-world projects
+by nature.  The productivity improvement from a functional language
+allows a programmer to tackle much larger projects.  I estimate at
+least a 10 to 1 improvement in productivity over the C language just
+from a reduction in the number of lines of code needed.  There is a
+large productivity boost from the absence of memory management bugs and
+the like that plague C programs.  Further the strong static type system
+often means that sizable pieces of SML code just works first time.</P
+><P
+>The SML module system goes a long way towards managing large-scale
+code. (But its inability to handle groups of mutually dependent modules
+is a minus).</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN6375"
+>Performance</A
+></H2
+><P
+>Over the years computer scientists have developed many &quot;very high
+level&quot; languages to help solve the &quot;programming crisis&quot; and improve
+programming productivity.  In the early stages of research they are
+usually interpreted rather than compiled and the implementation is slow.
+Often they don't progress beyond the research stage.  This leaves the
+impression that advanced languages are by nature slow and not suitable
+for real-world use.  Unfortunately programmers are prone to myths about
+programming languages and seldom revisit them.<A
+NAME="AEN6378"
+HREF="#FTN.AEN6378"
+>[1]</A
+></P
+><P
+>My experiments with the Swerve server in this book show that SML/NJ
+does perform well.  Without much trouble it achieved around 2/3 the
+speed of Apache, which is written in C. Anecdotal evidence has it that
+C++ is about 1/2 the speed of C. The speed drop is mainly due to the
+excessive copying encouraged by copy constructors and the overhead of
+virtual method calls.  Even a good Java implementation is slower again.
+This suggests that SML/NJ can certainly compete with C++ or Java.</P
+><P
+>Having said that, there are still some performance issues that need
+to be noted.  In <A
+HREF="x3010.html#PERFBASIC"
+>the section called <I
+>Basic SML/NJ Performance</I
+> in Chapter 7</A
+> I ran some basic speed tests.
+The performance on inner loops and low-level byte handling could do with
+some improvement.  This speed loss is partially compensated for by the
+much better heap performance.  Other implementations of SML such as the
+MLton compiler[<SPAN
+CLASS="CITATION"
+><A
+HREF="b6666.html#BIBE.MLTON"
+><I
+>MLton</I
+></A
+></SPAN
+>] work harder at optimisation.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN6388"
+>Infrastructure</A
+></H2
+><P
+>The big impediment to wider use of SML in the real-world is support
+for features such as databases, graphics, encryption, native languages
+(unicode), true concurrency etc.  </P
+><P
+>The standard basis library is looking rather dated.  It hasn't progressed
+in years.  A future release of SML/NJ will include a native C-language
+interface.  This will allow your SML program to dynamically link to a
+shared library and call its C API.  It includes a tool that generates SML
+stubs for all of the API functions found in the library's header files.
+This will make it possible to call libraries for database access, file
+encryption and compression etc.  But I think that the basis library will
+need further work to integrate this properly.  Personally I would like
+to see a plug-in mechanism for the SML/NJ run-time to make it easier
+to extend.</P
+><P
+>The choice of a web server for this book neatly avoids the issue
+of database programming.  Web servers typically delegate this to CGI
+scripts which you could write in Perl or PHP.  SML/NJ desperately needs
+an ODBC-like mechanism.</P
+><P
+>This book has been silent too on the matter of graphics programming.
+Image handling (e.g.  JPEG, PNG) needs access to standard libraries as
+described above.  To develop a GUI with SML/NJ you have a choice of the
+eXene system, supplied with SML/NJ, or the SML/Tk package[<SPAN
+CLASS="CITATION"
+><A
+HREF="b6666.html#BIBE.SMLTK"
+><I
+>SMLTK</I
+></A
+></SPAN
+>].
+I haven't used eXene. It's an experiment in designing a concurrent GUI
+toolkit for CML. But I would prefer a more conventional look and feel such
+as Tk. But SML/Tk is not written for a concurrent environment. Personally
+I consider Concurrent ML to be a &quot;killer&quot; feature of SML/NJ.  A GUI
+should be multi-threaded for responsiveness. It's a shame that CML is
+not built-in to SML/NJ instead of being an add-on.</P
+></DIV
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN6378"
+HREF="c6358.html#AEN6378"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>Here are some
+common ones. <I
+CLASS="EMPHASIS"
+>Lisp is slow.</I
+> Optimising compilers have been available
+for years. <I
+CLASS="EMPHASIS"
+>Ada is huge and bloated</I
+>. What, C++ isn't? <I
+CLASS="EMPHASIS"
+>C must
+be efficient because you can program down to the bare metal</I
+>. Nope, its
+1970s-vintage machine model no longer fits well with modern computers.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x5914.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x6396.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>The Common Layer</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Related Languages</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

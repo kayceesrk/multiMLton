@@ -1,0 +1,579 @@
+<HTML
+><HEAD
+><TITLE
+>Introduction</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Programming with Standard ML"
+HREF="p31.html"><LINK
+REL="PREVIOUS"
+TITLE="Programming with Standard ML"
+HREF="p31.html"><LINK
+REL="NEXT"
+TITLE="Hello World"
+HREF="c131.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="CHAPTER"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="p31.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="c131.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="CHAPTER"
+><H1
+><A
+NAME="AEN33"
+>Chapter 1. Introduction</A
+></H1
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN35"
+>What is Functional Programming?</A
+></H1
+><P
+>This section gives a brief overview of functional programming to
+set the scene.  <A
+HREF="c33.html#LANGPARADIGMS"
+>Figure 1-1</A
+> shows a rather simplistic
+classification of some contemporary programming languages.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="LANGPARADIGMS"
+></A
+><P
+><B
+>Figure 1-1. A Classification of Some Languages</B
+></P
+><DIV
+CLASS="MEDIAOBJECT"
+><P
+><center><IMG
+SRC="intro/langParadigms.png"
+></center></IMG
+></P
+></DIV
+></DIV
+><P
+>The conventional languages are based on the imperative programming
+paradigm (which I'll abbreviate to IMP).  This means that the program
+progresses by applying commands to a store containing the program
+variables.  The commands cause updates to the contents of the store.
+As the program executes the store goes through a sequence of states.</P
+><P
+>In functional programming (which I'll abbreviate to FP) there is no store
+that is updated.  The program progresses by computing new values from
+existing values. There is nothing in pure FP that requires the existence
+of a distinct store let alone an updatable one.</P
+><P
+>FP is further divided into two main camps, eager and lazy.  Eager
+languages always evaluate an expression at the earliest opportunity.
+All inputs to functions are values.  The ML language family is eager.</P
+><P
+>Lazy languages delay the evaluation of an expression until its value is
+actually needed.  The aim is to avoid computing unneeded values.  This
+means that inputs to functions may be partially evaluated expressions.
+A very useful consequence of lazy evaluation is that it becomes possible
+to deal with data structures of infinite size,  as long as you don't need
+to evaluate all of the data structure.  The flagship lazy functional
+language is Haskell[<SPAN
+CLASS="CITATION"
+><A
+HREF="b6666.html#BIBE.HASKELL"
+><I
+>Haskell</I
+></A
+></SPAN
+>] with Clean[<SPAN
+CLASS="CITATION"
+><A
+HREF="b6666.html#BIBE.CLEAN"
+><I
+>Clean</I
+></A
+></SPAN
+>] an
+important rival.</P
+><P
+>It might seem that there is not much difference between IMP and FP
+since they both involve computing new values from existing values.
+The difference is best illustrated graphically. <A
+HREF="c33.html#SIMPLEEXPR"
+>Figure 1-2</A
+>
+shows a simple expression and a graphical representation of the values
+and operators (functions).</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="SIMPLEEXPR"
+></A
+><P
+><B
+>Figure 1-2. The expression <TT
+CLASS="COMPUTEROUTPUT"
+>(x + y) * (u + v)</TT
+></B
+></P
+><DIV
+CLASS="MEDIAOBJECT"
+><P
+><center><IMG
+SRC="intro/simpleexpr.png"
+></center></IMG
+></P
+></DIV
+></DIV
+><P
+>This expression illustrates several essential features of FP.</P
+><P
+></P
+><UL
+><LI
+><P
+>    Values flow between operators.  The values are immutable by nature.
+    A value such as 3 is always 3 and never anything else.</P
+></LI
+><LI
+><P
+>    Operators always compute the same result given the same inputs (at
+    least within the same environment).  If you compute 1+2 at one point
+    in time and do it again later you can expect to get the same result.</P
+></LI
+><LI
+><P
+>    The only effect of an operator is to produce an output value.
+    Nothing else is disturbed in the system.</P
+></LI
+></UL
+><P
+>Functions that always compute the same results for the same inputs are
+called <I
+CLASS="EMPHASIS"
+>pure</I
+> or <I
+CLASS="EMPHASIS"
+>referentially transparent</I
+>.  Functions that
+have no other effect than to produce their output value are called
+<I
+CLASS="EMPHASIS"
+>side-effect free</I
+>.  These properties are closely connected.
+If a function's behaviour depends on some input other than its
+manifest inputs then some other function could change this other input
+as a side-effect.  In this case the behaviour of the function can change
+at times and in ways that can be very difficult to predict and hard
+to debug.</P
+><P
+>FP says that these features of immutable values and pure, side-effect
+free functions are so valuable that they must be preserved throughout
+the design of the language.  </P
+><P
+>IMP programs abandon these features as soon as the result of the
+expression is assigned to a variable.  A variable in IMP is a name bound
+to a box into which different values can be placed at different times.
+This variable can be updated by a side-effect of some function <TT
+CLASS="COMPUTEROUTPUT"
+>f</TT
+>.
+The behaviour of a function <TT
+CLASS="COMPUTEROUTPUT"
+>g</TT
+> in another part of the program
+can depend on the value of this variable.  These two functions are
+communicating a value using the variable as a channel.  I call this a
+<I
+CLASS="EMPHASIS"
+>sneak path</I
+>.  The sneak path is not obvious from the source
+code.  There is nothing to see at the place where <TT
+CLASS="COMPUTEROUTPUT"
+>f</TT
+> is called to
+indicate that it is making this communication.  IMP programs are full
+of sneak paths.  Part of the challenge of figuring out an IMP program
+is tracing all the possible sneak paths.  IMP programmers are warned not
+to use lots of global variables in their programs as it makes the scope
+of the sneak paths enormous.  But that only barely contains the problem.</P
+><P
+>A further problem with communication via a variable is that its
+correctness depends on the order of operations.  The call to <TT
+CLASS="COMPUTEROUTPUT"
+>f</TT
+> must
+be made before the call to <TT
+CLASS="COMPUTEROUTPUT"
+>g</TT
+> or else it fails.  You've probably
+had many bugs in your programs like this where you've got something
+happening in the wrong order.  I sure have.</P
+><P
+>In general, since variables go through sequences of states, getting
+computation steps in the right order is essential to IMP.  Controlling the
+order of operation is a large part of what makes IMP difficult.  You find
+that you need to use a debugger to observe the order of events in the
+program and the changes in variables just to figure out what is going on.</P
+><P
+>Pure FP eliminates these problems.  </P
+><P
+></P
+><UL
+><LI
+><P
+>    The meaning of the word <I
+CLASS="EMPHASIS"
+>variable</I
+> in FP is different.  It is a
+    name bound to a value, not to a box holding a value.  So the value
+    associated with the variable is steady.</P
+></LI
+><LI
+><P
+>    All inputs to a function are made manifest in its declaration as
+    argument variables.  For convenience a function may depend on the
+    value of a variable in a surrounding scope but this value must by
+    definition be steady during the lifetime of the function so the
+    behaviour of the function cannot vary over its lifetime.</P
+></LI
+><LI
+><P
+>    The communication between functions is more directly visible in the
+    source code.</P
+></LI
+><LI
+><P
+>    There is no order of evaluation to worry about. Referring back to
+    <A
+HREF="c33.html#SIMPLEEXPR"
+>Figure 1-2</A
+>, you see that it doesn't matter in what
+    order the addition operators are performed.  The only ordering that
+    is needed is that a function does not compute until all its input
+    values are available.  This order can be determined automatically
+    by the language system so you don't need to worry about it at all.</P
+></LI
+></UL
+><P
+>These features make it a lot easier to reason rigourously about FP code.
+A simple demonstration of the difficulty with IMP is the mathematical
+rule <TT
+CLASS="COMPUTEROUTPUT"
+>x + x = 2x</TT
+>.  You would think that any logical system that
+violates even as simple a rule as this is going to be hard to work with.
+So consider if this C expression can be true: <TT
+CLASS="COMPUTEROUTPUT"
+>getchar() + getchar()
+== 2*getchar()</TT
+>!</P
+><P
+>Unfortunately, while pure FP is very nice in theory, it has its problems
+in practice.  Some of these are described in the next sections.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="PUREFPIO"
+>Pure FP and I/O</A
+></H2
+><P
+>The major problem with pure FP is input/output (I/O).  Except in the
+simplest cases where a program can be cast as a function transforming one
+file into another, I/O is a side-effect.  For example, an FP program could
+have sneak-paths by writing to a file and reading it back again later.
+The outer world, the operating system, is a vast mess of state that the
+program has to interact with.</P
+><P
+>There are a variety of techniques that have been developed in recent
+years to find a way to get pure FP and I/O to blend together.  The most
+advanced can be found in the Haskell and Clean languages.  I won't go
+into the details except to mention the idea of lazy streams.  </P
+><P
+>A lazy stream is an infinite list of values that is computed lazily.  The
+stream of keystrokes that a user presses on the keyboard can be represented
+as an infinite (or arbitrarily long) list of all of the keystrokes that
+the user is ever going to press.  You get the next keystroke by taking
+the head element of the stream and saving the remainder.  Since the head
+is only computed lazily, on demand, this will result in a call to the
+operating system to get the next keystroke.</P
+><P
+>What's special about the lazy stream approach is that you can treat
+the entire stream as a value and pass it around in your program.
+You can pass it as an argument to a function or save the stream in a
+data structure. You can write functions that operate on the stream as
+a whole.  You can write a word scanner as a function, <TT
+CLASS="COMPUTEROUTPUT"
+>toWords</TT
+>,
+that transforms a stream of characters into a stream of words.  A program
+to obtain the next 100 words from the standard input might look something
+like</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>        apply show (take 100 (toWords stdIn))</PRE
+></TD
+></TR
+></TABLE
+><P
+>where <TT
+CLASS="COMPUTEROUTPUT"
+>stdIn</TT
+> is the input stream and <TT
+CLASS="COMPUTEROUTPUT"
+>take n</TT
+> is a function
+that returns the first <TT
+CLASS="COMPUTEROUTPUT"
+>n</TT
+> elements in a list.  The <TT
+CLASS="COMPUTEROUTPUT"
+>show</TT
+>
+function is applied to each word to print it out.  The program is just
+the simple composition of the functions.  Lazy evaluation ensures that
+this program is equivalent to the set of nested loops that you would
+write for this in an IMP program.  This is programming at a much higher
+level than you typically get with IMP languages.</P
+><P
+>But we aren't using Haskell or Clean.  The approach of SML to I/O is to
+revert to impure behaviour.  You can use a <TT
+CLASS="COMPUTEROUTPUT"
+>read</TT
+> function and it
+will return different values on each call.  You can use a <TT
+CLASS="COMPUTEROUTPUT"
+>print</TT
+>
+function and it will have the side-effect of writing to a file.
+You can even have <I
+CLASS="EMPHASIS"
+>imperative variables</I
+> with assignment statements.
+These are called reference types.  They provide you with a box into which
+you can store different values at different times.  So this means that
+the sequencing of statements raises its ugly head in SML.</P
+><P
+>With SML you can use a mixture of FP and IMP but naturally the IMP should
+be kept to a minimum to maximise the advantages of FP.  When we get into
+concurrent programming later on we'll look at ways of blending the two.
+Communication between threads or coroutines can be used to emulate
+lazy streams.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN116"
+>Pure FP and Plumbing</A
+></H2
+><P
+>One of the awkward problems with pure FP is that all input values to a
+function must be passed in as arguments at some point.  This creates
+the plumbing problem.  If you want to pass a value to some point in
+the program it must be plumbed through all of the functions in between
+which can lead to a lot of clutter.   This problem can be reduced a bit
+by taking advantage of nested functions and scoping. In the following code</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun f a b c =
+let
+    fun g x count =
+    (
+        ... g (x-1) (count+1) ...
+    )
+in
+    g b 1
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>the values <TT
+CLASS="COMPUTEROUTPUT"
+>a</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>c</TT
+> are available to the function <TT
+CLASS="COMPUTEROUTPUT"
+>g</TT
+>
+without having to be passed as arguments.  But even doing this
+it can be sometimes be quite awkward plumbing everything through.
+In practice, the careful use of some global imperative variables can
+improve a program's readability a lot, as long as we don't have sneak
+paths as an essential feature of an algorithm.</P
+><P
+>A second part to the plumbing problem is the chaining of values from
+one function to the next.  You often have code looking something like</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun f a =
+let
+    ...
+    val (x, s1) = g a []
+    val (y, s2) = g b s1
+    val (z, s3) = g c s2
+    ...
+in
+    ...
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>Here the functions are computing values <TT
+CLASS="COMPUTEROUTPUT"
+>x</TT
+>, <TT
+CLASS="COMPUTEROUTPUT"
+>y</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>z</TT
+>
+while passing some state values between the calls.  There is no easy
+solution to this in SML.  The Haskell language has a design pattern
+called a <I
+CLASS="EMPHASIS"
+>monad</I
+> which neatly simplifies this plumbing.  In SML you
+would have to roll your own monads which is messy enough that you might
+as well just grin and bear it.</P
+></DIV
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="p31.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="c131.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Programming with Standard ML</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="p31.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Hello World</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

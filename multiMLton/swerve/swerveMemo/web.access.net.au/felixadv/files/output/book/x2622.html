@@ -1,0 +1,399 @@
+<HTML
+><HEAD
+><TITLE
+>Getting the Counter's Value</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Concurrency"
+HREF="c2344.html"><LINK
+REL="PREVIOUS"
+TITLE="Some Tips on Using CML"
+HREF="x2608.html"><LINK
+REL="NEXT"
+TITLE="Getting the Value through an Event"
+HREF="x2669.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x2608.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 6. Concurrency</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x2669.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="COUNTERREPLY"
+>Getting the Counter's Value</A
+></H1
+><P
+>The next goal is to be able to return the count from a counter
+object.  Since the object can only respond to one message at a time
+it will be enough to have one channel reserved for replies.  The main
+design goal is ensuring that the channels are used correctly so that
+the clients of the object can't cause deadlocks.</P
+><P
+>Remember that channels are synchronous. The client will block while
+waiting for the counter to receive a <TT
+CLASS="COMPUTEROUTPUT"
+>get</TT
+> request.  When the
+counter has received it it will send the reply on the reply channel and
+the client will be blocked waiting for the reply. For correctness there
+must be a 1 to 1 match between request and reply and the thread that
+accepts the reply must be the one that sent the request.</P
+><P
+>To ensure correctness the bits and pieces of the object must be hidden
+within a module.  Here is the signature of a structure that describes
+the interface to a counter object.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>signature COUNTER =
+sig
+    type Counter
+
+    val new:    int -&#62; Counter 
+    val incr:   Counter -&#62; int -&#62; unit
+    val get:    Counter -&#62; int
+
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>To a client, the counter object is represented by a proxy of type
+<TT
+CLASS="COMPUTEROUTPUT"
+>Counter</TT
+>.  The proxy encapsulates the sending and receiving
+performed by a client.  New objects are created with the <TT
+CLASS="COMPUTEROUTPUT"
+>new</TT
+>
+function which takes an initial value for the count. The <TT
+CLASS="COMPUTEROUTPUT"
+>incr</TT
+>
+and <TT
+CLASS="COMPUTEROUTPUT"
+>get</TT
+> functions operate on the counter.</P
+><P
+>Here are the types that implement the counter.  </P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>structure Counter: COUNTER =
+struct
+
+    datatype Request = 
+            ReqIsIncr of int
+        |   ReqIsGet
+
+    and Reply =
+            ReplyIsCount of int
+
+    and Counter = Counter of {
+                    req_chan:   Request CML.chan,
+                    rpl_chan:   Reply CML.chan
+                    }</PRE
+></TD
+></TR
+></TABLE
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>Request</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>Reply</TT
+> types define the messages passed
+between the client and counter.  The counter proxy is a record containing
+the two channels that communicate with the counter.</P
+><P
+>There is no need to retain any other handle to the counter, such as its
+thread.  As long as there are channels that can communicate with a thread
+it will be considered to be live by the garbage collector. If a value of
+type Counter becomes garbage then the thread that it communicates with
+will also become garbage and the thread will be collected and terminated.
+(If I want a thread to stay alive without channels then I would have to
+retain its thread ID somewhere).</P
+><P
+>Here is the implementation of the counter in the <TT
+CLASS="COMPUTEROUTPUT"
+>new</TT
+> function.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>    fun new init =
+    let
+        val req_chan = CML.channel()
+        val rpl_chan = CML.channel()
+
+        fun counter() =
+        let
+            fun loop count =
+            (
+                case CML.recv req_chan of
+                  ReqIsIncr n =&#62; loop (count + n)
+
+                | ReqIsGet =&#62; 
+                (
+                    CML.send(rpl_chan, ReplyIsCount count);
+                    loop count
+                )
+            )
+        in
+            loop init
+        end
+
+        val thread = CML.spawn counter
+    in
+        Counter
+        {
+            req_chan = req_chan,
+            rpl_chan = rpl_chan
+        }
+    end</PRE
+></TD
+></TR
+></TABLE
+><P
+>To create a counter I create the two channels and spawn a thread to run
+the <TT
+CLASS="COMPUTEROUTPUT"
+>counter</TT
+> function.  The <TT
+CLASS="COMPUTEROUTPUT"
+>counter</TT
+> function gets its channels
+and initial value from its surrounding scope.  I return a value of type
+<TT
+CLASS="COMPUTEROUTPUT"
+>Counter</TT
+> to the client.</P
+><P
+>Here are the interface functions.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>    fun incr (Counter {req_chan, ...}) n =
+    (
+        CML.send(req_chan, ReqIsIncr n)
+    )
+
+
+    fun get  (Counter {req_chan, rpl_chan}) =
+    (
+        CML.send(req_chan, ReqIsGet);
+
+        case CML.recv rpl_chan of
+          ReplyIsCount n =&#62; n
+    )</PRE
+></TD
+></TR
+></TABLE
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>incr</TT
+> function just sends a message to the server to increment
+its value. There is no need for a reply.  The <TT
+CLASS="COMPUTEROUTPUT"
+>get</TT
+> function
+stops to wait for a reply.  </P
+><P
+><A
+HREF="x2622.html#CNT2INTER"
+>Figure 6-5</A
+> shows an interaction between the client and object
+for the <TT
+CLASS="COMPUTEROUTPUT"
+>get</TT
+> function.  The counter has performed a <TT
+CLASS="COMPUTEROUTPUT"
+>recv</TT
+> and
+is blocked waiting for the client.  When the client sends the Get message
+the counter runs and sends back the reply. Then it loops and blocks on
+a <TT
+CLASS="COMPUTEROUTPUT"
+>recv</TT
+> again.  Meanwhile the <TT
+CLASS="COMPUTEROUTPUT"
+>get</TT
+> function  has blocked
+waiting for the reply. When it gets it it returns the value to the caller.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="CNT2INTER"
+></A
+><P
+><B
+>Figure 6-5. Getting the Counter's Value</B
+></P
+><DIV
+CLASS="MEDIAOBJECT"
+><P
+><center><IMG
+SRC="concur/cnt2Inter.png"
+></center></IMG
+></P
+></DIV
+></DIV
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>get</TT
+> function is guaranteed to be atomic because of the
+synchronous nature of the <TT
+CLASS="COMPUTEROUTPUT"
+>send</TT
+> operation.  If another thread
+attempts to call <TT
+CLASS="COMPUTEROUTPUT"
+>incr</TT
+> or <TT
+CLASS="COMPUTEROUTPUT"
+>get</TT
+> before a previous reply
+has been received then it will block at the <TT
+CLASS="COMPUTEROUTPUT"
+>send</TT
+> operation.
+The object will not receive the next message until the reply has been
+accepted by the client.  </P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x2608.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x2669.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Some Tips on Using CML</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c2344.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Getting the Value through an Event</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

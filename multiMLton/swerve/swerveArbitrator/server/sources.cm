@@ -1,0 +1,16 @@
+(*  Copyright (c) 2001 Anthony L Shipman *)
+
+
+group is
+    /src/smlnj/current/lib/cml.cm
+    /src/smlnj/current/lib/cml-lib.cm
+
+    ../common/sources.cm
+    ../config/sources.cm
+    ../ietf/sources.cm
+    ../store/sources.cm
+
+    connect.sml
+    http10.sml
+    listener.sml
+

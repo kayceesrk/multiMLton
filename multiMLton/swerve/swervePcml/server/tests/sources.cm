@@ -1,0 +1,10 @@
+(*  Copyright (c) 2001 Anthony L Shipman *)
+
+
+group is
+    ../sources.cm
+    /src/smlnj/current/lib/cml.cm
+
+    ../../common/tests/t_utils.sml
+
+    t_main.sml

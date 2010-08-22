@@ -1,0 +1,43 @@
+$(SML_LIB)/basis/basis.mlb
+../Util/smlnj-lib.mlb
+
+local
+    Glue/match-tree.sml
+
+ann "warnMatch false" in
+
+    FrontEnd/syntax-sig.sml
+    FrontEnd/syntax.sml
+
+    BackEnd/fsm.sml
+
+    FrontEnd/parser-sig.sml
+    BackEnd/engine-sig.sml
+
+    FrontEnd/awk-syntax.sml
+    
+    BackEnd/bt-engine.sml
+    BackEnd/dfa-engine.sml
+
+end
+
+    Glue/regexp-sig.sml
+    Glue/regexp-fn.sml
+
+in
+
+    signature REGEXP_SYNTAX
+    signature REGEXP_PARSER
+    signature MATCH_TREE
+    signature REGEXP_ENGINE
+    signature REGEXP
+	      
+    structure RegExpSyntax
+    structure MatchTree
+    structure AwkSyntax
+    structure BackTrackEngine
+    structure DfaEngine
+	      
+    functor RegExpFn
+
+end

@@ -1,0 +1,5 @@
+local
+in
+   spawnM.sml
+   run-main.sml
+end

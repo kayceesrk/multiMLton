@@ -1,0 +1,1318 @@
+<HTML
+><HEAD
+><TITLE
+>The Organisation of the Code</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The Swerve Detailed Design"
+HREF="c4671.html"><LINK
+REL="PREVIOUS"
+TITLE="The Swerve Detailed Design"
+HREF="c4671.html"><LINK
+REL="NEXT"
+TITLE="The Main Layer"
+HREF="x4989.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="c4671.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 9. The Swerve Detailed Design</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x4989.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="CODEORG"
+>The Organisation of the Code</A
+></H1
+><P
+>Perhaps the most awkward thing about the SML module system is that
+circular dependencies between modules are not allowed.  Declarations
+have to be carefully partitioned between modules to avoid circular
+dependencies.  For example this often means that type declarations have
+to be factored out to a separate module.  This is because you can only
+have mutually recursive types if they are <TT
+CLASS="COMPUTEROUTPUT"
+>datatypes</TT
+> in the same
+group of declarations (i.e. joined with the <TT
+CLASS="COMPUTEROUTPUT"
+>and</TT
+> keyword) in the
+same module.  So you end up with a tree of modules to manage.</P
+><P
+>To help manage the modules I divide them into layers with each layer in
+its own directory. The module dependencies between layers always point
+from the top down.  <A
+HREF="x4677.html#CODELAYERS"
+>Table 9-1</A
+> shows the layers of the
+server and the files in each layer. The layers are shown from the highest
+to the lowest.  The files in each layer are listed in alphabetical order.
+I usually only place one module in each file.</P
+><DIV
+CLASS="TABLE"
+><A
+NAME="CODELAYERS"
+></A
+><P
+><B
+>Table 9-1. The Module Layers of the Server.</B
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Layer</P
+></TH
+><TH
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>File (Module)</P
+></TH
+><TH
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>Purpose</P
+></TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>main</P
+></TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>main.sml (Main)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This contains the main function for the server.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>startup.sml (Startup)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This contains the code for creating the lock
+			and pid files, setting the uid/gid and reversing
+			this on shutdown.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>server</P
+></TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>connect.sml (Connect)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This implements a type for a connection
+			along with I/O and utility operations on the
+			connection.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>http10.sml (HTTP_1_0)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This implements the HTTP1.0 protocol over a
+			connection and communicates with the resource
+			store.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>listener.sml (Listener)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This creates the listener socket and accepts
+			new connections.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>store</P
+></TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>builtin_node.sml (SimpleBuiltinHandler)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This implements some built-in node handlers.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>cgibin_node.sml (CgiNodeHandler)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This implements the CGI node handler.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>dir_node.sml (DirNodeHandler)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This implements nodes that map to files and directories.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>gen_node.sml (GenericNodeFn)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This implements backbone nodes that route
+			requests to handlers. It provides a functor that is 
+			specialise by each kind of handler.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>node_auth.sml (NodeAuth)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This implements authorisation checking functions.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>node_factory.sml (NodeFactory)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This implements a function to create resource
+			nodes of different kinds.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>node_handler_sig.sml (NODE_HANDLER)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This defines the signature that a node handler
+			must have. This is the configuration interface
+			between backbone and handler nodes. </P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>node.sml (Node)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This defines common types for resource nodes.
+			This includes the message protocol between
+			backbone nodes and handlers. Some utility
+			functions are included.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>resp_utils.sml (ResponseUtils)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This implements a few utility functions for
+			creating HTTP responses.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>store.sml (Store)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This is the entry point for the resource store.
+			It builds the node tree and accepts request from
+			the HTTP protocol manager.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>ietf</P
+></TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>entity.sml (Entity)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This defines a type for a HTTP entity. The
+			entity producer and consumer types and protocol
+			is also included. All of the kinds of producers
+			are implemented in here.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>http_header.sml (HTTPHeader)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This runs the parsing of HTTP headers.  A type
+			is defined to represent all of the well-known
+			headers in a fully-parsed format.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>http_msg.sml (HTTPMsg)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This defines the types for a HTTP request and response.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>http_status.sml (HTTPStatus)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This defines the type for a HTTP status code.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>ietf.lex (IETFLex)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This implements a ML-Lex lexer to help
+			parse HTTP headers.  It performs all of the
+			regular-expression operations.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>ietf_line.sml (IETF_Line)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This has more functions for parsing HTTP headers.
+			It uses the lexer to split a header line into
+			tokens according the the HTTP specification.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>ietf_part.sml (IETF_Part)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This defines the type for the tokens returned
+			by the functions in ietf_line.sml.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>ietf_utils.sml (IETF_Utils)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This implements a few utility
+			functions. Currently it only has base64 encoding
+			and decoding.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>config</P
+></TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>config.grm</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This is a ML-Yacc grammar for the server's configuration
+			file.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>config.lex</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This is a ML-Lex lexer to match the grammar.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>config.sml (Config)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This implements the configuration file
+			parsing. It stores the configuration parameters
+			as global values.  Some parameters are pushed
+			down into the common modules to avoid circular dependencies (see
+			<TT
+CLASS="COMPUTEROUTPUT"
+>init_globals</TT
+>).</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>config_types.sml (ConfigTypes)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This defines types for the parse tree produced
+			by the grammar.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>common</P
+></TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>abort.sml (Abort)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This defines a type to represent abort conditions
+			on connections.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>common.sml (Common)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This defines common types and functions that are
+			used all over the place.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>file_io.sml (FileIO)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This implements functions that generally operate
+			on the contents of files, especially wrappers
+			around OS.FileSys functions.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>files.sml (Files)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This implements functions that manage file paths
+			and provide information about files.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>finalise.sml (FinaliseFn)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This implements a functor to provides finalisation of
+			values after garbage collection.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>logging.sml (Log)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This implement the Logging Manager.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>mutex.sml (Mutex)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This implements mutexes for atomic operations on 
+			static variables.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>open_mgr.sml</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This implements the modules of the Open Manager.
+			This include the open file counter (OpenCounter)
+			and the managers specialised to each kind of
+			openable object such as files and processes.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>profile.sml (MyProfile)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This implements some profiling utilities.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>signals.sml (SignalMgr)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This implements signal catchers. It also catches
+			the pseudo-signal from the garbage collector. The
+			signals are distributed to the rest of the server
+			using multicasted messages.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>singleton.sml (Singleton)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This implements a functor that provides the
+			common pattern of a singleton concurrent object that
+			is started on demand.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>text.sml (TextFrag)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This defines a type for a fragment of text.
+			Fragments can be combined cheaply without copying
+			the text.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>tmpfile.sml (TmpFile)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This implements the management of temporary files including
+			limiting the disk space used and cleaning up when a connection
+			closes.</P
+></TD
+></TR
+><TR
+><TD
+WIDTH="85"
+ALIGN="LEFT"
+VALIGN="TOP"
+>&nbsp;</TD
+><TD
+WIDTH="227"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>url.sml (URL)</P
+></TD
+><TD
+WIDTH="255"
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>This implements a type for representing URLs.</P
+></TD
+></TR
+></TBODY
+></TABLE
+></DIV
+><P
+>The main dependencies between the modules of the top three levels
+are shown in <A
+HREF="x4677.html#TOPLAYERS"
+>Figure 9-1</A
+>.  Only the main interactions are
+shown, enough to place the modules into a hierarchy.  The modules on the
+right hand side are those in the ietf layer.  There would be too many
+connections joining the store and ietf layers to draw in.  I've omitted
+the config layer as it is fairly simple. The common layer is mostly flat.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="TOPLAYERS"
+></A
+><P
+><B
+>Figure 9-1. The Main Dependencies of the Upper Layers.</B
+></P
+><DIV
+CLASS="MEDIAOBJECT"
+><P
+><center><IMG
+SRC="webserver/toplayers.png"
+></center></IMG
+></P
+></DIV
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN4959"
+>How to Follow the Code</A
+></H2
+><P
+>The following detailed discussions will be organised by layer from the
+top down.  I'm going to describe the modules in a logical order that
+roughly traces the flow of control for a HTTP request through the server.
+This will also mesh with the top-down description of the layers since
+the functions are calling from the top down through the layers.</P
+><P
+>This ordering of the discussions means there will be many forward
+references to modules that will be discussed later, especially those in
+the the config and common layers.  You may want to jump ahead and scan
+the modules of the common layer first.  Especially have a look at the
+<TT
+CLASS="COMPUTEROUTPUT"
+>TextFrag</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>Log</TT
+> modules in <A
+HREF="x5914.html"
+>the section called <I
+>The Common Layer</I
+></A
+>.</P
+><P
+>Throughout the code I've used some common abbreviations for module names.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>structure Cfg    = Config
+structure Hdr    = HTTPHeader
+structure Req    = HTTPMsg
+structure S      = Socket
+structure SS     = Substring
+structure Status = HTTPStatus
+structure TF     = TextFrag
+structure U      = ResponseUtils</PRE
+></TD
+></TR
+></TABLE
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>Common</TT
+> module is always opened for direct access.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN4970"
+>Building the Server</A
+></H2
+><P
+>Each directory contains a <TT
+CLASS="COMPUTEROUTPUT"
+>sources.cm</TT
+> CM file to control the
+compilation of the server.  Here is the CM file for the <TT
+CLASS="COMPUTEROUTPUT"
+>main</TT
+>
+directory. (See <A
+HREF="c131.html#ASSEMBLEHW"
+>the section called <I
+>Assembling the Hello World Program</I
+> in Chapter 2</A
+> for more on <TT
+CLASS="COMPUTEROUTPUT"
+>CM</TT
+> files).</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>group is
+    /src/smlnj/current/lib/cml.cm
+    /src/smlnj/current/lib/cml-lib.cm
+
+    ../common/sources.cm
+    ../config/sources.cm
+    ../server/sources.cm
+
+    main.sml
+    startup.sml</PRE
+></TD
+></TR
+></TABLE
+><P
+>This CM file includes all other CM files directly or indirectly so you
+only need to compile in the <TT
+CLASS="COMPUTEROUTPUT"
+>main</TT
+> directory to compile all of the program.</P
+><P
+>Note that all uses of <TT
+CLASS="COMPUTEROUTPUT"
+>sml-lib</TT
+> (the SML libary) must be replaced
+with <TT
+CLASS="COMPUTEROUTPUT"
+>cml-lib</TT
+> in all <TT
+CLASS="COMPUTEROUTPUT"
+>.cm</TT
+> files in all directories.
+You cannot mix <TT
+CLASS="COMPUTEROUTPUT"
+>sml-lib</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>cml-lib</TT
+> in the same program.</P
+><P
+>To build the entire program just do the following or use the
+<TT
+CLASS="COMPUTEROUTPUT"
+>Makefile</TT
+> in the top directory.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>$ cd main
+$ sml
+Standard ML of New Jersey, Version 110.0.7, ...
+- CM.make();
+........
+write 5,0: 57 big objects (544 pages) @ 0x1064a0
+$ </PRE
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="c4671.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x4989.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>The Swerve Detailed Design</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c4671.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>The Main Layer</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

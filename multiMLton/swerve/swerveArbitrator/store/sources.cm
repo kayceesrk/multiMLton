@@ -1,0 +1,22 @@
+(*  Copyright (c) 2001 Anthony L Shipman *)
+
+
+group is
+    /src/smlnj/current/lib/cml-lib.cm
+    /src/smlnj/current/lib/cml.cm
+
+    ../common/sources.cm
+    ../config/sources.cm
+    ../ietf/sources.cm
+
+    builtin_node.sml
+    cgibin_node.sml
+    dir_node.sml
+    gen_node.sml
+    node_auth.sml
+    node_factory.sml
+    node_handler_sig.sml
+    node.sml
+    resp_utils.sml
+    store.sml
+

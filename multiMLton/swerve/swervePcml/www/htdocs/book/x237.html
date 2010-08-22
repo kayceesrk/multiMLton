@@ -1,0 +1,1226 @@
+<HTML
+><HEAD
+><TITLE
+>Loops and Recursion</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Hello World"
+HREF="c131.html"><LINK
+REL="PREVIOUS"
+TITLE="The echo Program"
+HREF="x212.html"><LINK
+REL="NEXT"
+TITLE="The getopt Programs"
+HREF="x443.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x212.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 2. Hello World</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x443.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN237"
+>Loops and Recursion</A
+></H1
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="RECBASICS"
+>The Basics</A
+></H2
+><P
+>The typical imperative loop idiom is demonstrated by this C function for finding
+the sum of the nodes in a list.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>typedef struct node {
+    int          value;
+    struct node* next;
+} Node;
+
+int
+sumlist(const Node* the_list)
+{
+    int     sum = 0;
+    Node*   l;
+
+    for(l = the_list; l != 0; l = l-&#62;next)
+    {
+        sum = sum + l-&#62;value;
+    }
+
+    return sum;
+}</PRE
+></TD
+></TR
+></TABLE
+><P
+>This shows two major features of imperative loops.  There is a loop
+variable, here <TT
+CLASS="COMPUTEROUTPUT"
+>l</TT
+>, that passes through a sequence of values, one
+for each iteration.  There are values that are passed from one iteration
+to the next through one or more other variables, here just <TT
+CLASS="COMPUTEROUTPUT"
+>sum</TT
+>.
+These are global to the body of the loop in order to persist from one
+iteration to another.  So the iterations are communicating with each
+other via side-effects.</P
+><P
+>Both of these features are anathema to functional programming.  You can't
+have variables changing from one iteration to the next like that.
+So <TT
+CLASS="COMPUTEROUTPUT"
+>for</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>while</TT
+> loops and anything similar is out of
+the question.</P
+><P
+>Instead in functional programming, loops are done with recursion within
+a function.  The idea is that the computation within the recursive
+function represents the computation of one iteration of the loop.
+The next iteration is started by calling the function again. Values
+are communicated between two iterations via the arguments passed to
+the function.  The rebinding of the argument variables to different
+values on different calls is the closest you will get to changing the
+value of a variable in pure functional programming.</P
+><P
+>Here is the same function in SML.  In the first version I've written
+the case expression out in full.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun sumlist the_list =
+(
+    case the_list of
+      []        =&#62; 0
+    | (v::rest) =&#62; v + (sumlist rest)
+)</PRE
+></TD
+></TR
+></TABLE
+><P
+>It can be made neater by merging the case expression with the function
+definition.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun sumlist []        = 0
+|   sumlist (v::rest) = v + (sumlist rest)</PRE
+></TD
+></TR
+></TABLE
+><P
+>The algorithm is described by the following specification.</P
+><P
+>To find the sum of the elements in a list:</P
+><P
+></P
+><OL
+TYPE="1"
+><LI
+><P
+>   If the list is empty then define the sum to be 0.</P
+></LI
+><LI
+><P
+>   If the list is not empty then we can split it into a first
+            element and some remaining elements.  The sum is the value
+            of the first element plus the sum of the remaining elements.</P
+></LI
+></OL
+><P
+>This is a &quot;divide and conquer&quot; style of specification. We reduce the
+problem of summing the list to a smaller problem by splitting it into
+two pieces.  SML provides a cheap mechanism to split the first element
+off from a list.  <A
+HREF="x237.html#DIVIDECONQ"
+>Figure 2-2</A
+> shows this division.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="DIVIDECONQ"
+></A
+><P
+><B
+>Figure 2-2. Summing a list by Divide and Conquer.</B
+></P
+><DIV
+CLASS="MEDIAOBJECT"
+><P
+><center><IMG
+SRC="recurse/divideConq.png"
+></center></IMG
+></P
+></DIV
+></DIV
+><P
+>To find the sum of the list <TT
+CLASS="COMPUTEROUTPUT"
+>[1, 2, 3, 4, 5]</TT
+> we reduce it to the
+problem of finding the sum of the list <TT
+CLASS="COMPUTEROUTPUT"
+>[2, 3, 4, 5]</TT
+> and adding 1
+to it.  This continues until we get to an empty list in which case its
+sum is known trivially.  Then we can complete the additions.</P
+><P
+>The problem with this algorithm is that the addition cannot be completed
+until the sum of the remaining elements is known.  This leaves a trail
+of pending additions which is as long as the list itself.  Each pending
+addition means there is an incomplete function call taking up stack
+space. So the stack space consumed is proportional to the length of the
+list.  The iterative algorithm in C above takes up constant stack space.
+When imperative programmers point to the superiority of iterative loops
+this is a major complaint they make against recursion.</P
+><P
+>But this problem is not a problem with recursion itself as much as how
+it is implemented in imperative languages like C.   We can sum the list with
+recursion in constant stack space too using tail recursion.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN273"
+>Tail Recursion</A
+></H2
+><P
+>A tail call to a function is one that is the last step made in the
+execution of the calling function.  In other words, the return value
+of the calling function will <I
+CLASS="EMPHASIS"
+>unconditionally</I
+> be the return value
+of the called function.  Since there will be no more execution in the
+calling function its stack space can be reclaimed <I
+CLASS="EMPHASIS"
+>before</I
+> the tail
+call.  This eliminates the accumulation of stack space during the loop.
+This is called the tail call optimisation.</P
+><P
+>Here is the same function in SML taking care to use tail recursion.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun sumlist the_list =
+let
+    fun loop []        sum = sum
+    |   loop (v::rest) sum = loop rest (sum+v)
+in
+    loop the_list 0
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The first argument to the <TT
+CLASS="COMPUTEROUTPUT"
+>loop</TT
+> function is the remainder of the
+list to be counted. The <TT
+CLASS="COMPUTEROUTPUT"
+>sum</TT
+> variable accumulates the result.
+The initial call to <TT
+CLASS="COMPUTEROUTPUT"
+>loop</TT
+> supplies initial values for these
+variables. Each subsequent call to the function passes updated
+values for these variables.  When the remainder of the list is empty
+then the value of the <TT
+CLASS="COMPUTEROUTPUT"
+>sum</TT
+> variable is the number of list
+elements. <A
+HREF="x237.html#SUMLISTDF"
+>Figure 2-3</A
+> shows the function calls in a data
+flow diagram.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="SUMLISTDF"
+></A
+><P
+><B
+>Figure 2-3. Tail Recursion as Data Flow</B
+></P
+><DIV
+CLASS="MEDIAOBJECT"
+><P
+><center><IMG
+SRC="recurse/sumlistDF.png"
+></center></IMG
+></P
+></DIV
+></DIV
+><P
+>Each iteration of the loop function is an operation that shortens the
+list by one and increments the sum.  When the list is reduced to an
+empty list then the accumulated sum is the answer.</P
+><P
+>I emphasised the word unconditionally in the definition of tail calls
+above because sometimes what is a tail call can be obscured.  For example
+if there is an exception handler surrounding the tail call then this
+implies that the calling function may sometimes still have work to do
+handling an exception from the called function so it can't be a tail call.
+You may need to watch out for this in loops.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="TAILASITER"
+>Tail Recursion as Iteration</A
+></H2
+><P
+>The first reaction of a C programmer to using recursion everywhere is
+to object to the performance of using recursion instead of iteration.
+But the programmer's intuition on what is expensive and what isn't is
+based on how C works and is pretty much useless when it comes to functional programming
+because it works so differently.</P
+><P
+>In this section I want to emphasise the equivalence of tail recursion
+and iteration by working back from recursion to iteration.  This will
+not only show that tail recursion is as efficient as iteration but will
+also provide an intuition that will be useful for bringing across imperative
+idioms to functional programming.</P
+><P
+>If you have studied a little assembly language you will know of the
+variety of machine instructions for jumping around in a program.  The
+Intel architecture has the simple unconditional <TT
+CLASS="COMPUTEROUTPUT"
+>JMP</TT
+> instruction.
+This corresponds to the <TT
+CLASS="COMPUTEROUTPUT"
+>goto</TT
+> statement in C.  You would expect
+that a <TT
+CLASS="COMPUTEROUTPUT"
+>goto</TT
+> translates to a single <TT
+CLASS="COMPUTEROUTPUT"
+>JMP</TT
+> instruction.
+For calling functions there is the <TT
+CLASS="COMPUTEROUTPUT"
+>CALL</TT
+> instruction which works
+like <TT
+CLASS="COMPUTEROUTPUT"
+>JMP</TT
+> except that it saves a return address on the stack.
+This allows the calling function to continue execution after the called
+function has finished.</P
+><P
+>But when we have tail recursion there is nothing to return to.
+By definition the calling function has completed.  So instead of using
+a <TT
+CLASS="COMPUTEROUTPUT"
+>CALL</TT
+>, we should be able to use a <TT
+CLASS="COMPUTEROUTPUT"
+>JMP</TT
+> instruction to
+implement the tail call.  In other words, <I
+CLASS="EMPHASIS"
+>a tail call is equivalent
+to a <TT
+CLASS="COMPUTEROUTPUT"
+>goto</TT
+></I
+>.</P
+><P
+>I'll demonstrate this equivalence by manually translating the
+<TT
+CLASS="COMPUTEROUTPUT"
+>sumlist</TT
+> function to C.  Here is the original in SML.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun sumlist the_list =
+let
+    fun loop []        sum = sum
+    |   loop (v::rest) sum = loop rest (sum+v)
+in
+    loop the_list 0
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>In C, using the <TT
+CLASS="COMPUTEROUTPUT"
+>Node</TT
+> type in <A
+HREF="x237.html#RECBASICS"
+>the section called <I
+>The Basics</I
+></A
+>, I get the
+(somewhat literal) code:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>int
+sumlist(const Node* the_list)
+{
+    const Node* list;       /* args to loop */
+    int         sum;    
+
+    list = the_list;        /* args to the first call */
+    sum  = 0;
+    goto loop;              /* a tail call to loop */
+
+loop:
+    if (list == 0)
+    {
+        return sum;         /* value returned from loop */
+    }
+    else
+    {
+        int         v    = list-&#62;value;
+        const Node* rest = list-&#62;next;
+
+        list = rest;        /* new args for the tail call */
+        sum  = sum + v;
+        goto loop;
+    }
+}</PRE
+></TD
+></TR
+></TABLE
+><P
+>Since all calls to <TT
+CLASS="COMPUTEROUTPUT"
+>loop</TT
+> are tail calls I can use <TT
+CLASS="COMPUTEROUTPUT"
+>goto</TT
+>s
+instead of function calls and use a label for <TT
+CLASS="COMPUTEROUTPUT"
+>loop</TT
+>.  This
+translation simultaneously incorporates the tail call optimisation
+and the inlining of the <TT
+CLASS="COMPUTEROUTPUT"
+>loop</TT
+> function.  A good SML compiler can
+be expected to perform these optimisations as a matter of course and
+generate machine code as good as C for the <TT
+CLASS="COMPUTEROUTPUT"
+>sumlist</TT
+> function.</P
+><P
+>Just to belabor the point, <A
+HREF="x237.html#TAILITER"
+>Figure 2-4</A
+> shows the equivalence
+graphically.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="TAILITER"
+></A
+><P
+><B
+>Figure 2-4. Tail Recursion as Iteration</B
+></P
+><DIV
+CLASS="MEDIAOBJECT"
+><P
+><center><IMG
+SRC="recurse/tailIter.png"
+></center></IMG
+></P
+></DIV
+></DIV
+><P
+>Part (a) of the figure shows a function <TT
+CLASS="COMPUTEROUTPUT"
+>f</TT
+> in a recursive loop being
+called.  In the middle of its execution it calls itself recursively.
+This continues until one of the invocations chooses not to call itself.
+Then the invocation returns and the second half of the previous invocation
+executes. This continues until all invocations have returned.  Part (b)
+shows what we have with tail recursion.  There is no second half, the
+returned value from one invocation becomes the returned value from the
+previous one and eventually the returned value from the entire function.
+Looking at the diagram we see that the cascade of returns is redundant.
+In part (c) the last invocation returns directly for the whole loop.
+With a bit of inlining the recursion has become just a sequence of
+executions of the body of the function <TT
+CLASS="COMPUTEROUTPUT"
+>f</TT
+> joined by <TT
+CLASS="COMPUTEROUTPUT"
+>goto</TT
+>
+statements, in other words conventional imperative iteration.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN333"
+>Using the Fold Functions</A
+></H2
+><P
+>The structure of the code in <A
+HREF="x237.html#SUMLISTDF"
+>Figure 2-3</A
+> is such a common
+pattern that there is a standard built-in function to implement
+it. It is called <TT
+CLASS="COMPUTEROUTPUT"
+>List.foldl</TT
+>, but it is also directly callable
+as <TT
+CLASS="COMPUTEROUTPUT"
+>foldl</TT
+><A
+NAME="AEN339"
+HREF="#FTN.AEN339"
+>[1]</A
+>.  Actually there are two variants, <TT
+CLASS="COMPUTEROUTPUT"
+>foldl</TT
+> and
+<TT
+CLASS="COMPUTEROUTPUT"
+>foldr</TT
+>, depending on whether you want to read the list from left
+to right or right to left.  Normally you should read the list left to
+right for efficiency.</P
+><P
+>The function for summing the list using <TT
+CLASS="COMPUTEROUTPUT"
+>foldl</TT
+> can now be written</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun sumlist the_list = foldl (fn (v, sum) =&#62; v + sum) 0 the_list</PRE
+></TD
+></TR
+></TABLE
+><P
+>The first argument to <TT
+CLASS="COMPUTEROUTPUT"
+>foldl</TT
+> is a function that performs the
+body of the loop. It takes a pair of arguments, the first is a value
+from the list and the second is the accumulated value.  It must then
+compute a new accumulated value.  The second argument to <TT
+CLASS="COMPUTEROUTPUT"
+>foldl</TT
+>
+is the initial value for the accumulator and the third is the list.
+The <TT
+CLASS="COMPUTEROUTPUT"
+>foldl</TT
+> takes care of all of the iteration over the list.</P
+><P
+>In general the expression <TT
+CLASS="COMPUTEROUTPUT"
+>foldl f i l</TT
+> corresponds to the data flow
+diagram in <A
+HREF="x237.html#FOLDDF"
+>Figure 2-5</A
+>.  In this diagram I have represented
+the calling of the function <TT
+CLASS="COMPUTEROUTPUT"
+>f</TT
+> by an @ operator.  This applies
+the function to the pair of the list element and the accumulated value.
+These two values are always supplied in a single argument as a tuple
+with the list element first and the accumulated value second.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="FOLDDF"
+></A
+><P
+><B
+>Figure 2-5. The Data Flow for foldl</B
+></P
+><DIV
+CLASS="MEDIAOBJECT"
+><P
+><center><IMG
+SRC="recurse/foldDF.png"
+></center></IMG
+></P
+></DIV
+></DIV
+><P
+>There are further abbreviations you can do in the <TT
+CLASS="COMPUTEROUTPUT"
+>foldl</TT
+> call. A function that just
+adds two integers together can be derived directly from the addition operator.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun sumlist the_list = foldl (op +) 0 the_list</PRE
+></TD
+></TR
+></TABLE
+><P
+>The notation <TT
+CLASS="COMPUTEROUTPUT"
+>(op +)</TT
+> makes the addition operator into a function
+that can be passed around like any other.  The type of the function
+is declared in the standard <TT
+CLASS="COMPUTEROUTPUT"
+>INTEGER</TT
+> signature as <TT
+CLASS="COMPUTEROUTPUT"
+>(int * int) -&#62; int</TT
+> 
+which means it takes a pair of integers as its argument,
+just as needed by <TT
+CLASS="COMPUTEROUTPUT"
+>foldl</TT
+>.  </P
+><P
+>This notation will only work if the compiler can work out from the
+context that it is the integer addition operator that is needed, rather
+than real or some other type.  It can do this in this case because the
+initial value is known to be the integer zero. If you wrote 
+<TT
+CLASS="COMPUTEROUTPUT"
+>foldl (op +) 0.0 the_list</TT
+> 
+then it would know to use the real addition operator.  You can't write a sum function
+that can sum either lists of integers or lists of reals.</P
+><P
+>The order of the arguments to <TT
+CLASS="COMPUTEROUTPUT"
+>foldl</TT
+> is meaningful.  You can
+use <I
+CLASS="EMPHASIS"
+>currying</I
+> to omit arguments from the right to create partially
+satisfied functions.  For example the expression <TT
+CLASS="COMPUTEROUTPUT"
+>foldl (op +) 0</TT
+> represents a
+function that will take a list and return its sum.  You can write</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>val sumlist = foldl (op +) 0</PRE
+></TD
+></TR
+></TABLE
+><P
+>which binds the name <TT
+CLASS="COMPUTEROUTPUT"
+>sumlist</TT
+> to this partially satisified
+function. When you write <TT
+CLASS="COMPUTEROUTPUT"
+>sumlist [1, 2, 3]</TT
+> you satisfy all of
+the arguments for the <TT
+CLASS="COMPUTEROUTPUT"
+>foldl</TT
+> and it executes.  Similarly you
+could define</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>val accumlist = foldl (op +)
+val sumlist = accumlist 0</PRE
+></TD
+></TR
+></TABLE
+><P
+>and if you wrote <TT
+CLASS="COMPUTEROUTPUT"
+>accumlist x [1, 2, 3]</TT
+> you would be accumulating the sum of the
+list elements onto the value of <TT
+CLASS="COMPUTEROUTPUT"
+>x</TT
+>.  (The compiler will default
+<TT
+CLASS="COMPUTEROUTPUT"
+>accumlist</TT
+> to do integer addition in the absence of any type constraints saying
+otherwise).</P
+><P
+>As a general rule when choosing the order of arguments, if you want to make
+currying useful, then place the argument that varies the least first and
+the most varying last.  The designers of <TT
+CLASS="COMPUTEROUTPUT"
+>foldl</TT
+> judged that you
+are more likely to want to apply the same function to a variety of lists
+than apply a variety of functions to a particular list.  You can think
+of the first arguments as customisation arguments so that <TT
+CLASS="COMPUTEROUTPUT"
+>foldl (op +) 0</TT
+> 
+customises <TT
+CLASS="COMPUTEROUTPUT"
+>foldl</TT
+> to sum lists as opposed to <TT
+CLASS="COMPUTEROUTPUT"
+>foldl (op *) 1</TT
+> which multiplies
+list elements together.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="TAILFSM"
+>Tail Recursion for Finite State Machines</A
+></H2
+><P
+>A finite state machine, or FSM, is a common design technique for
+describing repetitive behaviour.  The FSM passes through a series of
+discrete states in response to its inputs.  As it makes the transition
+from one state to another it performs some output action.  This may
+continue forever or there may be an end state.  The word finite in the
+name refers to the finite number of different discrete states that the
+machine can be in, not how long the machine runs for.</P
+><P
+><A
+HREF="x237.html#WORDCNTFSM"
+>Figure 2-6</A
+> shows a FSM to count words in text.  
+There are two operational states: <TT
+CLASS="COMPUTEROUTPUT"
+>in</TT
+> means the machine is
+inside a word, <TT
+CLASS="COMPUTEROUTPUT"
+>out</TT
+> means the machine is outside a word.
+The <TT
+CLASS="COMPUTEROUTPUT"
+>END</TT
+> state stops the machine.  The text is supplied as a
+sequence of characters.  Each character causes a transition to another
+state, which may be the same as the previous state.</P
+><P
+>If the machine is in the <TT
+CLASS="COMPUTEROUTPUT"
+>out</TT
+> state and it gets a white space
+character, represented by <TT
+CLASS="COMPUTEROUTPUT"
+>ws</TT
+> in the figure, then it stays in
+the <TT
+CLASS="COMPUTEROUTPUT"
+>out</TT
+> state.  If it gets a non-white space character (and
+it's not the end of data, <TT
+CLASS="COMPUTEROUTPUT"
+>eod</TT
+>) then it changes to the <TT
+CLASS="COMPUTEROUTPUT"
+>in</TT
+>
+state because it has entered a word.  A word is completed when there
+is a transition from the <TT
+CLASS="COMPUTEROUTPUT"
+>in</TT
+> state back to the <TT
+CLASS="COMPUTEROUTPUT"
+>out</TT
+> state
+upon a white space character.  The <TT
+CLASS="COMPUTEROUTPUT"
+>[incr]</TT
+> notation means that
+the count of words is incremented during the transition.</P
+><P
+>If the machine gets an end-of-data condition then it stops at the
+<TT
+CLASS="COMPUTEROUTPUT"
+>END</TT
+> state.  A word has to be counted if it is was in a word at
+the time.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="WORDCNTFSM"
+></A
+><P
+><B
+>Figure 2-6. Counting Words with a FSM</B
+></P
+><DIV
+CLASS="MEDIAOBJECT"
+><P
+><center><IMG
+SRC="recurse/wordCntFSM.png"
+></center></IMG
+></P
+></DIV
+></DIV
+><P
+>If you were to write this FSM in C you might implement the states with
+small pieces of code joined with <TT
+CLASS="COMPUTEROUTPUT"
+>goto</TT
+> statements.  It might be
+something like:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>int
+word_count(const char* text)
+{
+    int     count = 0;
+    char    c;
+
+out:
+    c = *text++;
+    if (!c) goto eod;
+    if (!isspace(c)) goto in;
+    goto out;
+
+in:
+    c = *text++;
+    if (!c)
+    {
+        count++
+        goto eod;
+    }
+    if (isspace(c))
+    {
+        count++;
+        goto in;
+    }
+    goto in;
+
+eod:
+    return count;
+}</PRE
+></TD
+></TR
+></TABLE
+><P
+>(This is a bit ugly but it's a literal translation of the design and it
+should generate nice fast machine code if you care.)</P
+><P
+>Now that we know that tail recursion in functional programming is
+equivalent to <TT
+CLASS="COMPUTEROUTPUT"
+>goto</TT
+> in imperative programming we can write the same
+algorithm directly in SML.  The set of states will correspond to a set
+of mutually tail-recursive functions.  Here is the word counter function.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and word_count text =
+let
+    fun out_state []        count = count
+    |   out_state (c::rest) count =
+    (
+        if Char.isSpace c
+        then
+            out_state rest count
+        else
+            in_state rest count
+    )
+
+    and in_state []        count = count + 1
+    |   in_state (c::rest) count =
+    (
+        if Char.isSpace c
+        then
+            out_state rest (count + 1)
+        else
+            in_state rest count
+    )
+in
+    out_state (explode text) 0
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The two state functions are part of a mutually recursive pair joined
+by the <TT
+CLASS="COMPUTEROUTPUT"
+>and</TT
+> keyword.  For convenience I've represented the text
+as a list of characters.  The built-in <TT
+CLASS="COMPUTEROUTPUT"
+>explode</TT
+> function makes a
+list of characters from a string and the built-in <TT
+CLASS="COMPUTEROUTPUT"
+>Char.isSpace</TT
+>
+tests if the character is white space.  The output from the loop is in
+the accumulator <TT
+CLASS="COMPUTEROUTPUT"
+>count</TT
+>.  It gets incremented whenever we leave
+the <TT
+CLASS="COMPUTEROUTPUT"
+>in</TT
+> state.  In place of an explicit <TT
+CLASS="COMPUTEROUTPUT"
+>eod</TT
+> state we just
+return the accumulated count.</P
+><P
+>Here is the main function that calls the <TT
+CLASS="COMPUTEROUTPUT"
+>word_count</TT
+> function.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun main(arg0, argv) =
+let
+    val cnt = word_count "the quick brown fox";
+in
+    print(concat["Count = ", Int.toString cnt, "\n"]);
+    OS.Process.success
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>It counts the word in the foxy message and prints the result.  To print
+I've used the built-in <TT
+CLASS="COMPUTEROUTPUT"
+>concat</TT
+> function which concatenates a list
+of strings into a single string and <TT
+CLASS="COMPUTEROUTPUT"
+>Int.toString</TT
+> to make a
+string from an integer.</P
+><P
+>Alternatively you can represent the state by a state variable and have
+a single loop.  The <TT
+CLASS="COMPUTEROUTPUT"
+>word_count</TT
+> function then becomes:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and word_count text =
+let
+    datatype State = In | Out
+
+    fun loop Out []        count = count
+
+    |   loop Out (c::rest) count =
+    (
+        if Char.isSpace c
+        then
+            loop Out rest count
+        else
+            loop In rest count
+    )
+
+    |   loop In []        count = count + 1
+
+    |   loop In (c::rest) count =
+    (
+        if Char.isSpace c
+        then
+            loop Out rest (count + 1)
+        else
+            loop In rest count
+    )
+in
+    loop Out (explode text) 0
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>In this code I've used a datatype to define some states. This use of a
+datatype is equivalent to an enumeration type in C or C++.  Apart from
+that there is little difference in such a small example.  We now have
+just one tail-recursive function that takes a current state argument.
+I've used pattern matching in the function definition to recognise all
+of the combinations of state and character list.</P
+><P
+>Concerning performance, using <TT
+CLASS="COMPUTEROUTPUT"
+>explode</TT
+> requires copying the string
+to a list before counting.  If you were dealing with long strings and were
+worried about the amount of memory needed for two copies then you could
+try just subscripting the string using <TT
+CLASS="COMPUTEROUTPUT"
+>String.sub</TT
+>.  This may well
+run slower though since there is bounds-checking on each subscript call.</P
+><P
+>This word counting example is just an example to demonstrate a simple
+state machine. It's a bit of overkill.  The shortest piece of code to
+count words in a string uses <TT
+CLASS="COMPUTEROUTPUT"
+>String.tokens</TT
+>:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun word_count text = length(String.tokens Char.isSpace text)</PRE
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN339"
+HREF="x237.html#AEN339"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>This function is called <TT
+CLASS="COMPUTEROUTPUT"
+>reduce</TT
+> in
+some languages</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x212.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x443.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>The <I
+CLASS="EMPHASIS"
+>echo</I
+> Program</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c131.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>The <I
+CLASS="EMPHASIS"
+>getopt</I
+> Programs</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

@@ -1,0 +1,11 @@
+local
+   $(SML_LIB)/basis/basis.mlb
+   $(SML_LIB)/basis/mlton.mlb
+   text-io.sig
+   text-io.sml
+   non-blocking-io.sig
+   non-blocking-io.sml
+in
+    signature NON_BLOCKING_IO
+    structure NonBlockingIO
+end

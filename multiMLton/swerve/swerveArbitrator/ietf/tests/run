@@ -1,0 +1,4 @@
+
+smlbin=/src/smlnj/current/bin
+
+exec $smlbin/.run-sml @SMLload=t_main.x86-linux @SMLdebug=/dev/null "$@"

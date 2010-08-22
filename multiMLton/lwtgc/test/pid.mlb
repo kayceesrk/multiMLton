@@ -1,0 +1,7 @@
+local
+   $(SML_LIB)/basis/basis.mlb
+   $(SML_LIB)/basis/mlton.mlb
+   /home/chandras/multiMLton/lwtgc/lib/mlton/basic/sources.mlb
+in
+    pid.sml
+end

@@ -1,0 +1,1299 @@
+<HTML
+><HEAD
+><TITLE
+>The Utility Libraries</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Programming with Standard ML"
+HREF="p31.html"><LINK
+REL="PREVIOUS"
+TITLE="The Socket API"
+HREF="x1626.html"><LINK
+REL="NEXT"
+TITLE="Algorithms"
+HREF="x2014.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="CHAPTER"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x1626.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x2014.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="CHAPTER"
+><H1
+><A
+NAME="UTILLIBRARIES"
+>Chapter 5. The Utility Libraries</A
+></H1
+><DIV
+CLASS="TOC"
+><DL
+><DT
+><B
+>Table of Contents</B
+></DT
+><DT
+><A
+HREF="c1812.html#AEN1832"
+>Data Structures</A
+></DT
+><DT
+><A
+HREF="x2014.html"
+>Algorithms</A
+></DT
+><DT
+><A
+HREF="x2239.html"
+>Regular Expressions</A
+></DT
+><DT
+><A
+HREF="x2319.html"
+>Other Utilities</A
+></DT
+></DL
+></DIV
+><P
+>SML/NJ comes with a collection of utility libraries that are separate
+from the compiler.  These provide modules for the following main areas.</P
+><P
+></P
+><UL
+><LI
+><P
+>	Data structures such as hash tables, dynamically
+	resizing arrays, bit vectors, queues, maps and trees and
+	property lists.</P
+></LI
+><LI
+><P
+>	Algorithms such as list sorting, searching, numeric formatting,
+	random numbers.</P
+></LI
+><LI
+><P
+>	Utility modules for simple parsing, and miscellaneous I/O
+	operations.</P
+></LI
+><LI
+><P
+>	Regular expressions.</P
+></LI
+><LI
+><P
+>	Parsing HTML 3.2 markup.</P
+></LI
+><LI
+><P
+>	Some Unix and socket utilities.</P
+></LI
+></UL
+><P
+>You can find these in the <TT
+CLASS="COMPUTEROUTPUT"
+>smlnj-lib</TT
+> source directory.  At the
+moment these modules are underdocumented. There is some documentation
+in the <TT
+CLASS="COMPUTEROUTPUT"
+>Doc</TT
+> directory but it is mainly reference material which
+describes the API.  For full details you will need to look through the
+source files.</P
+><P
+>In the following sections I will describe the modules briefly and give
+examples for those that I think will be the most useful.</P
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN1832"
+>Data Structures</A
+></H1
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="TREESMAPSSETS"
+>Trees, Maps and Sets</A
+></H2
+><P
+>The major data structure (outside of lists) is the tree. The utility
+library provides an implementation of red-black trees with functional
+behaviour.  This means that an update of a tree produces a new tree
+leaving the original unchanged.</P
+><P
+>You might think that producing a new updated tree would be expensive
+as it seems to require copying the whole tree.  But that copying is
+mostly by reference. <A
+HREF="c1812.html#TREEUPDATE"
+>Figure 5-1</A
+> shows what you get after
+updating a functional binary tree.  In this diagram the node D has
+been replaced with a new node D'. This requires that the parent node
+C be updated with the new reference to D'.  The updates propagate up
+the tree to the root at A' each producing a copy of the updated node.
+But no more nodes will be copied than the height of the tree.  All other
+nodes will be shared.  If the application drops the reference to node
+A then the garbage collector will reclaim the old nodes A, C and D.
+In the mean-time the application has access to both the old and new
+versions of the tree which can be useful (e.g. for undoing the update).</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="TREEUPDATE"
+></A
+><P
+><B
+>Figure 5-1. Updating a Tree.</B
+></P
+><DIV
+CLASS="MEDIAOBJECT"
+><P
+><center><IMG
+SRC="utillib/treeupdate.png"
+></center></IMG
+></P
+></DIV
+></DIV
+><P
+>As long as the tree stays reasonably balanced then the height of the
+tree stays minimal and lookups and updates are cheapest.  The red-black
+algorithm adjusts the tree after each update to keep it close to balanced.
+The algorithm is fairly complex. A generic implementation is provided
+in the <TT
+CLASS="COMPUTEROUTPUT"
+>RedBlackMapFn</TT
+> functor in the <TT
+CLASS="COMPUTEROUTPUT"
+>redblack-map-fn.sml</TT
+>
+source file.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>functor RedBlackMapFn (K : ORD_KEY) :&#62; ORD_MAP where Key = K =
+...
+
+signature ORD_KEY =
+sig
+    type ord_key
+
+    val compare : ord_key * ord_key -&#62; order
+end
+
+...
+datatype order = LESS | EQUAL | GREATER</PRE
+></TD
+></TR
+></TABLE
+><P
+>This functor can be specialised for a key of any ordered type. The
+<TT
+CLASS="COMPUTEROUTPUT"
+>ORD_KEY</TT
+> signature describes the key type.  The <TT
+CLASS="COMPUTEROUTPUT"
+>order</TT
+> type
+is predefined in the SML Basis.  The resulting structure satisfies the
+<TT
+CLASS="COMPUTEROUTPUT"
+>ORD_MAP</TT
+> signature defined in the <TT
+CLASS="COMPUTEROUTPUT"
+>ord-map-sig.sml</TT
+> file.
+This signature describes the tree operations such as <TT
+CLASS="COMPUTEROUTPUT"
+>insert</TT
+>,
+<TT
+CLASS="COMPUTEROUTPUT"
+>remove</TT
+> etc.</P
+><P
+>The library then goes on to use red-black trees to implement sets.
+A set is just a map from a domain to a boolean value (which is always
+true for members of the set). But for efficiency a separate implementation
+of red-black sets is provided in the <TT
+CLASS="COMPUTEROUTPUT"
+>RedBlackSetFn</TT
+> functor.</P
+><P
+>Next the library provides some specialisations of these red-black sets
+and maps for various keys. For keys of <TT
+CLASS="COMPUTEROUTPUT"
+>int</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>word</TT
+> the
+code is re-implemented, presumably for efficiency.  For other key types
+such as atoms the functor is specialised.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>structure AtomRedBlackMap =
+  RedBlackMapFn (
+    struct
+      type ord_key = Atom.atom
+      val compare = Atom.compare
+    end)</PRE
+></TD
+></TR
+></TABLE
+><P
+>An atom is a string paired with a hash value so that equality can be
+tested very quickly by first comparing the hash values.  The library's
+implementation of atoms also ensures that all equal strings share the
+same atom by reference.  They are useful in the symbol tables of compilers
+and any similar application.</P
+><P
+>Other kinds of maps are also implemented. The <TT
+CLASS="COMPUTEROUTPUT"
+>BinaryMapFn</TT
+> functor
+in the <TT
+CLASS="COMPUTEROUTPUT"
+>binary-map-fn.sml</TT
+> source file also keeps the tree reasonably
+balanced.  The implementation says &quot;The main advantage of these trees
+is that they keep the size of the tree in the node, giving a constant
+time size operation.&quot;  Matching implementations for sets and integer
+and atom keys are provided.  You can also try out the <TT
+CLASS="COMPUTEROUTPUT"
+>SplayMapFn</TT
+>
+functor which does it with splay trees and the <TT
+CLASS="COMPUTEROUTPUT"
+>ListMapFn</TT
+> functor
+which does it with sorted lists.  These all conform to the <TT
+CLASS="COMPUTEROUTPUT"
+>ORD_MAP</TT
+>
+and <TT
+CLASS="COMPUTEROUTPUT"
+>ORD_SET</TT
+> signatures so they are interchangable.</P
+><P
+>To demonstrate functional maps here is a test program that reads pairs of 
+numbers from a file and makes a map of them. The map is then printed out.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>structure Main=
+struct
+    structure Map = IntRedBlackMap
+
+    fun toErr s = TextIO.output(TextIO.stdErr, s)
+
+
+    fun read_file file : int Map.map =
+    let
+        val istrm = TextIO.openIn file
+
+        (*  Read a pair of ints on a line and loop.
+            Empty lines are ignored. Other junk is fatal.
+        *)
+        fun get_pairs map_in lnum =
+        (
+            case TextIO.inputLine istrm of
+              "" =&#62; (TextIO.closeIn istrm; map_in)   (* eof *)
+
+            | line =&#62;
+            let
+                val tokens = String.tokens Char.isSpace line
+            in
+                case map Int.fromString tokens of
+                  [] =&#62; get_pairs map_in (lnum+1)
+
+                | [SOME a, SOME b] =&#62;
+                      get_pairs (Map.insert(map_in, a, b)) (lnum+1)
+
+                | _ =&#62; raise Fail (concat["Invalid data on line ",
+                                          Int.toString lnum])
+            end
+        )
+        handle x =&#62; (TextIO.closeIn istrm; raise x)
+
+    in
+        get_pairs Map.empty 1
+    end
+
+
+    and show_pairs pairs =
+    let
+        fun show (a, b) = print(concat[
+            Int.toString a, " =&#62; ", Int.toString b, "\n"])
+    in
+        Map.appi show pairs
+    end
+
+
+    fun main(arg0, argv) =
+    (
+        case argv of
+          [file] =&#62;
+        (
+            show_pairs(read_file file);
+            OS.Process.success
+        )
+
+        | _ =&#62;
+        (
+            print "Usage: intmap file\n";
+            OS.Process.failure
+        )
+    )
+    handle x =&#62;
+    (
+        toErr(exnMessage x); toErr("\n");
+        OS.Process.failure
+    )
+
+    val _ = SMLofNJ.exportFn("intmap", main)
+end</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="HASHTABLES"
+>Hash Tables</A
+></H2
+><P
+>A very different kind of map is the hash table. The implementation
+is imperative meaning that the table is updated in place.  See
+<A
+HREF="x443.html#GETOPTHASH"
+>the section called <I
+>Using a Hash Table</I
+> in Chapter 2</A
+> for an example of using a hash table to map
+from strings to strings.</P
+><P
+>The hash function that is used is defined in the <TT
+CLASS="COMPUTEROUTPUT"
+>HashString</TT
+>
+structure in the <TT
+CLASS="COMPUTEROUTPUT"
+>hash-string.sml</TT
+> file. It implements the recursion
+<TT
+CLASS="COMPUTEROUTPUT"
+>(h = 33 * h + 720 + c)</TT
+> over the characters of the string.
+The same hash function is used for atoms.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN1879"
+>Vectors and Arrays</A
+></H2
+><P
+>The utility library provides three useful kinds of arrays in
+addition to the array types defined in the Basis library (see
+<A
+HREF="x979.html"
+>the section called <I
+>Arrays and Vectors</I
+> in Chapter 3</A
+>).</P
+><P
+></P
+><UL
+><LI
+><P
+>	There is a monomorphic dynamic array functor which automatically grows
+	in size to accomodate the data.</P
+></LI
+><LI
+><P
+>	There is a <TT
+CLASS="COMPUTEROUTPUT"
+>BitArray</TT
+> structure that stores bits compactly
+	in bytes.  It provides all of the standard array operations. In
+	addition there are bit-operations like <TT
+CLASS="COMPUTEROUTPUT"
+>and</TT
+>, <TT
+CLASS="COMPUTEROUTPUT"
+>or</TT
+> and
+	<TT
+CLASS="COMPUTEROUTPUT"
+>shift</TT
+> over arrays.  See the <TT
+CLASS="COMPUTEROUTPUT"
+>bit-array.sml</TT
+> source
+	file for more details.	There is a matching <TT
+CLASS="COMPUTEROUTPUT"
+>BitVector</TT
+>
+	structure for immutable bit vectors.</P
+></LI
+><LI
+><P
+>	There is an <TT
+CLASS="COMPUTEROUTPUT"
+>Array2</TT
+> structure for polymorphic two-dimensional
+	arrays.  See the <TT
+CLASS="COMPUTEROUTPUT"
+>array2.sml</TT
+> source file for more
+	details.</P
+></LI
+></UL
+><P
+>The dynamic array grows by at least doubling in size as needed to
+accomodate all of the elements that have been referenced.  This doubling
+requires copying the original array.  The elements are stored internally
+in a reference to an array so the growth is imperative.  Newly created
+elements are initialised with a default value.  The module is a functor
+which constructs the dynamic array from a monomorphic array.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>functor DynamicArrayFn (A : MONO_ARRAY) : MONO_DYNAMIC_ARRAY
+
+signature MONO_DYNAMIC_ARRAY =
+sig
+    type elem
+    type array
+
+    val array:      (int * elem) -&#62; array
+    val subArray:   array * int * int -&#62; array
+    val fromList:   elem list * elem -&#62; array
+    val tabulate:   int * (int -&#62; elem) * elem -&#62; array
+    val default:    array -&#62; elem
+    val sub:        array * int -&#62; elem
+    val update:     array * int * elem -&#62; unit
+    val bound:      array -&#62; int
+    val truncate:   array * int -&#62; unit
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The signature <TT
+CLASS="COMPUTEROUTPUT"
+>MONO_ARRAY</TT
+> is predefined in the Basis library.
+It characterises any type that can be made to behave like an imperative
+array (see <A
+HREF="x979.html"
+>the section called <I
+>Arrays and Vectors</I
+> in Chapter 3</A
+>).  The <TT
+CLASS="COMPUTEROUTPUT"
+>MONO_DYNAMIC_ARRAY</TT
+>
+signature provides a restricted set of operations on dynamic arrays
+which currently omits the iterator operations.  See the source file
+<TT
+CLASS="COMPUTEROUTPUT"
+>mono-dynamic-array-sig.sml</TT
+> for more details on the operations.</P
+><P
+>Here is an example of creating a dynamic array of 1000 real numbers
+initialised to zero (the default value).</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>structure DynRealArray = DynamicArrayFn(Real64Array)
+
+val reals = DynRealArray.array(1000, 0.0)</PRE
+></TD
+></TR
+></TABLE
+><P
+>There is a <TT
+CLASS="COMPUTEROUTPUT"
+>MonoArrayFn</TT
+> functor which is a little utility for
+creating array structures for <TT
+CLASS="COMPUTEROUTPUT"
+>DynamicArrayFn</TT
+>.  For example,
+since there is no predefined <TT
+CLASS="COMPUTEROUTPUT"
+>IntArray</TT
+> structure you could write</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>structure DynIntArray = DynamicArrayFn(MonoArrayFn(type elem = int))</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="QUEUES"
+>Queues and Fifos</A
+></H2
+><P
+>The utility library implements first-in-first-out queues in both the
+functional and imperative styles.  The functional ones are called fifos
+and the imperative ones are called queues (for no special reason).</P
+><P
+>The fifo implementation is in the <TT
+CLASS="COMPUTEROUTPUT"
+>Fifo</TT
+> structure in the
+<TT
+CLASS="COMPUTEROUTPUT"
+>fifo.sml</TT
+> source file.  The queue implementation is in the
+<TT
+CLASS="COMPUTEROUTPUT"
+>Queue</TT
+> structure in the <TT
+CLASS="COMPUTEROUTPUT"
+>queue.sml</TT
+> source file. It's actually
+just a wrapper for a fifo stored in a reference.</P
+><P
+>The implementation of fifos is a little tricky for a typical functional
+language like SML.  It requires access to both ends of a list. But
+SML only provides cheap access to the front of a list.  If you naively
+enqueued a value by appending it to the end of a list that would require
+copying the entire list which would be ridiculously expensive.</P
+><P
+>The solution is to split the list into front and rear halves with the
+rear half in reverse.  This moves the end of the fifo to the front of
+a list, as shown in <A
+HREF="c1812.html#FIFO"
+>Figure 5-2</A
+>.</P
+><DIV
+CLASS="FIGURE"
+><A
+NAME="FIFO"
+></A
+><P
+><B
+>Figure 5-2. A Fifo as a Pair of Lists.</B
+></P
+><DIV
+CLASS="MEDIAOBJECT"
+><P
+><center><IMG
+SRC="utillib/fifo.png"
+></center></IMG
+></P
+></DIV
+></DIV
+><P
+>Elements can be dequeued from the front of the fifo by just removing
+them from the front of the 'front' list. Elements can be enqueued to
+the rear of the fifo by adding them to the front of the 'rear' list.
+When the front list becomes empty then the elements in the rear list
+are transferred to it.  This still requires copying a list but much
+less often than the naive implementation above.  A detailed analysis of
+the performance of this solution can be found in [<SPAN
+CLASS="CITATION"
+><A
+HREF="b6666.html#BIBE.OKASAKI"
+><I
+>Okasaki</I
+></A
+></SPAN
+>]. It
+turns out that the average time to enqueue or dequeue an element is O(1),
+that is, effectively constant.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN1931"
+>Property Lists</A
+></H2
+><P
+>A property list (<I
+CLASS="EMPHASIS"
+>plist</I
+>) is a list of key-value pairs that can be
+attached to or associated with some value.  The Lisp ([<SPAN
+CLASS="CITATION"
+><A
+HREF="b6666.html#BIBE.STEELE"
+><I
+>Steele</I
+></A
+></SPAN
+>])
+language has had plists since its beginning in 1959.  In Common Lisp
+they are only used for annotating symbols. The SML design allows you to
+annotate any base value such as a node in a tree.  You can add or remove
+properties from the list so they are naturally imperative.</P
+><P
+>The utility library has an implementation of property lists in the
+<TT
+CLASS="COMPUTEROUTPUT"
+>PropList</TT
+> structure of the <TT
+CLASS="COMPUTEROUTPUT"
+>plist.sml</TT
+> source file.   A key
+can appear only once in a property list but it can appear in any number of
+property lists.  In Lisp the keys would typically be Lisp <I
+CLASS="EMPHASIS"
+>symbols</I
+> but
+in SML any type that supports equality will do.  The design provides a more
+abstract interface to a property.  Each property is represented by a group
+of functions that access the property. The actual implementation of the
+key is an internal detail.  Here is the signature of the <TT
+CLASS="COMPUTEROUTPUT"
+>PropList</TT
+>
+structure.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>signature PROP_LIST = 
+sig 
+    type holder 
+
+    val newHolder : unit -&#62; holder 
+
+    val clearHolder : holder -&#62; unit
+
+    val sameHolder : (holder * holder) -&#62; bool
+        (* returns true, if two holders are the same *)
+
+    (* newProp (selHolder, init) *)
+    val newProp : (('a -&#62; holder) * ('a -&#62; 'b)) -&#62; {
+            peekFn : 'a -&#62; 'b option,
+            getFn  : 'a -&#62; 'b,
+            setFn  : ('a * 'b) -&#62; unit,
+            clrFn  : 'a -&#62; unit
+          }
+
+    val newFlag : ('a -&#62; holder) -&#62; {
+            getFn : 'a -&#62; bool,
+            setFn : ('a * bool) -&#62; unit
+          }
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>A <TT
+CLASS="COMPUTEROUTPUT"
+>holder</TT
+>, unsurprisingly, holds one property list.  To associate a
+property list with a value you must be able to write a function that maps
+from the value to a holder. This function is called <TT
+CLASS="COMPUTEROUTPUT"
+>selHolder</TT
+>
+in the signature.  How you write this is up to you. For example if
+you were attaching property lists to nodes in a tree you would simply
+include a holder as one of the fields of a node.  The <TT
+CLASS="COMPUTEROUTPUT"
+>selHolder</TT
+>
+function would then just select the field from a node.  The <TT
+CLASS="COMPUTEROUTPUT"
+>'a</TT
+>
+type variable represents the type of the annotated value and <TT
+CLASS="COMPUTEROUTPUT"
+>'b</TT
+> is
+the type of the property's value.</P
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>newHolder</TT
+> function creates a new empty holder. The
+<TT
+CLASS="COMPUTEROUTPUT"
+>clearHolder</TT
+> function deletes all of the properties in a holder.</P
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>newProp</TT
+> function defines a new property.  The property is
+represented by the four access functions: peek, get, set and clear.
+These operate in terms of the annotated value so you have to supply the
+<TT
+CLASS="COMPUTEROUTPUT"
+>selHolder</TT
+> function to translate the annotated value to the holder.
+The property is restricted to appear only in plists that can be selected
+by the <TT
+CLASS="COMPUTEROUTPUT"
+>selHolder</TT
+> function.  This usually means it is restricted
+to the plists of one annotated type.</P
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>init</TT
+> function is used to create an initial value for the
+property should you try to get the property value before it is set.
+This initial value is allowed to depend on the annotated value for more
+flexibility.</P
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>newFlag</TT
+> function makes a specialised kind of property that
+has no value. You only test if it is present or absent in the plist.
+The get function returns true if it is present.</P
+><P
+>Here is a simple demonstration of some properties.  Where this
+demonstration differs from other kinds of data structures is that the
+set of properties is completely dynamic. You can invent new properties on
+the fly rather than just having the fixed number of fields in a record.
+Accessing these properties will be a bit slow though.  First I define a
+set of people and some properties for them.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>structure PL = PropList
+
+(*  Associate a plist holder with each person. *)
+val people: PL.holder STRT.hash_table = STRT.mkTable(101, NotFound)
+
+(*  Add someone to the table. *)
+fun define name = STRT.insert people (name, PL.newHolder())
+
+(*  Define some properties.
+    Weight is a real measure in kilograms. Father is a string.
+*)
+val weight_prop = PL.newProp (STRT.lookup people, fn _ =&#62; 0.0)
+val father_prop = PL.newProp (STRT.lookup people, fn _ =&#62; "unknown")
+
+(*  Functions to set and get the properties. *)
+fun set prop (name, value) =
+let
+    val {peekFn, getFn, setFn, clrFn} = prop
+in
+    setFn(name, value)
+end
+
+
+fun get prop name =
+let
+    val {peekFn, getFn, setFn, clrFn} = prop
+in
+    getFn name
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The people are represented by a hash table that maps a name to a plist
+holder. (See <A
+HREF="x443.html#GETOPTHASH"
+>the section called <I
+>Using a Hash Table</I
+> in Chapter 2</A
+> for details of my <TT
+CLASS="COMPUTEROUTPUT"
+>STRT</TT
+>
+structure).  The <TT
+CLASS="COMPUTEROUTPUT"
+>set</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>get</TT
+> functions are polymorphic
+enough to work for all properties.  Unfortunately the type of a property
+is not named in the <TT
+CLASS="COMPUTEROUTPUT"
+>PROP_LIST</TT
+> signature so I end up having to
+write out all of the fields in the property record each time.</P
+><P
+>Here is a demonstration of the use of these functions.  I define some
+people, set some properties and then dump them all.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>val names = ["fred", "wilma", "barney", "betty", "wilma",
+             "pebbles", "bambam"]
+
+
+fun show_father name = print(concat[
+                        name, "\thas father ",
+                        get father_prop name,
+                        "\n"])
+
+fun show_weight name = print(concat[
+                        name, "\thas weight ",
+                        Real.toString(get weight_prop name),
+                        "kg\n"])
+
+fun run() =
+let
+in
+    app define names;
+
+    app (set father_prop) [("pebbles", "fred"),
+                           ("bambam", "barney")
+                           ];
+
+    app (set weight_prop) [("fred", 111.0),
+                           ("wilma", 73.0),
+                           ("barney", 82.5),
+                           ("betty", 68.5),
+                           ("pebbles", 15.1),
+                           ("bambam", 18.7)
+                           ];
+    app show_father names;
+    app show_weight names;
+    ()
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>What is especially interesting about SML plists is how they are
+implemented.  A list in SML must always have elements of the same type.
+But property lists manage to have elements of different types and new
+types of elements can be added at any time. How do they do it?</P
+><P
+>If you were to implement something like this in an object-oriented
+language such as C++ or Java you would define a base class for a
+plist element.  Then you would define a subclass for each type of
+element you want in the list.  You can use run-time type identification
+(&quot;downcasting&quot;) to extract a property's value.  A subclass defines a
+subtype of the base class and you can use any subtype anywhere that its
+base type is used.  This is how you do polymorphism in object-oriented
+languages.  </P
+><P
+>But SML does not provide subtyping.  Normally you have to define
+a datatype that represents the union of all of the subtypes you are
+going to use.  This doesn't have the flexibility or extensibility of
+the object-oriented paradigm.  </P
+><P
+>But there is a way around this. There is a dirty little trick you can
+do with exceptions in SML that provides a great big loophole in the type
+checking.  An exception declaration declares a constructor that coerces
+some type to the special type <TT
+CLASS="COMPUTEROUTPUT"
+>exn</TT
+>.  For example this declaration</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>exception Error of string</PRE
+></TD
+></TR
+></TABLE
+><P
+>declares the constructor function</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>val Error: string -&#62; exn</PRE
+></TD
+></TR
+></TABLE
+><P
+>You can think of the <TT
+CLASS="COMPUTEROUTPUT"
+>exn</TT
+> type as being like a datatype where each
+exception declaration adds a new branch, no matter where the declaration
+appears in your program.  The <TT
+CLASS="COMPUTEROUTPUT"
+>exn</TT
+> type is an extensible type.
+From another point of view, the <TT
+CLASS="COMPUTEROUTPUT"
+>Error</TT
+> declaration above lets you
+use a <TT
+CLASS="COMPUTEROUTPUT"
+>string</TT
+> type anywhere an exception type is allowed so it
+effectively declares the <TT
+CLASS="COMPUTEROUTPUT"
+>string</TT
+> type as a subtype of <TT
+CLASS="COMPUTEROUTPUT"
+>exn</TT
+>.</P
+><P
+>Exceptions have one more quirk up their sleeve.  An exception declaration
+is, to use the jargon, <I
+CLASS="EMPHASIS"
+>generative</I
+>. This means that each declaration
+creates a new exception each time that it is executed.  For example if
+you have an exception declaration inside a function then each time that
+function is called a new distinct exception is created, even though
+the constructor name is the same.  This is what lets you define new
+subtypes dynamically.</P
+><P
+>Here is an example where the properties are defined statically using
+exceptions.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>type PList = exn list
+
+exception PFruit of string
+exception PNum   of int
+
+val fruit = [PFruit "apple", PNum 5]
+
+fun get_fruit []            = NONE
+|   get_fruit (PFruit f::_) = SOME f
+|   get_fruit (_::rest)     = get_fruit rest</PRE
+></TD
+></TR
+></TABLE
+><P
+>The list <TT
+CLASS="COMPUTEROUTPUT"
+>fruit</TT
+> contains some properties. The <TT
+CLASS="COMPUTEROUTPUT"
+>get_fruit</TT
+>
+will find and return the value of the <TT
+CLASS="COMPUTEROUTPUT"
+>PFruit</TT
+> property.  This all
+works the same way as if I had written</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>datatype PList =
+        PFruit of string
+    |   PNum   of int</PRE
+></TD
+></TR
+></TABLE
+><P
+>This next example creates properties dynamically. </P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun new_prop dflt =
+let
+    exception E of 'a
+
+    fun get []        = NONE
+    |   get (E v::_)  = SOME v
+    |   get (_::rest) = get rest
+
+    fun set props v = (E v)::props
+
+    fun dummy() = E dflt
+in
+    (get, set)
+end
+
+val (get_colour, set_colour) = new_prop "colour"
+val props2       = set_colour fruit "red"
+
+val (get_weight, set_weight) = new_prop 0.0
+val props3       = set_weight props2 0.75
+
+fun report() =
+(
+    print(concat[
+        "The colour is ", valOf(get_colour props3),
+        " and the weight is ",
+        Real.toString(valOf(get_weight props3)),
+        "\n"])
+)</PRE
+></TD
+></TR
+></TABLE
+><P
+>Every time the <TT
+CLASS="COMPUTEROUTPUT"
+>new_prop</TT
+> function is called the exception
+declaration will be executed.  This will define a new exception which
+is known locally by the name <TT
+CLASS="COMPUTEROUTPUT"
+>E</TT
+>.  This new exception is captured
+by the <TT
+CLASS="COMPUTEROUTPUT"
+>get</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>set</TT
+> functions which provide the only access
+to it.  I've had to include an extra dummy argument to let me constrain
+the type of the value for each property.  Without it, the type <TT
+CLASS="COMPUTEROUTPUT"
+>'a</TT
+>
+is completely unconstrained and the type checking fails with the notorious
+value restriction message:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>dyn.sml:36.5-36.34 Warning: type vars not generalized because of
+   value restriction are instantiated to dummy types (X1,X2,...)
+dyn.sml:37.5-37.34 Error: operator and operand don't agree [tycon mismatch]
+  operator domain: ?.X1
+  operand:         string
+  in expression:
+    (set2 fruit) "red"</PRE
+></TD
+></TR
+></TABLE
+><P
+>By including the <TT
+CLASS="COMPUTEROUTPUT"
+>dflt</TT
+> argument and the <TT
+CLASS="COMPUTEROUTPUT"
+>dummy</TT
+> function
+I constrain the type of the property value to be the same as that of
+the <TT
+CLASS="COMPUTEROUTPUT"
+>dflt</TT
+> argument. So when I write <TT
+CLASS="COMPUTEROUTPUT"
+>(new_prop &quot;colour&quot;)</TT
+>
+the <TT
+CLASS="COMPUTEROUTPUT"
+>get_colour</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>set_colour</TT
+> functions are known to work
+on strings.  In a more complete example the <TT
+CLASS="COMPUTEROUTPUT"
+>dflt</TT
+> argument would
+be useful as a default or initial value for the property.</P
+><P
+>With this exception trick and property lists you can build up a nice
+little prototype-based object system along the lines of the Common Lisp
+Object System (CLOS)[<SPAN
+CLASS="CITATION"
+><A
+HREF="b6666.html#BIBE.STEELE"
+><I
+>Steele</I
+></A
+></SPAN
+>].</P
+></DIV
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x1626.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x2014.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>The Socket API</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="p31.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Algorithms</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

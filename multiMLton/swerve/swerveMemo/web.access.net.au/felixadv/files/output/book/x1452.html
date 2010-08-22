@@ -1,0 +1,336 @@
+<HTML
+><HEAD
+><TITLE
+>Signals</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The SML/NJ Extensions"
+HREF="c1357.html"><LINK
+REL="PREVIOUS"
+TITLE="The SML/NJ Extensions"
+HREF="c1357.html"><LINK
+REL="NEXT"
+TITLE="The SMLofNJ API"
+HREF="x1503.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="c1357.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 4. The SML/NJ Extensions</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x1503.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="SIGNALS"
+>Signals</A
+></H1
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>Signals</TT
+> structure provides a basic interface to the Unix signal
+system.  It defines four basic signals that can be simulated on most operating
+systems.</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+><TT
+CLASS="COMPUTEROUTPUT"
+>sigINT</TT
+></DT
+><DD
+><P
+>    On Unix, this corresponds to the SIGINT signal.</P
+></DD
+><DT
+><TT
+CLASS="COMPUTEROUTPUT"
+>sigALRM</TT
+></DT
+><DD
+><P
+>    This is used by the interval timer in the <TT
+CLASS="COMPUTEROUTPUT"
+>IntervalTimer</TT
+> structure.
+    You can use this to generate periodic interrupts in your program.</P
+></DD
+><DT
+><TT
+CLASS="COMPUTEROUTPUT"
+>sigTERM</TT
+></DT
+><DD
+><P
+>    On Unix, this corresponds to the SIGTERM signal.</P
+></DD
+><DT
+><TT
+CLASS="COMPUTEROUTPUT"
+>sigGC</TT
+></DT
+><DD
+><P
+>    This is a pseudo-signal generated internally when a garbage collection
+    has been completed.</P
+></DD
+></DL
+></DIV
+><P
+>In addition the <TT
+CLASS="COMPUTEROUTPUT"
+>UnixSignal</TT
+> structure provides a few more signals
+found on Unix systems.  These are <TT
+CLASS="COMPUTEROUTPUT"
+>sigPIPE</TT
+>, <TT
+CLASS="COMPUTEROUTPUT"
+>sigQUIT</TT
+>,
+<TT
+CLASS="COMPUTEROUTPUT"
+>sigUSR1</TT
+>, <TT
+CLASS="COMPUTEROUTPUT"
+>sigUSR2</TT
+>, <TT
+CLASS="COMPUTEROUTPUT"
+>sigCHLD</TT
+>, <TT
+CLASS="COMPUTEROUTPUT"
+>sigCONT</TT
+>,
+<TT
+CLASS="COMPUTEROUTPUT"
+>sigTSTP</TT
+>, <TT
+CLASS="COMPUTEROUTPUT"
+>sigTTIN</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>sigTTOU</TT
+>.  See the source code
+in the <TT
+CLASS="COMPUTEROUTPUT"
+>boot/Unix/unix-signals*.sml</TT
+> files for more details.</P
+><P
+>There may be more signals available on your
+platform than appear in <TT
+CLASS="COMPUTEROUTPUT"
+>UnixSignal</TT
+>. In particular <TT
+CLASS="COMPUTEROUTPUT"
+>SIGHUP</TT
+>
+has missed out on appearing in either structure.  You can fetch it yourself
+like this:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>    val sighup = valOf(Signals.fromString "HUP")</PRE
+></TD
+></TR
+></TABLE
+><P
+>A complete list of the available signals can be printed with this code
+which you can type to the top-level SML prompt.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>app (fn s =&#62; print(concat[Signals.toString s, "\n"]))
+    (Signals.listSignals());</PRE
+></TD
+></TR
+></TABLE
+><P
+>Here is a program to demonstrate setting up a simple interrupt handler.
+It just prints a message and lets the program, which is an infinite
+loop, continue.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun int_handler(signal, n, cont) =
+let
+in
+    print "interrupt\n";
+    cont
+end</PRE
+></TD
+></TR
+></TABLE
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun main(arg0, argv) =
+let
+    fun loop() = (Signals.pause(); loop())
+in
+    Signals.setHandler(Signals.sigINT,
+                       Signals.HANDLER int_handler);
+    loop();
+
+    OS.Process.success
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The handler function must return a continuation.  This will normally be
+the third argument to the function.  Continuations are described in more
+detail in <A
+HREF="c2344.html#CONTINUATIONS"
+>the section called <I
+>Continuations</I
+> in Chapter 6</A
+>.</P
+><P
+>A signal handler function does not execute in the same kind of interrupted
+state as a signal handler in C.  The C-level handler queues the signal
+and completes.  A little later the SML-level handler is called as part
+of the normal execution of the program.  So there are no restrictions
+on what you can do in an SML signal handler.  Also by manipulating the
+returned continuation you can perform the equivalent of a C <TT
+CLASS="COMPUTEROUTPUT"
+>longjmp</TT
+>
+to anywhere else in the program.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="c1357.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x1503.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>The SML/NJ Extensions</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c1357.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>SMLofNJ</TT
+> API</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

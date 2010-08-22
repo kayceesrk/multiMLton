@@ -1,0 +1,49 @@
+<STYLE>
+BODY
+{
+    BACKGROUND: white;
+    COLOR: black;
+    FONT-FAMILY: verdana, arial, sans-serif
+}
+
+.COMPUTEROUTPUT
+{
+    /* BACKGROUND: #d0ffff; */
+    FONT-FAMILY: courier, sans-serif
+}
+
+.PROGRAMLISTING
+{
+    FONT-FAMILY: courier, sans-serif
+}
+
+.NAVHEADER, .NAVFOOTER, .COPYRIGHT, .TITLE
+{
+    BACKGROUND: #60ffa0;
+}
+
+.LEGALNOTICE
+{
+    COLOR: red;
+}
+
+/*  This is for the warning about TimeLimit.
+*/
+.WARNING TR
+{
+    BACKGROUND: #ffd0d0;
+}
+
+/*  The body of a table. */
+.CALSTABLE
+{
+    BACKGROUND: #fffff0;
+}
+
+/*  table headings in body tables.  Not navheader tables. */
+.CALSTABLE TH
+{
+    BACKGROUND: #ffffb0;
+}
+
+</STYLE>

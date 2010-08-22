@@ -1,0 +1,1248 @@
+<HTML
+><HEAD
+><TITLE
+>The POSIX API</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The Basis Library"
+HREF="c710.html"><LINK
+REL="PREVIOUS"
+TITLE="The Portable OS API"
+HREF="x1065.html"><LINK
+REL="NEXT"
+TITLE="The SML/NJ Extensions"
+HREF="c1357.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x1065.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 3. The Basis Library</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="c1357.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN1164"
+>The POSIX API</A
+></H1
+><P
+>The Basis library provides a useful collection of POSIX functions on Unix systems.
+These are grouped together under substructures in the <TT
+CLASS="COMPUTEROUTPUT"
+>Posix</TT
+>
+structure.  The source for these functions can be found in the compiler
+in the <TT
+CLASS="COMPUTEROUTPUT"
+>boot/Posix</TT
+> directory surprisingly enough.  Much of the
+SML implementation is just a wrapper around calls to the corresponding
+C functions.  The C code is in the runtime under the <TT
+CLASS="COMPUTEROUTPUT"
+>c-libs/</TT
+>
+directory.</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN1170"
+><TT
+CLASS="COMPUTEROUTPUT"
+>Posix.Error</TT
+></A
+></H2
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>syserror</TT
+> value is a representation of the POSIX <TT
+CLASS="COMPUTEROUTPUT"
+>errno</TT
+>
+error codes.  This is the same type as <TT
+CLASS="COMPUTEROUTPUT"
+>OS.syserror</TT
+> which appears
+in the <TT
+CLASS="COMPUTEROUTPUT"
+>OS.SysErr</TT
+> exception.</P
+><P
+>It appears as an abstract type but internally it is represented as an
+integer with the same value as the <TT
+CLASS="COMPUTEROUTPUT"
+>errno</TT
+> code.  The <TT
+CLASS="COMPUTEROUTPUT"
+>errorMsg</TT
+>
+function returns the same string used by the <TT
+CLASS="COMPUTEROUTPUT"
+>perror()</TT
+> C library
+function.  The unique name returned by <TT
+CLASS="COMPUTEROUTPUT"
+>errorName</TT
+> is derived from the 
+symbol for the POSIX error code.  If you need the actual integer value
+for the error code then you can use <TT
+CLASS="COMPUTEROUTPUT"
+>toWord</TT
+>.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="POSIXFILESYS"
+><TT
+CLASS="COMPUTEROUTPUT"
+>Posix.FileSys</TT
+></A
+></H2
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>Posix.FileSys</TT
+> structure provides functions for dealing
+with directories and files except for the actual I/O which is in
+<TT
+CLASS="COMPUTEROUTPUT"
+>Posix.IO</TT
+>.  Where possible you should use the corresponding
+<TT
+CLASS="COMPUTEROUTPUT"
+>OS.FileSys</TT
+> functions which are intended to be a bit more portable.</P
+><P
+>At this level you are working with Unix file descriptors, represented
+by the type <TT
+CLASS="COMPUTEROUTPUT"
+>file_desc</TT
+>.  There is also a <TT
+CLASS="COMPUTEROUTPUT"
+>OS.IO.iodesc</TT
+> type
+for the file descriptors used by the poll interface in <TT
+CLASS="COMPUTEROUTPUT"
+>OS.IO</TT
+>. A
+separate type is used to make the <TT
+CLASS="COMPUTEROUTPUT"
+>OS.IO</TT
+> interface more independent of
+the POSIX layer and therefore more portable.  Underneath they are both
+Unix file descriptors.</P
+><P
+>Most of the functions should be straight-forward to use.  The flags may
+need some explaining.  Flags are represented by lists of values of some
+flag type. The underlying bit patterns of the values in a list are or-ed
+together.  Each substructure containing flags inherits a <TT
+CLASS="COMPUTEROUTPUT"
+>flags</TT
+>
+function from the <TT
+CLASS="COMPUTEROUTPUT"
+>POSIX_FLAGS</TT
+> signature to convert the list to
+the bit pattern. For example write</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>structure FS = Posix.FileSys
+...
+    FS.chmod("myfile", FS.S.flags
+                [FS.S.irusr, FS.S.irgrp, FS.S.iroth])
+...</PRE
+></TD
+></TR
+></TABLE
+><P
+>to set the permissions of the file &quot;<TT
+CLASS="COMPUTEROUTPUT"
+>myfile</TT
+>&quot; to 0444.  The sticky mode
+bit with value 01000 is deliberately filtered out by the stat functions
+as it is not part of the POSIX standard so you will never be able to
+test or preserve it.</P
+><P
+>To give the functions a workout here is a
+<A
+HREF="basis/statx.sml"
+TARGET="_top"
+>stat</A
+> program that reports a file's status
+in detail.  First I start with some useful declarations.  The <TT
+CLASS="COMPUTEROUTPUT"
+>wordToDec</TT
+>
+function is needed since the <TT
+CLASS="COMPUTEROUTPUT"
+>SysWord.toString</TT
+> function always
+formats in hexadecimal.  (See the Basis documentation on the <TT
+CLASS="COMPUTEROUTPUT"
+>WORD</TT
+>
+signature).</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>structure FS = Posix.FileSys
+
+exception Error of string
+fun toErr msg = TextIO.output(TextIO.stdErr, msg)
+
+fun wordToDec w = SysWord.fmt StringCvt.DEC w</PRE
+></TD
+></TR
+></TABLE
+><P
+>Here is the main function.  It is pretty boiler-plate by now.  It only
+recognises a single command line argument which must be the file name.
+The various functions we are using use the <TT
+CLASS="COMPUTEROUTPUT"
+>OS.SysErr</TT
+> exception
+so I've put in a catch-all for it.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun main(arg0, argv) =
+let
+in
+    case argv of
+      [file] =&#62; (stat file; OS.Process.success)
+
+    | _ =&#62; (toErr "Usage: statx filename\n"; OS.Process.failure)
+end
+handle
+  OS.SysErr (msg, _) =&#62;
+    (
+        toErr(concat["Error: ", msg, "\n"]);
+        OS.Process.failure
+    )
+
+| Error msg =&#62; (toErr msg; OS.Process.failure)
+
+| x =&#62; (toErr(concat["Uncaught exception: ", exnMessage x,"\n"]);
+        OS.Process.failure)</PRE
+></TD
+></TR
+></TABLE
+><P
+>Here is the function to report the stat data.  I've put in a <TT
+CLASS="COMPUTEROUTPUT"
+>SysErr</TT
+>
+handler on the <TT
+CLASS="COMPUTEROUTPUT"
+>stat</TT
+> function so that I can report the file name.
+This is the most likely error to come from the program.  Note that for
+better portability you should use the matching integer structure when
+printing integers e.g.  <TT
+CLASS="COMPUTEROUTPUT"
+>Position.toString</TT
+> for <TT
+CLASS="COMPUTEROUTPUT"
+>Position.int</TT
+>
+types.  It happens on the Intel x86 architecture that <TT
+CLASS="COMPUTEROUTPUT"
+>Position</TT
+>
+= <TT
+CLASS="COMPUTEROUTPUT"
+>Int</TT
+> but this may not be true on other architectures.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun stat file =
+let
+    val st = (FS.stat file) 
+                handle OS.SysErr (msg, _) =&#62;
+                    raise Error (concat[ file, ": ", msg, "\n"])
+
+    val mode = FS.ST.mode st
+    val uid  = FS.ST.uid st
+    val gid  = FS.ST.gid st
+in
+    print(concat["  File: ", file, "\n"]);
+
+    print(concat["  Size: ",
+        Position.toString(FS.ST.size st), "\n"]);
+
+    print(concat["  Type: ",
+        filetypeToString st, "\n"]);
+
+    print(concat["  Mode: ",
+        SysWord.fmt StringCvt.OCT (FS.S.toWord mode),
+        "/", modeToString mode, "\n"]);
+
+    print(concat["   Uid: ",
+        uidToInt uid, "/", uidToName uid, "\n"]);
+
+    print(concat["   Gid: ",
+        gidToInt gid, "/", gidToName gid, "\n"]);
+
+    print(concat["Device: ",
+        devToString(FS.ST.dev st), "\n"]);
+
+    print(concat[" Inode: ",
+        wordToDec(FS.inoToWord(FS.ST.ino st)), "\n"]);
+
+    print(concat[" Links: ",
+        Int.toString(FS.ST.nlink st), "\n"]);
+
+    print(concat["Access: ", Date.toString(
+        Date.fromTimeLocal(FS.ST.atime st)), "\n"]);
+
+    print(concat["Modify: ", Date.toString(
+        Date.fromTimeLocal(FS.ST.mtime st)), "\n"]);
+
+    print(concat["Change: ", Date.toString(
+        Date.fromTimeLocal(FS.ST.ctime st)), "\n"]);
+    ()
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The first of the helper functions called from <TT
+CLASS="COMPUTEROUTPUT"
+>stat</TT
+> is
+<TT
+CLASS="COMPUTEROUTPUT"
+>filetypeToString</TT
+>.  It searches a list of predicate functions
+to find one that works on the stat buffer value.  The matching name
+is returned.  I've put the list of predicates within a <I
+CLASS="EMPHASIS"
+>local</I
+> block
+so that is private to <TT
+CLASS="COMPUTEROUTPUT"
+>filetypeToString</TT
+> without being inside it.
+This way the list isn't built every time that the function is called,
+which is wasteful.  This doesn't matter on this small program but it
+very well might in other programs.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>local
+    val type_preds = [
+            (FS.ST.isDir,   "Directory"),
+            (FS.ST.isChr,   "Char Device"),
+            (FS.ST.isBlk,   "Block Device"),
+            (FS.ST.isReg,   "Regular File"),
+            (FS.ST.isFIFO,  "FIFO"),
+            (FS.ST.isLink,  "Symbolic Link"),
+            (FS.ST.isSock,  "Socket")
+            ]
+in
+    fun filetypeToString st =
+    let
+        val pred = List.find (fn (pred, _) =&#62; pred st) type_preds
+    in
+        case pred of
+          SOME (_, name) =&#62; name
+        | NONE =&#62; "Unknown"
+    end
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>modeToString</TT
+> helper function iterates over a list of flag
+testing functions, one for each position in the final mode string.
+I've used currying to make each of the expressions in the list a function
+from a mode to the character for the mode in the string. </P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>local
+    fun test flag ch mode =
+    (
+        if FS.S.anySet(FS.S.flags [flag], mode)
+        then
+            ch
+        else
+            #"-"
+    )
+
+    fun test2 flag1 ch1 flag2 ch2 mode =
+    (
+        if FS.S.anySet(FS.S.flags [flag1], mode)
+        then
+            ch1
+        else
+            if FS.S.anySet(FS.S.flags [flag2], mode)
+            then
+                ch2
+            else
+                #"-"
+    )
+
+    val flags  = [
+            test  FS.S.irusr #"r",
+            test  FS.S.iwusr #"w",
+            test2 FS.S.isuid #"s" FS.S.ixusr #"x",
+            test  FS.S.irgrp #"r",
+            test  FS.S.iwgrp #"w",
+            test2 FS.S.isgid #"s" FS.S.ixusr #"x",
+            test  FS.S.iroth #"r",
+            test  FS.S.iwoth #"w",
+            test  FS.S.ixoth #"x"
+            ]
+in
+    fun modeToString mode =
+    let
+        val chars = foldl
+            (fn (func, rslt) =&#62; (func mode)::rslt)
+            [] flags
+    in
+        implode(rev chars)
+    end
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The next group of functions convert uids and gids to their string forms,
+both as a decimal number and as a name from the passwd/group files.
+These use functions from the <TT
+CLASS="COMPUTEROUTPUT"
+>Posix.ProcEnv</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>Posix.SysDB</TT
+>
+structures, described later.  If there is any exception then I assume
+that the name is not known in the file.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>local
+    structure PROC = Posix.ProcEnv
+    structure DB   = Posix.SysDB
+in
+    fun uidToInt uid = wordToDec(PROC.uidToWord uid)
+    pun gidToInt gid = wordToDec(PROC.gidToWord gid)
+
+    fun uidToName uid =
+    (
+        (DB.Passwd.name(DB.getpwuid uid))
+            handle _ =&#62; "unknown"
+    )
+
+    fun gidToName gid =
+    (
+        (DB.Group.name(DB.getgrgid gid))
+            handle _ =&#62; "unknown"
+    )
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>Finally here is <TT
+CLASS="COMPUTEROUTPUT"
+>devToString</TT
+>.  I need to do some bit operations to
+separate the bytes of the <TT
+CLASS="COMPUTEROUTPUT"
+>dev_t</TT
+> word.  The current SML definition
+for a device value does not allow for the newer 64-bit device numbers. But
+on Linux on Intel x86 I get the major and minor numbers in the lower 16
+bits of the word.  This is not very portable.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun devToString dev =
+let
+    val word = FS.devToWord dev
+    val w1 = SysWord.andb(SysWord.&#62;&#62;(word, 0w8), 0wxff)
+    val w2 = SysWord.andb(word, 0wxff)
+in
+    concat[wordToDec w1, ",", wordToDec w2]
+end</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN1236"
+><TT
+CLASS="COMPUTEROUTPUT"
+>POSIX_FLAGS</TT
+></A
+></H2
+><P
+>This signature is an interface that is inherited into each distinct
+set of flags in other <TT
+CLASS="COMPUTEROUTPUT"
+>Posix</TT
+> structures.  See for example
+<TT
+CLASS="COMPUTEROUTPUT"
+>Posix.FileSys.S</TT
+> for the mode flags.  It provides common
+operations on flags which are represented as bit-strings internally.
+See <A
+HREF="x1164.html#POSIXFILESYS"
+>the section called <I
+><TT
+CLASS="COMPUTEROUTPUT"
+>Posix.FileSys</TT
+></I
+></A
+> for an example of flag use.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="POSIXIO"
+><TT
+CLASS="COMPUTEROUTPUT"
+>Posix.IO</TT
+></A
+></H2
+><P
+>This structure provides the functions that deal with the content of
+files as a stream of bytes. It works with the file descriptors that
+were created with the <TT
+CLASS="COMPUTEROUTPUT"
+>Posix.FileSys</TT
+> functions.  There is not
+a lot of need to use the read and write functions in this structure
+for general purpose binary file I/O as the <TT
+CLASS="COMPUTEROUTPUT"
+>BinIO</TT
+> structure in
+<A
+HREF="x1003.html"
+>the section called <I
+>The Portable I/O API</I
+></A
+> should be all that you will need. You could use
+them in conjunction with other functions that deal with file descriptors
+such as the file locking functions.  </P
+><P
+>A good demonstration of programming at this level can be found
+in the implementation of the <TT
+CLASS="COMPUTEROUTPUT"
+>execute</TT
+> function in the <TT
+CLASS="COMPUTEROUTPUT"
+>Unix</TT
+>
+structure. (See the <TT
+CLASS="COMPUTEROUTPUT"
+>boot/Unix</TT
+> directory of the compiler).
+It shows how to fork and exec a child process and build portable I/O
+streams from file descriptors.  Central to building I/O streams are the
+<TT
+CLASS="COMPUTEROUTPUT"
+>mkReader</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>mkWriter</TT
+> functions that are declared in the
+<TT
+CLASS="COMPUTEROUTPUT"
+>OS_PRIM_IO</TT
+> signature. (See <A
+HREF="x1003.html"
+>the section called <I
+>The Portable I/O API</I
+></A
+>).  These build
+reader and writer objects for buffered I/O given a POSIX file descriptor.
+You can find implementations of them in the <TT
+CLASS="COMPUTEROUTPUT"
+>PosixBinPrimIO</TT
+> and
+<TT
+CLASS="COMPUTEROUTPUT"
+>PosixTextPrimIO</TT
+> structures.  The result is this code from the
+<TT
+CLASS="COMPUTEROUTPUT"
+>Unix</TT
+> structure.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun fdReader (name : string, fd : PIO.file_desc) =
+      PosixTextPrimIO.mkReader {
+          initBlkMode = true,
+          name = name,
+          fd = fd
+        }
+
+fun fdWriter (name, fd) =
+      PosixTextPrimIO.mkWriter {
+          appendMode = false,
+          initBlkMode = true,
+          name = name,
+          chunkSize=4096,
+          fd = fd
+        }
+
+fun openOutFD (name, fd) =
+      TextIO.mkOutstream (
+        TextIO.StreamIO.mkOutstream (
+          fdWriter (name, fd), IO.BLOCK_BUF))
+
+fun openInFD (name, fd) =
+      TextIO.mkInstream (
+        TextIO.StreamIO.mkInstream (
+          fdReader (name, fd), NONE))&#13;</PRE
+></TD
+></TR
+></TABLE
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>name</TT
+> argument is only used for error reporting to distinguish
+the stream.  The implementation in the <TT
+CLASS="COMPUTEROUTPUT"
+>PosixBinPrimIO</TT
+> and
+<TT
+CLASS="COMPUTEROUTPUT"
+>PosixTextPrimIO</TT
+> structures use the <TT
+CLASS="COMPUTEROUTPUT"
+>Posix.IO.setfl</TT
+> function
+to change the blocking mode as requested by the blocking and non-blocking
+versions of the I/O functions in a reader or writer.  You need to
+supply the correct initial state for these modes.  If you opened the
+file with, for example, <TT
+CLASS="COMPUTEROUTPUT"
+>Posix.FileSys.openf</TT
+> with <TT
+CLASS="COMPUTEROUTPUT"
+>O_APPEND</TT
+>
+or <TT
+CLASS="COMPUTEROUTPUT"
+>O_NONBLOCK</TT
+> using the flags in <TT
+CLASS="COMPUTEROUTPUT"
+>Posix.FileSys.O</TT
+> then
+you must pass in the appropriate values for <TT
+CLASS="COMPUTEROUTPUT"
+>initBlkMode</TT
+> and
+<TT
+CLASS="COMPUTEROUTPUT"
+>appendMode</TT
+>.</P
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>openOutFD</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>openInFD</TT
+> functions assemble the stream
+layers as shown in <A
+HREF="x1003.html#IOSIGS"
+>Figure 3-2</A
+>.  The output stream is set to
+be fully buffered.  Other possible buffered modes, from the <TT
+CLASS="COMPUTEROUTPUT"
+>IO</TT
+>
+structure, are <TT
+CLASS="COMPUTEROUTPUT"
+>NO_BUF</TT
+> for no buffering at all and <TT
+CLASS="COMPUTEROUTPUT"
+>LINE_BUF</TT
+>
+if you want to flush the buffer after each line of text. (<TT
+CLASS="COMPUTEROUTPUT"
+>LINE_BUF</TT
+>
+is the same as <TT
+CLASS="COMPUTEROUTPUT"
+>BLOCK_BUF</TT
+> for binary streams).</P
+><P
+>Once you have built a stream on a file descriptor you cannot easily
+retrieve the file descriptor to manipulate it while the stream is live.
+If you call <TT
+CLASS="COMPUTEROUTPUT"
+>TextIO.StreamIO.getReader</TT
+> for example intending to get
+the reader's <TT
+CLASS="COMPUTEROUTPUT"
+>ioDesc</TT
+> field then the stream will be terminated on the
+assumption that you will be taking over all I/O from then on. If you need
+access to the file descriptor then you should save it somewhere yourself.
+You might do this if you want to use the polling interface of the
+<TT
+CLASS="COMPUTEROUTPUT"
+>OS.IO</TT
+> structure. (The <TT
+CLASS="COMPUTEROUTPUT"
+>canInput</TT
+> function on streams doesn't
+poll, it just attempts to do a non-blocking read on the file descriptor).</P
+><P
+>Here is the code for <TT
+CLASS="COMPUTEROUTPUT"
+>Unix.executeInEnv</TT
+>.  It demonstrates file
+descriptor manipulation while forking and setting up some pipes.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>structure P = Posix.Process
+structure PIO = Posix.IO
+structure SS = Substring
+
+fun executeInEnv (cmd, argv, env) = let
+      val p1 = PIO.pipe ()
+      val p2 = PIO.pipe ()
+
+      fun closep () = (
+            PIO.close (#outfd p1); 
+            PIO.close (#infd p1);
+            PIO.close (#outfd p2); 
+            PIO.close (#infd p2)
+          )
+
+      val base = SS.string(SS.taker
+                    (fn c =&#62; c &#60;&#62; #"/") (SS.all cmd))
+
+      fun startChild () =
+      (
+        case protect P.fork () of
+          SOME pid =&#62;  pid                      (* parent *)
+
+        | NONE =&#62;
+        let
+            val oldin = #infd p1
+            val newin = Posix.FileSys.wordToFD 0w0
+
+            val oldout = #outfd p2
+            val newout = Posix.FileSys.wordToFD 0w1
+        in
+            PIO.close (#outfd p1);
+            PIO.close (#infd p2);
+
+            if (oldin = newin) then () else (
+                PIO.dup2{old = oldin, new = newin};
+                PIO.close oldin);
+
+            if (oldout = newout) then () else (
+                PIO.dup2{old = oldout, new = newout};
+                PIO.close oldout);
+
+            P.exece (cmd, base::argv, env)
+        end
+
+      val _ = TextIO.flushOut TextIO.stdOut
+
+      val pid = (startChild ())
+                    handle ex =&#62; (closep(); raise ex)
+
+      val ins = openInFD (base^"_exec_in", #infd p2)
+      val outs = openOutFD (base^"_exec_out", #outfd p1)
+
+  in
+    (* close the child-side fds *)
+    PIO.close (#outfd p2);
+    PIO.close (#infd p1);
+
+    (* set the fds close on exec *)
+    PIO.setfd (#infd p2, PIO.FD.flags [PIO.FD.cloexec]);
+    PIO.setfd (#outfd p1,PIO.FD.flags [PIO.FD.cloexec]);
+
+    PROC {
+      pid = pid,
+      ins = ins,
+      outs = outs
+    }
+  end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>startChild</TT
+> function forks (see <A
+HREF="x1164.html#POSIXPROCESS"
+>the section called <I
+><TT
+CLASS="COMPUTEROUTPUT"
+>Posix.Process</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>Posix.Signal</TT
+></I
+></A
+>)
+and dups file descriptors in the usual way to get the pipes connected to
+stdin and stdout while being careful that they are not already connected
+that way.  Remember to close the unused ends of the pipe in the parent
+and child or else you won't be able to get an end-of-file indication
+when the child exits.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN1293"
+><TT
+CLASS="COMPUTEROUTPUT"
+>Posix.ProcEnv</TT
+></A
+></H2
+><P
+>This structure provides access to information about a process such as
+its uid, gid, pid, running time or environment variables.</P
+><P
+>You can also get system information via the <TT
+CLASS="COMPUTEROUTPUT"
+>uname</TT
+> and
+<TT
+CLASS="COMPUTEROUTPUT"
+>sysconf</TT
+> functions.  You form the string argument to <TT
+CLASS="COMPUTEROUTPUT"
+>sysconf</TT
+>
+by deleting the <TT
+CLASS="COMPUTEROUTPUT"
+>_SC_</TT
+> prefix from the POSIX value name, for example
+to get <TT
+CLASS="COMPUTEROUTPUT"
+>_SC_OPEN_MAX</TT
+> write <TT
+CLASS="COMPUTEROUTPUT"
+>Posix.ProcEnv.sysconf &quot;OPEN_MAX&quot;</TT
+>.
+All of the <TT
+CLASS="COMPUTEROUTPUT"
+>_SC_</TT
+> values defined in <TT
+CLASS="COMPUTEROUTPUT"
+>unistd.h</TT
+> on your system
+should be available this way.</P
+><P
+>To use file descriptors with <TT
+CLASS="COMPUTEROUTPUT"
+>isatty</TT
+> you need the conversion
+function in <TT
+CLASS="COMPUTEROUTPUT"
+>Posix.FileSys</TT
+>.  For example to determine if stdin is
+a tty:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun isatty() = Posix.ProcEnv.isatty (Posix.FileSys.wordToFD 0w0)</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="POSIXPROCESS"
+><TT
+CLASS="COMPUTEROUTPUT"
+>Posix.Process</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>Posix.Signal</TT
+></A
+></H2
+><P
+>This structure provides functions to fork and exec processes, kill and
+wait for them.  Equivalent functions for the  C library's <TT
+CLASS="COMPUTEROUTPUT"
+>alarm()</TT
+>,
+<TT
+CLASS="COMPUTEROUTPUT"
+>pause()</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>sleep()</TT
+> functions are also included.  You can find a
+demonstration of fork and exec in <A
+HREF="x1164.html#POSIXIO"
+>the section called <I
+><TT
+CLASS="COMPUTEROUTPUT"
+>Posix.IO</TT
+></I
+></A
+>.</P
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>kill</TT
+> function uses the signal values defined in
+<TT
+CLASS="COMPUTEROUTPUT"
+>Posix.Signal</TT
+>.  This defines a type <TT
+CLASS="COMPUTEROUTPUT"
+>signal</TT
+> with values for
+each of the POSIX signals.  You can also convert these to the integer
+codes for your platform with the <TT
+CLASS="COMPUTEROUTPUT"
+>toWord</TT
+> function.  </P
+><P
+>Unfortunately the POSIX API does not currently provide for setting
+signal handlers. For that you need to resort the older signal API of
+the SMLofNJ structure in <A
+HREF="x1452.html"
+>the section called <I
+>Signals</I
+> in Chapter 4</A
+>.  (If you are looking in
+the <TT
+CLASS="COMPUTEROUTPUT"
+>boot/Unix</TT
+> directory of the compiler, the <TT
+CLASS="COMPUTEROUTPUT"
+>unix-signals*</TT
+>
+files define the signals for this older API).</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN1328"
+><TT
+CLASS="COMPUTEROUTPUT"
+>Posix.SysDB</TT
+></A
+></H2
+><P
+>This structure provides an API for reading the <TT
+CLASS="COMPUTEROUTPUT"
+>/etc/passwd</TT
+> and
+<TT
+CLASS="COMPUTEROUTPUT"
+>/etc/group</TT
+> files.  The <TT
+CLASS="COMPUTEROUTPUT"
+>uidToName</TT
+> function in the <TT
+CLASS="COMPUTEROUTPUT"
+>statx</TT
+>
+program of <A
+HREF="x1164.html#POSIXFILESYS"
+>the section called <I
+><TT
+CLASS="COMPUTEROUTPUT"
+>Posix.FileSys</TT
+></I
+></A
+> provides a little demonstration
+of the API.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN1337"
+><TT
+CLASS="COMPUTEROUTPUT"
+>Posix.TTY</TT
+></A
+></H2
+><P
+>This structure provides a termio-style API to terminals.</P
+><P
+>The following function from the <A
+HREF="ttyx.sml"
+TARGET="_top"
+><TT
+CLASS="COMPUTEROUTPUT"
+>ttyx</TT
+></A
+>
+program shows how to change the erase character on your terminal.
+(Updating a single field in a record is a pain in SML).</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun setErase ch =
+let
+    val fd   = Posix.FileSys.wordToFD 0w0
+    val attr = TTY.getattr fd
+    val new_attr = TTY.termios {
+            iflag  = TTY.getiflag attr,
+            oflag  = TTY.getoflag attr,
+            cflag  = TTY.getcflag attr,
+            lflag  = TTY.getlflag attr,
+            cc     = TTY.V.update
+                        (TTY.getcc attr, [(TTY.V.erase, ch)]),
+            ispeed = TTY.getispeed attr,
+            ospeed = TTY.getospeed attr
+            }
+in
+    TTY.setattr(fd, TTY.TC.sanow, new_attr)
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>Note that at the time of writing this, the Basis library documentation for
+<TT
+CLASS="COMPUTEROUTPUT"
+>Posix.TTY</TT
+> doesn't match SML/NJ version 110.0.7.  In version 110.0.7
+there is no internal structure called <TT
+CLASS="COMPUTEROUTPUT"
+>Posix.TTY.CF</TT
+>.  Its contents
+appear directly in <TT
+CLASS="COMPUTEROUTPUT"
+>Posix.TTY</TT
+>.  Similarly these functions which
+should be in the <TT
+CLASS="COMPUTEROUTPUT"
+>Posix.TTY.TC</TT
+> structure appear directly in
+<TT
+CLASS="COMPUTEROUTPUT"
+>Posix.TTY</TT
+>: <TT
+CLASS="COMPUTEROUTPUT"
+>getattr</TT
+>, <TT
+CLASS="COMPUTEROUTPUT"
+>setattr</TT
+>, <TT
+CLASS="COMPUTEROUTPUT"
+>sendbreak</TT
+>,
+<TT
+CLASS="COMPUTEROUTPUT"
+>drain</TT
+>, <TT
+CLASS="COMPUTEROUTPUT"
+>flush</TT
+>, and <TT
+CLASS="COMPUTEROUTPUT"
+>flow</TT
+>.</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x1065.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="c1357.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>The Portable OS API</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c710.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>The SML/NJ Extensions</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

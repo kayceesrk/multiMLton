@@ -1,0 +1,247 @@
+<HTML
+><HEAD
+><TITLE
+>More on Time-Outs</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Concurrency"
+HREF="c2344.html"><LINK
+REL="PREVIOUS"
+TITLE="Getting the Value with a Time-Out"
+HREF="x2690.html"><LINK
+REL="NEXT"
+TITLE="Semaphores"
+HREF="x2758.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x2690.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 6. Concurrency</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x2758.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="MORETIMEOUTS"
+>More on Time-Outs</A
+></H1
+><P
+>There are two kinds of time-out events.  The <TT
+CLASS="COMPUTEROUTPUT"
+>timeOutEvt</TT
+> function
+returns an event that will delay each time that it is synchronised on.
+The <TT
+CLASS="COMPUTEROUTPUT"
+>atTimeEvt</TT
+> function returns an event that becomes enabled at
+some time in the future and then is always enabled thereafter.</P
+><P
+>These differences are illustrated by the <TT
+CLASS="COMPUTEROUTPUT"
+>timeouts</TT
+> program.
+Depending on the command line argument it will exercise either of the
+<TT
+CLASS="COMPUTEROUTPUT"
+>abs</TT
+> or <TT
+CLASS="COMPUTEROUTPUT"
+>delta</TT
+> functions.</P
+><P
+>Here is the <TT
+CLASS="COMPUTEROUTPUT"
+>delta</TT
+> function.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun delta() =
+let
+    val tmevt = CML.timeOutEvt (Time.fromSeconds 5)
+in
+    print "Waiting for the timeout\n";
+    CML.sync tmevt;
+
+    print "Delay\n";
+    CML.sync (CML.timeOutEvt (Time.fromSeconds 1));
+
+    print "Waiting again for the timeout\n";
+    CML.sync tmevt;
+
+    print "Done\n"
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>When you run the program with the <TT
+CLASS="COMPUTEROUTPUT"
+>delta</TT
+> command-line argument
+you will see that the &quot;Waiting for the timeout&quot; message is followed by
+a 5 second delay each time.</P
+><P
+>Here is the <TT
+CLASS="COMPUTEROUTPUT"
+>abs</TT
+> function.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun abs() =
+let
+    val when = Time.+(Time.now(), Time.fromSeconds 5)
+    val tmevt = CML.atTimeEvt when
+in
+    print "Waiting for the timeout\n";
+    CML.sync tmevt;
+
+    print "Delay\n";
+    CML.sync (CML.timeOutEvt (Time.fromSeconds 2));
+
+    print "Waiting again for the timeout\n";
+    CML.sync tmevt;
+
+    print "Delay again\n";
+    CML.sync (CML.timeOutEvt (Time.fromSeconds 2));
+
+    print "Waiting again for the timeout\n";
+    CML.sync tmevt;
+
+    print "Done\n"
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>When you run the program with the <TT
+CLASS="COMPUTEROUTPUT"
+>abs</TT
+> command-line argument you
+will see that there is a 5 second delay the first time but then each
+subsequent wait takes no time.  The timeout event is always enabled once
+the target time has been reached.  This will be useful in programs to
+produce an abort indication after a time-out.</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x2690.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x2758.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Getting the Value with a Time-Out</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c2344.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Semaphores</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

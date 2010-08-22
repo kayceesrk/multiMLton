@@ -1,0 +1,23 @@
+httperf --timeout=10 --client=0/1 --server=e --port=8084 --uri=/index.html --rate=700 --send-buffer=4096 --recv-buffer=16384 --num-conns=1000 --num-calls=1
+Maximum connect burst length: 2
+
+Total: connections 1000 requests 1000 replies 1000 test-duration 1.988 s
+
+Connection rate: 502.9 conn/s (2.0 ms/conn, <=344 concurrent connections)
+Connection time [ms]: min 12.3 avg 333.1 max 604.1 median 297.5 stddev 189.6
+Connection time [ms]: connect 0.0
+Connection length [replies/conn]: 1.000
+
+Request rate: 502.9 req/s (2.0 ms/req)
+Request size [B]: 64.0
+
+Reply rate [replies/s]: min 0.0 avg 0.0 max 0.0 stddev 0.0 (0 samples)
+Reply time [ms]: response 329.5 transfer 3.6
+Reply size [B]: header 116.0 content 1130.0 footer 0.0 (total 1246.0)
+Reply status: 1xx=0 2xx=1000 3xx=0 4xx=0 5xx=0
+
+CPU time [s]: user 0.07 system 1.91 (user 3.6% system 96.2% total 99.8%)
+Net I/O: 643.6 KB/s (5.3*10^6 bps)
+
+Errors: total 0 client-timo 0 socket-timo 0 connrefused 0 connreset 0
+Errors: fd-unavail 0 addrunavail 0 ftab-full 0 other 0

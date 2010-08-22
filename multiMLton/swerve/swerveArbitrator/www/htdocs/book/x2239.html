@@ -1,0 +1,646 @@
+<HTML
+><HEAD
+><TITLE
+>Regular Expressions</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="The Utility Libraries"
+HREF="c1812.html"><LINK
+REL="PREVIOUS"
+TITLE="Algorithms"
+HREF="x2014.html"><LINK
+REL="NEXT"
+TITLE="Other Utilities"
+HREF="x2319.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x2014.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 5. The Utility Libraries</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x2319.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN2239"
+>Regular Expressions</A
+></H1
+><P
+>This section describes the regular expression library in the <TT
+CLASS="COMPUTEROUTPUT"
+>RegExp</TT
+>
+directory of the SML/NJ library.  This directory includes a README file
+which has some brief notes on using the library.  This section shows
+some examples.</P
+><P
+>To use the library your CM files will need to include <TT
+CLASS="COMPUTEROUTPUT"
+>regexp-lib.cm</TT
+>
+(from the same place you get your <TT
+CLASS="COMPUTEROUTPUT"
+>smlnj-lib.cm</TT
+> file).</P
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN2246"
+>The Pieces of the Library</A
+></H2
+><P
+>The regular expression library is designed to be very flexible.  It is
+divided into:</P
+><P
+></P
+><UL
+><LI
+><P
+> a front-end section that implements the syntax of regular expressions;</P
+></LI
+><LI
+><P
+> a back-end section that implements the matching of regular expressions;</P
+></LI
+><LI
+><P
+> a glue section that joins the two together.</P
+></LI
+></UL
+><P
+>The idea is that you can have more than one style of syntax for regular
+expressions e.g. Perl versus grep.  The different syntaxes can be combined
+with different implementations of the matching algorithm.  You can even
+feed in your own regular expressions in the internal format directly to
+the matching algorithms.</P
+><P
+>At the time of writing there is only one front-end which is for an
+Awk-like syntax.  There are two back-ends.  One uses back-tracking and the
+other compiles the regular expression to a deterministic finite-state
+automaton (DFA).  The back-tracking matcher is described as &quot;slow,
+low memory footprint, low startup cost&quot;. The DFA matcher is described
+as &quot;fast, but memory-intensive and high startup cost (the cost of
+constructing the automaton in the first place)&quot;.</P
+><P
+>The front-end and back-end are combined together using the <TT
+CLASS="COMPUTEROUTPUT"
+>RegExpFn</TT
+>
+functor from the <TT
+CLASS="COMPUTEROUTPUT"
+>Glue/regexp-fn.sml</TT
+> source file.  For example</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>structure RE = RegExpFn(structure P=AwkSyntax
+                        structure E=BackTrackEngine)</PRE
+></TD
+></TR
+></TABLE
+><P
+>The resulting structure has this signature.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>signature REGEXP = 
+sig
+    (* The type of a compiled regular expression. *)
+    type regexp
+
+    (* Read an external representation of a regular expression
+       from a stream.
+    *)
+    val compile:  (char,'a) StringCvt.reader -&#62;
+                  (regexp, 'a) StringCvt.reader
+
+
+    (* Read an external representation of a regular expression
+       from a string.
+    *)
+    val compileString : string -&#62; regexp
+
+    (*  Scan the stream for the first occurence of the regular expression.
+    *)
+    val find:   regexp -&#62; 
+                (char,'a) StringCvt.reader -&#62;
+                ({pos: 'a, len: int} option MatchTree.match_tree,'a)
+                    StringCvt.reader
+        
+    (* Attempt to match the stream at the current position with the 
+       regular expression.
+    *)
+    val prefix: regexp -&#62;
+                (char,'a) StringCvt.reader -&#62;
+                ({pos: 'a, len: int} option MatchTree.match_tree,'a)
+                    StringCvt.reader
+
+    (* Attempt to match the stream at the current position with one 
+       of the external representations of regular expressions and 
+       trigger the corresponding action.
+    *)
+    val match:  (string *
+                    ({pos:'a, len:int} option MatchTree.match_tree -&#62; 'b)
+                ) list
+                -&#62; (char,'a) StringCvt.reader
+                -&#62; ('b, 'a)  StringCvt.reader
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>Your program will first compile a regular expression using either the
+<TT
+CLASS="COMPUTEROUTPUT"
+>compile</TT
+> or <TT
+CLASS="COMPUTEROUTPUT"
+>compileString</TT
+> functions.  You can then use
+one of <TT
+CLASS="COMPUTEROUTPUT"
+>find</TT
+>, <TT
+CLASS="COMPUTEROUTPUT"
+>prefix</TT
+> or <TT
+CLASS="COMPUTEROUTPUT"
+>match</TT
+> to match a string
+with the regular expression.  The result of matching is a match tree.
+Here is the (partial) signature which defines the tree.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>signature MATCH_TREE =
+sig
+    (* A match tree is used to represent the results of a nested
+       grouping of regular expressions.
+    *)
+    datatype 'a match_tree = Match of 'a * 'a match_tree list
+
+    (* Return the root (outermost) match in the tree. *)
+    val root : 'a match_tree -&#62; 'a
+
+    (* return the nth match in the tree; matches are labeled in 
+       pre-order starting at 0. Raises Subscript
+    *)
+    val nth : ('a match_tree * int) -&#62; 'a
+
+    ...</PRE
+></TD
+></TR
+></TABLE
+><P
+>Each node in the tree corresponds to a regular expression in parentheses
+(a <I
+CLASS="EMPHASIS"
+>group</I
+>) except the root of the tree which corresponds to the whole
+regular expression.  Since groups can be nested you get a tree of matches.
+Each match tree node stores an optional pair of position and length
+(see the <TT
+CLASS="COMPUTEROUTPUT"
+>match_tree</TT
+> type in the <TT
+CLASS="COMPUTEROUTPUT"
+>REGEXP</TT
+> signature above).
+If the group was matched with part of the original string then this pair
+will show where.  The pair is <TT
+CLASS="COMPUTEROUTPUT"
+>NONE</TT
+> if the group was not matched
+with anything e.g. if it's for an alternative that was never followed.</P
+><P
+>The matching functions are designed to work with the <TT
+CLASS="COMPUTEROUTPUT"
+>StringCvt</TT
+>
+scanning infrastructure (see <A
+HREF="x801.html#TEXTSCANNING"
+>the section called <I
+>Text Scanning</I
+> in Chapter 3</A
+>).  So for example
+the expression <TT
+CLASS="COMPUTEROUTPUT"
+>(find regexp)</TT
+> is a function that maps a character
+stream to a stream of match trees. To match a string you will need to
+combine it with the <TT
+CLASS="COMPUTEROUTPUT"
+>StringCvt.scanString</TT
+> function.</P
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>match</TT
+> function takes a list of pairs of a regular expression
+(which will be compiled on the fly) and a function to post-process the
+match tree. It returns the post-processed result (of the type <TT
+CLASS="COMPUTEROUTPUT"
+>'b</TT
+>
+in the <TT
+CLASS="COMPUTEROUTPUT"
+>REGEXP</TT
+> signature).</P
+><P
+>All of this is very flexible but a bit verbose to use.  The following
+sections will show some examples.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN2286"
+>Basic Matching</A
+></H2
+><P
+>This test will match the regular expression &quot;the.(quick|slow).brown&quot;
+against the string &quot;the quick brown fox&quot;.  First I build some matchers
+to try out.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>structure BT  = RegExpFn(structure P=AwkSyntax
+                         structure E=BackTrackEngine)
+
+structure DFA = RegExpFn(structure P=AwkSyntax
+                         structure E=BackTrackEngine)</PRE
+></TD
+></TR
+></TABLE
+><P
+>Here is the function to run the matching using the BT matcher.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun demo1BT msg =
+let
+    val regexp = BT.compileString "the.(quick|slow).brown"
+in
+    case StringCvt.scanString (BT.find regexp) msg of
+      NONE      =&#62; print "demo1 match failed\n"
+    | SOME tree =&#62; show_matches msg tree
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>scanString</TT
+> function is used to apply the matcher to the
+message.  The <TT
+CLASS="COMPUTEROUTPUT"
+>show_matches</TT
+> function reports the parts of the string
+that were matched by each group in the regular expression.  Here it is.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>(*  Show the matches n=0, ... *)
+and show_matches msg tree =
+let
+    val last = MatchTree.num tree
+
+    fun find n =
+    (
+        case MatchTree.nth(tree, n) of
+          NONE =&#62; "&#60;Unmatched&#62;"
+
+        | SOME {pos, len} =&#62; String.substring(msg, pos, len)
+    )
+
+    and loop n =
+    (
+        print(concat[Int.toString n, " =&#62; ", find n, "\n"]);
+        if n &#62;= last then () else loop(n+1)
+    )
+in
+    loop 0
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>Groups are numbered by counting left-parentheses left to right from 1.
+Group 0 represents the entire regular expression.  The <TT
+CLASS="COMPUTEROUTPUT"
+>nth</TT
+> function
+returns the match tree node for the nth group.  The <TT
+CLASS="COMPUTEROUTPUT"
+>show_matches</TT
+>
+function just iterates for increasing values of n.  The last group is
+given by the <TT
+CLASS="COMPUTEROUTPUT"
+>num</TT
+> function.  The output of this test is</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>Demo 1 using BT
+0 =&#62; the quick brown
+1 =&#62; quick</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN2301"
+>Matching with a Back-End</A
+></H2
+><P
+>The front-end translates a regular expression to an intermediate form
+which is represented by the <TT
+CLASS="COMPUTEROUTPUT"
+>syntax</TT
+> datatype. This is defined
+in the following signature from <TT
+CLASS="COMPUTEROUTPUT"
+>FrontEnd/syntax-sig.sml</TT
+>.
+The <TT
+CLASS="COMPUTEROUTPUT"
+>RegExpSyntax</TT
+> structure implements this signature.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>signature REGEXP_SYNTAX =
+sig
+    exception CannotParse
+    exception CannotCompile
+
+    structure CharSet : ORD_SET where type Key.ord_key = char
+
+    datatype syntax =
+        Group of syntax
+    |   Alt of syntax list
+    |   Concat of syntax list
+    |   Interval of (syntax * int * int option)
+    |   Option of syntax    (* == Interval(re, 0, SOME 1) *)
+    |   Star of syntax      (* == Interval(re, 0, NONE) *)
+    |   Plus of syntax      (* == Interval(re, 1, NONE) *)
+    |   MatchSet of CharSet.set
+    |   NonmatchSet of CharSet.set
+    |   Char of char
+    |   Begin               (* Matches beginning of stream *)
+    |   End                 (* Matches end of stream *)
+
+    val addRange : CharSet.set * char * char -&#62; CharSet.set
+    val allChars : CharSet.set
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>You can build regular expressions using this datatype.  This intermediate
+form is further translated by the back-end to its own internal
+representation, for example the DFA for the DFA back-end.  Each back-end
+has its own <TT
+CLASS="COMPUTEROUTPUT"
+>compile</TT
+> function to do this.</P
+><P
+>The following code shows the quick brown fox example from the previous
+section done this way. </P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>local
+    structure RE = RegExpSyntax
+    structure CS = RE.CharSet
+
+    val dot = RE.NonmatchSet(CS.singleton #"\n")
+
+    fun cvt_str s = RE.Concat(map RE.Char (explode s))
+in
+    fun demo2BT msg =
+    let
+        (* "the.(quick|slow).brown" *)
+        val regexp = BackTrackEngine.compile(RE.Concat[
+                        cvt_str "the",
+                        dot,
+                        RE.Group(RE.Alt[
+                            cvt_str "quick",
+                            cvt_str "slow"]),
+                        dot,
+                        cvt_str "brown"
+                        ])
+    in
+        case StringCvt.scanString (BT.find regexp) msg of
+          NONE      =&#62; print "demo2 match failed\n"
+        | SOME tree =&#62; show_matches msg tree
+    end
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The dot in a regular expression usually means any character excluding
+the new-line character.  I can achieve this with <TT
+CLASS="COMPUTEROUTPUT"
+>NonmatchSet</TT
+>
+which means all characters but the one in the set.  Look at the
+<TT
+CLASS="COMPUTEROUTPUT"
+>ORD_SET</TT
+> signature for the available operations on character sets. </P
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>cvt_str</TT
+> function converts a string to a sequence of character
+matchers.  The syntax value is not the simplest since the <TT
+CLASS="COMPUTEROUTPUT"
+>cvt_str</TT
+>
+calls produce redundant nesting of Concats.  If you were going to be doing
+a lot of this sort of thing it would be useful to write a normalising
+function that flattened nested Concats.  The Group constructor signals
+a group of characters to be put into the match tree.  The result is the
+same as before.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>Demo 2 using BT
+0 =&#62; the quick brown
+1 =&#62; quick</PRE
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x2014.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x2319.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Algorithms</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c1812.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Other Utilities</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

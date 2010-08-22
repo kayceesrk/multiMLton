@@ -1,0 +1,219 @@
+<HTML
+><HEAD
+><TITLE
+>Record Errors</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Coping with the Compiler's Error Messages"
+HREF="a6445.html"><LINK
+REL="PREVIOUS"
+TITLE="Identifier Errors"
+HREF="x6459.html"><LINK
+REL="NEXT"
+TITLE="Type Errors"
+HREF="x6478.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x6459.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Appendix B. Coping with the Compiler's Error Messages</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="x6478.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN6465"
+>Record Errors</A
+></H1
+><P
+>The binding patterns that select record fields introduce ambiguities
+that usually need some kind of explicit type constraint.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>type Cmd = {
+    name: string,
+    data: int
+    }
+
+fun show {name, ...} = print name
+
+fun process cmd = print(#name cmd)
+
+fun size ({data, ...}: Cmd) = data</PRE
+></TD
+></TR
+></TABLE
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>rec1.sml:6.1-6.34 Error: unresolved flex record
+   (can't tell what fields there are besides #name)
+type4a.sml:8.1-8.35 Error: unresolved flex record
+   (can't tell what fields there are besides #name)</PRE
+></TD
+></TR
+></TABLE
+><P
+>The binding pattern in <TT
+CLASS="COMPUTEROUTPUT"
+>show</TT
+> is called a &quot;flex record&quot;. It can match
+against any record type that contains a field called <TT
+CLASS="COMPUTEROUTPUT"
+>name</TT
+>.  But you
+aren't allowed to make a function polymorphic over all such record types
+so you have to constrain its type as done in the <TT
+CLASS="COMPUTEROUTPUT"
+>size</TT
+> function.
+The field selector <TT
+CLASS="COMPUTEROUTPUT"
+>#name</TT
+> is equivalent to the function <TT
+CLASS="COMPUTEROUTPUT"
+>(fn
+{name, ...} =&#62; name)</TT
+> so it has the same problem.</P
+><P
+>I prefer to use a datatype for all record types. The constructor will
+serve to constrain the type.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>datatype Cmd = Cmd of {
+    name: string,
+    data: int
+    }
+
+fun show (Cmd {name, ...}) = name</PRE
+></TD
+></TR
+></TABLE
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x6459.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="x6478.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Identifier Errors</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="a6445.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Type Errors</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

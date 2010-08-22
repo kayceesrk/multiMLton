@@ -1,0 +1,1834 @@
+<HTML
+><HEAD
+><TITLE
+>The getopt Programs</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.59"><LINK
+REL="HOME"
+TITLE="Unix System Programming with Standard ML"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Hello World"
+HREF="c131.html"><LINK
+REL="PREVIOUS"
+TITLE="Loops and Recursion"
+HREF="x237.html"><LINK
+REL="NEXT"
+TITLE="The Basis Library"
+HREF="c710.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="book.css"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>Unix System Programming with Standard ML</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="x237.html"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 2. Hello World</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="c710.html"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="AEN443"
+>The <I
+CLASS="EMPHASIS"
+>getopt</I
+> Programs</A
+></H1
+><P
+>The <I
+CLASS="EMPHASIS"
+>getopt</I
+> program will fetch the options from the command line
+and check that the required options are present.  I'll implement this
+in several different ways to demonstrate some programming techniques.</P
+><P
+>The goal is to to recognise the following options.</P
+><P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><DL
+><DT
+>-v, --verbose</DT
+><DD
+><P
+>    This is optional.</P
+></DD
+><DT
+>--width <I
+CLASS="EMPHASIS"
+>width</I
+></DT
+><DD
+><P
+>    This is required.  It sets the width.</P
+></DD
+><DT
+>--height <I
+CLASS="EMPHASIS"
+>height</I
+></DT
+><DD
+><P
+>    This is required.  It sets the height.</P
+></DD
+><DT
+>-h</DT
+><DD
+><P
+>    This prints a help message.</P
+></DD
+><DT
+><I
+CLASS="EMPHASIS"
+>files</I
+></DT
+><DD
+><P
+>    The remaining arguments are file names.</P
+></DD
+></DL
+></DIV
+><P
+>Our little program will print the file names.  If the verbose option is
+given then it will also print the width and height.  The usage will be:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>Usage: [-h] [-v|--verbose]
+       [--width width]
+       [--height height]
+       files</PRE
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN476"
+>Mostly Functional</A
+></H2
+><P
+>This first version, <TT
+CLASS="COMPUTEROUTPUT"
+>getopt1.sml</TT
+>, is in a mostly-functional style.
+The deviation is in the use of an exception to abort the program with
+an error message.</P
+><P
+>The first part of the program has some type definitions for
+documentation.<A
+NAME="AEN481"
+HREF="#FTN.AEN481"
+>[1]</A
+></P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>(*  The options will be returned as a list of pairs
+    of name and value.  We need to use an option type for
+    the value so that we can distinguish between a missing
+    value and an empty value.
+
+*)
+type Option = string * string option
+
+(*  The result from the command line parsing will
+    be a list of file names and a set of options.
+*)
+type CmdLine = (Option list) * (string list)
+
+(*  This exception will bomb with a usage message. *)
+exception Usage of string</PRE
+></TD
+></TR
+></TABLE
+><P
+>I've defined <TT
+CLASS="COMPUTEROUTPUT"
+>Option</TT
+> to be a pair of a string for the name of the
+option and an optional string for its value.  The name will be an internal
+canonical name.  The <TT
+CLASS="COMPUTEROUTPUT"
+>CmdLine</TT
+> type is to describe the result from
+<TT
+CLASS="COMPUTEROUTPUT"
+>parse_cmdline</TT
+>, namely a list of options and a list of files.</P
+><P
+>I've defined an exception <TT
+CLASS="COMPUTEROUTPUT"
+>Usage</TT
+> which carries a message.  I use
+this to abort the program.  The exception is caught when it aborts
+the <TT
+CLASS="COMPUTEROUTPUT"
+>main</TT
+> function and prints a message on <TT
+CLASS="COMPUTEROUTPUT"
+>stdErr</TT
+>.
+The exception handler returns the failure code so that the program exits
+with an exit code of 1.</P
+><P
+>The next section of the program scans the arguments.  </P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun parse_cmdline argv : CmdLine =
+let
+    fun loop [] opts = (opts, [])       (* no more args *)
+
+    |   loop ("-h"::rest) opts =
+            loop rest (("help", NONE) :: opts)
+
+    |   loop ("-v"::rest)        opts =
+            loop rest (("verbose", NONE) :: opts)
+
+    |   loop ("--verbose"::rest) opts =
+            loop rest (("verbose", NONE) :: opts)
+
+    |   loop ("--width"::rest)  opts =
+            get_value "width"  rest opts
+
+    |   loop ("--height"::rest) opts =
+            get_value "height" rest opts
+
+    |   loop (arg::rest) opts =
+    (
+        if String.sub(arg, 0) = #"-"
+        then
+            raise Usage (concat["The option ", arg,
+                            " is unrecognised."])
+        else
+            (opts, arg::rest)           (* the final result *)
+    )
+
+    and get_value name [] opts =
+    (
+        raise Usage (concat[
+            "The value for the option ", name, " is missing."])
+    )
+
+    |   get_value name (v::rest) opts =
+    (
+        loop rest ((name, SOME v) :: opts)
+    )
+in
+    loop argv []
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>parse_cmdline</TT
+> function scans the arguments in an inner loop.
+I've got a type constraint on the expression pattern <TT
+CLASS="COMPUTEROUTPUT"
+>parse_cmdline
+argv</TT
+> to indicate that its resulting value is of the type <TT
+CLASS="COMPUTEROUTPUT"
+>CmdLine</TT
+>.
+Although this is not strictly necessary it aids readability.  It can
+also make it easier to find the location of type errors by putting in
+explicit points where the type is known.  (See <A
+HREF="a6445.html"
+>Appendix B</A
+>
+for a discussion on type errors).  If you wanted a type constraint on
+the <TT
+CLASS="COMPUTEROUTPUT"
+>argv</TT
+> argument then you would need to put it in parentheses
+i.e. <TT
+CLASS="COMPUTEROUTPUT"
+>(argv: string list)</TT
+>.</P
+><P
+>I've used literal strings in the binding patterns for conciseness. So
+for example the second variant of the loop function says that if the
+argument list starts with a <TT
+CLASS="COMPUTEROUTPUT"
+>&quot;-h&quot;</TT
+> then continue looping over the
+rest of the arguments with the options table in <TT
+CLASS="COMPUTEROUTPUT"
+>opts</TT
+> augmented
+with the pair <TT
+CLASS="COMPUTEROUTPUT"
+>(&quot;help&quot;, NONE)</TT
+>.</P
+><P
+>The first variant catches the case of running out of arguments while
+scanning for options. In this case I return the options that I have and
+the list of files is empty.</P
+><P
+>To handle an option which requires a value I've used a separate function,
+<TT
+CLASS="COMPUTEROUTPUT"
+>get_value</TT
+>. It looks at the first of the rest of the arguments.
+If the rest of the arguments are empty then the value is missing.
+If present then I add it to the <TT
+CLASS="COMPUTEROUTPUT"
+>opts</TT
+> table and continue the loop.
+Note that with an <TT
+CLASS="COMPUTEROUTPUT"
+>option</TT
+> type, a value that is present is tagged
+with the <TT
+CLASS="COMPUTEROUTPUT"
+>SOME</TT
+> data constructor.  This algorithm will treat the
+case of <TT
+CLASS="COMPUTEROUTPUT"
+>--width --height</TT
+> as a width option having the value
+<TT
+CLASS="COMPUTEROUTPUT"
+>--height</TT
+>.  </P
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>get_value</TT
+> function must be joined to the <TT
+CLASS="COMPUTEROUTPUT"
+>loop</TT
+>
+function with the <TT
+CLASS="COMPUTEROUTPUT"
+>and</TT
+> keyword to make the forward reference to
+<TT
+CLASS="COMPUTEROUTPUT"
+>get_value</TT
+> in <TT
+CLASS="COMPUTEROUTPUT"
+>loop</TT
+> legal.  The two are mutually recursive
+functions.</P
+><P
+>The last variant of the loop function catches all the arguments that
+don't match any of the preceding option strings.  Remember that in cases
+the variants are matched in order from first to last.  An identifier
+in a binding pattern, here <TT
+CLASS="COMPUTEROUTPUT"
+>arg</TT
+>, will match any value.  I need
+to check if the value starts with a hyphen in which case it is an
+unrecognised option.  I've used the <TT
+CLASS="COMPUTEROUTPUT"
+>String.sub</TT
+> function which
+subscripts a string to get a character.  The first character is at
+index 0.  The <TT
+CLASS="COMPUTEROUTPUT"
+>#&quot;-&quot;</TT
+> notation is the hyphen character.  If the
+argument does not start with a hyphen then I return the final result
+which is the options table and the rest of the arguments, not forgetting
+that <TT
+CLASS="COMPUTEROUTPUT"
+>arg</TT
+> is one of them.</P
+><P
+>I've used parentheses to bracket the body of each variant although in
+this code they are redundant.  I find that I get fewer syntax surprises
+this way as the code gets more complex.  Imagine a body containing a
+case expression!</P
+><P
+>The next section of the program has some utility functions to deal with
+option tables.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>and find_option opts name : (string option) option =
+(
+    case List.find (fn (n, v) =&#62; n = name) opts of
+      NONE =&#62; NONE
+    | SOME (n, v) =&#62; SOME v
+)
+
+
+and has_option opts name =
+    (find_option opts name) &#60;&#62; NONE
+
+
+and require_option opts name and_value : string =
+(
+    case find_option opts name of
+      NONE =&#62; raise Usage (concat[
+                    "The option '", name,
+                    "' is missing."])
+
+    | SOME NONE =&#62;  (* found but has no value *)
+    (
+        if and_value 
+        then
+            raise Usage (concat[
+                "The option '", name, "' is missing a value."])
+        else
+            ""
+    )
+
+    | SOME (SOME v) =&#62; v  (* found and has a value *)
+)</PRE
+></TD
+></TR
+></TABLE
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>find_option</TT
+> searches the table for a given name.  I've used
+the <TT
+CLASS="COMPUTEROUTPUT"
+>List.find</TT
+> function which finds the first entry in the option
+list that satisfies the predicate function which is the first argument
+to <TT
+CLASS="COMPUTEROUTPUT"
+>List.find</TT
+>.  Remember that each member of the list is a pair
+of name and value.  So the argument to the predicate is a pair, matching
+with <TT
+CLASS="COMPUTEROUTPUT"
+>(n, v)</TT
+>.  The predicate tests if the name field is the same
+as the supplied name.</P
+><P
+>The option tables have a subtle property.  I built them in reverse by
+pushing new options onto the front of the list. So if there are duplicate
+options then the first one found will be the last on the command line.
+I either should not rely on this or I should document it <I
+CLASS="EMPHASIS"
+>loudly</I
+>.</P
+><P
+>The result from the <TT
+CLASS="COMPUTEROUTPUT"
+>List.find</TT
+> will be of the type <TT
+CLASS="COMPUTEROUTPUT"
+>Option
+option</TT
+>.  That is it will be <TT
+CLASS="COMPUTEROUTPUT"
+>NONE</TT
+> if the option was not found
+or else some name-value pair, <TT
+CLASS="COMPUTEROUTPUT"
+>SOME (n, v)</TT
+>.  I've decided that
+I only want to return the value.  But I have to indicate if the value
+was found or not in the options table so I wrap it in another level
+of <TT
+CLASS="COMPUTEROUTPUT"
+>option</TT
+>.</P
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>has_option</TT
+> just tests if <TT
+CLASS="COMPUTEROUTPUT"
+>find_option</TT
+> returns a non-NONE
+value.  The equality and inequality (<TT
+CLASS="COMPUTEROUTPUT"
+>&lt;&#62;</TT
+>) operators are available
+for the type <TT
+CLASS="COMPUTEROUTPUT"
+>T option</TT
+> if they are available for a type <TT
+CLASS="COMPUTEROUTPUT"
+>T</TT
+>.</P
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>require_option</TT
+> function checks that an option is present in
+the table.  If the <TT
+CLASS="COMPUTEROUTPUT"
+>and_value</TT
+> flag is true then I also require it
+to have a value.  If it has a value then I return it.  Because every
+<TT
+CLASS="COMPUTEROUTPUT"
+>if</TT
+> expression must have both a <TT
+CLASS="COMPUTEROUTPUT"
+>then</TT
+> and an <TT
+CLASS="COMPUTEROUTPUT"
+>else</TT
+>
+part I can't avoid covering the case of an option not having a value
+and not needing to, even though I don't use this case in the program.
+Better safe than sorry.</P
+><P
+>The final part of the program is the main function.  It should be fairly
+straightforward.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun main(arg0, argv) =
+let
+    val (opts, files) = parse_cmdline argv
+
+    val width  = require_option opts "width"  true
+    val height = require_option opts "height" true
+
+    fun show_stuff() =
+    (
+        print "The files are";
+        app (fn f =&#62; (print " "; print f)) files;
+        print ".\n";
+
+        if has_option opts "verbose"
+        then
+            print(concat[
+                "The width is ",  width,  ".\n",
+                "The height is ", height, ".\n"
+                ])
+        else
+            ()
+    )
+in
+    if has_option opts "help"
+    then
+        print "some helpful blurb\n"
+    else
+        show_stuff();
+
+    OS.Process.success
+end
+handle Usage msg =&#62;
+(
+    TextIO.output(TextIO.stdErr, concat[msg,
+       "\nUsage: [-h] [-v|--verbose] [--width width]",
+       " [--height height] files\n"]);
+    OS.Process.failure
+)</PRE
+></TD
+></TR
+></TABLE
+><P
+>Observe again how all <TT
+CLASS="COMPUTEROUTPUT"
+>if</TT
+> expressions must have both a <TT
+CLASS="COMPUTEROUTPUT"
+>then</TT
+>
+and an <TT
+CLASS="COMPUTEROUTPUT"
+>else</TT
+> part and each part must return a value.  Since the
+<TT
+CLASS="COMPUTEROUTPUT"
+>print</TT
+> function has <TT
+CLASS="COMPUTEROUTPUT"
+>unit</TT
+> as a return value then the
+<TT
+CLASS="COMPUTEROUTPUT"
+>else</TT
+> part must too.  The <TT
+CLASS="COMPUTEROUTPUT"
+>()</TT
+> is the notation for the one and
+only value of the <TT
+CLASS="COMPUTEROUTPUT"
+>unit</TT
+> type.  You can interpret it as &quot;do nothing&quot;.</P
+><P
+>In a real program of course I would call some function to do the work of
+the program and pass it the options and the file names.  But the rest of
+the code of the program may be quite large and it will only refer to the
+options in a few places scattered throughout the program.  It would be
+awkward to pass the options table all the way through the program just
+to be read in a few places.  The program would quickly become difficult
+to read.  Instead I will cheat and put the options into a global table.
+Since they are used read-only and are set before the body of the program is
+run this won't break referential transparency.  The program will still
+be as good as pure.</P
+><P
+>The way to put values into global variables in SML is to use global
+reference values.  Reference values emulate the variables of imperative
+programs.  But we don't have to get our hands dirty dealing with
+them. The SML/NJ utility library includes a hash table module that
+uses reference values internally to store its contents imperatively.
+In the next section I show how to set up one of those.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="GETOPTHASH"
+>Using a Hash Table</A
+></H2
+><P
+>The SML/NJ utility library defines a generic hash table using
+imperative storage so that you can update its contents. (See
+<A
+HREF="c1812.html"
+>Chapter 5</A
+>). The table is generic over the key type.
+You need to supply a specification of the key type and its properties to
+make an instance of the table type.  Then you can create values of the
+table type. All of the values have the same key type but each can have
+a different content type, since the table is polymorphic in this type.
+But all entries in a particular table have the same content type.
+SML does not do dynamic typing or subtyping.</P
+><P
+>The generic hash table is defined by this functor from the
+<TT
+CLASS="COMPUTEROUTPUT"
+>hash-table-fn.sml</TT
+> file in the SML/NJ library.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>functor HashTableFn (Key : HASH_KEY) : MONO_HASH_TABLE</PRE
+></TD
+></TR
+></TABLE
+><P
+>The functor takes a <TT
+CLASS="COMPUTEROUTPUT"
+>Key</TT
+> structure as an argument and produces a
+hash table structure.  The <TT
+CLASS="COMPUTEROUTPUT"
+>HASH_KEY</TT
+> signature describes what the
+<TT
+CLASS="COMPUTEROUTPUT"
+>Key</TT
+> structure must tell the functor.  Observe that in signatures, functions are
+described as a value of a function type.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>signature HASH_KEY =
+sig
+  type hash_key
+
+  val hashVal : hash_key -&#62; word
+      (* Compute an unsigned integer from a hash key. *)
+
+  val sameKey : (hash_key * hash_key) -&#62; bool
+      (* Return true if two keys are the same.
+       * NOTE: if sameKey(h1, h2), then it must be the
+       * case that (hashVal h1 = hashVal h2).
+       *)
+
+end (* HASH_KEY *)</PRE
+></TD
+></TR
+></TABLE
+><P
+>For the option table I want strings for keys.  So I've defined a string
+table key with the following structure.  The hash function comes from another library
+module in the <TT
+CLASS="COMPUTEROUTPUT"
+>hash-string.sml</TT
+> file. </P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>structure STRT_key =
+struct
+    type hash_key = string
+    val hashVal = HashString.hashString
+    fun sameKey (s1, s2) = (s1 = s2)
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>Now I can assemble these to make a module I call <TT
+CLASS="COMPUTEROUTPUT"
+>STRT</TT
+> that
+implements a hash table from strings to some content type.  I've also
+defined a useful exception that will be used later for when table
+lookups fail.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>structure STRT = HashTableFn(STRT_key)
+
+exception NotFound</PRE
+></TD
+></TR
+></TABLE
+><P
+>This structure conforms to the <TT
+CLASS="COMPUTEROUTPUT"
+>MONO_HASH_TABLE</TT
+> signature.
+Here <TT
+CLASS="COMPUTEROUTPUT"
+>MONO</TT
+> means it is monomorphic in the key type.  This signature
+describes all of the types and values (including functions) that the
+hash table structure makes public.  Here is a part of this signature
+containing the features that I use often.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>signature MONO_HASH_TABLE =
+sig
+
+  structure Key : HASH_KEY
+
+  type 'a hash_table
+
+  val mkTable: (int * exn) -&#62; 'a hash_table
+      (* Create a new table; the int is a size hint
+       * and the exception is to be raised by find.
+       *)
+
+  val insert: 'a hash_table -&#62; (Key.hash_key * 'a) -&#62; unit
+      (* Insert an item.  If the key already has an item
+       * associated with it, then the old item is
+       * discarded.
+       *)
+
+  val lookup: 'a hash_table -&#62; Key.hash_key -&#62; 'a
+      (* Find an item, the table's exception is raised
+       * if * the item doesn't exist
+       *)
+
+  val find: 'a hash_table -&#62; Key.hash_key -&#62; 'a option
+      (* Look for an item, return NONE if the item
+       * doesn't exist
+       *)
+
+  val listItemsi: 'a hash_table -&#62; (Key.hash_key * 'a) list
+      (* Return a list of the items (and their keys) in
+       * the table
+       *)
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>This shows that the table structure exports a copy of the <TT
+CLASS="COMPUTEROUTPUT"
+>Key</TT
+>
+structure that defined it.  This is good practice as it can be useful
+to get access to the hash function of the table.</P
+><P
+>So now I have the type <TT
+CLASS="COMPUTEROUTPUT"
+>'a STRT.hash_table</TT
+> which maps from string
+keys to some content type represented by the type variable <TT
+CLASS="COMPUTEROUTPUT"
+>'a</TT
+>.
+I can create a table from strings to strings like this.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>type OptionTable = string STRT.hash_table
+
+val option_tbl: OptionTable = STRT.mkTable(101, NotFound)</PRE
+></TD
+></TR
+></TABLE
+><P
+>The type constraint on the table value settles the type of the table
+immediately to save the compiler and the reader having to figure it out.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="GETOPT2"
+>Getopt with a Hash Table</A
+></H2
+><P
+>With these hash table tools I can go on to write a neater <I
+CLASS="EMPHASIS"
+>getopt</I
+> program,
+called <TT
+CLASS="COMPUTEROUTPUT"
+>getopt2.sml</TT
+>.  I'm in the habit of putting useful things
+like the string table structure into a common module which can be used
+throughout a project.  I put global variables like the option table into
+their own separate module.  These would normally go into separate files.
+In the source code for this program I've put them all in the same file.
+Here is the common module which exports all of its declarations.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>structure Common =
+struct
+
+(*-------------------------------------------------*)
+(*  A hash table with string keys. *)
+
+    structure STRT_key =
+    struct
+        type hash_key = string
+        val hashVal = HashString.hashString
+        fun sameKey (s1, s2) = (s1 = s2)
+    end
+
+    structure STRT = HashTableFn(STRT_key)
+
+    exception NotFound
+
+(*-------------------------------------------------*)
+
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>Then I define a signature for the global module to constrain what
+it exports.  It's got a basic API for setting and testing options.
+In keeping with the previous <I
+CLASS="EMPHASIS"
+>getopt</I
+> program an option value is an optional
+string so that I can tell the difference between a missing option value
+and an empty option value.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>signature GLOBAL =
+sig
+    type Option = string option
+
+    (*  Add an option to the table silently overriding
+        an existing entry.
+    *)
+    val addOption: (string * Option) -&#62; unit
+
+    (*  Test if an option is in the table. *)
+    val hasOption: string -&#62; bool
+
+    (*  Get the value of an option if it exists. *)
+    val getOption: string -&#62; Option option
+
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>Next I define the global module.  The <TT
+CLASS="COMPUTEROUTPUT"
+>open</TT
+> declaration imports everything
+from <TT
+CLASS="COMPUTEROUTPUT"
+>Common</TT
+> and makes its names directly visible.  Note that there must
+be a definition for every name declared in the <TT
+CLASS="COMPUTEROUTPUT"
+>GLOBAL</TT
+> signature so 
+the <TT
+CLASS="COMPUTEROUTPUT"
+>Option</TT
+> type must be defined again.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>structure Global: GLOBAL =
+struct
+    open Common
+
+(*-------------------------------------------------*)
+(*  The option table. *)
+
+    type Option = string option
+
+    type OptionTable = Option STRT.hash_table
+
+    val option_tbl: OptionTable = STRT.mkTable(20, NotFound)
+
+    fun addOption arg  = STRT.insert option_tbl arg
+
+    fun hasOption name = STRT.find option_tbl name &#60;&#62; NONE
+
+    fun getOption name = STRT.find option_tbl name
+
+(*-------------------------------------------------*)
+
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>The option table is a value in the structure.  This value will be
+created when the module is compiled into the heap as I described in
+<A
+HREF="c131.html#ASSEMBLEHW"
+>the section called <I
+>Assembling the Hello World Program</I
+></A
+>.  The value comes from the <TT
+CLASS="COMPUTEROUTPUT"
+>mkTable</TT
+>
+function. It will end up in the exported heap file.  When defining
+<TT
+CLASS="COMPUTEROUTPUT"
+>addOption</TT
+> I made the argument type match the argument to the
+STRT.insert function.  This avoids unpacking and repacking the contents
+as it passes from function to function.</P
+><P
+>I could have abbreviated the definitions of <TT
+CLASS="COMPUTEROUTPUT"
+>addOption</TT
+> and <TT
+CLASS="COMPUTEROUTPUT"
+>getOption</TT
+>
+further by taking advantage of currying but I think that this obscures
+the code a bit for no real gain.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>val addOption = STRT.insert option_tbl 
+val getOption = STRT.find   option_tbl</PRE
+></TD
+></TR
+></TABLE
+><P
+>Finally the main program is rewritten to eliminate all mention of a table of options.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>structure Main=
+struct
+
+    (* This exception will bomb with a usage message. *)
+    exception Usage of string
+
+
+    fun parse_cmdline argv : string list =
+    let
+        fun loop [] = []            (* no more arguments *)
+
+        |   loop ("-h"::rest) = add ("help", NONE) rest
+
+        |   loop ("-v"::rest) = add ("verbose", NONE) rest
+
+        |   loop ("--verbose"::rest) = add ("verbose", NONE) rest
+
+        |   loop ("--width"::rest)  = get_value "width"  rest
+
+        |   loop ("--height"::rest) = get_value "height" rest
+
+        |   loop (arg::rest) =
+        (
+            if String.sub(arg, 0) = #"-"
+            then
+                raise Usage (concat[
+                        "The option ", arg, " is unrecognised."])
+            else
+                arg::rest           (* the final result *)
+        )
+
+        and get_value name [] =
+        (
+            raise Usage (concat["The value for the option ",
+                                name, " is missing."])
+        )
+        |   get_value name (v::rest) = add (name, SOME v) rest
+
+        and add pair rest =
+        (
+            Global.addOption pair;
+            loop rest
+        )
+    in
+        loop argv
+    end
+
+
+    fun require_option name and_value : string =
+    (
+        case Global.getOption name of
+          NONE =&#62; raise Usage (concat[
+                    "The option '", name, "' is missing."])
+
+        | SOME NONE =&#62;              (* found but no value *)
+        (
+            if and_value 
+            then
+                raise Usage (concat["The option '", name,
+                                    "' is missing a value."])
+            else
+                ""
+        )
+
+        | SOME (SOME v) =&#62; v        (* found with a value *)
+    )
+
+
+
+    fun main(arg0, argv) =
+    let
+        val files = parse_cmdline argv
+
+        val width  = require_option "width"  true
+        val height = require_option "height" true
+
+        fun show_stuff() =
+        (
+            print "The files are";
+            app (fn f =&#62; (print " "; print f)) files;
+            print ".\n";
+
+            if Global.hasOption "verbose"
+            then
+                print(concat[
+                    "The width is ",  width,  ".\n",
+                    "The height is ", height, ".\n"
+                    ])
+            else
+                ()
+        )
+    in
+        if Global.hasOption "help"
+        then
+            print "some helpful blurb\n"
+        else
+            show_stuff();
+
+        OS.Process.success
+    end
+    handle Usage msg =&#62;
+    (
+        TextIO.output(TextIO.stdErr, concat[msg,
+         "\nUsage: [-h] [-v|--verbose] [--width width]",
+         " [--height height] files\n"]);
+        OS.Process.failure
+    )
+
+
+    val _ = SMLofNJ.exportFn("getopt2", main)
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>Since I am now using modules from the SML/NJ utility library I must
+mention the library in the CM file for the program.  Here is the
+<TT
+CLASS="COMPUTEROUTPUT"
+>getopt2.cm</TT
+> file.  It has the path to a CM file for the library which
+was created when SML/NJ was installed.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>group is 
+    getopt2.sml
+    /src/smlnj/current/lib/smlnj-lib.cm</PRE
+></TD
+></TR
+></TABLE
+><P
+>An alternative to having the table in the heap is to have it built on
+demand when the program runs.  A convenient way to do this in SML/NJ is
+described in <A
+HREF="x1503.html#LAZYSUSP"
+>the section called <I
+>Lazy Suspensions</I
+> in Chapter 4</A
+>.</P
+></DIV
+><DIV
+CLASS="SECT2"
+><H2
+CLASS="SECT2"
+><A
+NAME="AEN624"
+>The Deluxe getopt</A
+></H2
+><P
+>The <I
+CLASS="EMPHASIS"
+>getopt</I
+> programs I've done so far implement a simple command line
+syntax. This next one, called <TT
+CLASS="COMPUTEROUTPUT"
+>getopt3.sml</TT
+>, does the full Gnu-style
+syntax with short and long options etc.  It will report its usage as:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>Usage: getopt
+  -v  --verbose        Select verbose output
+      --width=width    The width in pixels  
+      --height=height  The height in pixels 
+  -h  --help           Show this message.   </PRE
+></TD
+></TR
+></TABLE
+><P
+>I've written this program using the <TT
+CLASS="COMPUTEROUTPUT"
+>GetOpt</TT
+> structure in the SML/NJ
+utility library.  This structure is rather under-documented and not that easy
+to figure out. You can find its signature in the <TT
+CLASS="COMPUTEROUTPUT"
+>getopt-sig.sml</TT
+>
+file.  When you use this module to parse the command line you get back
+a list of options and files similar to my first <I
+CLASS="EMPHASIS"
+>getopt</I
+> program.  But I
+will then transfer them to a global option table as in the the second
+<I
+CLASS="EMPHASIS"
+>getopt</I
+> program.</P
+><P
+>I start by building an <TT
+CLASS="COMPUTEROUTPUT"
+>Option</TT
+> module that contains the command
+line parsing and can deliver the values of the options imperatively.
+The API for this module is specified in the <TT
+CLASS="COMPUTEROUTPUT"
+>OPTION</TT
+> signature.
+I've put in an alias of <TT
+CLASS="COMPUTEROUTPUT"
+>G</TT
+> for the <TT
+CLASS="COMPUTEROUTPUT"
+>GetOpt</TT
+> structure to save on
+typing.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>structure Option: OPTION =
+struct
+    structure G = GetOpt</PRE
+></TD
+></TR
+></TABLE
+><P
+>The interface to the <TT
+CLASS="COMPUTEROUTPUT"
+>GetOpt</TT
+> structure revolves around a single type
+to represent all of the possible options.  This should be a datatype
+to be useful. I start by defining the <TT
+CLASS="COMPUTEROUTPUT"
+>Option</TT
+> type.  I keep the width
+and height as strings for simplicity but in a real program you would
+probably use integers with <TT
+CLASS="COMPUTEROUTPUT"
+>Int.fromString</TT
+> to do the conversion.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>(*  This represents an option found on
+    the command line.
+*)
+datatype Option = 
+        Verbose
+    |   Help
+    |   Width of string
+    |   Height of string</PRE
+></TD
+></TR
+></TABLE
+><P
+>An option is described by the following record type in <TT
+CLASS="COMPUTEROUTPUT"
+>GetOpt</TT
+>.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>type 'a opt_descr = {
+    short : string,
+    long : string list,
+    desc : 'a arg_descr,
+    help : string
+    }
+    (* Description of a single option *)</PRE
+></TD
+></TR
+></TABLE
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>short</TT
+> field contains the single letter version of the option.
+If you have more than one letter then they are treated as synonyms. The
+long field contains the <TT
+CLASS="COMPUTEROUTPUT"
+>long</TT
+> version of the option as a list of strings.
+Again if you have more than one then they are treated as synonyms.</P
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>desc</TT
+> field describes properties of the options value and
+how to map it to the representation type (my <TT
+CLASS="COMPUTEROUTPUT"
+>Option</TT
+>).  The value of this
+field is of the following datatype from <TT
+CLASS="COMPUTEROUTPUT"
+>GetOpt</TT
+>.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>datatype 'a arg_descr
+    = NoArg of unit -&#62; 'a
+    | ReqArg of (string -&#62; 'a) * string
+    | OptArg of (string option -&#62; 'a) * string</PRE
+></TD
+></TR
+></TABLE
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>'a</TT
+> type variable is a place holder for the representation type.
+If the option takes no value then supply <TT
+CLASS="COMPUTEROUTPUT"
+>NoArg</TT
+>. You must include
+with it a function that returns a representation value for the option.
+If the option requires a value then supply <TT
+CLASS="COMPUTEROUTPUT"
+>ReqArg</TT
+> along with a
+function to convert the value to the representation type and a description
+of the value for the usage message.  If the option's value is optional
+then supply <TT
+CLASS="COMPUTEROUTPUT"
+>OptArg</TT
+> along with a conversion function and a
+description as for <TT
+CLASS="COMPUTEROUTPUT"
+>ReqArg</TT
+>.  Note that for <TT
+CLASS="COMPUTEROUTPUT"
+>OptArg</TT
+> the conversion
+function is passed a <TT
+CLASS="COMPUTEROUTPUT"
+>string option</TT
+> type to tell whether the value
+is available or not.</P
+><P
+>Here is my code for part of the option description list.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun NoArg  opt       = G.NoArg (fn () =&#62; opt)
+fun ReqArg opt descr = G.ReqArg (opt, descr)
+
+val options: (Option G.opt_descr) list = [
+        {short = "v", long = ["verbose"],
+            desc = NoArg Verbose,
+            help = "Select verbose output"
+        },
+
+        {short = "", long = ["width"],
+            desc = ReqArg Width "width",
+            help = "The width in pixels"
+        },</PRE
+></TD
+></TR
+></TABLE
+><P
+>I've defined two helper functions to make it easier to write the
+option descriptions.  My <TT
+CLASS="COMPUTEROUTPUT"
+>NoArg</TT
+> function takes a value of the
+representation type and wraps it into a conversion function for the
+<TT
+CLASS="COMPUTEROUTPUT"
+>GetOpt.NoArg</TT
+> data constructor.  </P
+><P
+>My <TT
+CLASS="COMPUTEROUTPUT"
+>ReqArg</TT
+> does a similar thing but here the first argument
+<TT
+CLASS="COMPUTEROUTPUT"
+>opt</TT
+> is the conversion function.  The data constructors <TT
+CLASS="COMPUTEROUTPUT"
+>Width</TT
+>
+and <TT
+CLASS="COMPUTEROUTPUT"
+>Height</TT
+> in the <TT
+CLASS="COMPUTEROUTPUT"
+>Option</TT
+> type can be used as functions to
+construct values of type <TT
+CLASS="COMPUTEROUTPUT"
+>Option</TT
+> from the types that they tag.
+For example the <TT
+CLASS="COMPUTEROUTPUT"
+>Width</TT
+> data constructor behaves as a function
+with the type <TT
+CLASS="COMPUTEROUTPUT"
+>string -&#62; Option</TT
+> which is just the type needed
+for <TT
+CLASS="COMPUTEROUTPUT"
+>GetOpt.ReqArg</TT
+>.</P
+><P
+>The command line is parsed using the GetOpt.getOpt function.  Its signature is</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>datatype 'a arg_order
+  = RequireOrder
+  | Permute
+  | ReturnInOrder of string -&#62; 'a
+(* What to do with options following non-options:
+ * RequireOrder: no processing after first non-option
+ * Permute: freely intersperse options and non-options
+ * ReturnInOrder: wrap non-options into options
+ *)
+
+val getOpt : {
+        argOrder : 'a arg_order,
+        options : 'a opt_descr list,
+        errFn : string -&#62; unit
+      } -&#62; string list -&#62; ('a list * string list)
+
+(* takes as argument an arg_order to specify the
+ * non-options handling, a list of option descriptions
+ * and a command line containing the options and
+ * arguments, and returns a list of (options,
+ * non-options)
+ *)      </PRE
+></TD
+></TR
+></TABLE
+><P
+>The first argument is a record of details about the options.  I'll just
+use <TT
+CLASS="COMPUTEROUTPUT"
+>RequireOrder</TT
+> for the ordering control. The <TT
+CLASS="COMPUTEROUTPUT"
+>options</TT
+> field is my list
+of option descriptions. For an error function I just need something to
+print a string to <TT
+CLASS="COMPUTEROUTPUT"
+>stdErr</TT
+>.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>    fun toErr msg = TextIO.output(TextIO.stdErr, msg)</PRE
+></TD
+></TR
+></TABLE
+><P
+>The second argument is the argv list.  The result is a list of
+representation values and the remaining arguments, the file names.
+Here is my code to parse the command line.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>val opt_tbl: (Option list) ref = ref []
+
+
+fun parseCmdLine argv =
+let
+    val (opts, files) =
+        G.getOpt {
+            argOrder = G.RequireOrder,
+            options  = options,
+            errFn    = toErr
+            } argv
+in
+    opt_tbl := opts;
+    files
+end</PRE
+></TD
+></TR
+></TABLE
+><P
+>When I get back the list of options I assign it to the imperative variable
+<TT
+CLASS="COMPUTEROUTPUT"
+>opt_tbl</TT
+>.  The variable must have an initial value which is
+constructed by the <TT
+CLASS="COMPUTEROUTPUT"
+>ref</TT
+> data constructor from an empty list.</P
+><P
+>Then I can write some accessor functions to get option information from the table.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun hasVerbose() =
+(
+    List.exists (fn opt =&#62; opt = Verbose) (!opt_tbl)
+)
+
+fun hasHelp() =
+(
+    List.exists (fn opt =&#62; opt = Help) (!opt_tbl)
+)
+
+fun getWidth()   =
+let
+    val opt_width = List.find
+                    (fn Width _ =&#62; true | _ =&#62; false)
+                    (!opt_tbl)
+in
+    case opt_width of
+      NONE          =&#62; NONE
+    | SOME(Width w) =&#62; SOME w
+    | _             =&#62; raise Fail "Option,getWidth"
+)</PRE
+></TD
+></TR
+></TABLE
+><P
+>The <TT
+CLASS="COMPUTEROUTPUT"
+>!</TT
+> operator dereferences the imperative variable.  It is like
+the <TT
+CLASS="COMPUTEROUTPUT"
+>*</TT
+> operator in C.  The operator precedence rules require
+the parentheses around the dereference. I've used <TT
+CLASS="COMPUTEROUTPUT"
+>List.exists</TT
+>
+to check for the presence of the simple options in the table.</P
+><P
+>To get the width value out I need <TT
+CLASS="COMPUTEROUTPUT"
+>List.find</TT
+> to return the entry
+from the list.  The predicate needs some more elaborate binding patterns
+in order to recognise the <TT
+CLASS="COMPUTEROUTPUT"
+>Width</TT
+> tag and ignore the string value
+with an underscore.  The case expression must cover all possibilities or
+else you will get messy warnings from the compiler which should be avoided
+at all costs or some day you will miss a genuine error among the warnings.
+In this example I need to cover the find returning a non-<TT
+CLASS="COMPUTEROUTPUT"
+>Width</TT
+> entry even
+though that is impossible for the predicate I've used.  The <TT
+CLASS="COMPUTEROUTPUT"
+>Fail</TT
+>
+exception is a built-in exception in the Basis library that you can use
+to signal an internal fatal error.  Use it only for impossible conditions
+like this.  The <TT
+CLASS="COMPUTEROUTPUT"
+>GetOpt</TT
+> implementation also uses it for impossible conditions.</P
+><P
+>Finally I rewrite the <TT
+CLASS="COMPUTEROUTPUT"
+>require_option</TT
+> function to check that
+the option was supplied on the command line.  It works for all of the
+<TT
+CLASS="COMPUTEROUTPUT"
+>get*</TT
+> functions.</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun require_option func name : string =
+(
+    case func() of
+      NONE =&#62; raise Usage (concat[
+                        "The option '", name,
+                        "' is missing."])
+
+    | SOME v =&#62; v
+)</PRE
+></TD
+></TR
+></TABLE
+><P
+>Then my main function becomes:</P
+><TABLE
+BORDER="0"
+BGCOLOR="#d0ffff"
+WIDTH="100%"
+><TR
+><TD
+><PRE
+CLASS="PROGRAMLISTING"
+>fun main(arg0, argv) =
+let
+    val files  = Option.parseCmdLine argv
+
+    val width  = require_option
+                    Option.getWidth "width"
+
+    val height = require_option
+                    Option.getHeight "height"
+
+    fun show_stuff() =
+    (
+        print "The files are";
+        app (fn f =&#62; (print " "; print f)) files;
+        print ".\n";
+
+        if Option.hasVerbose()
+        then
+            print(concat[
+                "The width is ",  width,  ".\n",
+                "The height is ", height, ".\n"
+                ])
+        else
+            ()
+    )
+in
+    if Option.hasHelp()
+    then
+        print "some helpful blurb\n"
+    else
+        show_stuff();
+
+    OS.Process.success
+end
+handle Usage msg =&#62;
+(
+    toErr msg;              toErr "\n";
+    toErr(Option.usage());  toErr "\n";
+
+    OS.Process.failure
+)</PRE
+></TD
+></TR
+></TABLE
+></DIV
+></DIV
+><H3
+CLASS="FOOTNOTES"
+>Notes</H3
+><TABLE
+BORDER="0"
+CLASS="FOOTNOTES"
+WIDTH="100%"
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="5%"
+><A
+NAME="FTN.AEN481"
+HREF="x443.html#AEN481"
+>[1]</A
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+WIDTH="95%"
+><P
+>My naming convention dresses up public names
+in mixed case and uses lower case with underscores for private names.
+Types start with an uppercase.</P
+></TD
+></TR
+></TABLE
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="x237.html"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="c710.html"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Loops and Recursion</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="c131.html"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>The Basis Library</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>
