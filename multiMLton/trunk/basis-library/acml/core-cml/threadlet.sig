@@ -10,9 +10,9 @@ sig
     type 'a asyncChan
 
     val newAChan : unit -> 'a asyncChan
-    val async : (unit -> unit) -> unit
-    val aSend : ('a asyncChan * 'a) -> unit
-    val aRecv : 'a asyncChan -> 'a
+    val parasite : (unit -> unit) -> unit
+    val pSend : ('a asyncChan * 'a) -> unit
+    val pRecv : 'a asyncChan -> 'a
 
     val printFrames : unit -> unit
     val dontInline : (unit -> 'a) -> 'a

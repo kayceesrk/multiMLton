@@ -46,17 +46,17 @@ struct
   val dontInline = Primitive.dontInline
 
 
-  val async = S.async
+  val parasite = S.async
 
-  fun aSend (ACHAN {inQ, outQ, lock}, msg) =
+  fun pSend (ACHAN {inQ, outQ, lock}, msg) =
     let
-      val () = Assert.assertNonAtomic' "Threadlet.aSend"
-      val () = Assert.assertNonAtomic' "Threadlet.aSend(1)"
-      val () = debug' "Threadlet.aSend(1)"
+      val () = Assert.assertNonAtomic' "Threadlet.pSend"
+      val () = Assert.assertNonAtomic' "Threadlet.pSend(1)"
+      val () = debug' "Threadlet.pSend(1)"
       val () = S.atomicBegin ()
       val () = L.getCmlLock lock (S.tidNum())
-      val () = Assert.assertAtomic' ("Threadlet.aSend(2)", SOME 1)
-      val () = debug' "Threadlet.aSend(2)"
+      val () = Assert.assertAtomic' ("Threadlet.pSend(2)", SOME 1)
+      val () = debug' "Threadlet.pSend(2)"
       val () =
         (case Q.deque (inQ) of
               SOME (e) => (case e of
@@ -64,7 +64,7 @@ struct
                                     let
                                       val _ = L.releaseCmlLock lock (S.tidNum ())
                                       val _ = handoffFun := (fn () => msg)
-                                      val _ = debug' "aSend-SOME-AR"
+                                      val _ = debug' "pSend-SOME-AR"
                                       val _ = S.atomicPrefixAndSwitchTo (thlet) (* Implicit atomicEnd *)
                                     in
                                       ()
@@ -72,7 +72,7 @@ struct
                                | MR (thrd, procNum) =>
                                    let
                                      val _ = L.releaseCmlLock lock (S.tidNum ())
-                                     val _ = debug' "aSend-SOME-MR"
+                                     val _ = debug' "pSend-SOME-MR"
                                      val rdyThrd = S.prepVal (thrd, msg)
                                      val _ = S.readyOnProc (rdyThrd, procNum)
                                      val _ = S.atomicEnd ()
@@ -86,7 +86,7 @@ struct
                   val _ = (case state of
                                 MAIN =>
                                   let
-                                    val _ = debug' "aSend-NONE-MAIN"
+                                    val _ = debug' "pSend-NONE-MAIN"
                                     val procNum = B.processorNumber ()
                                     val () =
                                         S.atomicSwitchToNext (
@@ -98,17 +98,17 @@ struct
                                   end
                               | ASYNC =>
                                   let
-                                    val _ = debug' "aSend-NONE-ASYNC"
+                                    val _ = debug' "pSend-NONE-ASYNC"
                                     (* sandBox will be executed only during the first time.
                                       * when then Async resumes, this is not executed. *)
                                     fun sandBox () =
                                       let
-                                        val _ = debug' "aSend sandBox"
+                                        val _ = debug' "pSend sandBox"
                                         val thlet = copyFrames (S.getNextPointer ())
                                         val _ = Q.enque (outQ, AS (thlet, msg))
                                         val _ = L.releaseCmlLock lock (S.tidNum ())
                                         val _ = Prim.jumpDown (S.getNextPointer ())  (* Implicit atomicEnd *)
-                                        val _ = print "\naSend : Should not see this"
+                                        val _ = print "\npSend : Should not see this"
                                       in
                                         ()
                                       end
@@ -122,24 +122,24 @@ struct
                 end
         )
     in
-      () (* aSend ends *)
+      () (* pSend ends *)
     end
 
 
-  fun aRecv (ACHAN {inQ, outQ, lock}) =
+  fun pRecv (ACHAN {inQ, outQ, lock}) =
     let
-      val () = Assert.assertNonAtomic' "Threadlet.aRecv"
-      val () = Assert.assertNonAtomic' "Threadlet.aRecv(1)"
-      val () = debug' "Threadlet.aRecv(1)"
+      val () = Assert.assertNonAtomic' "Threadlet.pRecv"
+      val () = Assert.assertNonAtomic' "Threadlet.pRecv(1)"
+      val () = debug' "Threadlet.pRecv(1)"
       val () = S.atomicBegin ()
       val () = L.getCmlLock lock (S.tidNum())
-      val () = Assert.assertAtomic' ("Threadlet.aRecv(2)", SOME 1)
-      val () = debug' "Threadlet.aRecv(2)"
+      val () = Assert.assertAtomic' ("Threadlet.pRecv(2)", SOME 1)
+      val () = debug' "Threadlet.pRecv(2)"
       val msg = (case Q.deque (outQ) of
                     SOME (e) => (case e of
                                       AS (thlet, msg) =>
                                         let
-                                          val _ = debug' "aRecv-SOME-AS"
+                                          val _ = debug' "pRecv-SOME-AS"
                                           val _ = L.releaseCmlLock lock (S.tidNum ())
                                           val _ = S.atomicPrefixAndSwitchTo (thlet)
                                           (* Atomic 0 *)
@@ -149,7 +149,7 @@ struct
                                     | MS (thrd, msg, procNum) =>
                                         let
                                           val _ = L.releaseCmlLock lock (S.tidNum ())
-                                          val _ = debug' "aRecv-SOME-MS"
+                                          val _ = debug' "pRecv-SOME-MS"
                                           val rdyThrd = S.prepVal (thrd, ())
                                           val _ = S.readyOnProc (rdyThrd, procNum)
                                           val _ = S.atomicEnd ()
@@ -163,7 +163,7 @@ struct
                         val msg = (case state of
                                        MAIN =>
                                         let
-                                          val _ = debug' "aRecv-NONE-MAIN"
+                                          val _ = debug' "pRecv-NONE-MAIN"
                                           val procNum = B.processorNumber ()
                                           val msg =
                                             S.atomicSwitchToNext (
@@ -175,19 +175,19 @@ struct
                                         end
                                      | ASYNC =>
                                         let
-                                          val _ = debug' "aRecv-NONE-ASYNC"
+                                          val _ = debug' "pRecv-NONE-ASYNC"
                                           val handoffFun = ref (fn () => Primitive.MLton.bogus ())
                                           (* sandBox will be executed only during the first time.
                                             * when then Async resumes, this is not executed. *)
                                           fun sandBox () =
                                             let
-                                              val _ = debug' "aRecv sandBox"
+                                              val _ = debug' "pRecv sandBox"
                                               val thlet = copyFrames (S.getNextPointer ())
                                               val _ = Q.enque (inQ, AR (thlet, handoffFun))
                                               val _ = L.releaseCmlLock lock (S.tidNum ())
                                               val _ = Prim.jumpDown (S.getNextPointer ()) (* Implicit atomicEnd () *)
                                               (* Atomic 0 *)
-                                              val _ = print "\naRecv : Should not see this"
+                                              val _ = print "\npRecv : Should not see this"
                                             in
                                               ()
                                             end
