@@ -1,0 +1,8 @@
+LEGEND
+------
+pSend - parasitic send
+pRecv - parasitic recv
+MT - action done in MLton/CML thread
+P - action done in parasite
+NONE - action blocks
+SOME - action does not block
