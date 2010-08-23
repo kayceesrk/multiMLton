@@ -109,11 +109,11 @@ val defaultWord = control {name = "defaultWord",
                            default = "word32",
                            toString = fn s => s}
 
-val diagPasses = 
+val diagPasses =
    control {name = "diag passes",
             default = [],
-            toString = List.toString 
-                       (Layout.toString o 
+            toString = List.toString
+                       (Layout.toString o
                         Regexp.Compiled.layout)}
 
 val dropPasses =
@@ -138,7 +138,7 @@ structure Elaborate =
                 | "warn" => SOME Warn
                 | _ => NONE
 
-            val toString: t -> string = 
+            val toString: t -> string =
                fn Error => "error"
                 | Ignore => "ignore"
                 | Warn => "warn"
@@ -155,7 +155,7 @@ structure Elaborate =
                 | "ignore" => SOME Ignore
                 | _ => NONE
 
-            val toString: t -> string = 
+            val toString: t -> string =
                fn Default => "default"
                 | Ignore => "ignore"
          end
@@ -165,8 +165,8 @@ structure Elaborate =
             datatype t = T of {enabled: bool ref,
                                expert: bool,
                                name: string}
-            fun equals (T {enabled = enabled1, ...}, 
-                        T {enabled = enabled2, ...}) = 
+            fun equals (T {enabled = enabled1, ...},
+                        T {enabled = enabled2, ...}) =
                enabled1 = enabled2
 
             val enabled = fn (T {enabled, ...}) => !enabled
@@ -200,7 +200,7 @@ structure Elaborate =
 
       datatype ('a, 'b) parseResult =
          Bad | Deprecated of 'a | Good of 'b | Other
-      val deGood = 
+      val deGood =
          fn Good z => z
           | _ => Error.bug "Control.Elaborate.deGood"
 
@@ -231,7 +231,7 @@ structure Elaborate =
                                          "}"]])))
          end
 
-      local 
+      local
          fun make ({choices: 'st list option,
                     default: 'st,
                     expert: bool,
@@ -252,7 +252,7 @@ structure Elaborate =
                                           List.map (cs, toString)),
                     expert = expert,
                     name = name})
-               val ctrl as T {args = argsRef, cur, def, 
+               val ctrl as T {args = argsRef, cur, def,
                               id as Id.T {enabled, ...}, ...} =
                   T {args = ref NONE,
                      cur = ref default,
@@ -267,16 +267,16 @@ structure Elaborate =
                                 expert = expert,
                                 name = name}}
                val parseId = fn name' =>
-                  if String.equals (name', name) 
-                     then Good id 
+                  if String.equals (name', name)
+                     then Good id
                      else parseId name'
                val parseIdAndArgs = fn s =>
                   case String.tokens (s, Char.isSpace) of
                      name'::args' =>
                         if String.equals (name', name)
-                           then 
+                           then
                               case parseArgs args' of
-                                 SOME v => 
+                                 SOME v =>
                                     let
                                        fun fillArgs () =
                                           (argsRef := SOME v
@@ -321,9 +321,9 @@ structure Elaborate =
                   end
                val snapshot : unit -> unit -> (unit -> unit) =
                   fn () =>
-                  let 
+                  let
                      val withSaved = snapshot ()
-                     val saved = !cur 
+                     val saved = !cur
                   in
                      fn () =>
                      let
@@ -336,7 +336,7 @@ structure Elaborate =
                      end
                   end
             in
-               (ctrl, 
+               (ctrl,
                 {parseId = parseId,
                  parseIdAndArgs = parseIdAndArgs,
                  withDef = withDef,
@@ -357,7 +357,7 @@ structure Elaborate =
                    parseArgs = fn args' =>
                                case args' of
                                   [arg'] => Bool.fromString arg'
-                                | _ => NONE}, 
+                                | _ => NONE},
                   ac)
 
          fun makeDiagnostic ({choices,
@@ -418,22 +418,22 @@ structure Elaborate =
              withDef = fn () => (fn () => ()),
              snapshot = fn () => fn () => (fn () => ())}
          val (allowConstant, ac) =
-            makeBool ({name = "allowConstant", 
+            makeBool ({name = "allowConstant",
                        default = false, expert = true}, ac)
          val (allowFFI, ac) =
             makeBool ({name = "allowFFI",
                        default = false, expert = false}, ac)
          val (allowPrim, ac) =
-            makeBool ({name = "allowPrim", 
+            makeBool ({name = "allowPrim",
                        default = false, expert = true}, ac)
          val (allowOverload, ac) =
-            makeBool ({name = "allowOverload", 
+            makeBool ({name = "allowOverload",
                        default = false, expert = true}, ac)
          val (allowRebindEquals, ac) =
-            makeBool ({name = "allowRebindEquals", 
+            makeBool ({name = "allowRebindEquals",
                        default = false, expert = true}, ac)
          val (deadCode, ac) =
-            makeBool ({name = "deadCode", 
+            makeBool ({name = "deadCode",
                        default = false, expert = true}, ac)
          val (forceUsed, ac) =
             make ({choices = NONE,
@@ -465,16 +465,16 @@ structure Elaborate =
              makeDiagDI ({name = "nonexhaustiveExnMatch",
                           default = DiagDI.Default, expert = false}, ac)
          val (nonexhaustiveMatch, ac) =
-             makeDiagEIW ({name = "nonexhaustiveMatch", 
+             makeDiagEIW ({name = "nonexhaustiveMatch",
                            default = DiagEIW.Warn, expert = false}, ac)
          val (redundantMatch, ac) =
-             makeDiagEIW ({name = "redundantMatch", 
+             makeDiagEIW ({name = "redundantMatch",
                            default = DiagEIW.Warn, expert = false}, ac)
          val (sequenceNonUnit, ac) =
-            makeDiagEIW ({name = "sequenceNonUnit", 
+            makeDiagEIW ({name = "sequenceNonUnit",
                           default = DiagEIW.Ignore, expert = false}, ac)
          val (warnUnused, ac) =
-            makeBool ({name = "warnUnused", 
+            makeBool ({name = "warnUnused",
                        default = false, expert = false}, ac)
 
          val {parseId, parseIdAndArgs, withDef, snapshot} = ac
@@ -488,16 +488,16 @@ structure Elaborate =
                               parseIdAndArgs: string -> ((Id.t * Args.t) list, (Id.t * Args.t)) parseResult}) =
             let
                val parseId = fn name' =>
-                  if String.equals (name', name) 
+                  if String.equals (name', name)
                      then Deprecated (List.map (alts, deGood o parseId))
                      else parseId name'
                val parseIdAndArgs = fn s =>
                   case String.tokens (s, Char.isSpace) of
                      name'::args' =>
                         if String.equals (name', name)
-                           then 
+                           then
                               case parseArgs args' of
-                                 SOME alts => 
+                                 SOME alts =>
                                     Deprecated (List.map (alts, deGood o parseIdAndArgs))
                                | NONE => Bad
                            else parseIdAndArgs s
@@ -525,12 +525,12 @@ structure Elaborate =
                                 name = name,
                                 parseArgs = fn args' =>
                                             case args' of
-                                               [arg'] => 
+                                               [arg'] =>
                                                   (case Bool.fromString arg' of
                                                       SOME true => SOME trueAltIdAndArgs
                                                     | SOME false => SOME falseAltIdAndArgs
                                                     | NONE => NONE)
-                                             | _ => NONE}, 
+                                             | _ => NONE},
                                ac)
             end
          val _ = makeDeprecatedBool
@@ -571,7 +571,7 @@ structure Elaborate =
       val processEnabled = fn (s, b) =>
          case parseId s of
             Bad => Bad
-          | Deprecated alts => 
+          | Deprecated alts =>
                List.fold
                (alts, Deprecated alts, fn (id,res) =>
                 if Id.setEnabled (id, b) then res else Bad)
@@ -673,7 +673,7 @@ val inlineIntoMain = control {name = "inlineIntoMain",
                               default = true,
                               toString = Bool.toString}
 
-val inlineLeafA = 
+val inlineLeafA =
    control {name = "inlineLeafA",
             default = {loops = true,
                        repeat = true,
@@ -684,7 +684,7 @@ val inlineLeafA =
             (Layout.record [("loops", Bool.layout loops),
                             ("repeat", Bool.layout repeat),
                             ("size", Option.layout Int.layout size)])}
-val inlineLeafB = 
+val inlineLeafB =
    control {name = "inlineLeafB",
             default = {loops = true,
                        repeat = true,
@@ -763,7 +763,7 @@ val libDir = control {name = "lib dir",
 
 val libTargetDir = control {name = "lib target dir",
                             default = "<libTargetDir unset>",
-                            toString = fn s => s} 
+                            toString = fn s => s}
 
 val libname = ref ""
 
@@ -838,8 +838,13 @@ val optimizationPasses:
    {il: string, set: string -> unit Result.t, get: unit -> string} list ref =
    control {name = "optimizationPasses",
             default = [],
-            toString = List.toString 
+            toString = List.toString
                        (fn {il,get,...} => concat ["<",il,"::",get (),">"])}
+
+val parallelCompile =
+  control {name = "parallelCompile",
+           default = 8,
+           toString = Int.toString}
 
 val polyvariance =
    control {name = "polyvariance",
@@ -864,11 +869,11 @@ val preferAbsPaths = control {name = "prefer abs paths",
                               default = false,
                               toString = Bool.toString}
 
-val profPasses = 
+val profPasses =
    control {name = "prof passes",
             default = [],
-            toString = List.toString 
-            (Layout.toString o 
+            toString = List.toString
+            (Layout.toString o
              Regexp.Compiled.layout)}
 
 structure Profile =
@@ -907,7 +912,7 @@ val profileBranch = control {name = "profile branch",
 val profileC = control {name = "profile C",
                         default = [],
                         toString = List.toString
-                                   (Layout.toString o 
+                                   (Layout.toString o
                                     Regexp.Compiled.layout)}
 
 structure ProfileIL =
@@ -926,12 +931,12 @@ val profileIL = control {name = "profile IL",
                          default = ProfileSource,
                          toString = ProfileIL.toString}
 
-val profileInclExcl = 
+val profileInclExcl =
    control {name = "profile include/exclude",
             default = [],
             toString = List.toString
-                       (Layout.toString o 
-                        (Layout.tuple2 (Regexp.Compiled.layout, 
+                       (Layout.toString o
+                        (Layout.tuple2 (Regexp.Compiled.layout,
                                         Bool.layout)))}
 
 val profileRaise = control {name = "profile raise",
@@ -963,7 +968,7 @@ structure Target =
       datatype t =
          Cross of string
        | Self
-         
+
       val toString =
          fn Cross s => s
           | Self => "self"
@@ -978,7 +983,7 @@ val target = control {name = "target",
 structure Target =
    struct
       datatype arch = datatype MLton.Platform.Arch.t
-         
+
       val arch = control {name = "target arch",
                           default = X86,
                           toString = MLton.Platform.Arch.toString}
@@ -1013,7 +1018,7 @@ structure Target =
             val (objptr: unit -> Bits.t, set_objptr) = make "Size.objptr"
             val (seqIndex: unit -> Bits.t, set_seqIndex) = make "Size.seqIndex"
          end
-      fun setSizes {cint, cpointer, cptrdiff, csize, 
+      fun setSizes {cint, cpointer, cptrdiff, csize,
                     header, mplimb, objptr, seqIndex} =
          (Size.set_cint cint
           ; Size.set_cpointer cpointer

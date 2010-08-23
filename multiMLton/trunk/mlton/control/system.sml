@@ -32,13 +32,36 @@ structure System: SYSTEM =
                            then
                               case ss of
                                  [] => rev (concat (rev line') :: lines)
-                               | _ => 
+                               | _ =>
                                     if pos + 2 <= width
                                        then loop (ss, pos, line', lines)
                                     else newLine ()
                         else newLine ()
                      end
          in loop (ss, 0, [], [])
+         end
+
+      fun systemAsync (com: string, args: string list): MLton.Process.pid =
+         let
+            (* Many terminal emulators do the line folding one character early,
+             * so we use 79 instead of 80 columns.
+             *)
+            val width = 79
+            val indentAmount = 4
+            val _ =
+               let
+                  open Control
+               in
+                  message (Top, fn () =>
+                           Layout.align
+                           (List.map (insertBackslashes
+                                      (com :: args,
+                                       width - getDepth (),
+                                       indentAmount),
+                                      Layout.str)))
+               end
+         in
+            (MLton.Process.spawnp {file = com, args = com :: args})
          end
 
       fun system (com: string, args: string list): unit =

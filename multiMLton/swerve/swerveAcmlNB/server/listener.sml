@@ -187,7 +187,7 @@ struct
 		    fun msg ConnDied = num_connects - 1
 
 		    val new_num =  if isSome max_clients andalso num_connects + 10 >= (valOf max_clients) then
-                            (MLton.PCML.ssync (MLton.PCML.wrap (MLton.PCML.recvEvt lchan, msg)))
+                            (MLton.PCML.sSync (MLton.PCML.wrap (MLton.PCML.recvEvt lchan, msg)))
                           else MLton.PCML.select [ MLton.PCML.wrap ( MLton.PCML.recvEvt acceptChan, new_connect ),
 					       MLton.PCML.wrap ( MLton.PCML.recvEvt lchan, msg ) ]
 		in

@@ -11,4 +11,5 @@ type int = Int.t
 signature SYSTEM =
    sig
       val system: string * string list -> unit
+      val systemAsync: string * string list -> MLton.Process.pid
    end

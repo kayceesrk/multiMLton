@@ -551,6 +551,8 @@ fun makeOptions {usage} =
                      end)),
        (Normal, "output", " <file>", "name of output file",
         SpaceString (fn s => output := SOME s)),
+       (Normal, "parallel-compile", " <n>", "num cores to user for parallel compilation",
+        intRef parallelCompile),
        (Expert, "polyvariance", " {true|false}", "use polyvariance",
         Bool (fn b => if b then () else polyvariance := NONE)),
        (Expert, "polyvariance-hofo", " {true|false}", "duplicate higher-order fns only",
@@ -1304,6 +1306,27 @@ fun commandLine (args: string list): unit =
                      in
                         output
                      end
+                  fun compileCAsync (c: Counter.t, input: File.t): (File.t * MLton.Process.pid) =
+                     let
+                        val debugSwitches = gccDebug @ ["-DASSERT=1"]
+                        val output = mkOutputO (c, input)
+
+                        val pid =
+                           System.systemAsync
+                            (gcc,
+                             List.concat
+                             [[ "-std=gnu99", "-c" ],
+                              if !format = Executable
+                              then [] else [ "-DLIBNAME=" ^ !libname ],
+                              if positionIndependent
+                              then [ "-fPIC", "-DPIC" ] else [],
+                              if !debug then debugSwitches else [],
+                              ccOpts,
+                              ["-o", output],
+                              [input]])
+                     in
+                        (output, pid)
+                     end
                   fun compileS (c: Counter.t, input: File.t): File.t =
                      let
                         val output = mkOutputO (c, input)
@@ -1326,6 +1349,7 @@ fun commandLine (args: string list): unit =
                      else
                      let
                         val c = Counter.new 0
+                        val toWaitList = ref []
                         val oFiles =
                            trace (Top, "Compile and Assemble")
                            (fn () =>
@@ -1333,11 +1357,21 @@ fun commandLine (args: string list): unit =
                             (inputs, [], fn (input, ac) =>
                              let
                                 val extension = File.extension input
+                                val numCores = !Control.parallelCompile
                              in
                                 if SOME "o" = extension
                                    then input :: ac
-                                else if SOME "c" = extension
-                                   then (compileC (c, input)) :: ac
+                                else if SOME "c" = extension then
+                                    let
+                                       val _ = if List.length (!toWaitList) > numCores then
+                                                 (ignore (List.map (!toWaitList, fn pid => Process.wait pid));
+                                                 toWaitList := [])
+                                               else ()
+                                       val (file, pid) = (compileCAsync (c, input))
+                                       val _ = toWaitList := pid::(!toWaitList)
+                                    in
+                                       file::ac
+                                    end
                                 else if SOME "s" = extension
                                         orelse SOME "S" = extension
                                    then (compileS (c, input)) :: ac
@@ -1347,6 +1381,8 @@ fun commandLine (args: string list): unit =
                                        Option.toString (fn s => s) extension])
                              end))
                            ()
+                        val _ = ignore (List.map (!toWaitList, fn pid => Process.wait pid))
+                        val _ = toWaitList := []
                      in
                         case stop of
                            Place.O => ()
