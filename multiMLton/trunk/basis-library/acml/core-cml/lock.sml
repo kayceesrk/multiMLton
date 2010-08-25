@@ -45,8 +45,9 @@ struct
       if !l = tid andalso !count > 0 then
           count := !count - 1
       else
-        if cas (l, tid, ~1) then
-          (mayBeWaitForGC ())
+        if !l = tid then
+          (l := ~1; (* We don't need to do CAS here *)
+           mayBeWaitForGC ())
         else
           let
             val holder = Int.toString(!l)
