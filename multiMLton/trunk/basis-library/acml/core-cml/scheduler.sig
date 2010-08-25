@@ -14,7 +14,7 @@ signature SCHEDULER =
       include CRITICAL
 
       type thread_id = ThreadID.thread_id
-      type thread_state = ThreadID.thread_state
+      type thread_type = ThreadID.thread_type
       type 'a thread = 'a RepTypes.thread
       type rdy_thread = RepTypes.rdy_thread
       type threadlet = Primitive.MLton.Thread.thread
@@ -28,11 +28,9 @@ signature SCHEDULER =
       val tidMsg : unit -> string
       val tidNum : unit -> int
 
-      val getThreadletState : unit -> (thread_state * int)
-      val setThreadletState : (thread_state * int) -> unit
-      val getNextPointer : unit -> int
-      val setNextPointer : int -> unit
-      val setThreadletType : thread_state -> unit
+      val getParasiteBottom : unit -> int
+      val setParasiteBottom : int -> unit
+      val setThreadletType : thread_type -> unit
 
       val async : (unit -> unit) -> unit
       val atomicPrefixAndSwitchTo : Primitive.MLton.Thread.thread -> unit
@@ -76,7 +74,7 @@ signature SCHEDULER =
       *)
       val reifyHostFromParasite : threadlet -> rdy_thread
 
-     val getThreadType : unit -> RepTypes.thread_state
+     val getThreadType : unit -> RepTypes.thread_type
 
 
    end

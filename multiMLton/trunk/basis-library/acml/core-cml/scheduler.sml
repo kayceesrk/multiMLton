@@ -35,7 +35,7 @@ structure Scheduler : SCHEDULER =
 
       datatype thread = datatype RepTypes.thread
       datatype rdy_thread = datatype RepTypes.rdy_thread
-      datatype thread_state = datatype RepTypes.thread_state
+      datatype thread_type = datatype RepTypes.thread_type
 
 
       fun prep (THRD (tid, t)) = RTHRD (tid, T.prepare (t, ()))
@@ -80,37 +80,32 @@ structure Scheduler : SCHEDULER =
       fun debug' msg = debug (fn () => msg^" : "
                                     ^Int.toString(B.processorNumber()))
 
-
-
       (* This is setup in thread.sml *)
       val wrapFunction = ref NONE
 
-      (* contains preempted asyncs *)
-      val asyncQ = Array.tabulate (B.numberOfProcessors, fn _ => Q.new ())
-
-      fun getThreadletState () =
+      fun getThreadState () =
         let
-          val TID.TID {state, next, ...} = getCurThreadId ()
-          val _ = print "\ngetThreadletState\n\tnext = "
-          val _ = printPointerAtOffset (!next)
-          val _ = case !state of
-                       HOST => print "\n\tstate = HOST"
-                     | PARASITE => print "\n\tstate = PARASITE"
+          val TID.TID {threadType, parasiteBottom, ...} = getCurThreadId ()
+          val _ = print "\ngetThreadState\n\tparasiteBottom = "
+          val _ = printPointerAtOffset (!parasiteBottom)
+          val _ = case !threadType of
+                       HOST => print "\n\tthreadType = HOST"
+                     | PARASITE => print "\n\tthreadType = PARASITE"
           val _ = print "\n"
         in
-          (!state, !next)
+          (!threadType, !parasiteBottom)
         end
 
-     fun setThreadletState (s, n) =
+     fun setThreadState (s, n) =
         let
-          val TID.TID {state, next, ...} = getCurThreadId ()
-          val _ = state := s
-          val _ = next := n
-          val _ = print "\nsetThreadletState\n\tnext = "
+          val TID.TID {threadType, parasiteBottom, ...} = getCurThreadId ()
+          val _ = threadType := s
+          val _ = parasiteBottom := n
+          val _ = print "\nsetThreadState\n\tparasiteBottom = "
           val _ = printPointerAtOffset (n)
-          val _ = case !state of
-                       HOST => print "\n\tstate = HOST"
-                     | PARASITE => print "\n\tstate = PARASITE"
+          val _ = case !threadType of
+                       HOST => print "\n\tthreadType = HOST"
+                     | PARASITE => print "\n\tthreadType = PARASITE"
           val _ = print "\n"
         in
           ()
@@ -119,56 +114,56 @@ structure Scheduler : SCHEDULER =
 
      fun getThreadType () =
        let
-         val TID.TID {state, ...} = getCurThreadId ()
+         val TID.TID {threadType, ...} = getCurThreadId ()
        in
-         !state
+         !threadType
        end
 
-     fun getNextPointer () =
+     fun getParasiteBottom () =
        let
-         val TID.TID {next, ...} = getCurThreadId ()
-         val _ = print "\ngetNextPointer = "
-         val _ = printPointerAtOffset (!next)
+         val TID.TID {parasiteBottom, ...} = getCurThreadId ()
+         val _ = print "\ngetParasiteBottom = "
+         val _ = printPointerAtOffset (!parasiteBottom)
          val _ = print "\n"
        in
-         !next
+         !parasiteBottom
        end
 
 
-     fun setThreadletType (s) =
+     fun setThreadletType (t) =
        let
-         val TID.TID {state, ...} = getCurThreadId ()
+         val TID.TID {threadType, ...} = getCurThreadId ()
        in
-         state := s
+         threadType := t
        end
 
-     fun setNextPointer (p) =
+     fun setParasiteBottom (p) =
        let
-         val TID.TID {next, ...} = getCurThreadId ()
-         val _ = print "\nsetNextPointer = "
+         val TID.TID {parasiteBottom, ...} = getCurThreadId ()
+         val _ = print "\nsetParasiteBottom = "
          val _ = printPointerAtOffset (p)
          val _ = print "\n"
        in
-         next := p
+          parasiteBottom := p
        end
 
       datatype prefix_kind = PREFIX_REGULAR | PREFIX_SPECIAL
 
       fun atomicPrefixAndSwitchToHelper (thlet, kind) =
       let
-        val state = getThreadletState ()
+        val state = getThreadState ()
         val _ = case kind of
                      PREFIX_REGULAR => setThreadletType (PARASITE)
                    | _ => ()
         fun doit () =
         let
-          val _ = setNextPointer (getFrameBottomAsOffset ())
+          val _ = setParasiteBottom (getFrameBottomAsOffset ())
           val _ = Prim.prefixAndSwitchTo (thlet) (* Implicit atomic End *)
         in
           print "\natomicPrefixAndSwitchTo : Should not see this"
         end
         val _ = Primitive.dontInline doit
-        val _ = setThreadletState (state)
+        val _ = setThreadState (state)
       in
         ()
       end
@@ -184,57 +179,20 @@ structure Scheduler : SCHEDULER =
       let
         fun doit () =
         let
-          val _ = setNextPointer (getFrameBottomAsOffset ())
+          val _ = setParasiteBottom (getFrameBottomAsOffset ())
           val _ = f ()
         in
           noop () (* Needed to prevent inlining f () *)
         end
-        val state = getThreadletState ()
+        val state = getThreadState ()
         val _ = setThreadletType (PARASITE)
         val _ = Primitive.dontInline (doit)
         val _ = atomicBegin ()
-        val _ = setThreadletState (state)
+        val _ = setThreadState (state)
         val _ = atomicEnd ()
       in
         ()
       end
-
-      fun enqueA x =
-      let
-        val _ = if (not PARASITE_ENABLED) then Assert.fail ("Scheduler.enqueA") else ()
-        val _ = debug' "Enque async"
-        val q = Array.sub (asyncQ, B.processorNumber ())
-        val _ = Q.enque (q, x)
-        val n = fetchAndAdd (numAsyncs, 1)
-      in
-        ()
-      end
-
-      fun dequeA () =
-        if (not PARASITE_ENABLED) then
-          NONE
-        else
-      (let
-        val _ = debug' "Deque async"
-        val q = Array.sub (asyncQ, B.processorNumber ())
-        val async = Q.deque (q)
-        val _ = case async of
-                     SOME _ => ignore (fetchAndAdd (numAsyncs , ~1))
-                   | NONE => ()
-      in
-        async
-      end)
-
-     fun emptyA () =
-       (if (not PARASITE_ENABLED) then
-         true
-       else
-        (let
-          val q = Array.sub (asyncQ, B.processorNumber ())
-        in
-          Q.empty (q)
-        end))
-
 
       (* enqueue a thread in the primary queue *)
       fun enque1 thrd forceSame =
@@ -284,10 +242,8 @@ structure Scheduler : SCHEDULER =
         RTHRD (tid, newRT)
       end
 
-
-
       fun next' iter =
-        if B.empty () andalso emptyA () then
+        if B.empty () then
           (!SH.pauseHook(iter))
         else
          (let
@@ -295,28 +251,10 @@ structure Scheduler : SCHEDULER =
             val wf = valOf (!wrapFunction)
             val thrd =
                case deque1 () of
-                  NONE => if (emptyA ()) then (!SH.pauseHook (iter))
-                           else (* we are going to reify parasite into a host *)
-                           (let
-                             val () = if (not PARASITE_ENABLED) then Assert.fail ("Scheduler.next") else ()
-                             (* This must be done before deque to avoid race
-                              * causing premature termination of program *)
-                             val _ = debug' "Reifying host thread from parasite"
-                             val _ = fetchAndAdd (B.numThreadsLive, 1)
-                             (* creating a container for parasite to run *)
-                             val tid = TID.new ()
-                             val nT = T.new (wf (fn () => debug' "Starting reified thread") tid)
-                             val nRt = T.prepare (nT, ())
-                            in
-                              RTHRD (tid, nRt)
-                            end)
+                  NONE =>  !SH.pauseHook (iter)
                 | SOME thrd => thrd
-           val parasite = dequeA ()
-           val thrd' = case parasite of
-                           NONE => thrd
-                         | SOME a => spliceParasiteToHost (a, thrd)
          in
-           thrd'
+           thrd
          end)
 
      fun next () = next' 0
@@ -324,10 +262,9 @@ structure Scheduler : SCHEDULER =
      fun finishWork () =
      let
        val r = B.finishWork ()
-       val  res = r andalso (!numAsyncs = 0)
-       val _ = debug'' ("FinishWork - NumAsyncs = "^(Int.toString(!numAsyncs))^"; NumThreadsLive = "^(Int.toString(!B.numThreadsLive)))
+       val _ = debug' ("FinishWork - NumThreadsLive = "^(Int.toString(!B.numThreadsLive)))
      in
-       res
+       r
      end
 
      fun readySpawn thrd forceSame =
@@ -448,7 +385,7 @@ structure Scheduler : SCHEDULER =
                        (PARASITE, true) =>
                             let
                               val host' = T.toPrimitive host
-                              val thlet = extractParasiteFromHost (host', getNextPointer())
+                              val thlet = extractParasiteFromHost (host', getParasiteBottom())
                               val newHost = reifyHostFromParasite (thlet)
                               val _ = readySpawn newHost R.ANY_PROC (* Will add 1 to numThreadsLive *)
                               val host'' = T.fromPrimitive host'

@@ -17,7 +17,7 @@ structure ThreadID : THREAD_ID_EXTRA =
 
       datatype thread_id = datatype R.thread_id
       datatype thread_id' = datatype thread_id
-      datatype thread_state = datatype R.thread_state
+      datatype thread_type = datatype R.thread_type
 
       fun sameTid (TID{id=a, ...}, TID{id=b, ...}) = a = b
       fun compareTid (TID{id=a, ...}, TID{id=b, ...}) = Int.compare (a, b)
@@ -37,8 +37,8 @@ structure ThreadID : THREAD_ID_EXTRA =
               exnHandler = ref (!defaultExnHandler),
               props = ref [],
               dead = CVar.new (),
-              state = ref HOST,
-              next = ref 0
+              threadType = ref HOST,
+              parasiteBottom = ref 0
               }
 
       local

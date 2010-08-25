@@ -12,7 +12,7 @@
 signature THREAD_ID =
    sig
       type thread_id
-      type thread_state
+      type thread_type
 
       val sameTid    : (thread_id * thread_id) -> bool
       val compareTid : (thread_id * thread_id) -> order

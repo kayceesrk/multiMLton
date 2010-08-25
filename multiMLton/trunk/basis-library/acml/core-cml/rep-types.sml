@@ -17,9 +17,9 @@ structure RepTypes =
       structure L = Lock
 
       datatype queue_prio = PRI | SEC
+      datatype thread_type = PARASITE | HOST
 
       (** transaction IDs -- see trans-id.sml *)
-      datatype thread_state = PARASITE | HOST
       datatype trans_id = TXID of (
           {txst : trans_id_state ref,
           cas : (trans_id_state ref * trans_id_state * trans_id_state) -> trans_id_state})
@@ -52,11 +52,11 @@ structure RepTypes =
                  props : exn list ref,
                  (* the cvar that becomes set when the thread dies *)
                  dead : cvar,
-                 (* Whether we are Main thread or Async *)
-                 state : thread_state ref,
+                 (* Whether we are host thread or parasite *)
+                 threadType : thread_type ref,
                  (* Pointer to the threadlet sitting below us *)
                  (* It is an offset from the bottom of the stack *)
-                 next : int ref
+                 parasiteBottom : int ref
                  }
 
       (** threads --- see scheduler.sml and threads.sml **)

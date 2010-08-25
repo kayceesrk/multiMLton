@@ -36,7 +36,7 @@ struct
   val printFrames = _import "GC_printFrames" : unit -> unit;
   val copyFrames = _import "GC_copyFrames" : int -> threadlet;
 
-  datatype thread_state = datatype RepTypes.thread_state
+  datatype thread_type = datatype RepTypes.thread_type
   datatype 'a asyncChan = ACHAN of {inQ : ('a recvThreadlet) Q.t,
                                     outQ : ('a sendThreadlet) Q.t,
                                     lock : L.cmlLock}
@@ -103,10 +103,10 @@ struct
                                     fun sandBox () =
                                       let
                                         val _ = debug' "pSend sandBox"
-                                        val thlet = copyFrames (S.getNextPointer ())
+                                        val thlet = copyFrames (S.getParasiteBottom ())
                                         val _ = Q.enque (outQ, AS (thlet, msg))
                                         val _ = L.releaseCmlLock lock (S.tidNum ())
-                                        val _ = Prim.jumpDown (S.getNextPointer ())  (* Implicit atomicEnd *)
+                                        val _ = Prim.jumpDown (S.getParasiteBottom ())  (* Implicit atomicEnd *)
                                         val _ = print "\npSend : Should not see this"
                                       in
                                         ()
@@ -181,10 +181,10 @@ struct
                                           fun sandBox () =
                                             let
                                               val _ = debug' "pRecv sandBox"
-                                              val thlet = copyFrames (S.getNextPointer ())
+                                              val thlet = copyFrames (S.getParasiteBottom ())
                                               val _ = Q.enque (inQ, AR (thlet, handoffFun))
                                               val _ = L.releaseCmlLock lock (S.tidNum ())
-                                              val _ = Prim.jumpDown (S.getNextPointer ()) (* Implicit atomicEnd () *)
+                                              val _ = Prim.jumpDown (S.getParasiteBottom ()) (* Implicit atomicEnd () *)
                                               (* Atomic 0 *)
                                               val _ = print "\npRecv : Should not see this"
                                             in
