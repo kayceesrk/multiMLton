@@ -11,7 +11,7 @@
 
 structure MLtonRunPCML : MLTON_RUN_PCML =
    struct
-      structure Assert = LocalAssert(val assert = false)
+      structure Assert = LocalAssert(val assert = true)
       structure Debug = LocalDebug(val debug = false)
 
       structure R = Running

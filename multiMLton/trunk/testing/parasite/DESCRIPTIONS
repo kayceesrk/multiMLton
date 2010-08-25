@@ -2,7 +2,9 @@ LEGEND
 ------
 pSend - parasitic send
 pRecv - parasitic recv
-MT - action done in MLton/CML thread
+H - action done in host
 P - action done in parasite
 NONE - action blocks
 SOME - action does not block
+
+inflateTest - parasite inflates to a host and quits

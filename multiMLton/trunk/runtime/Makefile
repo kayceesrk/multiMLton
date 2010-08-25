@@ -143,7 +143,7 @@ FLAGS += -funroll-all-loops
 endif
 
 CPPFLAGS :=
-CFLAGS := -I. -Iplatform $(FLAGS) -I/home/chandras/MLton/gmp/include
+CFLAGS := -I. -Iplatform $(FLAGS)
 OPTCFLAGS := $(CFLAGS) $(CPPFLAGS) $(OPTFLAGS)
 DEBUGCFLAGS := $(CFLAGS) $(CPPFLAGS) -DASSERT=1 $(DEBUGFLAGS)
 PICCFLAGS := $(CFLAGS) $(CPPFLAGS) $(OPTFLAGS) $(PICFLAGS)

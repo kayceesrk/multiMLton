@@ -10,7 +10,7 @@ struct
   val wait = _import "Parallel_wait": unit -> unit;
   val wakeUp = _import "Parallel_wakeUpThread": Int32.int * Int32.int -> unit;
 
-  val ASYNC_ENABLED = false
+  val PARASITE_ENABLED = false
   val maxIter = 5000
 
 end

@@ -19,7 +19,7 @@ structure RepTypes =
       datatype queue_prio = PRI | SEC
 
       (** transaction IDs -- see trans-id.sml *)
-      datatype thread_state = ASYNC | MAIN
+      datatype thread_state = PARASITE | HOST
       datatype trans_id = TXID of (
           {txst : trans_id_state ref,
           cas : (trans_id_state ref * trans_id_state * trans_id_state) -> trans_id_state})
@@ -84,5 +84,8 @@ structure RepTypes =
        datatype ('a,'b) cevt =
             SEVT of 'a sevt
           | AEVT of ('a,'b) aevt
+
+       datatype placement = CUR_PROC | ANY_PROC
+
 
    end

@@ -37,7 +37,7 @@ structure ThreadID : THREAD_ID_EXTRA =
               exnHandler = ref (!defaultExnHandler),
               props = ref [],
               dead = CVar.new (),
-              state = ref MAIN,
+              state = ref HOST,
               next = ref 0
               }
 

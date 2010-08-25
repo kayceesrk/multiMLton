@@ -6,18 +6,19 @@ struct
   structure T = PCML.Threadlet
 
    fun p () : string =
-        (*Int.toString(B.processorNumber())*)""
+        Int.toString(MLton.PCML.Aux.processorNumber())
 
-   fun print s = ""
+   fun print' s = ""
+   fun println s = (s^"\n")
 
 
    fun pong ch n =
       let
          fun loop n =
             let
-               val _ = print ("Before receiving\n")
+               val _ = print' ("Before receiving\n")
                val i = (T.pRecv ch)
-               val _ = print ("Received "^Int.toString(i)^" "^(p())^"\n")
+               val _ = print' ("Received "^Int.toString(i)^" "^(p())^"\n")
             in
               if n>0 then loop (n-1) else ()
             end
@@ -31,7 +32,7 @@ struct
          fun loop i =
             if i > n then ()
                else let
-                       val _ = print ("aSend "^(Int.toString n)^"\n")
+                       val _ = print' ("aSend "^(Int.toString n)^"\n")
                        val _ = (T.pSend (ch, i))
                     in
                        loop (i + 1)
@@ -43,21 +44,21 @@ struct
 
    fun doit n =
    let
-     val _ = print "\nIn doit"
+     val _ = println "In doit"
    in
       RunPCML.doit
       (fn () =>
        let
-          val _ = print ("\nCreating channel "^(p()))
+          val _ = println ("Creating channel "^(p()))
           val ch = T.newAChan ()
 
-          val _ = print ("\nCreating pong "^(p()))
+          val _ = println ("Creating pong "^(p()))
           val _ = pong ch n
 
-          val _ = print ("\nCreating ping "^(p()))
+          val _ = println ("Creating ping "^(p()))
           val _ = ping ch n
 
-        val _ = print ("\nCreated ping and pong "^(p()))
+        val _ = println ("Created ping and pong "^(p()))
        in
           ()
        end,

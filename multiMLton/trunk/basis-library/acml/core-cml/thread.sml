@@ -11,12 +11,13 @@
 
 structure Thread : THREAD =
    struct
-      structure Assert = LocalAssert(val assert = false)
+      structure Assert = LocalAssert(val assert = true)
       structure Debug = LocalDebug(val debug = false)
 
       structure S = Scheduler
       structure SH = SchedulerHooks
       structure B = Basic
+      structure R = RepTypes
 
       fun debug msg = Debug.sayDebug ([S.atomicMsg, S.tidMsg], msg)
       fun debug' msg = debug (fn () => msg)
@@ -29,7 +30,7 @@ structure Thread : THREAD =
       fun generalExit (tid', clr') =
          let
             val () = Assert.assertNonAtomic' "Thread.generalExit"
-            val () = debug' "generalExit" (* NonAtomic *)
+            val () = debug' "Thread.generalExit(1)" (* NonAtomic *)
             val () = Assert.assertNonAtomic' "Thread.generalExit"
             val () = S.atomicBegin ()
             val tid as TID {dead, props, ...} = S.getCurThreadId ()
@@ -42,7 +43,7 @@ structure Thread : THREAD =
                                       | SOME tid' => sameTid (tid', tid))
             val () = if clr' then props := [] else ()
             val () = Event.atomicCVarSet dead
-
+            val () = debug' "Thread.generalExit(2)"
          in
            if S.finishWork () then
              S.atomicSwitch
@@ -109,9 +110,9 @@ structure Thread : THREAD =
 
       val _ = S.wrapFunction := SOME (wrapFunction)
      (* forceSame is false. Hence, Spawns on different processors *)
-      fun spawn f = spawnc f () false
+      fun spawn f = spawnc f () R.ANY_PROC
 
-      fun spawnOnCurProc f = spawnc f () true
+      fun spawnOnCurProc f = spawnc f () R.CUR_PROC
 
       fun joinEvt (TID{dead, ...}) = Event.cvarGetEvt dead
 

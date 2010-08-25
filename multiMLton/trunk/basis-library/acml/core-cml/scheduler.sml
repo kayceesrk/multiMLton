@@ -14,7 +14,7 @@
 
 structure Scheduler : SCHEDULER =
    struct
-      structure Assert = LocalAssert(val assert = false)
+      structure Assert = LocalAssert(val assert = true)
       structure GlobalDebug = Debug
       structure Debug = LocalDebug(val debug = false)
       structure Pointer = Primitive.MLton.Pointer
@@ -44,22 +44,25 @@ structure Scheduler : SCHEDULER =
 
       val fetchAndAdd = ParallelInternal.fetchAndAdd
       val printPointerAtOffset = _import "GC_printPointerAtOffset" : int -> unit;
-      val preemptAsync = _import "GC_preemptAsync" : primThread * int -> threadlet;
       val getFrameBottomAsOffset = _import "GC_getFrameBottomAsOffset" : unit -> int;
       val noop = _import "GC_noop" : unit -> unit;
 
-      (* the error thread.  This thread is used to trap attempts to run CML
+
+     (* the error thread.  This thread is used to trap attempts to run CML
        * without proper initialization (i.e., via RunCML).  This thread is
        * enqueued by reset.
        *)
 
+     fun debug'' msg =  print (msg^"["^Int.toString(B.processorNumber())^"]\n")
+
      (* disable prints *)
      fun print str = ()
+
      fun printPointerAtOffset str = ()
      val numAsyncs = ref 0
 
-     val ASYNC_ENABLED = ParallelInternal.ASYNC_ENABLED
-     val doesAsyncPreempt = false
+     val PARASITE_ENABLED = ParallelInternal.PARASITE_ENABLED
+     val doesAsyncPreempt = true
 
       val errorTid = TID.bogus "error"
       fun errorThrd () : unit thread =
@@ -76,7 +79,7 @@ structure Scheduler : SCHEDULER =
       fun debug msg = Debug.sayDebug ([atomicMsg, tidMsg], msg)
       fun debug' msg = debug (fn () => msg^" : "
                                     ^Int.toString(B.processorNumber()))
-      fun debug'' msg = ()
+
 
 
       (* This is setup in thread.sml *)
@@ -91,8 +94,8 @@ structure Scheduler : SCHEDULER =
           val _ = print "\ngetThreadletState\n\tnext = "
           val _ = printPointerAtOffset (!next)
           val _ = case !state of
-                       MAIN => print "\n\tstate = MAIN"
-                     | ASYNC => print "\n\tstate = ASYNC"
+                       HOST => print "\n\tstate = HOST"
+                     | PARASITE => print "\n\tstate = PARASITE"
           val _ = print "\n"
         in
           (!state, !next)
@@ -106,15 +109,15 @@ structure Scheduler : SCHEDULER =
           val _ = print "\nsetThreadletState\n\tnext = "
           val _ = printPointerAtOffset (n)
           val _ = case !state of
-                       MAIN => print "\n\tstate = MAIN"
-                     | ASYNC => print "\n\tstate = ASYNC"
+                       HOST => print "\n\tstate = HOST"
+                     | PARASITE => print "\n\tstate = PARASITE"
           val _ = print "\n"
         in
           ()
         end
 
 
-     fun getThreadletType () =
+     fun getThreadType () =
        let
          val TID.TID {state, ...} = getCurThreadId ()
        in
@@ -149,10 +152,14 @@ structure Scheduler : SCHEDULER =
          next := p
        end
 
-      fun atomicPrefixAndSwitchTo (thlet) =
+      datatype prefix_kind = PREFIX_REGULAR | PREFIX_SPECIAL
+
+      fun atomicPrefixAndSwitchToHelper (thlet, kind) =
       let
         val state = getThreadletState ()
-        val _ = setThreadletType (ASYNC)
+        val _ = case kind of
+                     PREFIX_REGULAR => setThreadletType (PARASITE)
+                   | _ => ()
         fun doit () =
         let
           val _ = setNextPointer (getFrameBottomAsOffset ())
@@ -167,6 +174,12 @@ structure Scheduler : SCHEDULER =
       end
 
 
+      fun atomicPrefixAndSwitchTo (thlet) = atomicPrefixAndSwitchToHelper (thlet, PREFIX_REGULAR)
+      (* Special version does not set the thread type to parasite. Used when reifying a host thread
+       * from a parasite.
+       *)
+      fun atomicPrefixAndSwitchToSpecial (thlet) = atomicPrefixAndSwitchToHelper (thlet, PREFIX_SPECIAL)
+
       fun async f =
       let
         fun doit () =
@@ -177,7 +190,7 @@ structure Scheduler : SCHEDULER =
           noop () (* Needed to prevent inlining f () *)
         end
         val state = getThreadletState ()
-        val _ = setThreadletType (ASYNC)
+        val _ = setThreadletType (PARASITE)
         val _ = Primitive.dontInline (doit)
         val _ = atomicBegin ()
         val _ = setThreadletState (state)
@@ -188,7 +201,7 @@ structure Scheduler : SCHEDULER =
 
       fun enqueA x =
       let
-        val _ = if (not ASYNC_ENABLED) then Assert.fail ("Scheduler.enqueA") else ()
+        val _ = if (not PARASITE_ENABLED) then Assert.fail ("Scheduler.enqueA") else ()
         val _ = debug' "Enque async"
         val q = Array.sub (asyncQ, B.processorNumber ())
         val _ = Q.enque (q, x)
@@ -198,7 +211,7 @@ structure Scheduler : SCHEDULER =
       end
 
       fun dequeA () =
-        if (not ASYNC_ENABLED) then
+        if (not PARASITE_ENABLED) then
           NONE
         else
       (let
@@ -213,7 +226,7 @@ structure Scheduler : SCHEDULER =
       end)
 
      fun emptyA () =
-       (if (not ASYNC_ENABLED) then
+       (if (not PARASITE_ENABLED) then
          true
        else
         (let
@@ -249,6 +262,29 @@ structure Scheduler : SCHEDULER =
               NONE => ()
             | SOME thrd => enque1 thrd true)
 
+      (**
+      * Joins together an async to a runnable CML thread
+      *
+      * @param parsite
+      * @param runnable CML thread
+      *
+      * @return newly spliced thread
+      *)
+      fun spliceParasiteToHost (parasite, RTHRD (tid, t)) =
+      let
+        val _ = debug' ("Scheduler.spliceParasiteToHost")
+        val wf = valOf (!wrapFunction)
+        val newT = T.new (wf (fn () => (T.atomicBegin ();
+        atomicPrefixAndSwitchToSpecial (parasite);
+        ignore (T.switch (fn _ => t));
+        noop ()))
+        tid)
+        val newRT = T.prepare (newT, ())
+      in
+        RTHRD (tid, newRT)
+      end
+
+
 
       fun next' iter =
         if B.empty () andalso emptyA () then
@@ -260,60 +296,50 @@ structure Scheduler : SCHEDULER =
             val thrd =
                case deque1 () of
                   NONE => if (emptyA ()) then (!SH.pauseHook (iter))
-                           else (* we are going to reify async into a thread *)
+                           else (* we are going to reify parasite into a host *)
                            (let
-                             val () = if (not ASYNC_ENABLED) then Assert.fail ("Scheduler.next") else ()
+                             val () = if (not PARASITE_ENABLED) then Assert.fail ("Scheduler.next") else ()
                              (* This must be done before deque to avoid race
                               * causing premature termination of program *)
-                             val _ = debug' "Reifying async"
+                             val _ = debug' "Reifying host thread from parasite"
                              val _ = fetchAndAdd (B.numThreadsLive, 1)
-                             (* creating a container for async to run *)
+                             (* creating a container for parasite to run *)
                              val tid = TID.new ()
-                             val nT = T.new (wf (fn () => debug' "Dummy thread") tid)
+                             val nT = T.new (wf (fn () => debug' "Starting reified thread") tid)
                              val nRt = T.prepare (nT, ())
                             in
                               RTHRD (tid, nRt)
                             end)
                 | SOME thrd => thrd
-           val async = dequeA ()
-           fun spliceAnM (a, RTHRD (tid, t)) =
-               let
-                 val newT = T.new (wf (fn () => (T.atomicBegin ();
-                                    atomicPrefixAndSwitchTo (a);
-                                    ignore (T.switch (fn _ => t));
-                                    noop ())) tid)
-                 val newRT = T.prepare (newT, ())
-               in
-                 RTHRD (tid, newRT)
-               end
-           val thrd' = case async of
+           val parasite = dequeA ()
+           val thrd' = case parasite of
                            NONE => thrd
-                         | SOME a => spliceAnM (a, thrd)
+                         | SOME a => spliceParasiteToHost (a, thrd)
          in
            thrd'
          end)
 
      fun next () = next' 0
 
-      fun finishWork () =
-        let
-          val r = B.finishWork ()
-          val  res =
-            r andalso (!numAsyncs = 0)
-          val _ = debug' ("FinishWork : NumAsyncs = "^(Int.toString(!numAsyncs)))
-        in
-          res
-        end
+     fun finishWork () =
+     let
+       val r = B.finishWork ()
+       val  res = r andalso (!numAsyncs = 0)
+       val _ = debug'' ("FinishWork - NumAsyncs = "^(Int.toString(!numAsyncs))^"; NumThreadsLive = "^(Int.toString(!B.numThreadsLive)))
+     in
+       res
+     end
 
-      fun readySpawn thrd forceSame =
-         let
-            val () = Assert.assertAtomic' ("Scheduler.ready", NONE)
-            val () = enque1 thrd forceSame
-         in
-            ()
-         end
+     fun readySpawn thrd forceSame =
+     let
+       val () = Assert.assertAtomic' ("Scheduler.readySpawn", NONE)
+     in
+       (case forceSame of
+             R.CUR_PROC => enque1 thrd true
+           | R.ANY_PROC => enque1 thrd false)
+     end
 
-      fun ready thrd = readySpawn thrd true (* forceSame = true *)
+      fun ready thrd = readySpawn thrd R.CUR_PROC (* forceSame = true *)
 
       fun readyOnProc (thrd,procNum) = B.addWorkTo thrd procNum R.PRI
 
@@ -383,39 +409,63 @@ structure Scheduler : SCHEDULER =
             THRD (tid, t)
          end
 
-      fun unwrap (f : rdy_thread -> rdy_thread) (t: T.Runnable.t) : T.Runnable.t =
+
+      (**
+      * Extracts a parasite from the top of the host
+      *
+      * @param host - primThread
+      * @param start - start of parasite on host stack
+      *
+      * @return - threadlet
+      *)
+      val extractParasiteFromHost = _import "GC_preemptAsync" : primThread * int -> threadlet;
+
+      (**
+      * Inflate and async to a CML thread
+      *
+      * @param parasite
+      *
+      * @return runnable CML thread
+      *)
+      fun reifyHostFromParasite (parasite) =
+      let
+        val wf = valOf (!wrapFunction)
+        val _ = debug'' ("Reifying host from parasite. NumThreads = "^(Int.toString(!B.numThreadsLive)))
+        (* creating a container for async to run *)
+        val tid = TID.new ()
+        val nT = T.new (wf (fn () => debug' "Dummy thread") tid)
+        val nRt = T.prepare (nT, ())
+      in
+        spliceParasiteToHost (parasite, RTHRD (tid, nRt))
+      end
+
+      fun unwrap (f : rdy_thread -> rdy_thread) (host: T.Runnable.t) : T.Runnable.t =
          let
+            val () = debug' "Scheduler.unwrap"
             val () = Assert.assertAtomic' ("Scheduler.unwrap", NONE)
-            val state = getThreadletType ()
-            val t' = case (state, doesAsyncPreempt) of
-                         (MAIN, true) =>
+            val state = getThreadType ()
+            val host' = case (state, doesAsyncPreempt) of
+                       (PARASITE, true) =>
                             let
-                              val tid = B.getCurThreadId ()
-                              val RTHRD (tid', t') = f (RTHRD (tid, t))
-                              val () = B.setCurThreadId tid'
+                              val host' = T.toPrimitive host
+                              val thlet = extractParasiteFromHost (host', getNextPointer())
+                              val newHost = reifyHostFromParasite (thlet)
+                              val _ = readySpawn newHost R.ANY_PROC (* Will add 1 to numThreadsLive *)
+                              val host'' = T.fromPrimitive host'
                             in
-                              t'
+                              host''
                             end
-                       | (ASYNC, true) =>
-                           let
-                             val t' = T.toPrimitive t
-                             val thlet = preemptAsync (t', getNextPointer ())
-                             val _ = enqueA thlet
-                             val t'' = T.fromPrimitive t'
-                           in
-                             t''
-                           end
                         | _ =>
                             let
                               val tid = B.getCurThreadId ()
-                              val RTHRD (tid', t') = f (RTHRD (tid, t))
+                              val RTHRD (tid', host') = f (RTHRD (tid, host))
                               val () = B.setCurThreadId tid'
                             in
-                              t'
+                              host'
                             end
 
          in
-            t'
+            host'
          end
 
 
@@ -427,11 +477,12 @@ structure Scheduler : SCHEDULER =
           ; B.clearWork ()
           ; if not running then ready (prep (errorThrd ())) else ()
           ; atomicEnd ())
+
       (* what to do at a preemption (with the current thread) *)
       fun preempt (thrd as RTHRD(tid, _)) =
          let
             val () = Assert.assertAtomic' ("Scheduler.preempt", NONE)
-            val () = debug'' "Scheduler.preempt" (* Atomic 1 *)
+            val () = print "Scheduler.preempt" (* Atomic 1 *)
             val () = Assert.assertAtomic' ("Scheduler.preempt", SOME 1)
             val () =
              if TID.isMarked tid
@@ -444,4 +495,5 @@ structure Scheduler : SCHEDULER =
          end
 
       val _ = reset false
+
    end

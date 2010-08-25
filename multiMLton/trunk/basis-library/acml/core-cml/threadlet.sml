@@ -10,7 +10,7 @@ structure Threadlet :> THREADLET =
 struct
 
   structure Assert = LocalAssert(val assert = false)
-  structure Debug = LocalDebug(val debug = true)
+  structure Debug = LocalDebug(val debug = false)
 
   structure Prim = Primitive.MLton.Threadlet
   structure Pointer = Primitive.MLton.Pointer
@@ -44,7 +44,6 @@ struct
   fun newAChan () = ACHAN {inQ = Q.new (), outQ = Q.new (), lock = L.initCmlLock ()}
 
   val dontInline = Primitive.dontInline
-
 
   val parasite = S.async
 
@@ -82,11 +81,11 @@ struct
                            (* SOME ends *))
             | NONE =>
                 let
-                  val state = S.getThreadletType ()
+                  val state = S.getThreadType ()
                   val _ = (case state of
-                                MAIN =>
+                                HOST =>
                                   let
-                                    val _ = debug' "pSend-NONE-MAIN"
+                                    val _ = debug' "pSend-NONE-HOST"
                                     val procNum = B.processorNumber ()
                                     val () =
                                         S.atomicSwitchToNext (
@@ -96,9 +95,9 @@ struct
                                   in
                                     ()
                                   end
-                              | ASYNC =>
+                              | PARASITE =>
                                   let
-                                    val _ = debug' "pSend-NONE-ASYNC"
+                                    val _ = debug' "pSend-NONE-PARASITE"
                                     (* sandBox will be executed only during the first time.
                                       * when then Async resumes, this is not executed. *)
                                     fun sandBox () =
@@ -159,11 +158,11 @@ struct
                                       (* SOME ends *))
                   | NONE =>
                       let
-                        val state = S.getThreadletType ()
+                        val state = S.getThreadType ()
                         val msg = (case state of
-                                       MAIN =>
+                                       HOST =>
                                         let
-                                          val _ = debug' "pRecv-NONE-MAIN"
+                                          val _ = debug' "pRecv-NONE-HOST"
                                           val procNum = B.processorNumber ()
                                           val msg =
                                             S.atomicSwitchToNext (
@@ -173,9 +172,9 @@ struct
                                         in
                                           msg
                                         end
-                                     | ASYNC =>
+                                     | PARASITE =>
                                         let
-                                          val _ = debug' "pRecv-NONE-ASYNC"
+                                          val _ = debug' "pRecv-NONE-PARASITE"
                                           val handoffFun = ref (fn () => Primitive.MLton.bogus ())
                                           (* sandBox will be executed only during the first time.
                                             * when then Async resumes, this is not executed. *)

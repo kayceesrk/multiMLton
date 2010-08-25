@@ -17,6 +17,7 @@ signature SCHEDULER =
       type thread_state = ThreadID.thread_state
       type 'a thread = 'a RepTypes.thread
       type rdy_thread = RepTypes.rdy_thread
+      type threadlet = Primitive.MLton.Thread.thread
 
       val prep : unit thread -> rdy_thread
       val prepVal : 'a thread * 'a -> rdy_thread
@@ -30,7 +31,6 @@ signature SCHEDULER =
       val getThreadletState : unit -> (thread_state * int)
       val setThreadletState : (thread_state * int) -> unit
       val getNextPointer : unit -> int
-      val getThreadletType : unit -> thread_state
       val setNextPointer : int -> unit
       val setThreadletType : thread_state -> unit
 
@@ -40,7 +40,7 @@ signature SCHEDULER =
 
       val ready : rdy_thread -> unit
       (* Used by spawn. If spawning on same processor then bool is false*)
-      val readySpawn : rdy_thread -> bool -> unit
+      val readySpawn : rdy_thread -> RepTypes.placement -> unit
       (* Used be send/recv. Takes processor number *)
       val readyOnProc : (rdy_thread * int) -> unit
       val next : unit -> rdy_thread
@@ -66,4 +66,17 @@ signature SCHEDULER =
       val preempt : rdy_thread -> unit
 
       val wrapFunction : ((unit -> unit) -> thread_id -> (unit -> unit)) option ref
+
+      (**
+      * Inflate and async to a CML thread
+      *
+      * @param async
+      *
+      * @return runnable CML thread
+      *)
+      val reifyHostFromParasite : threadlet -> rdy_thread
+
+     val getThreadType : unit -> RepTypes.thread_state
+
+
    end
