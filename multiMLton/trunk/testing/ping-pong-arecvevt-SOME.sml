@@ -14,7 +14,7 @@ struct
       let
          fun loop n =
             let
-               val () = async (aRecvEvt ch)
+               val () = aSync (aRecvEvt ch)
             in
               if n>0 then loop (n-1) else ()
             end

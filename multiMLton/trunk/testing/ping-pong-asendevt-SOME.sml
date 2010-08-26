@@ -27,7 +27,7 @@ struct
          fun loop i =
             if i > n then ()
                else let
-                       val _ = async (aSendEvt (ch, i))
+                       val _ = aSync (aSendEvt (ch, i))
                     in
                        loop (i + 1)
                     end
