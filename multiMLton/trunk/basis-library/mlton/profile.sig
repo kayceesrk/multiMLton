@@ -19,4 +19,5 @@ signature MLTON_PROFILE =
 
       val isOn: bool (* a compile-time constant *)
       val withData: Data.t * (unit -> 'a) -> 'a
+      val init : unit -> unit
    end

@@ -10,6 +10,9 @@ struct
 
 structure P = Primitive.MLton.Profile
 
+val procCount = ParallelInternal.numberOfProcessors
+val procNum = ParallelInternal.processorNumber
+
 val gcState = Primitive.MLton.GCState.gcState
 
 val isOn = P.isOn
@@ -20,8 +23,7 @@ structure Data =
                          isFreed: bool ref,
                          raw: P.Data.t}
 
-      (* XXX spoons profiling uses global shared state *)
-      val all: t list ref = ref []
+      val all: t list array = Array.tabulate (procCount, fn _ => [])
 
       local
          fun make f (T r) = f r
@@ -42,12 +44,17 @@ structure Data =
             else if !isCurrent
                     then raise Fail "free of current profile data"
                  else
-                    (all := List.foldl (fn (d', ac) =>
+                   let
+                     val myAll = Array.sub (all, procNum())
+                     val myNewAll = (List.foldl (fn (d', ac) =>
                                         if equals (d, d')
                                            then ac
-                                        else d' :: ac) [] (!all)
-                     ; P.Data.free (gcState, raw)
-                     ; isFreed := true)
+                                        else d' :: ac) [] (myAll))
+                   in
+                     (Array.update (all, procNum(), myNewAll)
+                      ; P.Data.free (gcState, raw)
+                      ; isFreed := true)
+                   end
 
       fun make (raw: P.Data.t): t =
          T {isCurrent = ref false,
@@ -61,12 +68,12 @@ structure Data =
                   then P.Data.malloc gcState
                else P.Data.dummy
             val d = make array
-            val _ = all := d :: !all
+            val _ = Array.update (all, procNum(), d::Array.sub (all, procNum()))
          in
             d
          end
 
-      fun write (T {isFreed, raw, ...}, file) =
+      fun write (T {isFreed, raw, isCurrent}, file) =
          if not isOn then
             ()
          else if !isFreed then
@@ -77,10 +84,9 @@ structure Data =
                           (String.nullTerm file))
    end
 
-(* XXX spoons profiling uses global shared state *)
-val r: Data.t ref = ref (Data.make P.Data.dummy)
+val currentArray: Data.t array = Array.tabulate (procCount, fn _ => (Data.make P.Data.dummy))
 
-fun current () = !r
+fun current () = Array.sub (currentArray, procNum())
 
 fun setCurrent (d as Data.T {isCurrent, isFreed, raw, ...}) =
    if not isOn
@@ -93,7 +99,7 @@ fun setCurrent (d as Data.T {isCurrent, isFreed, raw, ...}) =
             val Data.T {isCurrent = ic, ...} = current ()
             val _ = ic := false
             val _ = isCurrent := true
-            val _ = r := d
+            val _ = Array.update (currentArray, procNum(), d)
             val _ = P.setCurrent (gcState, raw)
          in
             ()
@@ -116,16 +122,12 @@ val _ =
       let
          val _ =
             Cleaner.addNew
-            (Cleaner.atExit, fn () =>
-             (P.done gcState
-              ; Data.write (current (), "mlmon.out")
-              ; List.app (fn d => P.Data.free (gcState, Data.raw d))
-                         (!Data.all)))
+            (Cleaner.atExit, fn () => P.done gcState)
          val _ =
             Cleaner.addNew
             (Cleaner.atLoadWorld, fn () =>
              ((* In a new world, all of the old profiling data is invalid. *)
-              Data.all := []
+              Array.update (Data.all, procNum(), [])
               ; init ()))
       in
          init ()

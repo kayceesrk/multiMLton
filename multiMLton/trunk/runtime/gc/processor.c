@@ -23,7 +23,7 @@ volatile int32_t Proc_initialized = 0;
 volatile int32_t Proc_criticalCount;
 volatile int32_t Proc_criticalTicket;
 
-void Proc_waitForInitialization (__attribute__ ((unused)) GC_state s) {
+void Proc_waitForInitialization (GC_state s) {
   int32_t unused;
 
   while (!Proc_beginInit) { }

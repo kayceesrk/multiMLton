@@ -124,7 +124,8 @@ struct
       loop p
     end
 
-  val return = (disablePreemption ()
+  val return = (MLtonProfile.init ()
+                ; disablePreemption ()
                 ; MLtonSignal.setHandler (Posix.Signal.usr2, h)
                 ; waitForWork)
 

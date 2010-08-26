@@ -449,13 +449,15 @@ static GC_state atexitForProfilingState;
 
 void atexitForProfiling (void) {
   GC_state s;
+  char fname[20];
 
   if (DEBUG_PROFILE)
     fprintf (stderr, "atexitForProfiling ()\n");
   s = atexitForProfilingState;
-  if (s->profiling.isOn) {
-    fprintf (stderr, "profiling is on\n");
-    profileWrite (s, s->profiling.data, "mlmon.out");
+  if (s->profiling.isOn && s->profiling.data) {
+    fprintf (stderr, "profiling is on[%d]\n", Proc_processorNumber(s));
+    sprintf(fname, "mlmon.%d.out", Proc_processorNumber (s));
+    profileWrite (s, s->profiling.data, fname);
   }
 }
 
@@ -488,30 +490,43 @@ void initProfiling (GC_state s) {
 void GC_profileDone (__attribute__ ((unused)) GC_state *gs) {
   GC_profileData p;
   GC_profileMasterIndex profileMasterIndex;
-  GC_state s = pthread_getspecific (gcstate_key);
+  GC_state s0 = pthread_getspecific (gcstate_key);
+  char fname[20];
 
-  if (DEBUG_PROFILE)
-    fprintf (stderr, "GC_profileDone () [%d]\n",
-             Proc_processorNumber (s));
-  assert (s->profiling.isOn);
-  if (PROFILE_TIME_FIELD == s->profiling.kind
-      or PROFILE_TIME_LABEL == s->profiling.kind)
-    setProfTimer (0);
-  s->profiling.isOn = FALSE;
-  p = s->profiling.data;
-  if (s->profiling.stack) {
-    uint32_t profileMasterLength =
-      s->sourceMaps.sourcesLength + s->sourceMaps.sourceNamesLength;
-    for (profileMasterIndex = 0;
-         profileMasterIndex < profileMasterLength;
-         profileMasterIndex++) {
-      if (p->stack[profileMasterIndex].numOccurrences > 0) {
-        if (DEBUG_PROFILE)
-          fprintf (stderr, "done leaving %s\n",
-                   profileIndexSourceName (s, profileMasterIndex));
-        removeFromStackForProfiling (s, profileMasterIndex);
+  assert (s0->profiling.isOn);
+
+  for (int proc = 0; proc < s0->numberOfProcs; proc ++) {
+    GC_state s = &(s0->procStates[proc]);
+
+    printf ("GC_profileDone () [%d]\n",
+            Proc_processorNumber (s));
+    if (DEBUG_PROFILE)
+      fprintf (stderr, "GC_profileDone () [%d]\n",
+               Proc_processorNumber (s));
+    if (PROFILE_TIME_FIELD == s->profiling.kind
+        or PROFILE_TIME_LABEL == s->profiling.kind)
+      setProfTimer (0);
+    s->profiling.isOn = FALSE;
+    p = s->profiling.data;
+    if (s->profiling.stack) {
+      uint32_t profileMasterLength =
+        s->sourceMaps.sourcesLength + s->sourceMaps.sourceNamesLength;
+      for (profileMasterIndex = 0;
+           profileMasterIndex < profileMasterLength;
+           profileMasterIndex++) {
+        if (p->stack[profileMasterIndex].numOccurrences > 0) {
+          if (DEBUG_PROFILE)
+            fprintf (stderr, "done leaving %s\n",
+                     profileIndexSourceName (s, profileMasterIndex));
+          removeFromStackForProfiling (s, profileMasterIndex);
+        }
       }
     }
+
+    /* Write out the profile results */
+    sprintf(fname, "mlmon.%d.out", Proc_processorNumber (s));
+    profileWrite (s, s->profiling.data, fname);
+    //XXX KC should I cleanup profiling data here??
   }
 }
 

@@ -472,7 +472,10 @@ void GC_lateInit (GC_state s) {
    * show-sources, in which case we don't want to initialize the
    * atExit.
    */
-  initProfiling (s);
+
+  for (int proc = 0; proc < s->numberOfProcs; proc ++)
+    initProfiling (&(s->procStates[proc]));
+
   if (s->amOriginal) {
     initWorld (s);
     /* The mutator stack invariant doesn't hold,
@@ -527,7 +530,6 @@ void GC_duplicate (GC_state d, GC_state s) {
 
   d->sysvals.ram = s->sysvals.ram;
 
-  // XXX spoons better duplicate
   //initProfiling (d);
 
   // Multi-processor support is incompatible with saved-worlds
