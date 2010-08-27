@@ -1,8 +1,9 @@
 structure Main =
 struct
-   open MLton	
+   structure A = Array
+   open MLton
    structure T = PCML
-   
+
    val channel = T.channel
    val send = T.send
    val recv = T.recv
@@ -27,18 +28,18 @@ struct
      (
      MLton.RunPCML.doit ( fn () =>
      let
-       val channelArr = Array.tabulate(16, fn _ => channel ())
+       val channelArr = A.tabulate(16, fn _ => channel ())
 
        fun init m =
        let
-         val inCh = Array.sub(channelArr, (m-1+16) mod 16)
-         val outCh = Array.sub(channelArr, m)
+         val inCh = A.sub(channelArr, (m-1+16) mod 16)
+         val outCh = A.sub(channelArr, m)
        in
-         ignore (spawn(fn () => worker(inCh, outCh, n)))
+         ignore (T.spawn(fn () => worker(inCh, outCh, n)))
        end
 
-       val _ = Array.tabulate (8, fn x => init x)
-       val _ = send(Array.sub(channelArr, 15), ())
+       val _ = A.tabulate (8, fn x => init x)
+       val _ = send(A.sub(channelArr, 15), ())
      in
        ()
      end
