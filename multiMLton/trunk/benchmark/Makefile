@@ -10,7 +10,7 @@ SRC := $(shell cd .. && pwd)
 BUILD := $(SRC)/build
 BIN := $(BUILD)/bin
 LIB := $(BUILD)/lib
-MLTON := mlton
+MLTON := /home/lziarek/mlton/multiMLton/multiMLton/trunk/build/bin/mlton
 TARGET := self
 FLAGS := -target $(TARGET)	\
 	-default-ann 'sequenceNonUnit warn' \

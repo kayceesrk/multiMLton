@@ -1,5 +1,6 @@
 structure Main =
 struct
+
    structure A = Array
    open MLton
    structure T = PCML

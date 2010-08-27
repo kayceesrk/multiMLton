@@ -9,7 +9,7 @@ SRCS := $(wildcard *.sml)
 SRC_RULS := $(subst .sml,-amd64,$(SRCS))
 
 %-amd64 : $(SRCS)
-	$(MULTIMLTON) -keep g -debug $(DEBUG) -profile $(PROFILE) -profile-stack $(STACK) -output $@ "$(subst -amd64,,$@).sml"
+	$(MULTIMLTON) -debug $(DEBUG) -profile $(PROFILE) -profile-stack $(STACK) -output $@ "$(subst -amd64,,$@).sml"
 
 all: $(SRC_RULS)
 
