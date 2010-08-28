@@ -418,6 +418,7 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->sysvals.physMem = GC_physMem ();
   s->weaks = NULL;
   s->saveWorldStatus = true;
+  s->profiling.isProfilingTimeOn = false;
 
   initIntInf (s);
   initSignalStack (s);
@@ -458,9 +459,7 @@ int GC_init (GC_state s, int argc, char **argv) {
       sourceSeq = s->sourceMaps.sourceSeqs[s->sourceMaps.frameSources[i]];
       for (j = 1; j <= sourceSeq[0]; j++)
         fprintf (stderr, "\t%s\n",
-                 s->sourceMaps.sourceNames[
-                 s->sourceMaps.sources[sourceSeq[j]].sourceNameIndex
-                 ]);
+                 s->sourceMaps.sourceNames[s->sourceMaps.sources[sourceSeq[j]].sourceNameIndex]);
     }
   }
   return res;
@@ -473,8 +472,7 @@ void GC_lateInit (GC_state s) {
    * atExit.
    */
 
-  for (int proc = 0; proc < s->numberOfProcs; proc ++)
-    initProfiling (&(s->procStates[proc]));
+  initProfiling (s, proc);
 
   if (s->amOriginal) {
     initWorld (s);

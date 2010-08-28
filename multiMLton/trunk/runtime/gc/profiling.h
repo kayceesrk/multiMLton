@@ -67,6 +67,7 @@ typedef struct GC_profileData {
 struct GC_profiling {
   GC_profileData data;
   bool isOn;
+  bool isProfilingTimeOn;
   GC_profileKind kind;
   bool stack;
 };
@@ -107,7 +108,9 @@ PRIVATE void profileFree (GC_state s, GC_profileData p);
 static void setProfTimer (long usec);
 static void initProfilingTime (GC_state s);
 static void atexitForProfiling (void);
-static void initProfiling (GC_state s);
+static void initProfiling (GC_state s, int proc);
+
+void turnOnProfilingTime (GC_state s);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */
 

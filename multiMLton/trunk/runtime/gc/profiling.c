@@ -12,7 +12,7 @@ GC_profileMasterIndex sourceIndexToProfileMasterIndex (GC_state s,
   GC_profileMasterIndex pmi;
   pmi = s->sourceMaps.sources[i].sourceNameIndex + s->sourceMaps.sourcesLength;
   if (DEBUG_PROFILE)
-    fprintf (stderr, "%"PRIu32" = sourceIndexToProfileMasterIndex ("FMTSI")\n", pmi, i);
+    fprintf (stderr, "%"PRIu32" = sourceIndexToProfileMasterIndex ("FMTSI") [%d]\n", pmi, i, Proc_processorNumber (s));
   return pmi;
 }
 
@@ -151,8 +151,9 @@ void leaveForProfiling (GC_state s, GC_sourceSeqIndex sourceSeqIndex) {
     if (DEBUG_ENTER_LEAVE or DEBUG_PROFILE) {
       profileDepth--;
       profileIndent ();
-      fprintf (stderr, "leaving %s)\n",
-               getSourceName (s, sourceIndex));
+      fprintf (stderr, "leaving %s) [%d]\n",
+               getSourceName (s, sourceIndex),
+               Proc_processorNumber (s));
     }
     leaveSourceForProfiling (s, (GC_profileMasterIndex)sourceIndex);
     leaveSourceForProfiling (s, sourceIndexToProfileMasterIndex (s, sourceIndex));
@@ -173,8 +174,8 @@ void incForProfiling (GC_state s, size_t amount, GC_sourceSeqIndex sourceSeqInde
   GC_sourceIndex topSourceIndex;
 
   if (DEBUG_PROFILE)
-    fprintf (stderr, "incForProfiling (%"PRIuMAX", "FMTSSI")\n",
-             (uintmax_t)amount, sourceSeqIndex);
+    fprintf (stderr, "incForProfiling (%"PRIuMAX", "FMTSSI") [%d]\n",
+             (uintmax_t)amount, sourceSeqIndex, Proc_processorNumber (s));
   assert (sourceSeqIndex < s->sourceMaps.sourceSeqsLength);
   sourceSeq = s->sourceMaps.sourceSeqs[sourceSeqIndex];
   topSourceIndex =
@@ -183,8 +184,9 @@ void incForProfiling (GC_state s, size_t amount, GC_sourceSeqIndex sourceSeqInde
     : SOURCES_INDEX_UNKNOWN;
   if (DEBUG_PROFILE) {
     profileIndent ();
-    fprintf (stderr, "bumping %s by %"PRIuMAX"\n",
-             getSourceName (s, topSourceIndex), (uintmax_t)amount);
+    fprintf (stderr, "bumping %s by %"PRIuMAX" [%d]\n",
+             getSourceName (s, topSourceIndex), (uintmax_t)amount,
+             Proc_processorNumber (s));
   }
   s->profiling.data->countTop[topSourceIndex] += amount;
   s->profiling.data->countTop[sourceIndexToProfileMasterIndex (s, topSourceIndex)] += amount;
@@ -242,7 +244,7 @@ GC_profileData GC_profileMalloc (__attribute__ ((unused)) GC_state *gs) {
 
 void profileFree (GC_state s, GC_profileData p) {
   if (DEBUG_PROFILE)
-    fprintf (stderr, "profileFree ("FMTPTR")\n", (uintptr_t)p);
+    fprintf (stderr, "profileFree ("FMTPTR") [%d]\n", (uintptr_t)p, Proc_processorNumber (s));
   free (p->countTop);
   if (s->profiling.stack)
     free (p->stack);
@@ -274,7 +276,7 @@ void profileWrite (GC_state s, GC_profileData p, const char *fileName) {
   const char* kind;
 
   if (DEBUG_PROFILE)
-    fprintf (stderr, "profileWrite("FMTPTR",%s)\n", (uintptr_t)p, fileName);
+    fprintf (stderr, "profileWrite("FMTPTR",%s) [%d]\n", (uintptr_t)p, fileName, Proc_processorNumber (s));
   f = fopen_safe (fileName, "wb");
   writeString (f, "MLton prof\n");
   kind = "";
@@ -347,14 +349,12 @@ void initProfilingTime (__attribute__ ((unused)) GC_state s) {
 
 #else
 
-static GC_state handleSigProfState;
-
 void GC_handleSigProf (code_pointer pc) {
   GC_frameIndex frameIndex;
   GC_state s;
   GC_sourceSeqIndex sourceSeqsIndex;
 
-  s = handleSigProfState;
+  s = pthread_getspecific (gcstate_key);
   if (DEBUG_PROFILE)
     fprintf (stderr, "GC_handleSigProf ("FMTPTR") [%d]\n", (uintptr_t)pc,
              Proc_processorNumber (s));
@@ -387,7 +387,7 @@ void GC_handleSigProf (code_pointer pc) {
             (i == 0 &&
              (uintptr_t)pc < (uintptr_t)s->sourceMaps.sourceLabels[i].label)) {
           if (DEBUG_PROFILE)
-            fprintf (stderr, "pc out of bounds\n");
+            fprintf (stderr, "pc out of bounds [%d]\n", Proc_processorNumber (s));
           sourceSeqsIndex = SOURCE_SEQ_UNKNOWN;
         } else {
           sourceSeqsIndex = s->sourceMaps.sourceLabels[start].sourceSeqIndex;
@@ -407,35 +407,40 @@ void GC_profileEnable (void) {
   setProfTimer (10000);
 }
 
-static void initProfilingTime (GC_state s) {
-  struct sigaction sa;
 
+void turnOnProfilingTime (GC_state s) {
+  assert (s);
+  /*
+   * Install catcher, which handles SIGUSR1 and calls MLton_Profile_inc.
+   * SIGPROF is handled by the signal handler thread (c-main.h) and broadcast
+   * as SIGUSR1 to every thread.
+   *
+   * One thing I should point out that I discovered the hard way: If the call
+   * to sigaction does NOT specify the SA_ONSTACK flag, then even if you have
+   * called sigaltstack(), it will NOT switch stacks, so you will probably die.
+   * Worse, if the call to sigaction DOES have SA_ONSTACK and you have NOT
+   * called sigaltstack(), it still switches stacks (to location 0) and you die
+   * of a SEGV.  Thus the sigaction() call MUST occur after the call to
+   * sigaltstack(), and in order to have profiling cover as much as possible,
+   * you want it to occur right after the sigaltstack() call.
+   */
+  struct sigaction sa;
+  sigemptyset (&sa.sa_mask);
+  GC_setSigProfHandler (&sa);
+  unless (sigaction (SIGUSR1, &sa, NULL) == 0)
+    diee ("turnOnProfilingTime: sigaction failed");
+
+  s->profiling.isProfilingTimeOn = TRUE;
+}
+
+
+static void initProfilingTime (GC_state s) {
   s->profiling.data = profileMalloc (s);
   if (PROFILE_TIME_LABEL == s->profiling.kind) {
     initSourceLabels (s);
   } else {
     s->sourceMaps.curSourceSeqsIndex = SOURCE_SEQ_UNKNOWN;
   }
-  /*
-   * Install catcher, which handles SIGPROF and calls MLton_Profile_inc.
-   *
-   * One thing I should point out that I discovered the hard way: If
-   * the call to sigaction does NOT specify the SA_ONSTACK flag, then
-   * even if you have called sigaltstack(), it will NOT switch stacks,
-   * so you will probably die.  Worse, if the call to sigaction DOES
-   * have SA_ONSTACK and you have NOT called sigaltstack(), it still
-   * switches stacks (to location 0) and you die of a SEGV.  Thus the
-   * sigaction() call MUST occur after the call to sigaltstack(), and
-   * in order to have profiling cover as much as possible, you want it
-   * to occur right after the sigaltstack() call.
-   */
-  handleSigProfState = s;
-  sigemptyset (&sa.sa_mask);
-  GC_setSigProfHandler (&sa);
-  unless (sigaction (SIGPROF, &sa, NULL) == 0)
-    diee ("initProfilingTime: sigaction failed");
-  /* Start the SIGPROF timer. */
-  setProfTimer (10000);
 }
 
 #endif
@@ -461,11 +466,10 @@ void atexitForProfiling (void) {
   }
 }
 
-void initProfiling (GC_state s) {
+void initProfiling (GC_state s, int proc) {
   if (PROFILE_NONE == s->profiling.kind)
     s->profiling.isOn = FALSE;
   else {
-    s->profiling.isOn = TRUE;
     assert (s->sourceMaps.frameSourcesLength == s->frameLayoutsLength);
     switch (s->profiling.kind) {
     case PROFILE_ALLOC:
@@ -478,10 +482,14 @@ void initProfiling (GC_state s) {
     case PROFILE_TIME_FIELD:
     case PROFILE_TIME_LABEL:
       initProfilingTime (s);
+      if (proc == 0)
+        turnOnProfilingTime (s);
       break;
     default:
       assert (FALSE);
     }
+    //Must be done after profile mallocs
+    s->profiling.isOn = TRUE;
     atexitForProfilingState = s;
     atexit (atexitForProfiling);
   }
@@ -492,39 +500,35 @@ void GC_profileDone (__attribute__ ((unused)) GC_state *gs) {
   GC_profileMasterIndex profileMasterIndex;
   GC_state s0 = pthread_getspecific (gcstate_key);
   char fname[20];
-
   assert (s0->profiling.isOn);
-
   for (int proc = 0; proc < s0->numberOfProcs; proc ++) {
     GC_state s = &(s0->procStates[proc]);
-
-    printf ("GC_profileDone () [%d]\n",
-            Proc_processorNumber (s));
     if (DEBUG_PROFILE)
-      fprintf (stderr, "GC_profileDone () [%d]\n",
-               Proc_processorNumber (s));
+        fprintf (stderr, "GC_profileDone () [%d]\n",
+                Proc_processorNumber (s));
     if (PROFILE_TIME_FIELD == s->profiling.kind
         or PROFILE_TIME_LABEL == s->profiling.kind)
-      setProfTimer (0);
+        setProfTimer (0);
     s->profiling.isOn = FALSE;
     p = s->profiling.data;
     if (s->profiling.stack) {
-      uint32_t profileMasterLength =
-        s->sourceMaps.sourcesLength + s->sourceMaps.sourceNamesLength;
-      for (profileMasterIndex = 0;
-           profileMasterIndex < profileMasterLength;
-           profileMasterIndex++) {
-        if (p->stack[profileMasterIndex].numOccurrences > 0) {
-          if (DEBUG_PROFILE)
-            fprintf (stderr, "done leaving %s\n",
-                     profileIndexSourceName (s, profileMasterIndex));
-          removeFromStackForProfiling (s, profileMasterIndex);
+        uint32_t profileMasterLength =
+            s->sourceMaps.sourcesLength + s->sourceMaps.sourceNamesLength;
+        for (profileMasterIndex = 0;
+            profileMasterIndex < profileMasterLength;
+            profileMasterIndex++) {
+            if (p->stack[profileMasterIndex].numOccurrences > 0) {
+                if (DEBUG_PROFILE)
+                    fprintf (stderr, "done leaving %s [%d]\n",
+                            profileIndexSourceName (s, profileMasterIndex),
+                            Proc_processorNumber (s));
+                removeFromStackForProfiling (s, profileMasterIndex);
+            }
         }
-      }
     }
 
     /* Write out the profile results */
-    sprintf(fname, "mlmon.%d.out", Proc_processorNumber (s));
+    sprintf(fname, "mlmon.%d.out", proc);
     profileWrite (s, s->profiling.data, fname);
     //XXX KC should I cleanup profiling data here??
   }

@@ -38,7 +38,7 @@ void MLton_callFromC (pointer ffiOpArgsResPtr) {                        \
         do {                                                            \
                 cont=(*(struct cont(*)(uintptr_t))cont.nextChunk)(cont.nextFun); \
         } while (not s->returnToC);                                     \
-        s->returnToC = FALSE;                                              \
+        s->returnToC = FALSE;                                           \
         printf ("\nMLtonCallFromC");                                    \
         s->atomicState += 1;                                            \
         GC_switchToThread (s, GC_getSavedThread (s), 0);                \
@@ -52,10 +52,53 @@ void MLton_callFromC (pointer ffiOpArgsResPtr) {                        \
 
 #define MLtonMain(al, mg, mfs, mmc, pk, ps, gnr, mc, ml)                \
 MLtonCallFromC                                                          \
-void runAlrmHandler (void *arg) {                                       \
+                                                                        \
+void runProfHandler (void* arg) {                                       \
+        if (DEBUG_ALRM)                                                 \
+            fprintf (stderr, "Running runProfHandler..\n");             \
+        /* Save our state locally */                                    \
+        GC_state s = (GC_state)arg;                                     \
+        pthread_setspecific (gcstate_key, s);                           \
+                                                                        \
+        /* Block all signals */                                         \
+        sigset_t blockSet;                                              \
+        sigfillset (&blockSet);                                         \
+        pthread_sigmask (SIG_SETMASK, &blockSet, NULL);                 \
                                                                         \
         if (DEBUG_ALRM)                                                 \
+            fprintf (stderr, "Installing itimer_prof\n");               \
+                                                                        \
+        /* Set PROF timer */                                            \
+        struct itimerval value;                                         \
+        value.it_interval.tv_sec = 0;                                   \
+        value.it_interval.tv_usec = 10000;                              \
+        value.it_value.tv_sec = 0;                                      \
+        value.it_value.tv_usec = 10000;                                 \
+        while (not Proc_isInitialized (s)) {}                           \
+        setitimer(ITIMER_PROF, &value, NULL);                           \
+                                                                        \
+        sigset_t set;                                                   \
+        sigemptyset (&set);                                             \
+        sigaddset (&set, SIGPROF);                                      \
+                                                                        \
+        while (1) {                                                     \
+            int signum;                                                 \
+            if (DEBUG_ALRM)                                             \
+                fprintf (stderr, "Wait for prof timer\n");              \
+            sigwait (&set, &signum);                                    \
+            for (int proc = 0; proc < s->numberOfProcs; proc++) {       \
+               GC_state gcState = &s->procStates[proc];                 \
+               if (gcState->profiling.isProfilingTimeOn)                \
+                 pthread_kill (gcState->pthread, SIGUSR1);              \
+           }                                                            \
+        }                                                               \
+}                                                                       \
+                                                                        \
+void runAlrmHandler (void *arg) {                                       \
+        if (DEBUG_ALRM)                                                 \
             fprintf (stderr, "Running runAlrmHandler..\n");             \
+                                                                        \
+        /* XXX KC is this needed?? */                                   \
         /* Save our state locally */                                    \
         GC_state s = (GC_state)arg;                                     \
         pthread_setspecific (gcstate_key, s);                           \
@@ -67,8 +110,9 @@ void runAlrmHandler (void *arg) {                                       \
                                                                         \
         if (DEBUG_ALRM)                                                 \
             fprintf (stderr, "Installing timer\n");                     \
-        struct itimerval value, ovalue;                                 \
-        int which = ITIMER_REAL;                                        \
+                                                                        \
+        /* Set REAL timer */                                            \
+        struct itimerval value;                                         \
         int microsec = (int)(s->timeInterval);                          \
         value.it_interval.tv_sec = microsec / 1000000;                  \
         value.it_interval.tv_usec = microsec % 1000000;                 \
@@ -76,7 +120,7 @@ void runAlrmHandler (void *arg) {                                       \
         value.it_value.tv_usec = microsec*5;                            \
                                                                         \
         while (not Proc_isInitialized (s)) {}                           \
-         setitimer( which, &value, &ovalue );                           \
+        setitimer(ITIMER_REAL, &value, NULL);                           \
                                                                         \
         sigset_t set;                                                   \
         /* XXX To delay sending SigUsr2 by one one time quantum. CML signal */      \
@@ -91,8 +135,9 @@ void runAlrmHandler (void *arg) {                                       \
         while (1) {                                                     \
             int signum;                                                 \
             if (DEBUG_ALRM)                                             \
-                fprintf (stderr, "Wait for alrm\n");                    \
+                fprintf (stderr, "Wait for alrm \n");                   \
             sigwait (&set, &signum);                                    \
+                                                                        \
             /* set up switches if GC_state is registered for an alrm */ \
             for (int proc = 0; proc < s->numberOfProcs; proc++) {       \
                 GC_state gcState = &s->procStates[proc];                \
@@ -107,7 +152,7 @@ void runAlrmHandler (void *arg) {                                       \
                     fprintf(stderr,"atomicState = %d\n",gcState->atomicState); \
                     fprintf(stderr,"sendSigUsr2 = %d\n", sendSigUsr2);  \
                 }                                                       \
-                /*Parallel_wakeUpThread (proc);*/                       \
+                                                                        \
                 if(sigismember(&gcState->signalsInfo.signalsHandled, SIGALRM)) \
                 {                                                       \
                     if (!gcState->signalsInfo.amInSignalHandler && !gcState->signalsInfo.signalIsPending) { \
@@ -117,7 +162,7 @@ void runAlrmHandler (void *arg) {                                       \
                         sigaddset (&gcState->signalsInfo.signalsPending, SIGALRM); \
                     }                                                   \
                 }                                                       \
-                /* if SIGUSR2 is handled */                         \
+                /* if SIGUSR2 is handled */                             \
                 if (sigismember(&gcState->signalsInfo.signalsHandled, SIGUSR2) &&   \
                     !gcState->signalsInfo.amInSignalHandler &&          \
                     !gcState->amInGC) {                                 \
@@ -141,14 +186,16 @@ void run (void *arg) {                                                  \
         /* Save our state locally */                                    \
         pthread_setspecific (gcstate_key, s);                           \
         s->pthread = pthread_self ();                                   \
-        /* Mask ALRM signal */                                          \
+                                                                        \
+        /* Mask ALRM and PROF signal */                                 \
+        sigset_t blockSet;                                              \
+        sigemptyset (&blockSet);                                        \
         if (s->enableTimer)                                             \
-        {                                                               \
-        sigset_t set;                                                   \
-        sigemptyset (&set);                                             \
-        sigaddset (&set, SIGALRM);                                      \
-        pthread_sigmask (SIG_SETMASK, &set, NULL);                      \
-        }                                                               \
+            sigaddset (&blockSet, SIGALRM);                             \
+        if (s->profiling.kind == PROFILE_TIME_FIELD ||                  \
+            s->profiling.kind == PROFILE_TIME_LABEL)                    \
+            sigaddset (&blockSet, SIGPROF);                             \
+        pthread_sigmask (SIG_SETMASK, &blockSet, NULL);                 \
                                                                         \
         if (s->amOriginal) {                                            \
                 real_Init();                                            \
@@ -180,12 +227,14 @@ void run (void *arg) {                                                  \
 PUBLIC int MLton_main (int argc, char* argv[]) {                        \
         int procNo;                                                     \
         pthread_t *threads;                                             \
+        pthread_t alrmHandlerThread;                                    \
+        pthread_t profHandlerThread;                                    \
         {                                                               \
                 struct GC_state s;                                      \
                 /* Initialize with a generic state to read in @MLtons, etc */ \
                 Initialize (s, al, mg, mfs, mmc, pk, ps, gnr);          \
                                                                         \
-                threads = (pthread_t *) malloc ((s.numberOfProcs) * sizeof (pthread_t)); \
+                threads = (pthread_t *) malloc ((s.numberOfProcs-1) * sizeof (pthread_t)); \
                 gcState = (GC_state) malloc ((s.numberOfProcs+1) * sizeof (struct GC_state)); \
                 /* Create key */                                        \
                 if (pthread_key_create(&gcstate_key, NULL)) {           \
@@ -212,12 +261,18 @@ PUBLIC int MLton_main (int argc, char* argv[]) {                        \
                 }                                                       \
         }                                                               \
         /* Create the alrmHandler thread */                             \
-        if(gcState[0].enableTimer)                                      \
-        {                                                               \
-        if(pthread_create (&threads[gcState[0].numberOfProcs -1], NULL, &runAlrmHandler, (void*)&gcState[gcState[0].numberOfProcs])) { \
-                fprintf (stderr, "pthread_create failed: %s\n", strerror (errno)); \
-                exit (1);                                               \
+        if(gcState[0].enableTimer) {                                    \
+            if(pthread_create (&alrmHandlerThread, NULL, &runAlrmHandler, (void*)&gcState[gcState[0].numberOfProcs])) { \
+                    fprintf (stderr, "pthread_create failed: %s\n", strerror (errno)); \
+                    exit (1);                                           \
+            }                                                           \
         }                                                               \
+        if(gcState[0].profiling.kind == PROFILE_TIME_LABEL ||           \
+           gcState[0].profiling.kind == PROFILE_TIME_FIELD) {           \
+             if(pthread_create (&profHandlerThread, NULL, &runProfHandler, (void*)&gcState[0])) { \
+                    fprintf (stderr, "pthread_create failed: %s\n", strerror (errno)); \
+                    exit (1);                                           \
+            }                                                           \
         }                                                               \
         run ((void *)&gcState[0]);                                      \
 }

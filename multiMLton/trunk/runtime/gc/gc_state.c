@@ -78,6 +78,7 @@ void setGCStateCurrentHeap (GC_state s,
              uintmaxToCommaString(oldGenBytesRequested),
              uintmaxToCommaString(nurseryBytesRequested));
   h = s->heap;
+  assert (h==s->heap);
   assert (isFrontierAligned (s, h->start + h->oldGenSize + oldGenBytesRequested));
   limit = h->start + h->size - bonus;
   nurserySize = h->size - (h->oldGenSize + oldGenBytesRequested) - bonus;
