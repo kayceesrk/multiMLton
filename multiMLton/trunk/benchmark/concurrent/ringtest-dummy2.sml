@@ -27,7 +27,7 @@ struct
 
   fun doit n =
      (
-     MLton.RunPCML.doit ( fn () =>
+     MLton.RunPCML.doit (fn () =>
      let
        val channelArr = A.tabulate(16, fn _ => channel ())
 
