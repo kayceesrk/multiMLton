@@ -466,7 +466,7 @@ void atexitForProfiling (void) {
   }
 }
 
-void initProfiling (GC_state s, int proc) {
+void initProfiling (GC_state s) {
   if (PROFILE_NONE == s->profiling.kind)
     s->profiling.isOn = FALSE;
   else {
@@ -482,8 +482,7 @@ void initProfiling (GC_state s, int proc) {
     case PROFILE_TIME_FIELD:
     case PROFILE_TIME_LABEL:
       initProfilingTime (s);
-      if (proc == 0)
-        turnOnProfilingTime (s);
+      turnOnProfilingTime (s);
       break;
     default:
       assert (FALSE);

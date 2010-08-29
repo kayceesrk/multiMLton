@@ -108,7 +108,7 @@ PRIVATE void profileFree (GC_state s, GC_profileData p);
 static void setProfTimer (long usec);
 static void initProfilingTime (GC_state s);
 static void atexitForProfiling (void);
-static void initProfiling (GC_state s, int proc);
+static void initProfiling (GC_state s);
 
 void turnOnProfilingTime (GC_state s);
 

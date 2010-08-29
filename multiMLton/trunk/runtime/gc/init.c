@@ -472,8 +472,7 @@ void GC_lateInit (GC_state s) {
    * atExit.
    */
 
-  for (int proc = 0; proc < s->numberOfProcs; proc ++)
-      initProfiling (&(s->procStates[proc]), proc);
+  initProfiling (s);
 
   if (s->amOriginal) {
     initWorld (s);
