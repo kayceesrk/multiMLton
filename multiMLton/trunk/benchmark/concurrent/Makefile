@@ -3,7 +3,6 @@
 DEBUG := false
 PROFILE := no
 STACK := false
-MULTIMLTON=$(HOME)/mlton/multiMLton/multiMLton/trunk/build/bin/mlton
 
 SRCS := $(wildcard *.sml)
 SRC_RULS := $(subst .sml,-amd64,$(SRCS))
