@@ -26,8 +26,8 @@ struct
     RunPCML.doit
     (fn () =>
     let
-      val _ = T.spawn (fn () => ping ch n)
       val _ = T.spawn (fn () => pong ch n)
+      val _ = T.spawn (fn () => ping ch n)
     in
       ()
     end,

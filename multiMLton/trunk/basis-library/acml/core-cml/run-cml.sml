@@ -79,8 +79,6 @@ structure MLtonRunPCML : MLTON_RUN_PCML =
        *)
       fun pauseHook (iter) =
          let
-            val () = Assert.assertAtomic' ("RunCML.pauseHook", SOME 1)
-            val () = debug' "RunCML.pauseHook"
             val to = TO.preempt ()
             (* If there are waiting time events, then make proc 0 spin *)
             val iter = case to of

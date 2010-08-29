@@ -49,7 +49,6 @@ structure TimeOut : TIME_OUT_EXTRA =
                     in clock := SOME t;  t
                     end
           | SOME t => t
-      fun preemptTime () = clock := NONE
 
       (* The queue of threads waiting for timeouts.
        * It is sorted in increasing order of time value.
@@ -179,26 +178,23 @@ structure TimeOut : TIME_OUT_EXTRA =
            if not (B.processorNumber () = 0) then
              NONE
            else
-             let
-               val _ = L.getCmlLock lock (S.tidNum())
-               val _ = preemptTime ()
-               val res = if TQ.empty timeQ'
-                          then NONE
-                          else let
-                                  val readied = ref false
-                                  val timeQ' = TQ.clean (timeQ', cleaner (fn () => readied := true))
-                                  val () = timeQ := timeQ'
-                                in
-                                  if !readied
-                                      then SOME NONE
-                                      else case TQ.peek timeQ' of
-                                              NONE => NONE
-                                            | SOME elt => SOME(SOME(Time.-(TQ.Elt.key elt, getTime ())))
-                                end
-               val _ = L.releaseCmlLock lock (S.tidNum())
-             in
-               res
-             end
+             if TQ.empty timeQ' then NONE
+             else
+               let
+                 val _ = L.getCmlLock lock (S.tidNum())
+                 val readied = ref false
+                 val timeQ' = TQ.clean (timeQ', cleaner (fn () => readied := true))
+                 val () = timeQ := timeQ'
+                 val res =
+                   if !readied
+                   then SOME NONE
+                   else case TQ.peek timeQ' of
+                             NONE => NONE
+                           | SOME elt => SOME(SOME(Time.-(TQ.Elt.key elt, getTime ())))
 
+                 val _ = L.releaseCmlLock lock (S.tidNum())
+               in
+                 res
+               end
          end
    end
