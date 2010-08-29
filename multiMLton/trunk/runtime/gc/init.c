@@ -472,7 +472,7 @@ void GC_lateInit (GC_state s) {
    * atExit.
    */
 
-  initProfiling (s, proc);
+  initProfiling (s);
 
   if (s->amOriginal) {
     initWorld (s);

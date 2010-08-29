@@ -31,7 +31,7 @@ void Proc_waitForInitialization (GC_state s) {
   unused = __sync_fetch_and_add (&Proc_initialized, 1);
 
   while (!Proc_isInitialized (s)) { }
-  turnOnProfilingTime (s);
+  initProfiling (s);
 }
 
 void Proc_signalInitialization (GC_state s) {
