@@ -1,0 +1,2 @@
+test1 - spawn (loop_X (send))
+test2 - spawn (loop_X1 (spawn (loop_X2 (send))))

@@ -7,6 +7,9 @@ struct
     val cas = ParallelInternal.compareAndSwap
     val mayBeWaitForGC = _import "Parallel_maybeWaitForGC": unit -> unit;
 
+    val acquireLock = ref (fn () => ())
+    val releaseLock = ref (fn () => ())
+
     type cmlLock = (int ref * int ref)
 
     fun initCmlLock () =
@@ -32,7 +35,7 @@ struct
         (* Don't bang on CAS. spin on conditional *)
         (if !l < 0 then
           (if cas (l, ~1, tid) then
-            ()
+            (!acquireLock)()
           else
             (maybePreempt ();
             getCmlLock (l, count) tid))
@@ -45,9 +48,9 @@ struct
       if !l = tid andalso !count > 0 then
           count := !count - 1
       else
-        if !l = tid then
-          (l := ~1; (* We don't need to do CAS here *)
-           mayBeWaitForGC ())
+        if cas (l, tid, ~1) then
+          ((!releaseLock)()
+           ; mayBeWaitForGC ())
         else
           let
             val holder = Int.toString(!l)
@@ -59,4 +62,5 @@ struct
             raise Fail msg
           end
 
+  fun assertLock ((l,count), i, m) = Assert.assert' (m, fn () => !l = i)
 end

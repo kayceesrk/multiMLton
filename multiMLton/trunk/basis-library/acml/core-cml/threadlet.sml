@@ -9,8 +9,8 @@
 structure Threadlet :> THREADLET =
 struct
 
-  structure Assert = LocalAssert(val assert = false)
-  structure Debug = LocalDebug(val debug = false)
+  structure Assert = LocalAssert(val assert = true)
+  structure Debug = LocalDebug(val debug = true)
 
   structure Prim = Primitive.MLton.Threadlet
   structure Pointer = Primitive.MLton.Pointer
@@ -24,6 +24,8 @@ struct
   fun debug msg = Debug.sayDebug ([S.atomicMsg, S.tidMsg], (msg))
   fun debug' msg = debug (fn () => msg^" : "
                                ^Int.toString(B.processorNumber()))
+
+  fun debug'' msg =  print (msg^"["^Int.toString(B.processorNumber())^"]\n")
 
   datatype 'a recvThreadlet = AR of (threadlet * (unit -> 'a) ref)
                             | MR of ('a S.thread * int)
@@ -54,6 +56,7 @@ struct
       val () = debug' "Threadlet.pSend(1)"
       val () = S.atomicBegin ()
       val () = L.getCmlLock lock (S.tidNum())
+      val () = L.assertLock (lock, S.tidNum(), "M1")
       val () = Assert.assertAtomic' ("Threadlet.pSend(2)", SOME 1)
       val () = debug' "Threadlet.pSend(2)"
       val () =
@@ -61,7 +64,7 @@ struct
               SOME (e) => (case e of
                                  AR (thlet, handoffFun) =>
                                     let
-                                      val _ = L.releaseCmlLock lock (S.tidNum ())
+                                      val _ = L.releaseCmlLock lock (S.tidNum())
                                       val _ = handoffFun := (fn () => msg)
                                       val _ = debug' "pSend-SOME-AR"
                                       val _ = S.atomicPrefixAndSwitchTo (thlet) (* Implicit atomicEnd *)
@@ -70,7 +73,7 @@ struct
                                     end
                                | MR (thrd, procNum) =>
                                    let
-                                     val _ = L.releaseCmlLock lock (S.tidNum ())
+                                     val _ = L.releaseCmlLock lock (S.tidNum())
                                      val _ = debug' "pSend-SOME-MR"
                                      val rdyThrd = S.prepVal (thrd, msg)
                                      val _ = S.readyOnProc (rdyThrd, procNum)
@@ -87,11 +90,13 @@ struct
                                   let
                                     val _ = debug' "pSend-NONE-HOST"
                                     val procNum = B.processorNumber ()
+                                    val _ = L.assertLock (lock, S.tidNum(), "M2")
                                     val () =
                                         S.atomicSwitchToNext (
                                               fn st =>
                                                 (Q.enque (outQ, MS (st, msg, procNum))
-                                                ; L.releaseCmlLock lock (S.tidNum ())))
+                                                ; L.assertLock (lock, S.tidNum(), "M3")
+                                                ; (L.releaseCmlLock lock (S.tidNum())) handle Fail m => raise Fail ("SNH:"^m)))
                                   in
                                     ()
                                   end
@@ -105,7 +110,7 @@ struct
                                         val _ = debug' "pSend sandBox"
                                         val thlet = copyFrames (S.getParasiteBottom ())
                                         val _ = Q.enque (outQ, AS (thlet, msg))
-                                        val _ = L.releaseCmlLock lock (S.tidNum ())
+                                        val _ = L.releaseCmlLock lock (S.tidNum())
                                         val _ = Prim.jumpDown (S.getParasiteBottom ())  (* Implicit atomicEnd *)
                                         val _ = print "\npSend : Should not see this"
                                       in
@@ -139,7 +144,7 @@ struct
                                       AS (thlet, msg) =>
                                         let
                                           val _ = debug' "pRecv-SOME-AS"
-                                          val _ = L.releaseCmlLock lock (S.tidNum ())
+                                          val _ = L.releaseCmlLock lock (S.tidNum()) handle Fail m => raise Fail ("RSP"^m)
                                           val _ = S.atomicPrefixAndSwitchTo (thlet)
                                           (* Atomic 0 *)
                                         in
@@ -147,8 +152,8 @@ struct
                                         end
                                     | MS (thrd, msg, procNum) =>
                                         let
-                                          val _ = L.releaseCmlLock lock (S.tidNum ())
                                           val _ = debug' "pRecv-SOME-MS"
+                                          val _ = L.releaseCmlLock lock (S.tidNum())
                                           val rdyThrd = S.prepVal (thrd, ())
                                           val _ = S.readyOnProc (rdyThrd, procNum)
                                           val _ = S.atomicEnd ()
@@ -168,7 +173,8 @@ struct
                                             S.atomicSwitchToNext (
                                                 fn rt =>
                                                   (Q.enque (inQ, MR (rt, procNum))
-                                                  ; L.releaseCmlLock lock (S.tidNum ())))
+                                                  ; L.releaseCmlLock lock (S.tidNum())) handle Fail m => raise Fail ("RNH"^m)
+                                                  )
                                         in
                                           msg
                                         end
@@ -183,7 +189,7 @@ struct
                                               val _ = debug' "pRecv sandBox"
                                               val thlet = copyFrames (S.getParasiteBottom ())
                                               val _ = Q.enque (inQ, AR (thlet, handoffFun))
-                                              val _ = L.releaseCmlLock lock (S.tidNum ())
+                                              val _ = L.releaseCmlLock lock (S.tidNum())
                                               val _ = Prim.jumpDown (S.getParasiteBottom ()) (* Implicit atomicEnd () *)
                                               (* Atomic 0 *)
                                               val _ = print "\npRecv : Should not see this"

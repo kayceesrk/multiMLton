@@ -7,4 +7,8 @@ sig
   val releaseCmlLock : cmlLock -> int -> unit
 
   val fetchAndAdd : int ref * int -> int
+
+  val acquireLock : (unit -> unit) ref
+  val releaseLock : (unit -> unit) ref
+  val assertLock: (cmlLock * int * string) -> unit
 end

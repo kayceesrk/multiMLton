@@ -12,7 +12,8 @@
 PRIVATE GC_thread GC_copyFrames (int startOffset);
 static pointer GC_getFrameBottom (void);
 PRIVATE int GC_getFrameBottomAsOffset (void);
-GC_thread GC_preemptAsync (GC_thread thrd, int startOffset);
+bool GC_proceedToPreempt (pointer p, int startOffset);
+GC_thread GC_preemptAsync (pointer p, int startOffset);
 void GC_noop (void);
 
 void GC_printFrames (void);
@@ -27,6 +28,6 @@ static inline void foo (GC_state s, GC_frameIndex i);
 
 // offset from bottom of stack
 PRIVATE void GC_jumpDown (GC_state s, int offset);
-PRIVATE void GC_prefixAndSwitchTo (GC_state s, GC_thread th);
+PRIVATE void GC_prefixAndSwitchTo (GC_state s, pointer p);
 
 #endif /* (defined (MLTON_GC_INTERNAL_BASIS)) */

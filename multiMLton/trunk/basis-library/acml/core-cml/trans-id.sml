@@ -43,6 +43,7 @@ structure TransID : TRANS_ID =
           in
             res
           end
+          handle Fail m => raise Fail ("CAS: "^m)
       in
         TXID({txst = v, cas = cas})
       end

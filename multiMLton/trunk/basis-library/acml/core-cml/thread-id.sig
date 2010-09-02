@@ -34,4 +34,9 @@ signature THREAD_ID_EXTRA =
       val isMarked : thread_id -> bool
 
       val reset : unit -> unit
+
+      (* Lock status *)
+     val acquireLock : thread_id -> unit
+     val releaseLock : thread_id -> unit
+     val hasNoLock : thread_id -> bool
    end

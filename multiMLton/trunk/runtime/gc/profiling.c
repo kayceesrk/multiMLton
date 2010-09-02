@@ -349,12 +349,17 @@ void initProfilingTime (__attribute__ ((unused)) GC_state s) {
 
 #else
 
+static GC_state gs0 = NULL;
+
+
 void GC_handleSigProf (code_pointer pc) {
   GC_frameIndex frameIndex;
   GC_state s;
   GC_sourceSeqIndex sourceSeqsIndex;
 
   s = pthread_getspecific (gcstate_key);
+  if (Proc_processorNumber (s) == 0)
+      assert (s==gs0);
   if (DEBUG_PROFILE)
     fprintf (stderr, "GC_handleSigProf ("FMTPTR") [%d]\n", (uintptr_t)pc,
              Proc_processorNumber (s));
@@ -441,6 +446,9 @@ static void initProfilingTime (GC_state s) {
   } else {
     s->sourceMaps.curSourceSeqsIndex = SOURCE_SEQ_UNKNOWN;
   }
+
+  if (Proc_processorNumber (s) == 0)
+    gs0 = s;
 }
 
 #endif

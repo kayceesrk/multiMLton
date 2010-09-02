@@ -122,36 +122,50 @@ void GC_printStackTop (void) {
     fflush (stderr);
 }
 
-GC_thread GC_preemptAsync (GC_thread oriThrd, int startOffset) {
-    assert (isObjptr ((objptr)(oriThrd)));
+bool GC_proceedToPreempt (pointer p, int startOffset) {
     GC_state s = pthread_getspecific (gcstate_key);
+    GC_thread oriThrd = (GC_thread) (p + offsetofThread (s));
 
     /* Find out the size needed for newThread */
     long int size = -1;
-    {
-        GC_stack oriStk = (GC_stack) objptrToPointer (oriThrd->stack, s->heap->start);
-        size = oriStk->used - startOffset;
-    }
-    assert (size > 0);
+    GC_stack oriStk = (GC_stack) objptrToPointer (oriThrd->stack, s->heap->start);
+    size = oriStk->used - startOffset;
+    if (size == 0) return false;
+    return true;
+}
+
+GC_thread GC_preemptAsync (pointer p, int startOffset) {
+    GC_state s = pthread_getspecific (gcstate_key);
+    GC_thread oriThrd = (GC_thread) (p + offsetofThread (s));
+
+    /* Find out the size needed for newThread */
+    long int size = -1;
+    GC_stack oriStk = (GC_stack) objptrToPointer (oriThrd->stack, s->heap->start);
+    size = oriStk->used - startOffset;
+    assert (size >=0);
+
+    if (size == 0)
+        printf("--------------------------SIZE IS 0---------------------------------\n");
 
     /* newThread () might do GC, so backup stuff */
     getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
     getThreadCurrent(s)->exnStack = s->exnStack;
     assert (s->savedThread == BOGUS_OBJPTR);
-    s->savedThread = pointerToObjptr ((pointer)oriThrd, s->heap->start);
+    s->savedThread = pointerToObjptr((pointer)oriThrd - offsetofThread (s), s->heap->start);
 
     GC_thread th = newThread (s, size);
+    assert (th);
     /* restore */
-    oriThrd = (GC_thread)(objptrToPointer(s->savedThread, s->heap->start));
+    oriThrd = (GC_thread)(objptrToPointer(s->savedThread, s->heap->start) + offsetofThread (s));
     s->savedThread = BOGUS_OBJPTR;
 
     GC_stack stk = (GC_stack) objptrToPointer (th->stack, s->heap->start);
 
     /* Find the limits of async */
-    GC_stack oriStk = (GC_stack) objptrToPointer (oriThrd->stack, s->heap->start);
+    oriStk = (GC_stack) objptrToPointer (oriThrd->stack, s->heap->start);
     pointer start = getStackBottom (s, oriStk) + startOffset;
     pointer end = getStackBottom (s, oriStk) + oriStk->used;
-    assert (start < end);
+    assert (start <= end);
 
     long int numBytes = end-start;
     assert (size == numBytes);
@@ -172,25 +186,47 @@ GC_thread GC_preemptAsync (GC_thread oriThrd, int startOffset) {
     return th;
 }
 
-void GC_prefixAndSwitchTo (GC_state s, GC_thread thrd) {
+void GC_prefixAndSwitchTo (GC_state s, pointer p) {
     /* TODO : get frameBottom by fixed offset */
 
     assert (s->atomicState > 0);
+    assert (p);
+
+    GC_thread thrd = (GC_thread)(p + offsetofThread (s));
 
     if (DEBUG_SPLICE)
         fprintf (stderr, "\nprefixAndSwitchTo [%d]\n", Proc_processorNumber (s));
 
     GC_stack stk = (GC_stack) objptrToPointer (thrd->stack, s->heap->start);
-    pointer p = getStackBottom (s, stk);
-    int size = stk->used;
+    unsigned int parasiteSize = stk->used;
 
-    assert (s->stackLimit > s->stackTop + size);
+    if (s->stackLimit > s->stackTop + parasiteSize) {
+        /* grow stack if needed */
+        getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
+        getThreadCurrent(s)->exnStack = s->exnStack;
+        getThreadCurrent(s)->bytesNeeded = getStackCurrent (s)->used + parasiteSize;
 
+        assert (s->savedThread == BOGUS_OBJPTR);
+        s->savedThread = pointerToObjptr((pointer)thrd - offsetofThread (s), s->heap->start);
+        ensureHasHeapBytesFreeAndOrInvariantForMutator (s, FALSE,
+                                                        TRUE, TRUE,
+                                                        0, 0, FALSE);
+
+        thrd = (GC_thread)(objptrToPointer(s->savedThread, s->heap->start) + offsetofThread (s));
+        s->savedThread = BOGUS_OBJPTR;
+
+        /* Assertions */
+        assert (s->stackLimit > s->stackTop + parasiteSize);
+        stk = (GC_stack) objptrToPointer (thrd->stack, s->heap->start);
+        assert (parasiteSize == stk->used);
+    }
+
+    pointer parasiteBottom = getStackBottom (s, stk);
     pointer start = GC_getFrameBottom ();
-    memcpy (start, p, size);
-    s->stackTop = start + size;
+    memcpy (start, parasiteBottom, parasiteSize);
+    s->stackTop = start + parasiteSize;
     if (DEBUG_SPLICE) {
-        fprintf (stderr, "\tprefixing frame of size %d\n", size);
+        fprintf (stderr, "\tprefixing frame of size %d\n", parasiteSize);
         fprintf (stderr, "\tnewStackTop = "FMTPTR"\n", (uintptr_t) s->stackTop);
         fflush (stderr);
     }
