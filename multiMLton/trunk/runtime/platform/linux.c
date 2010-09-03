@@ -20,8 +20,8 @@
  *  ia64: ucp->m_context.sc_ip & ~0x3UL
  *  s390: ucp->m_context.sregs->regs.psw.addr
  */
-static void catcher (__attribute__ ((unused)) int sig, 
-                     __attribute__ ((unused)) siginfo_t* sip, 
+static void catcher (__attribute__ ((unused)) int sig,
+                     __attribute__ ((unused)) siginfo_t* sip,
                      void* mystery) {
 #if (defined (__x86_64__))
 #define REG_INDEX(NAME) (offsetof(struct sigcontext, NAME) / sizeof(greg_t))

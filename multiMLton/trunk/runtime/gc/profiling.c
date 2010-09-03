@@ -358,12 +358,21 @@ void GC_handleSigProf (code_pointer pc) {
   GC_sourceSeqIndex sourceSeqsIndex;
 
   s = pthread_getspecific (gcstate_key);
-  if (Proc_processorNumber (s) == 0)
-      assert (s==gs0);
   if (DEBUG_PROFILE)
     fprintf (stderr, "GC_handleSigProf ("FMTPTR") [%d]\n", (uintptr_t)pc,
              Proc_processorNumber (s));
-  if (s->amInGC)
+
+  bool isSomeProcInGC = false;
+
+  /* XXX KC race condition between checking the amInGC flag and setting it on another processor */
+  for (int proc = 0; proc < s->numberOfProcs; proc ++) {
+      if ((s->procStates[proc]).amInGC == TRUE) {
+          isSomeProcInGC = true;
+          break;
+      }
+  }
+
+  if (isSomeProcInGC)
     sourceSeqsIndex = SOURCE_SEQ_GC;
   else {
     frameIndex = getCachedStackTopFrameIndex (s);
