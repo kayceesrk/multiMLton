@@ -15,7 +15,7 @@
 
 structure Channel : CHANNEL_EXTRA =
    struct
-      structure Assert = LocalAssert(val assert = true)
+      structure Assert = LocalAssert(val assert = false)
       structure Debug = LocalDebug(val debug = false)
 
       structure Q = ImpQueue
