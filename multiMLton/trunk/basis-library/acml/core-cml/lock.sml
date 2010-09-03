@@ -7,9 +7,6 @@ struct
     val cas = ParallelInternal.compareAndSwap
     val mayBeWaitForGC = _import "Parallel_maybeWaitForGC": unit -> unit;
 
-    val acquireLock = ref (fn () => ())
-    val releaseLock = ref (fn () => ())
-
     type cmlLock = (int ref * int ref)
 
     fun initCmlLock () =
@@ -24,10 +21,11 @@ struct
                               MLtonThread.atomicBegin ())
                           else
                             ()
-    fun getCmlLock (l, count) tid =
+    fun getCmlLock (l, count) ftid =
     let
       val _ =
       mayBeWaitForGC ()
+      val tid = ftid () (* Has to be this way to account for parasite reification at maybePreempt *)
     in
       if !l = tid then
         count := !count +1
@@ -35,13 +33,13 @@ struct
         (* Don't bang on CAS. spin on conditional *)
         (if !l < 0 then
           (if cas (l, ~1, tid) then
-            (!acquireLock)()
+            ()
           else
             (maybePreempt ();
-            getCmlLock (l, count) tid))
+            getCmlLock (l, count) ftid))
         else
           (maybePreempt ();
-          getCmlLock (l, count) tid))
+          getCmlLock (l, count) ftid))
     end
 
     fun releaseCmlLock (l,count) tid =
@@ -49,8 +47,7 @@ struct
           count := !count - 1
       else
         if cas (l, tid, ~1) then
-          ((!releaseLock)()
-           ; mayBeWaitForGC ())
+           mayBeWaitForGC ()
         else
           let
             val holder = Int.toString(!l)
@@ -62,5 +59,5 @@ struct
             raise Fail msg
           end
 
-  fun assertLock ((l,count), i, m) = Assert.assert' (m, fn () => !l = i)
+  fun assertLock ((l,count), i, m) = Assert.assert' (m^" "^(Int.toString (i)), fn () => !l = i)
 end

@@ -79,7 +79,7 @@ pointer GC_arrayAllocate (GC_state s,
       /* Local alloc may still require getting the lock, but we will release
          it before initialization. */
       ensureHasHeapBytesFreeAndOrInvariantForMutator (s, FALSE, FALSE, FALSE,
-                                                      0, bytesRequested, FALSE);
+                                                      0, bytesRequested, FALSE, FALSE);
     }
     assert (hasHeapBytesFree (s, 0, bytesRequested));
     frontier = s->frontier;

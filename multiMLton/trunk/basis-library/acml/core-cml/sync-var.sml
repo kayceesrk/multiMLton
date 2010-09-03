@@ -123,7 +123,7 @@ structure SyncVar : SYNC_VAR_EXTRA =
             val () = debug' ( concat [name, "(1)"]) (* NonAtomic *)
             val () = Assert.assertNonAtomic (fn () => concat ["SyncVar.", name, "(1)"])
             val () = S.atomicBegin()
-           val () = L.getCmlLock lock (S.tidNum())
+           val () = L.getCmlLock lock S.tidNum
             val () = debug' ( concat [name, "(2)"]) (* Atomic 1 *)
             val () = Assert.assertAtomic (fn () => concat ["SyncVar.", name, "(2)"], SOME 1)
             val () =
@@ -170,7 +170,7 @@ structure SyncVar : SYNC_VAR_EXTRA =
             val () = Assert.assertNonAtomic (fn () => concat ["SyncVar.", name, "(1)"])
             val () = S.atomicBegin()
            val curProcNum = pN ()
-           val () = L.getCmlLock lock (S.tidNum())
+           val () = L.getCmlLock lock S.tidNum
             val () = debug' ( concat [name, "(2)"]) (* Atomic 1 *)
             val () = Assert.assertAtomic (fn () => concat ["SyncVar.", name, "(2)"], SOME 1)
             val msg =
@@ -216,7 +216,7 @@ structure SyncVar : SYNC_VAR_EXTRA =
                   val () = Assert.assertAtomic (fn () => concat ["SyncVar.", name, ".doitFn"], NONE)
                   val () = debug' ( concat [name, "(3.2.1)"]) (* Atomic 1 *)
                   val () = Assert.assertAtomic (fn () => concat ["SyncVar.", name, "(3.2.1)"], SOME 1)
-                  val () = L.getCmlLock lock (S.tidNum())
+                  val () = L.getCmlLock lock S.tidNum
                   val x =
                     case !value of
                          NONE => (L.releaseCmlLock lock (S.tidNum()); NONE)
@@ -241,7 +241,7 @@ structure SyncVar : SYNC_VAR_EXTRA =
                   val () = debug' ( concat [name, "(3.2.1)"]) (* Atomic 1 *)
                   val () = Assert.assertAtomic (fn () => concat ["SyncVar.", name, "(3.2.1)"], SOME 1)
                   val curProcNum = pN ()
-                  val () = L.getCmlLock lock (S.tidNum())
+                  val () = L.getCmlLock lock S.tidNum
                   val msg =
                    case !value of
                         NONE => let
@@ -306,7 +306,7 @@ structure SyncVar : SYNC_VAR_EXTRA =
             val () = debug' ( concat [name, "(1)"]) (* NonAtomic *)
             val () = Assert.assertNonAtomic (fn () => concat ["SyncVar.", name, "(1)"])
             val () = S.atomicBegin()
-           val () = L.getCmlLock lock (S.tidNum ())
+           val () = L.getCmlLock lock S.tidNum
             val () = debug' ( concat [name, "(2)"]) (* Atomic 1 *)
             val () = Assert.assertAtomic (fn () => concat ["SyncVar.", name, "(2)"], SOME 1)
             val msg =

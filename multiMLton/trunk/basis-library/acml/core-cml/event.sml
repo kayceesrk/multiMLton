@@ -110,7 +110,7 @@ structure Event : EVENT_EXTRA =
             val () = Assert.assertAtomic' ("Event.atomicCVarSet", NONE)
             val () = debug' "atomicCVarSet" (* Atomic 1 *)
             val () = Assert.assertAtomic' ("Event.atomicCVarSet", SOME 1)
-            val () = L.getCmlLock lock (S.tidNum())
+            val () = L.getCmlLock lock S.tidNum
            val res =
             (case !state of
                CVAR_unset waiting =>
@@ -150,7 +150,7 @@ structure Event : EVENT_EXTRA =
                   val () = Assert.assertAtomic' ("Event.cvarGetEvt.doitFn", NONE)
                   val () = debug' "cvarGetEvt(3.1.1)" (* Atomic 1 *)
                   val () = Assert.assertAtomic' ("Event.cvarGetEvt(3.1.1)", SOME 1)
-                  val () = L.getCmlLock lock (S.tidNum())
+                  val () = L.getCmlLock lock S.tidNum
                   val res =
                     case !state of
                          CVAR_set _ => (state := CVAR_set 1;
@@ -171,7 +171,7 @@ structure Event : EVENT_EXTRA =
                   val () = Assert.assertAtomic' ("Event.cvarGetEvt.blockFn", NONE)
                   val () = debug' "cvarGetEvt(3.2.1)" (* Atomic 1 *)
                   val () = Assert.assertAtomic' ("Event.cvarGetEvt(3.2.1)", SOME 1)
-                  val () = L.getCmlLock lock (S.tidNum())
+                  val () = L.getCmlLock lock S.tidNum
                   val () =
                      (case !state of
                           CVAR_unset _ =>
@@ -218,7 +218,7 @@ structure Event : EVENT_EXTRA =
                   val () = Assert.assertAtomic' ("Event.cvarGetEvt.pollFn", NONE)
                   val () = debug' "cvarGetEvt(2)" (* Atomic 1 *)
                   val () = Assert.assertAtomic' ("Event.cvarGetEvt(2)", SOME 1)
-                 val () = L.getCmlLock lock (S.tidNum())
+                 val () = L.getCmlLock lock S.tidNum
                  val res =
                   case !state of
                      CVAR_set n =>

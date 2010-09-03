@@ -9,8 +9,8 @@
 structure Threadlet :> THREADLET =
 struct
 
-  structure Assert = LocalAssert(val assert = true)
-  structure Debug = LocalDebug(val debug = true)
+  structure Assert = LocalAssert(val assert = false)
+  structure Debug = LocalDebug(val debug = false)
 
   structure Prim = Primitive.MLton.Threadlet
   structure Pointer = Primitive.MLton.Pointer
@@ -55,8 +55,7 @@ struct
       val () = Assert.assertNonAtomic' "Threadlet.pSend(1)"
       val () = debug' "Threadlet.pSend(1)"
       val () = S.atomicBegin ()
-      val () = L.getCmlLock lock (S.tidNum())
-      val () = L.assertLock (lock, S.tidNum(), "M1")
+      val () = L.getCmlLock lock S.tidNum
       val () = Assert.assertAtomic' ("Threadlet.pSend(2)", SOME 1)
       val () = debug' "Threadlet.pSend(2)"
       val () =
@@ -90,13 +89,11 @@ struct
                                   let
                                     val _ = debug' "pSend-NONE-HOST"
                                     val procNum = B.processorNumber ()
-                                    val _ = L.assertLock (lock, S.tidNum(), "M2")
                                     val () =
                                         S.atomicSwitchToNext (
                                               fn st =>
                                                 (Q.enque (outQ, MS (st, msg, procNum))
-                                                ; L.assertLock (lock, S.tidNum(), "M3")
-                                                ; (L.releaseCmlLock lock (S.tidNum())) handle Fail m => raise Fail ("SNH:"^m)))
+                                                ; (L.releaseCmlLock lock (S.tidNum()))))
                                   in
                                     ()
                                   end
@@ -136,7 +133,7 @@ struct
       val () = Assert.assertNonAtomic' "Threadlet.pRecv(1)"
       val () = debug' "Threadlet.pRecv(1)"
       val () = S.atomicBegin ()
-      val () = L.getCmlLock lock (S.tidNum())
+      val () = L.getCmlLock lock S.tidNum
       val () = Assert.assertAtomic' ("Threadlet.pRecv(2)", SOME 1)
       val () = debug' "Threadlet.pRecv(2)"
       val msg = (case Q.deque (outQ) of
@@ -144,7 +141,7 @@ struct
                                       AS (thlet, msg) =>
                                         let
                                           val _ = debug' "pRecv-SOME-AS"
-                                          val _ = L.releaseCmlLock lock (S.tidNum()) handle Fail m => raise Fail ("RSP"^m)
+                                          val _ = L.releaseCmlLock lock (S.tidNum())
                                           val _ = S.atomicPrefixAndSwitchTo (thlet)
                                           (* Atomic 0 *)
                                         in
@@ -173,8 +170,7 @@ struct
                                             S.atomicSwitchToNext (
                                                 fn rt =>
                                                   (Q.enque (inQ, MR (rt, procNum))
-                                                  ; L.releaseCmlLock lock (S.tidNum())) handle Fail m => raise Fail ("RNH"^m)
-                                                  )
+                                                  ; L.releaseCmlLock lock (S.tidNum())))
                                         in
                                           msg
                                         end

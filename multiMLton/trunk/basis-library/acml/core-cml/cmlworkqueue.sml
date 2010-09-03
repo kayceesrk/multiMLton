@@ -54,7 +54,7 @@ struct
   (* For spawning in a round robin fashion *)
   val curPtr = ref 0
 
-  fun lock p = L.getCmlLock (A.unsafeSub (locks, p)) (pN ())
+  fun lock p = L.getCmlLock (A.unsafeSub (locks, p)) (pN)
   fun unlock p = L.releaseCmlLock (A.unsafeSub (locks, p)) (pN ())
 
   fun finishWork () =

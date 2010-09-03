@@ -49,7 +49,7 @@ void GC_switchToThread (GC_state s, pointer p, size_t ensureBytesFree) {
     //switchToSignalHandlerThreadIfNonAtomicAndSignalPending (s);
     ensureHasHeapBytesFreeAndOrInvariantForMutator (s, FALSE,
                                                     TRUE, TRUE,
-                                                    0, 0, FALSE);
+                                                    0, 0, FALSE, FALSE);
 
     endAtomic (s);
     assert (invariantForMutatorFrontier(s));

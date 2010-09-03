@@ -33,7 +33,7 @@ structure TransID : TRANS_ID =
         fun cas (v,t1,t2) =
           let
             val _ = S.atomicBegin ()
-            val _ = L.getCmlLock lock (S.tidNum ())
+            val _ = L.getCmlLock lock S.tidNum
             val res = !v
             val _ = if (!v) = t1 then
                        (v := t2)

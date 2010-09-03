@@ -359,7 +359,8 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
                                                      bool ensureStack,
                                                      size_t oldGenBytesRequested,
                                                      size_t nurseryBytesRequested,
-                                                     bool fromGCCollect) {
+                                                     bool fromGCCollect,
+                                                     bool forceStackGrowth) {
   bool stackTopOk;
   size_t stackBytesRequested;
 
@@ -371,11 +372,14 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
   }
 
   /* XXX (sort of) copied from performGC */
-  stackTopOk = (not ensureStack) or invariantForMutatorStack (s);
+  stackTopOk = (not forceStackGrowth) and ((not ensureStack) or invariantForMutatorStack (s));
   stackBytesRequested =
     stackTopOk
     ? 0
     : sizeofStackWithHeader (s, sizeofStackGrowReserved (s, getStackCurrent (s)));
+
+  if (forceStackGrowth && DEBUG_SPLICE)
+      fprintf (stderr, "stackBytesRequested = %ld\n", stackBytesRequested);
 
   /* try to satisfy (at least part of the) request locally */
   maybeSatisfyAllocationRequestLocally (s, nurseryBytesRequested + stackBytesRequested);
@@ -482,7 +486,7 @@ void GC_collect (GC_state s, size_t bytesRequested, bool force,
 
   ensureHasHeapBytesFreeAndOrInvariantForMutator (s, force,
                                                   TRUE, TRUE,
-                                                  0, 0, TRUE);
+                                                  0, 0, TRUE, FALSE);
 }
 
 pointer FFI_getOpArgsResPtr (GC_state s) {

@@ -14,7 +14,7 @@
 
 structure Scheduler : SCHEDULER =
    struct
-      structure Assert = LocalAssert(val assert = true)
+      structure Assert = LocalAssert(val assert = false)
       structure GlobalDebug = Debug
       structure Debug = LocalDebug(val debug = false)
       structure Pointer = Primitive.MLton.Pointer
@@ -387,8 +387,7 @@ structure Scheduler : SCHEDULER =
         val _ = debug'' ("Reifying host from parasite. "^
                          "NumThreads = "^(Int.toString(!B.numThreadsLive))^
                          ". curtid = "^(Int.toString(tidNum()))^
-                         ". newtid = "^(TID.tidToString(tid))^
-                         ". hasNoLock = "^(Bool.toString (TID.hasNoLock (getCurThreadId()))))
+                         ". newtid = "^(TID.tidToString(tid)))
         (* creating a container for async to run *)
         val nT = T.new (wf (fn () => debug' "Dummy thread") tid)
         val nRt = T.prepare (nT, ())
@@ -411,9 +410,11 @@ structure Scheduler : SCHEDULER =
             val host' = case thrdType of
                           PARASITE => if ((not (proceedToExtractParasite (primHost, pBottom))) orelse (pBottom=0)) then
                                         let
-                                          val _ = debug'' "Hello"
+                                          val tid = B.getCurThreadId ()
+                                          val RTHRD (tid', host') = f (RTHRD (tid, host))
+                                          val () = B.setCurThreadId tid'
                                         in
-                                          host
+                                          host'
                                         end
                                       else
                                         let
@@ -465,7 +466,5 @@ structure Scheduler : SCHEDULER =
 
       val _ = reset false
 
-      val _ = Lock.acquireLock := (fn () => ThreadID.acquireLock (getCurThreadId ()))
-      val _ = Lock.releaseLock := (fn () => ThreadID.releaseLock (getCurThreadId ()))
 
    end

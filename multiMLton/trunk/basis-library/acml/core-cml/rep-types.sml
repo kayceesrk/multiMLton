@@ -56,9 +56,7 @@ structure RepTypes =
                  threadType : thread_type ref,
                  (* Pointer to the threadlet sitting below us *)
                  (* It is an offset from the bottom of the stack *)
-                 parasiteBottom : int ref,
-                 (* is true if the thread holds a lock *)
-                 hasLock : int ref
+                 parasiteBottom : int ref
                  }
 
       (** threads --- see scheduler.sml and threads.sml **)

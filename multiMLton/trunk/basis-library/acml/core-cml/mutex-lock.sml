@@ -9,7 +9,7 @@ struct
 
   fun getLock lock =
     (MLtonThread.atomicBegin ();
-     L.getCmlLock lock (S.tidNum ()))
+     L.getCmlLock lock S.tidNum)
 
   fun releaseLock lock =
     (L.releaseCmlLock lock (S.tidNum());

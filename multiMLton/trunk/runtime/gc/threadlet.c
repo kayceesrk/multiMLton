@@ -198,35 +198,41 @@ void GC_prefixAndSwitchTo (GC_state s, pointer p) {
         fprintf (stderr, "\nprefixAndSwitchTo [%d]\n", Proc_processorNumber (s));
 
     GC_stack stk = (GC_stack) objptrToPointer (thrd->stack, s->heap->start);
-    unsigned int parasiteSize = stk->used;
 
-    if (s->stackLimit > s->stackTop + parasiteSize) {
+    if (s->stackLimit <= s->stackTop + stk->used) {
+        if (DEBUG_SPLICE) {
+            fprintf (stderr, "\tGrowingStack\n");
+            fprintf (stderr, "\t\tstackTop = "FMTPTR"\n", (uintptr_t)s->stackTop);
+            fprintf (stderr, "\t\tstackLimit = "FMTPTR"\n", (uintptr_t)s->stackLimit);
+            fprintf (stderr, "\t\tparasiteSize = %ld\n", stk->used);
+        }
+
+
         /* grow stack if needed */
         getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
         getThreadCurrent(s)->exnStack = s->exnStack;
-        getThreadCurrent(s)->bytesNeeded = getStackCurrent (s)->used + parasiteSize;
+        getThreadCurrent(s)->bytesNeeded = 0;
 
         assert (s->savedThread == BOGUS_OBJPTR);
         s->savedThread = pointerToObjptr((pointer)thrd - offsetofThread (s), s->heap->start);
         ensureHasHeapBytesFreeAndOrInvariantForMutator (s, FALSE,
                                                         TRUE, TRUE,
-                                                        0, 0, FALSE);
+                                                        0, 0, FALSE, TRUE);
 
         thrd = (GC_thread)(objptrToPointer(s->savedThread, s->heap->start) + offsetofThread (s));
         s->savedThread = BOGUS_OBJPTR;
 
         /* Assertions */
-        assert (s->stackLimit > s->stackTop + parasiteSize);
         stk = (GC_stack) objptrToPointer (thrd->stack, s->heap->start);
-        assert (parasiteSize == stk->used);
+        assert (s->stackLimit > s->stackTop + stk->used);
     }
 
     pointer parasiteBottom = getStackBottom (s, stk);
     pointer start = GC_getFrameBottom ();
-    memcpy (start, parasiteBottom, parasiteSize);
-    s->stackTop = start + parasiteSize;
+    memcpy (start, parasiteBottom, stk->used);
+    s->stackTop = start + stk->used;
     if (DEBUG_SPLICE) {
-        fprintf (stderr, "\tprefixing frame of size %d\n", parasiteSize);
+        fprintf (stderr, "\tprefixing frame of size %ld\n", stk->used);
         fprintf (stderr, "\tnewStackTop = "FMTPTR"\n", (uintptr_t) s->stackTop);
         fflush (stderr);
     }

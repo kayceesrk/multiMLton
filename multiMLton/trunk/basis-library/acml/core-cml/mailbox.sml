@@ -63,7 +63,7 @@ structure Mailbox : MAILBOX_EXTRA =
             val () = Assert.assertNonAtomic' "Mailbox.send"
             val () = Assert.assertNonAtomic' "Mailbox.send(1)"
             val () = S.atomicBegin ()
-            val () = L.getCmlLock lock (S.tidNum())
+            val () = L.getCmlLock lock S.tidNum
             val () = debug' "Mailbox.send(2)" (* Atomic 1 *)
             val () = Assert.assertAtomic' ("Mailbox.send(2)", SOME 1)
             val () =
@@ -152,7 +152,7 @@ structure Mailbox : MAILBOX_EXTRA =
             val () = debug' "Mailbox.recv(1)" (* NonAtomic *)
             val () = Assert.assertNonAtomic' "Mailbox.recv(1)"
             val () = S.atomicBegin ()
-           val () = L.getCmlLock lock (S.tidNum())
+           val () = L.getCmlLock lock S.tidNum
             val () = debug' "Mailbox.recv(2)" (* Atomic 1 *)
             val () = Assert.assertAtomic' ("Mailbox.recv(2)", SOME 1)
            val curProcNum = pN ()
@@ -179,7 +179,7 @@ structure Mailbox : MAILBOX_EXTRA =
         fun doitFn (_) =
           let
             val () = Assert.assertAtomic' ("Mailbox.recvEvt.doitFn(1)", SOME 1)
-            val _ = L.getCmlLock lock (S.tidNum())
+            val _ = L.getCmlLock lock S.tidNum
             val x =
               case !state of
                    EMPTY _ => (L.releaseCmlLock lock (S.tidNum()); NONE)
@@ -197,7 +197,7 @@ structure Mailbox : MAILBOX_EXTRA =
           let
             val () = Assert.assertAtomic' ("Mailbox.recvEvt.blockFn(1)", SOME 1)
             val curProcNum = pN ()
-            val _ = L.getCmlLock lock (S.tidNum ())
+            val _ = L.getCmlLock lock S.tidNum
             val msg =
                 case !state of
                   EMPTY q =>
@@ -236,7 +236,7 @@ structure Mailbox : MAILBOX_EXTRA =
       fun recvPoll (MB (state, lock)) =
       let val msg=
          (S.atomicBegin()
-          ; L.getCmlLock lock (S.tidNum ())
+          ; L.getCmlLock lock S.tidNum
           ; case !state of
                EMPTY _ => (L.releaseCmlLock lock (S.tidNum()); S.atomicEnd(); NONE)
              | NONEMPTY (_, q) => SOME (getMsg (state, q, lock)))

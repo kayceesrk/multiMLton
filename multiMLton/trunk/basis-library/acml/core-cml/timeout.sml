@@ -100,7 +100,7 @@ structure TimeOut : TIME_OUT_EXTRA =
                let
                   val () = debug' "timeOutEvt(3.2.1)" (* Atomic 1 *)
                   val () = Assert.assertAtomic' ("TimeOut.timeOutEvt(3.2.1)", SOME 1)
-                  val _ = L.getCmlLock lock (S.tidNum())
+                  val _ = L.getCmlLock lock S.tidNum
                   val () =
                      S.atomicSwitch
                      (fn t =>
@@ -141,7 +141,7 @@ structure TimeOut : TIME_OUT_EXTRA =
                let
                   val () = debug' "atTimeEvt(3.2.1)" (* Atomic 1 *)
                   val () = Assert.assertAtomic' ("TimeOut.atTimeEvt(3.2.1)", SOME 1)
-                  val _ = L.getCmlLock lock (S.tidNum())
+                  val _ = L.getCmlLock lock S.tidNum
                   val () =
                      S.atomicSwitch
                      (fn t =>
@@ -181,7 +181,7 @@ structure TimeOut : TIME_OUT_EXTRA =
              if TQ.empty timeQ' then NONE
              else
                let
-                 val _ = L.getCmlLock lock (S.tidNum())
+                 val _ = L.getCmlLock lock S.tidNum
                  val readied = ref false
                  val timeQ' = TQ.clean (timeQ', cleaner (fn () => readied := true))
                  val () = timeQ := timeQ'

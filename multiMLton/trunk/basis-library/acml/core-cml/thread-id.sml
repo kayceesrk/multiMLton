@@ -38,9 +38,7 @@ structure ThreadID : THREAD_ID_EXTRA =
               props = ref [],
               dead = CVar.new (),
               threadType = ref HOST,
-              parasiteBottom = ref 0,
-              hasLock = ref 0
-              }
+              parasiteBottom = ref 0}
 
       local
          val tidCounter = ref 0
@@ -69,7 +67,4 @@ structure ThreadID : THREAD_ID_EXTRA =
           ; done_comm := false)
       fun isMarked (TID{done_comm, ...}) = !done_comm
 
-      fun acquireLock (TID{hasLock, ...}) = (Assert.assert' ("acquireLock", fn () => !hasLock >= 0); hasLock := !hasLock + 1)
-      fun releaseLock (TID{hasLock, ...}) = (Assert.assert' ("releaseLock", fn () => !hasLock > 0); hasLock := !hasLock - 1)
-      fun hasNoLock (TID{hasLock, ...}) = (Assert.assert' ("hasNoLock", fn () => !hasLock >=0); !hasLock = 0)
    end

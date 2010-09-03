@@ -25,7 +25,8 @@ static void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s,
                                                             bool ensureStack,
                                                             size_t oldGenBytesRequested,
                                                             size_t nurseryBytesRequested,
-                                                            bool handlesSignals);
+                                                            bool handlesSignals,
+                                                            bool forceStackGrowth);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */
 
