@@ -19,19 +19,10 @@ structure RepTypes =
       datatype queue_prio = PRI | SEC
       datatype thread_type = PARASITE | HOST
 
-      (** transaction IDs -- see trans-id.sml *)
-      datatype trans_id = TXID of (
-          {txst : trans_id_state ref,
-          cas : (trans_id_state ref * trans_id_state * trans_id_state) -> trans_id_state})
-      and trans_id_state =
-         WAITING
-       | CLAIMED
-       | SYNCHED
-
       (** condition variables --- see cvar.sml and events.sml *)
       datatype cvar = CVAR of (cvar_state ref * L.cmlLock)
       and cvar_state =
-         CVAR_unset of {transId : trans_id,
+         CVAR_unset of {transId : int ref, (* XXX KC - Me wants macros *)
                         cleanUp : unit -> unit,
                         thread : rdy_thread,
                         procNum : int} list
@@ -56,7 +47,9 @@ structure RepTypes =
                  threadType : thread_type ref,
                  (* Pointer to the threadlet sitting below us *)
                  (* It is an offset from the bottom of the stack *)
-                 parasiteBottom : int ref
+                 parasiteBottom : int ref,
+                 (* Whether to preempt a parasite *)
+                 preemptParasite : bool ref
                  }
 
       (** threads --- see scheduler.sml and threads.sml **)
@@ -67,7 +60,7 @@ structure RepTypes =
       datatype sync_status = DOIT_FAIL | DOIT_SUCCESS
       datatype 'a status =
          ENABLED of {prio : int, doitFn : ((sync_status thread option) -> 'a option)}
-       | BLOCKED of {transId : trans_id,
+       | BLOCKED of {transId : int ref,
                      cleanUp : unit -> unit,
                      next : unit -> rdy_thread,
                      parentThread : (unit -> rdy_thread) option} -> 'a
@@ -76,7 +69,6 @@ structure RepTypes =
          BEVT of 'a base list
        | CHOOSE of 'a sevt list
        | GUARD of unit -> 'a sevt
-       | WNACK of unit sevt -> 'a sevt
 
        datatype ('a,'b) aevt =
             PAIR of ('a sevt * 'b sevt)
@@ -86,6 +78,4 @@ structure RepTypes =
           | AEVT of ('a,'b) aevt
 
        datatype placement = CUR_PROC | ANY_PROC
-
-
    end

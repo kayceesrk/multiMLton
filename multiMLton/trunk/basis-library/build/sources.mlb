@@ -416,20 +416,16 @@ in
         ann "allowFFI true" in
             ../acml/core-cml/scheduler.sig
             ../acml/core-cml/scheduler.sml
-            ../acml/core-cml/trans-id.sig
-            ../acml/core-cml/trans-id.sml
         end
         ../acml/core-cml/event-type.sig
         ../acml/core-cml/event-type.sml
-        ../acml/core-cml/event.sig
-        ../acml/core-cml/event.sml
+        ../acml/core-cml/pevent.sig
+        ../acml/core-cml/pevent.sml
         ../acml/core-cml/thread.sig
         ../acml/core-cml/thread.sml
-        ../acml/core-cml/channel.sig
-        ../acml/core-cml/channel.sml
         ann "allowFFI true" in
-            ../acml/core-cml/threadlet.sig
-            ../acml/core-cml/threadlet.sml
+            ../acml/core-cml/pchannel.sig
+            ../acml/core-cml/pchannel.sml
         end
         ../acml/core-cml/timeout.sig
         ../acml/core-cml/timeout.sml

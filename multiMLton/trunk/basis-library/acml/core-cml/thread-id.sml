@@ -38,7 +38,8 @@ structure ThreadID : THREAD_ID_EXTRA =
               props = ref [],
               dead = CVar.new (),
               threadType = ref HOST,
-              parasiteBottom = ref 0}
+              parasiteBottom = ref 0,
+              preemptParasite = ref true}
 
       local
          val tidCounter = ref 0

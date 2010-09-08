@@ -37,6 +37,14 @@ structure Scheduler : SCHEDULER =
       datatype rdy_thread = datatype RepTypes.rdy_thread
       datatype thread_type = datatype RepTypes.thread_type
 
+      datatype 'a recv_threadlet = R_PARASITE of (threadlet * (unit -> 'a) ref)
+                                | R_HOST of ('a S.thread * int)
+
+      datatype 'a send_threadlet = S_PARASITE of (threadlet * 'a)
+                                | S_HOST of (unit S.thread * 'a * int)
+
+      datatype rdy_threadlet = RDY_PARASITE of (threadlet * int)
+                             | RDY_HOST of rdy_thread
 
       fun prep (THRD (tid, t)) = RTHRD (tid, T.prepare (t, ()))
       fun prepVal (THRD (tid, t), v) = RTHRD (tid, T.prepare (t, v))
@@ -174,7 +182,7 @@ structure Scheduler : SCHEDULER =
        *)
       fun atomicPrefixAndSwitchToSpecial (thlet) = atomicPrefixAndSwitchToHelper (thlet, PREFIX_SPECIAL)
 
-      fun async f =
+      fun parasite f =
       let
         fun doit () =
         let
@@ -225,7 +233,7 @@ structure Scheduler : SCHEDULER =
             | SOME thrd => enque1 thrd true)
 
       (**
-      * Joins together an async to a runnable CML thread
+      * Joins together an parasite to a runnable CML thread
       *
       * @param parsite
       * @param runnable CML thread
@@ -373,7 +381,7 @@ structure Scheduler : SCHEDULER =
       val proceedToExtractParasite = _import "GC_proceedToPreempt" : primThread * int -> bool;
 
       (**
-      * Inflate and async to a CML thread
+      * Inflate and parasite to a CML thread
       *
       * @param parasite
       *
@@ -388,7 +396,7 @@ structure Scheduler : SCHEDULER =
                          "NumThreads = "^(Int.toString(!B.numThreadsLive))^
                          ". curtid = "^(Int.toString(tidNum()))^
                          ". newtid = "^(TID.tidToString(tid)))
-        (* creating a container for async to run *)
+        (* creating a container for parasite to run *)
         val nT = T.new (wf (fn () => debug' "Dummy thread") tid)
         val nRt = T.prepare (nT, ())
       in
@@ -399,6 +407,13 @@ structure Scheduler : SCHEDULER =
                                         PARASITE => "parasite"
                                       | _ => "host"
 
+      fun toPreemptParasite () =
+      let
+        val TID.TID {preemptParasite, ...} = B.getCurThreadId ()
+      in
+        !preemptParasite
+      end
+
       fun unwrap (f : rdy_thread -> rdy_thread) (host: T.Runnable.t) : T.Runnable.t =
          let
             val () = debug' "Scheduler.unwrap"
@@ -408,7 +423,7 @@ structure Scheduler : SCHEDULER =
             val primHost = T.toPrimitive host
             val host = T.fromPrimitive primHost
             val host' = case thrdType of
-                          PARASITE => if ((not (proceedToExtractParasite (primHost, pBottom))) orelse (pBottom=0)) then
+                          PARASITE => if ((not (proceedToExtractParasite (primHost, pBottom))) orelse (pBottom=0) orelse (not (toPreemptParasite ()))) then
                                         let
                                           val tid = B.getCurThreadId ()
                                           val RTHRD (tid', host') = f (RTHRD (tid, host))
@@ -465,6 +480,21 @@ structure Scheduler : SCHEDULER =
          end
 
       val _ = reset false
+
+    fun disableParasitePreemption () =
+    let
+      val TID.TID {preemptParasite, ...} = B.getCurThreadId ()
+    in
+      preemptParasite := false
+    end
+
+    fun enableParasitePreemption () =
+    let
+      val TID.TID {preemptParasite, ...} = B.getCurThreadId ()
+    in
+      preemptParasite := true
+    end
+
 
 
    end

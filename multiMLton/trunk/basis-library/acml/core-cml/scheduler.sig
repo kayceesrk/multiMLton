@@ -19,6 +19,10 @@ signature SCHEDULER =
       type rdy_thread = RepTypes.rdy_thread
       type threadlet = Primitive.MLton.Thread.thread
 
+      type 'a recv_threadlet
+      type 'a send_threadlet
+      type rdy_threadlet
+
       val prep : unit thread -> rdy_thread
       val prepVal : 'a thread * 'a -> rdy_thread
       val prepFn : 'a thread * (unit -> 'a) -> rdy_thread
@@ -32,7 +36,7 @@ signature SCHEDULER =
       val setParasiteBottom : int -> unit
       val setThreadletType : thread_type -> unit
 
-      val async : (unit -> unit) -> unit
+      val parasite : (unit -> unit) -> unit
       val atomicPrefixAndSwitchTo : Primitive.MLton.Thread.thread -> unit
       val finishWork : unit -> bool
 
@@ -75,6 +79,9 @@ signature SCHEDULER =
       val reifyHostFromParasite : threadlet -> rdy_thread
 
      val getThreadType : unit -> RepTypes.thread_type
+
+     val disableParasitePreemption : unit -> unit
+     val enableParasitePreemption : unit -> unit
 
 
    end

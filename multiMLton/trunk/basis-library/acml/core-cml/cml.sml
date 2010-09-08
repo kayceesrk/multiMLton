@@ -14,15 +14,17 @@ structure MLtonPCML : MLTON_PCML =
       open Version
       open Thread
       open EventType
-      open Event
+      (* open Event
       open Channel
-      open TimeOut
+      open TimeOut *)
+      open PEvent
+      open PChannel
       structure MutexLock : MUTEX_LOCK = MutexLock
-      structure SyncVar : SYNC_VAR = SyncVar
+      (* structure SyncVar : SYNC_VAR = SyncVar
       structure Mailbox : MAILBOX = Mailbox
       structure NonBlocking: NON_BLOCKING = NonBlocking
       structure SimpleRPC : SIMPLE_RPC = SimpleRPC
-      structure Multicast : MULTICAST = Multicast
-      structure Threadlet : THREADLET = Threadlet
+      structure Multicast : MULTICAST = Multicast *)
+      structure PChannel : P_CHANNEL = PChannel
       structure Aux : AUX = Aux
    end

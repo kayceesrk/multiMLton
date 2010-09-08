@@ -24,6 +24,6 @@ signature MLTON_PCML =
      structure NonBlocking : NON_BLOCKING
      structure SimpleRPC : SIMPLE_RPC
      structure Multicast : MULTICAST
-     structure Threadlet : THREADLET
+     structure PChannel : P_CHANNEL
      structure Aux : AUX
   end

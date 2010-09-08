@@ -46,7 +46,7 @@ signature EVENT_EXTRA =
       type 'a status
 
       val enabled : {prio : int, doitFn : (sync_status Scheduler.thread option) -> 'a option} -> 'a status
-      val blocked : ({transId : TransID.trans_id,
+      val blocked : ({transId : int ref,
                       cleanUp : unit -> unit,
                       next : unit -> Scheduler.rdy_thread,
                       parentThread : (unit -> Scheduler.rdy_thread) option} -> 'a) -> 'a status
