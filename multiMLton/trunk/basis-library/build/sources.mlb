@@ -410,6 +410,8 @@ in
 		../pacml/core-cml/scheduler.sml
 		../pacml/core-cml/thread.sig
 		../pacml/core-cml/thread.sml
+		../pacml/core-cml/channel.sig
+		../pacml/core-cml/channel.sml
 
 
 		../pacml/core-cml/timeout.sig
@@ -420,13 +422,11 @@ in
 		end
 
 
-		../pacml/core-cml/dummy.sml
+		../pacml/core-cml/pacml.sig
+		../pacml/core-cml/pacml.sml
     in
-        signature MLTON_PCML
-        structure MLtonPCML
-
-        signature MLTON_RUN_PCML
-        structure MLtonRunPCML
+        signature MLTON_PACML
+        structure MLtonPacml
 
     end
 

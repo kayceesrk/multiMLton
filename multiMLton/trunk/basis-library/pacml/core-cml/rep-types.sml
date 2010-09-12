@@ -67,10 +67,6 @@ structure RepTypes =
       and rdy_thread = H_RTHRD of runnable_host
                     |  P_RTHRD of parasite
 
-      (* Value bearing thread -- +1 *)
-      datatype 'a val_thread = P_VTHRD of (parasite * 'a)
-                             | H_VTHRD of (MLtonThread.Runnable.t * 'a)
-
       (** events --- see events.sml **)
       datatype sync_status = DOIT_FAIL | DOIT_SUCCESS
 

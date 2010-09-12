@@ -52,7 +52,16 @@ struct
           NONE => ()
         | SOME t => enque1 t)
 
-  fun ready (t : rdy_thread) = raise Fail "ready not implemented"
+  fun atomicReady (rt : rdy_thread) =
+    (Assert.assertAtomic' ("Scheduler.atomicReady(1)", SOME 1)
+    ; case rt of
+      H_RTHRD (rhost) => (SQ.enque (rhost, R.PRI); atomicEnd ())
+    | P_RTHRD (par) => PT.atomicPrefixAndSwitchTo (par) (* Implicit atomic end *)
+    ; Assert.assertNonAtomic (fn () => "Scheduler.atomicReady(2)"))
+
+  fun ready (rt : rdy_thread) =
+    (atomicBegin ();
+     atomicReady (rt))
 
   fun reset running =
       (if running then debug' "Scheduler.reset true"
@@ -64,16 +73,6 @@ struct
     (ignore (Config.incrementNumLiveThreads ())
     ; enque1 t)
 
-  fun atomicReady (rt : rdy_thread) =
-    (Assert.assertAtomic' ("Scheduler.atomicReady(1)", SOME 1)
-    ; case rt of
-      H_RTHRD (rhost) => (SQ.enque (rhost, R.PRI); atomicEnd ())
-    | P_RTHRD (par) => PT.atomicPrefixAndSwitchTo (par) (* Implicit atomic end *)
-    ; Assert.assertNonAtomic (fn () => "Scheduler.atomicReady(2)"))
-
-  fun ready (rt : rdy_thread) =
-    (atomicBegin ();
-     atomicReady (rt))
 
 
   fun unwrap (f : runnable_host -> runnable_host) (reify : parasite -> runnable_host) (host: MT.Runnable.t) : MT.Runnable.t =

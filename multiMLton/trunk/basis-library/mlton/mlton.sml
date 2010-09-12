@@ -81,8 +81,7 @@ structure LargeWord =
       open LargeWord
       type t = word
    end
-structure PCML = MLtonPCML
-structure RunPCML = MLtonRunPCML
+structure Pacml = MLtonPacml
 structure Platform = MLtonPlatform
 structure Pointer = MLtonPointer
 structure ProcEnv = MLtonProcEnv
