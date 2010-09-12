@@ -116,8 +116,8 @@ structure Handler =
 datatype handler = datatype Handler.t
 
 local
-   val numProcessors = ParallelInternal.numberOfProcessors
-   val procNum = ParallelInternal.processorNumber
+   val numProcessors = PacmlFFI.numberOfProcessors
+   val procNum = PacmlFFI.processorNumber
 
    (* XXX KC : per-thread state *)
    val r = Array.tabulate(numProcessors, fn _ => ref C_Int.zero)
@@ -137,13 +137,13 @@ val (getHandler, setHandler, handlers) =
       val localhandlers = fn () => Array.tabulate (C_Int.toInt Prim.NSIG, initHandler o fromInt)
       (* A localHandlers array for each processor *)
       val handlersArr = Array.tabulate
-      (ParallelInternal.numberOfProcessors, fn _ => localhandlers ())
+      (PacmlFFI.numberOfProcessors, fn _ => localhandlers ())
      fun init h =
          Cleaner.addNew
          (Cleaner.atLoadWorld, fn () =>
           Array.modifyi (initHandler o fromInt o #1) h)
 
-     val numProc = ParallelInternal.numberOfProcessors
+     val numProc = PacmlFFI.numberOfProcessors
      (* KC Used for CML *)
      fun setHandlerForAll h s =
      let
@@ -157,7 +157,7 @@ val (getHandler, setHandler, handlers) =
      (* Initialize localHandlers *)
      val _ = Array.app init handlersArr
 
-     val procNum = ParallelInternal.processorNumber
+     val procNum = PacmlFFI.processorNumber
    in
       (fn s: t => Array.sub (Array.unsafeSub(handlersArr, procNum()), toInt s),
        fn (s: t, h) => if Primitive.MLton.Profile.isOn andalso s = prof
@@ -221,7 +221,7 @@ structure Handler =
                 let
                    val mask = Mask.getBlocked ()
                    val () = Mask.block (handled ())
-                   val proc = ParallelInternal.processorNumber()
+                   val proc = PacmlFFI.processorNumber()
                    val fs =
                       case Array.unsafeSub(gcHandlers,proc) of
                          Handler f => if Prim.isPendingGC () <> C_Int.zero
@@ -293,7 +293,7 @@ fun suspend m =
 
 fun handleGC f =
    (Prim.handleGC ()
-    ; Array.update (gcHandlers,ParallelInternal.processorNumber (),
+    ; Array.update (gcHandlers,PacmlFFI.processorNumber (),
     Handler.simple f))
 
 end

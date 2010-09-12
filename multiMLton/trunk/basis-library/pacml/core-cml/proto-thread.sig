@@ -1,0 +1,37 @@
+signature PROTO_THREAD =
+sig
+  include CRITICAL
+
+  type thread_id = ThreadID.thread_id
+  type thread_type = ThreadID.thread_type
+  type 'a thread = 'a RepTypes.thread
+  type rdy_thread = RepTypes.rdy_thread
+  type runnable_host = RepTypes.runnable_host
+
+  (* Continuation management *)
+  val prepend : 'a thread * ('b -> 'a) -> 'b thread
+  val prep : unit thread -> rdy_thread
+  val prepVal : 'a thread * 'a -> rdy_thread
+  val prepFn : 'a thread * (unit -> 'a) -> rdy_thread
+
+  (* Manipulate current thread info *)
+  val getThreadState : unit -> (thread_type * int)
+  val setThreadState : (thread_type * int) -> unit
+  val getThreadType : unit -> thread_type
+  val setThreadType : thread_type -> unit
+  val getParasiteBottom : unit -> int
+  val setParasiteBottom : int -> unit
+  val enableParasitePreemption : unit -> unit
+  val disableParasitePreemption : unit -> unit
+
+  (* Parasite manipulation *)
+  val jumpDown : int -> unit
+  val copyParasite : int -> RepTypes.parasite
+  val toPreemptParasite : unit -> bool
+  val proceedToExtractParasite : RepTypes.primHost * int -> bool
+  val extractParasiteFromHost : RepTypes.primHost * int -> RepTypes.parasite
+  val atomicPrefixAndSwitchToSpecial : RepTypes.parasite -> unit
+  val atomicPrefixAndSwitchTo : RepTypes.parasite -> unit
+
+  val getRunnableHost : rdy_thread -> runnable_host
+end

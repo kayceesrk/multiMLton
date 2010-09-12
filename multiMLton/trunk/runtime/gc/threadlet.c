@@ -56,7 +56,7 @@ int GC_getCopiedSize (void) {
     return s->copiedSize;
 }
 
-GC_thread GC_copyFrames (int startOffset) {
+GC_thread GC_copyParasite (int startOffset) {
     /* TODO : Avoid this computation and subtract fixed offset
      * from stackTop to get end pointer */
     GC_state s = pthread_getspecific (gcstate_key);
@@ -71,7 +71,7 @@ GC_thread GC_copyFrames (int startOffset) {
     GC_stack stk = (GC_stack) objptrToPointer (th->stack, s->heap->start);
 
     if (DEBUG_SPLICE) {
-        fprintf (stderr, "\ncopyFrames [%d]\n", Proc_processorNumber (s));
+        fprintf (stderr, "\ncopyParasite [%d]\n", Proc_processorNumber (s));
     }
 
     start = s->stackBottom + startOffset;
@@ -122,7 +122,7 @@ void GC_printStackTop (void) {
     fflush (stderr);
 }
 
-bool GC_proceedToPreempt (pointer p, int startOffset) {
+bool GC_proceedToExtract (pointer p, int startOffset) {
     GC_state s = pthread_getspecific (gcstate_key);
     GC_thread oriThrd = (GC_thread) (p + offsetofThread (s));
 
@@ -134,7 +134,7 @@ bool GC_proceedToPreempt (pointer p, int startOffset) {
     return true;
 }
 
-GC_thread GC_preemptAsync (pointer p, int startOffset) {
+GC_thread GC_extractParasite (pointer p, int startOffset) {
     GC_state s = pthread_getspecific (gcstate_key);
     GC_thread oriThrd = (GC_thread) (p + offsetofThread (s));
 

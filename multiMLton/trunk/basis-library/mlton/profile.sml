@@ -10,8 +10,8 @@ struct
 
 structure P = Primitive.MLton.Profile
 
-val procCount = ParallelInternal.numberOfProcessors
-val procNum = ParallelInternal.processorNumber
+val procCount = PacmlFFI.numberOfProcessors
+val procNum = PacmlFFI.processorNumber
 
 val gcState = Primitive.MLton.GCState.gcState
 

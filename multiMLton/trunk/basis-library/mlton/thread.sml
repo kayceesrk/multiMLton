@@ -72,8 +72,8 @@ fun prepare (t: 'a t, v: 'a): Runnable.t =
 fun new f = T (ref (New f))
 
 local
-   val numProcessors = ParallelInternal.numberOfProcessors
-   val procNum = ParallelInternal.processorNumber
+   val numProcessors = PacmlFFI.numberOfProcessors
+   val procNum = PacmlFFI.processorNumber
    local
       (* create one reference per processor *)
       val func: (unit -> unit) option Array.array =
@@ -186,8 +186,8 @@ fun toPrimitive (t as T r : unit t): Prim.thread =
 local
    datatype state = Normal | InHandler
 
-   val numProcessors = ParallelInternal.numberOfProcessors
-   val procNum = ParallelInternal.processorNumber
+   val numProcessors = PacmlFFI.numberOfProcessors
+   val procNum = PacmlFFI.processorNumber
 
    val threadStates = Array.tabulate(numProcessors, fn _ => Normal )
    val handlers = Array.tabulate(numProcessors, fn _ => NONE )

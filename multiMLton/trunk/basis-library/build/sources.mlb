@@ -288,7 +288,7 @@ in
    ../mlton/exn.sml
 
    ann "allowFFI true" in
-      ../acml/core-cml/internal.sml
+      ../pacml/core-cml/ffi.sml
    end
    ../mlton/thread.sig
    ../mlton/thread.sml
@@ -374,89 +374,53 @@ in
    ../mlton/mono-vector.sig
 
     local
-        ../acml/util/critical.sig
-        ../acml/util/critical.sml
-        ../acml/util/assert.sig
-        ../acml/util/assert.sml
-        ../acml/util/local-assert.fun
-        ../acml/util/debug.sig
-        ../acml/util/debug.sml
-        ../acml/util/local-debug.fun
-        (*
-        ../acml/util/timeit.sig
-        ../acml/util/timeit.sml
-        *)
-        ../acml/util/fun-queue.sig
-        ../acml/util/fun-queue.sml
-        ../acml/util/imp-queue.sig
-        ../acml/util/imp-queue.sml
-        ../acml/util/fun-priority-queue.sig
-        ../acml/util/fun-priority-queue.fun
+        ../pacml/util/critical.sig
+        ../pacml/util/critical.sml
+        ../pacml/util/assert.sig
+        ../pacml/util/assert.sml
+        ../pacml/util/local-assert.fun
+        ../pacml/util/debug.sig
+        ../pacml/util/debug.sml
+        ../pacml/util/local-debug.fun
+        ../pacml/util/fun-queue.sig
+        ../pacml/util/fun-queue.sml
+        ../pacml/util/imp-queue.sig
+        ../pacml/util/imp-queue.sml
+        ../pacml/util/fun-priority-queue.sig
+        ../pacml/util/fun-priority-queue.fun
 
-        ../acml/core-cml/lock.sig
-        ann "allowFFI true" in
-            ../acml/core-cml/lock.sml
-            ../acml/core-cml/rep-types.sml
-        end
-        ../acml/core-cml/running.sml
-        ../acml/core-cml/cvar.sig
-        ../acml/core-cml/cvar.sml
-        ../acml/core-cml/thread-id.sig
-        ../acml/core-cml/thread-id.sml
-        ../acml/core-cml/workqueue.sig
-        ../acml/core-cml/basic.sig
-        ann "allowFFI true" in
-            ../acml/core-cml/cmlworkqueue.sml
-            ../acml/core-cml/basic.sml
-        end
-        ../acml/core-cml/scheduler-hooks.sig
-        ../acml/core-cml/scheduler-hooks.sml
-
-
-        ann "allowFFI true" in
-            ../acml/core-cml/scheduler.sig
-            ../acml/core-cml/scheduler.sml
-        end
-        ../acml/core-cml/event-type.sig
-        ../acml/core-cml/event-type.sml
-        ../acml/core-cml/pevent.sig
-        ../acml/core-cml/pevent.sml
-        ../acml/core-cml/thread.sig
-        ../acml/core-cml/thread.sml
-        ann "allowFFI true" in
-            ../acml/core-cml/pchannel.sig
-            ../acml/core-cml/pchannel.sml
-        end
-        ../acml/core-cml/timeout.sig
-        ../acml/core-cml/timeout.sml
-        ../acml/core-cml/version.sig
-        ../acml/core-cml/version.sml
+        ../pacml/core-cml/lock.sig
+		../pacml/core-cml/lock.sml
+		../pacml/core-cml/rep-types.sml
+		ann "allowFFI true" in
+			../pacml/core-cml/parasite-ffi.sml
+		end
+        ../pacml/core-cml/config.sml
+        ../pacml/core-cml/cvar.sig
+        ../pacml/core-cml/cvar.sml
+        ../pacml/core-cml/thread-id.sig
+        ../pacml/core-cml/thread-id.sml
+        ../pacml/core-cml/proto-thread.sig
+        ../pacml/core-cml/proto-thread.sml
+		../pacml/core-cml/scheduler-hooks.sig
+		../pacml/core-cml/scheduler-hooks.sml
+		../pacml/core-cml/scheduler-queue.sig
+		../pacml/core-cml/scheduler-queue.sml
+		../pacml/core-cml/scheduler.sig
+		../pacml/core-cml/scheduler.sml
+		../pacml/core-cml/thread.sig
+		../pacml/core-cml/thread.sml
 
 
-        ../acml/core-cml/mutex-lock.sig
-        ../acml/core-cml/mutex-lock.sml
-        ../acml/core-cml/aux.sml
-        ../acml/core-cml/sync-var.sig
-        ../acml/core-cml/sync-var.sml
-        ../acml/core-cml/mailbox.sig
-        ../acml/core-cml/mailbox.sml
-
-        ../acml/cml-lib/simple-rpc.sig
-        ../acml/cml-lib/simple-rpc.sml
-        ../acml/cml-lib/multicast.sig
-        ../acml/cml-lib/multicast.sml
-
-        (* Non-blocking IO *)
-        ../acml/core-cml/non-blocking.sig
-        ../acml/core-cml/non-blocking.sml
-
-        ../acml/core-cml/cml.sig
-        ../acml/core-cml/cml.sml
+		../pacml/core-cml/timeout.sig
+		../pacml/core-cml/timeout.sml
+		../pacml/core-cml/main.sig
+		ann "allowFFI true" in
+			../pacml/core-cml/main.sml
+		end
 
 
-        ../acml/core-cml/run-cml.sig
-        ../acml/core-cml/run-cml.sml
-
+		../pacml/core-cml/dummy.sml
     in
         signature MLTON_PCML
         structure MLtonPCML
