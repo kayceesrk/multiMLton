@@ -11,7 +11,6 @@ sig
   val tidToInt : thread_id -> int
 
   val getCurThreadId : unit -> thread_id
-  val setCurThreadId : thread_id -> unit
   val tidMsg : unit -> string
   val tidNum : unit -> int
 
@@ -23,6 +22,8 @@ signature THREAD_ID_EXTRA =
 sig
   datatype thread_id' = datatype RepTypes.thread_id
   include THREAD_ID where type thread_id = thread_id'
+
+  val setCurThreadId : thread_id -> unit
 
   val new : unit -> thread_id
   val bogus : string -> thread_id

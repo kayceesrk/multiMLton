@@ -105,7 +105,7 @@ struct
           val () = reset true
           val () = SH.shutdownHook := PT.prepend (thrd, fn arg => (atomicBegin (); arg))
           val () = SH.pauseHook := pauseHook
-          val () = ignore (Thread.spawn (fn ()=> (Config.isRunning := true;initialProc ())))
+          val () = ignore (Thread.spawnHost (fn ()=> (Config.isRunning := true;initialProc ())))
           val handler = MLtonSignal.Handler.handler (S.unwrap alrmHandler Thread.reifyHostFromParasite)
           val () = installAlrmHandler handler
           (* Spawn the Non-blocking worker threads *)

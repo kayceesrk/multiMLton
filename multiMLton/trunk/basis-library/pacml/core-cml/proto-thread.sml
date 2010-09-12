@@ -143,4 +143,28 @@ struct
                                      H_RTHRD rhost => rhost
                                    | _ => raise ThreadCasting "getRunnableHost failed"
 
+  fun spawnParasite f =
+  let
+    fun doit () =
+    let
+      val _ = setParasiteBottom (getFrameBottomAsOffset ())
+      val _ = atomicEnd ()
+      val _ = f ()
+    in
+      PacmlFFI.noop () (* Needed to prevent inlining f () *)
+    end
+    val state = getThreadState ()
+    val _ = atomicBegin ()
+    val _ = setThreadType (PARASITE)
+    val _ = Primitive.dontInline (doit)
+
+    (* Got back to the original thread *)
+    (* XXX KC state is inconsistent here *)
+    val _ = atomicBegin ()
+    val _ = setThreadState (state)
+    val _ = atomicEnd ()
+  in
+    ()
+  end
+
 end

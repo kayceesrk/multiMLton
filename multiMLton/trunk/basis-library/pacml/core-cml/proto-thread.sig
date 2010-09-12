@@ -32,6 +32,7 @@ sig
   val extractParasiteFromHost : RepTypes.primHost * int -> RepTypes.parasite
   val atomicPrefixAndSwitchToSpecial : RepTypes.parasite -> unit
   val atomicPrefixAndSwitchTo : RepTypes.parasite -> unit
+  val spawnParasite : (unit -> unit) -> unit
 
   val getRunnableHost : rdy_thread -> runnable_host
 end

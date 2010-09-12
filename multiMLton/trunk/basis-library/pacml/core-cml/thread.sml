@@ -1,4 +1,4 @@
-structure Thread : THREAD =
+structure Thread : THREAD_EXTRA =
 struct
 
   structure Assert = LocalAssert(val assert = false)
@@ -13,6 +13,8 @@ struct
 
   datatype thread_id = datatype RepTypes.thread_id
   datatype runnable_host = datatype RepTypes.runnable_host
+  datatype thread = datatype RepTypes.thread
+  datatype rdy_thread = datatype RepTypes.rdy_thread
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
   fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
@@ -106,4 +108,19 @@ struct
     RHOST (tid, nRt)
   end
 
+
+  fun spawnHost f =
+  let
+    val () = atomicBegin ()
+    val tid = TID.new ()
+    fun thrdFun () = ((f ()) handle ex => doHandler (tid, ex);
+                    generalExit (SOME tid, false))
+    val thrd = H_THRD (tid, MT.new thrdFun)
+    val rhost = PT.getRunnableHost (PT.prep (thrd))
+    val () = S.readyForSpawn (rhost)
+  in
+    tid
+  end
+
+  val spawnParasite = PT.spawnParasite
 end
