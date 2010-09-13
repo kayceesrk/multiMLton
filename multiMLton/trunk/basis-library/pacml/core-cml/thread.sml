@@ -1,8 +1,8 @@
 structure Thread : THREAD_EXTRA =
 struct
 
-  structure Assert = LocalAssert(val assert = false)
-  structure Debug = LocalDebug(val debug = false)
+  structure Assert = LocalAssert(val assert = true)
+  structure Debug = LocalDebug(val debug = true)
 
   open Critical
   structure MT = MLtonThread
@@ -118,6 +118,7 @@ struct
     val thrd = H_THRD (tid, MT.new thrdFun)
     val rhost = PT.getRunnableHost (PT.prep (thrd))
     val () = S.readyForSpawn (rhost)
+    val () = atomicEnd ()
   in
     tid
   end

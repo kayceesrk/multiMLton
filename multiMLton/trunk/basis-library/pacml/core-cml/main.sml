@@ -1,4 +1,4 @@
-structure Main =
+structure Main : MAIN =
 struct
 
   open Critical
@@ -11,8 +11,8 @@ struct
   structure MT = MLtonThread
   structure PT = ProtoThread
 
-  structure Assert = LocalAssert(val assert = false)
-  structure Debug = LocalDebug(val debug = false)
+  structure Assert = LocalAssert(val assert = true)
+  structure Debug = LocalDebug(val debug = true)
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
   fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
@@ -30,7 +30,6 @@ struct
   * restarted. Hence, the signal handler thread sends SIGUSR2 to each worker
   * thread, which corresponds to this handler *)
 
-  (* XXX DEBUG *)
   val h = MLtonSignal.Handler.handler (fn t => t)
   (* Install handler for processor 0*)
   val _ = MLtonSignal.setHandler (Posix.Signal.usr2, h)
@@ -61,6 +60,8 @@ struct
   end
 
   val () = (_export "Parallel_run": (unit -> unit) -> unit;) thread_main
+  (* init MUST come after waitForWorkLoop has been exported *)
+  val () = (_import "Parallel_init": unit -> unit;) ()
 
   fun alrmHandler thrd =
     let

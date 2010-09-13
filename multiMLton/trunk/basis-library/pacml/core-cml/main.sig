@@ -1,4 +1,4 @@
 signature MAIN =
 sig
-  val run : unit -> unit
+  val run : (unit -> unit) -> OS.Process.status
 end

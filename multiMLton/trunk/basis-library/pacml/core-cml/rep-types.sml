@@ -27,7 +27,7 @@ structure RepTypes =
       (** condition variables --- see cvar.sml and events.sml *)
       datatype cvar = CVAR of (cvar_state ref * L.cmlLock)
       and cvar_state =
-         CVAR_unset of {transId : int ref, (* XXX KC - Me wants macros *)
+         CVAR_unset of {transId : int ref, (* KC - Me wants macros *)
                         cleanUp : unit -> unit,
                         thread : rdy_thread,
                         procNum : int} list
@@ -75,7 +75,9 @@ structure RepTypes =
        | BLOCKED of {transId : int ref,
                      next : unit -> rdy_thread,
                      parentThread : (unit -> rdy_thread) option} -> 'a
+
       type 'a base = unit -> 'a status
+
       datatype 'a sevt =
          BEVT of 'a base list
        | CHOOSE of 'a sevt list
@@ -88,6 +90,5 @@ structure RepTypes =
             SEVT of 'a sevt
           | AEVT of ('a,'b) aevt
 
-       datatype placement = CUR_PROC | ANY_PROC
        datatype prefix_kind = PREFIX_REGULAR | PREFIX_SPECIAL
    end

@@ -408,6 +408,8 @@ in
 		../pacml/core-cml/scheduler-queue.sml
 		../pacml/core-cml/scheduler.sig
 		../pacml/core-cml/scheduler.sml
+		../pacml/core-cml/event.sig
+		../pacml/core-cml/event.sml
 		../pacml/core-cml/thread.sig
 		../pacml/core-cml/thread.sml
 		../pacml/core-cml/channel.sig

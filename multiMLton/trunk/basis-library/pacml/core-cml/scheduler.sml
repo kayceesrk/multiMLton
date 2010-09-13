@@ -1,8 +1,8 @@
 structure Scheduler : SCHEDULER =
 struct
 
-  structure Assert = LocalAssert(val assert = false)
-  structure Debug = LocalDebug(val debug = false)
+  structure Assert = LocalAssert(val assert = true)
+  structure Debug = LocalDebug(val debug = true)
 
   open Critical
 
@@ -22,13 +22,6 @@ struct
   datatype rdy_thread = datatype RepTypes.rdy_thread
   type parasite = RepTypes.parasite
   datatype runnable_host = datatype RepTypes.runnable_host
-
-  val errorTid = TID.bogus "error"
-  fun errorThrd () : unit thread =
-      H_THRD (errorTid, MT.new (fn () =>
-            (GlobalDebug.sayDebug
-            ([fn () => "CML"], fn () => "**** Use RunCML.doit to run CML ****")
-            ; raise Fail "CML not initialized")))
 
   fun enque1 thrd =
    (Assert.assertAtomic' ("Scheduler.enque1", NONE)
@@ -66,8 +59,7 @@ struct
   fun reset running =
       (if running then debug' "Scheduler.reset true"
         else  debug' "Scheduler.reset false"
-      ; SQ.clean ()
-      ; if not running then ready (PT.prep (errorThrd ())) else ())
+      ; SQ.clean ())
 
   fun readyForSpawn (t : runnable_host) =
     (ignore (Config.incrementNumLiveThreads ())
@@ -159,7 +151,7 @@ struct
            end)
        | PARASITE =>
            let
-             val r : (unit -> 'a) ref = ref (fn () => raise Fail "Switching to a unprepared thread")
+             val r : (unit -> 'a) ref = ref (fn () => raise Fail "atomicSwithc : Switching to a unprepared thread")
              fun dummyFrame () =
              let
                val tid = TID.getCurThreadId ()
@@ -168,7 +160,7 @@ struct
                val thrd = P_THRD (parasite, fn x => r := x)
                val rt = f (thrd)
                val _ = SQ.enque (rt, R.PRI) (* ready the given thread *)
-               val _ = PT.jumpDown (PT.getParasiteBottom ())
+               val _ = PT.jumpDown (PT.getParasiteBottom ()) (* Implicit atomic end *)
              in
                print "Should not see this\n"
              end
@@ -178,6 +170,29 @@ struct
            end)
 
   fun atomicSwitch (f) = atomicSwitchAux "atomicSwitch" f
-  fun atomicSwitchToNext (f : 'a thread -> unit) = atomicSwitchAux "atomicSwitchToNext" (fn thrd => (f thrd; next ()))
+
+  fun atomicSwitchToNext (f : 'a thread -> unit) =
+    case PT.getThreadType () of
+         HOST => atomicSwitchAux "atomicSwitchToNext" (fn thrd => (f thrd; next ()))
+       | PARASITE =>
+           let
+             val r : (unit -> 'a) ref = ref (fn () => raise Fail "atomicSwitchToNext : Switching to a unprepared thread")
+             fun dummyFrame () =
+             let
+               val tid = TID.getCurThreadId ()
+               val _ = TID.mark tid
+               val parasite = PT.copyParasite (PT.getParasiteBottom())
+               val thrd = P_THRD (parasite, fn x => r := x)
+               val () = f (thrd)
+               val _ = PT.jumpDown (PT.getParasiteBottom ()) (* Implicit atomic end *)
+             in
+               print "Should not see this\n"
+             end
+             val _ = Primitive.dontInline (dummyFrame)
+           in
+             !r()
+           end
+
   fun switchToNext (f : 'a thread -> unit) = (atomicBegin (); atomicSwitchToNext (f))
+
 end

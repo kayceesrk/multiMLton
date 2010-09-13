@@ -1,7 +1,7 @@
 structure Channel : CHANNEL_EXTRA =
 struct
-  structure Assert = LocalAssert(val assert = false)
-  structure Debug = LocalDebug(val debug = false)
+  structure Assert = LocalAssert(val assert = true)
+  structure Debug = LocalDebug(val debug = true)
 
   open Critical
 
@@ -69,8 +69,10 @@ struct
         case cleanAndDeque (inQ) of
               SOME (rtxid, rt) =>
                 (let
+                  val () = debug' "Channel.tryLp"
                   fun matchLp () =
                     (let
+                      val () = debug' "Channel.matchLp"
                       val res = cas (rtxid, 0, 2)
                      in
                       if res = 0 then
