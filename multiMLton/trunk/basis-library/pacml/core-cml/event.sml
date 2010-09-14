@@ -275,24 +275,27 @@ struct
                   val () = Assert.assertAtomic' ("Event.syncOnBEvts(2).ext([])", SOME 1)
                   val transId = ref 0
                   fun blockHelper () =
-                    S.atomicSwitchToNext (fn t=>
+                    S.atomicSwitch (fn t=>
                       let
+                        val _ = Assert.assertAtomic (fn () => "Event.syncOnBEvts blockHelper", SOME 1)
                         fun loop (blockFns) =
                           case blockFns of
                                [] => (case et of
-                                          ASYNC => (S.atomicReady (PT.prepVal (t, NONE)); atomicBegin ())
+                                          ASYNC => (S.ready (PT.prepVal (t, NONE)))
                                         | SYNC => ())
                              | blockFn::blockFns =>
                                  let
                                    val _ = PT.spawnParasite (fn () =>
                                                               let
+                                                                val _ = atomicBegin ()
                                                                 val x = blockFn(transId)
+                                                                val _ = Assert.assertNonAtomic (fn () => "Event.syncOnBEvts.blockFn returned")
+                                                                val _ = debug' "Event.syncOnBEvts.blockFn returned"
                                                               in
                                                                 case et of
                                                                      ASYNC => ()
-                                                                   | SYNC => (S.atomicReady (PT.prepVal (t, SOME x)); atomicBegin ())
+                                                                   | SYNC => (S.readyWMsg (PT.prepVal (t, SOME x)) "Event.syncOnBEvts.blockFn")
                                                               end)
-                                   val _ = atomicBegin ()
                                  in
                                    if (!transId = 0) then
                                      loop (blockFns)
@@ -300,7 +303,7 @@ struct
                                      ()
                                  end
                       in
-                        loop (blockFns)
+                        Thread.createHost (fn () => loop (blockFns))
                       end)
                 in
                   blockHelper ()

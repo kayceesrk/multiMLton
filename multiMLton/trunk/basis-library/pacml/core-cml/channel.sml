@@ -72,10 +72,10 @@ struct
         case cleanAndDeque (inQ) of
               SOME (rtxid, rt) =>
                 (let
-                  val () = debug' "Channel.tryLp"
+                  val () = debug' "Channel.send.tryLp"
                   fun matchLp () =
                     (let
-                      val () = debug' "Channel.matchLp"
+                      val () = debug' "Channel.send.matchLp"
                       val res = cas (rtxid, 0, 2)
                      in
                       if res = 0 then
@@ -187,7 +187,8 @@ struct
                     end (* SOME ends *)
                 | NONE =>
                     S.atomicSwitchToNext (fn st => (cleanAndEnque (outQ, (mytxid, (msg, st)))
-                                                  ; L.releaseCmlLock lock (TID.tidNum())))
+                                                  ; L.releaseCmlLock lock (TID.tidNum())
+                                                  ; debug' ("Channel.sendEvt.NONE."^PT.getThreadTypeString())))
           (* tryLp ends *)
           val () = tryLp ()
         in
@@ -268,8 +269,10 @@ struct
         case cleanAndDeque (outQ) of
             SOME (rtxid, (msg, st)) =>
              (let
+                val () = debug' "Channel.recv.tryLp"
                 fun matchLp () =
                  (let
+                    val () = debug' "Channel.recv.matchLp"
                     val res = cas (rtxid, 0, 2)
                   in
                     if res = 0 then
@@ -278,7 +281,7 @@ struct
                         val () = TID.mark (TID.getCurThreadId ())
                         val _ = L.releaseCmlLock lock (TID.tidNum())
                         val rthrd = PT.prep (st)
-                        val _ = S.atomicReady (rthrd)
+                        val _ = S.atomicReadyWMsg (rthrd) "Channel.recv.SOME"
                       in
                         msg
                       end)

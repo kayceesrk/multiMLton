@@ -199,7 +199,8 @@ void GC_prefixAndSwitchTo (GC_state s, pointer p) {
 
     GC_stack stk = (GC_stack) objptrToPointer (thrd->stack, s->heap->start);
 
-    if (s->stackLimit <= s->stackTop + stk->used) {
+    int i=0;
+    while (s->stackLimit <= s->stackTop + stk->used) {
         if (DEBUG_SPLICE) {
             fprintf (stderr, "\tGrowingStack\n");
             fprintf (stderr, "\t\tstackTop = "FMTPTR"\n", (uintptr_t)s->stackTop);
@@ -207,6 +208,9 @@ void GC_prefixAndSwitchTo (GC_state s, pointer p) {
             fprintf (stderr, "\t\tparasiteSize = %ld\n", stk->used);
         }
 
+        if (i>0) {
+            printf ("SECOND ITERATION!!\n");
+        }
 
         /* grow stack if needed */
         getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
@@ -224,8 +228,9 @@ void GC_prefixAndSwitchTo (GC_state s, pointer p) {
 
         /* Assertions */
         stk = (GC_stack) objptrToPointer (thrd->stack, s->heap->start);
-        assert (s->stackLimit > s->stackTop + stk->used);
+        i++;
     }
+    assert (s->stackLimit > s->stackTop + stk->used);
 
     pointer parasiteBottom = getStackBottom (s, stk);
     pointer start = GC_getFrameBottom ();

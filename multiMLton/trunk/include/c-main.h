@@ -181,6 +181,7 @@ void run (void *arg) {                                                  \
         uint32_t num = Proc_processorNumber (s)                         \
                 * s->controls->affinityStride                           \
                 + s->controls->affinityBase;                            \
+         /* KC : if (numProc != 1) */                                   \
          set_cpu_affinity(num);                                         \
                                                                         \
         /* Save our state locally */                                    \

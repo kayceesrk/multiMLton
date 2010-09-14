@@ -9,5 +9,6 @@ end
 signature THREAD_EXTRA =
 sig
   include THREAD
+  val createHost : (unit->unit) -> RepTypes.runnable_host
   val reifyHostFromParasite : RepTypes.parasite -> RepTypes.runnable_host
 end

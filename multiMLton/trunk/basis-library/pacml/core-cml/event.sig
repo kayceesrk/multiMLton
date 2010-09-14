@@ -2,7 +2,6 @@ signature EVENT =
 sig
   type 'a sevt = 'a RepTypes.sevt
   type ('a,'b) aevt = ('a, 'b) RepTypes.aevt
-  type ('a,'b) cevt
 
   val never : 'a sevt
   val alwaysEvt : 'a -> 'a sevt
@@ -10,10 +9,6 @@ sig
   val wrap        : ('a sevt * ('a -> 'b)) -> 'b sevt
   val sWrap        : (('a,'b) aevt * ('a -> 'c)) -> ('c,'b) aevt
   val aWrap        : (('a,'b) aevt * ('b -> 'c)) -> ('a,'c) aevt
-
-  val wrapHandler : ('a sevt * (exn -> 'a)) -> 'a sevt
-  val sWrapHandler : (('a, 'b) aevt * (exn -> 'a)) -> ('a, 'b) aevt
-  val aWrapHandler : (('a, 'b) aevt * (exn -> 'b)) -> ('a, 'b) aevt
 
   val guard    : (unit -> 'a sevt) -> 'a sevt
 
@@ -32,8 +27,14 @@ sig
   include EVENT
 
   type 'a status
+  type ('a,'b) cevt
+
   type 'a thread = 'a RepTypes.thread
   type rdy_thread = RepTypes.rdy_thread
+
+  val wrapHandler : ('a sevt * (exn -> 'a)) -> 'a sevt
+  val sWrapHandler : (('a, 'b) aevt * (exn -> 'a)) -> ('a, 'b) aevt
+  val aWrapHandler : (('a, 'b) aevt * (exn -> 'b)) -> ('a, 'b) aevt
 
   exception DOIT_FAIL
 

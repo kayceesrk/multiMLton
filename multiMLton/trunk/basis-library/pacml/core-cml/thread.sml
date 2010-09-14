@@ -123,5 +123,19 @@ struct
     tid
   end
 
+  fun createHost f =
+  let
+    val () = atomicBegin ()
+    val tid = TID.new ()
+    fun thrdFun () = ((f ()) handle ex => doHandler (tid, ex);
+                    generalExit (SOME tid, false))
+    val thrd = H_THRD (tid, MT.new thrdFun)
+    val rhost = PT.getRunnableHost (PT.prep (thrd))
+    val _ = Config.incrementNumLiveThreads ()
+    val () = atomicEnd ()
+  in
+    rhost (* NOTE: This thread must not be readySpawned as numLiveThreads has already been incremented *)
+  end
+
   val spawnParasite = PT.spawnParasite
 end

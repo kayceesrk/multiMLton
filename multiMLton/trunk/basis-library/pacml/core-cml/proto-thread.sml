@@ -103,6 +103,11 @@ struct
     !preemptParasite
   end
 
+  fun getThreadTypeString () =
+    case getThreadType () of
+         HOST => "HOST"
+       | _ => "PARASITE"
+
   (* Parasite management *)
 
   val extractParasiteFromHost = ParasiteFFI.extractParasiteFromHost
@@ -158,12 +163,8 @@ struct
     val _ = atomicBegin ()
     val _ = setThreadType (PARASITE)
     val _ = Primitive.dontInline (doit)
-
-    (* Got back to the original thread *)
-    (* XXX KC state is inconsistent here *)
-    val _ = atomicBegin ()
+    val _ = debug' "ProtoThread.spawnParasite.resetting thread state"
     val _ = setThreadState (state)
-    val _ = atomicEnd ()
   in
     ()
   end

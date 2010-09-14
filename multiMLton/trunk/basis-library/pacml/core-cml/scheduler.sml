@@ -45,12 +45,23 @@ struct
           NONE => ()
         | SOME t => enque1 t)
 
-  fun atomicReady (rt : rdy_thread) =
-    (Assert.assertAtomic' ("Scheduler.atomicReady(1)", SOME 1)
+  fun atomicReadyWMsg (rt : rdy_thread) msg =
+    (debug' ("atomicReadyWMsg(1)."^msg)
     ; case rt of
       H_RTHRD (rhost) => (SQ.enque (rhost, R.PRI); atomicEnd ())
     | P_RTHRD (par) => PT.atomicPrefixAndSwitchTo (par) (* Implicit atomic end *)
-    ; Assert.assertNonAtomic (fn () => "Scheduler.atomicReady(2)"))
+    ; debug' ("atomicReadyWMsg(2)."^msg))
+
+  fun readyWMsg (rt : rdy_thread) msg =
+    (atomicBegin ();
+     atomicReadyWMsg (rt) msg)
+
+  fun atomicReady (rt : rdy_thread) =
+    (Assert.assertAtomic' ("Scheduler.atomicReady(1)[tid:"^(TID.tidMsg())^"]", SOME 1)
+    ; case rt of
+      H_RTHRD (rhost) => (SQ.enque (rhost, R.PRI); atomicEnd ())
+    | P_RTHRD (par) => PT.atomicPrefixAndSwitchTo (par) (* Implicit atomic end *)
+    ; Assert.assertNonAtomic (fn () => "Scheduler.atomicReady(2)[tid:"^(TID.tidMsg())^"]"))
 
   fun ready (rt : rdy_thread) =
     (atomicBegin ();
@@ -78,6 +89,7 @@ struct
       val host' = case thrdType of
                     PARASITE => if ((not (PT.proceedToExtractParasite (primHost, pBottom))) orelse (pBottom=0) orelse (not (PT.toPreemptParasite ()))) then
                                   let
+                                    val _ = debug' "Scheduler.unwrap.PARASITE(1)"
                                     val tid = TID.getCurThreadId ()
                                     val RHOST (tid', host') = f (RHOST (tid, host))
                                     val () = TID.setCurThreadId tid'
@@ -86,6 +98,7 @@ struct
                                   end
                                 else
                                   let
+                                    val _ = debug' "Scheduler.unwrap.PARASITE(2)"
                                     val host' = MT.toPrimitive host
                                     val thlet = PT.extractParasiteFromHost (host', pBottom)
                                     val newHost = reify (thlet)
@@ -96,6 +109,7 @@ struct
                                   end
                   | HOST =>
                       let
+                        val _ = debug' "Scheduler.unwrap.HOST"
                         val tid = TID.getCurThreadId ()
                         val RHOST (tid', host') = f (RHOST (tid, host))
                         val () = TID.setCurThreadId tid'

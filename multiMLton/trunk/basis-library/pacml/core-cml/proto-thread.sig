@@ -23,6 +23,7 @@ sig
   val setParasiteBottom : int -> unit
   val enableParasitePreemption : unit -> unit
   val disableParasitePreemption : unit -> unit
+  val getThreadTypeString : unit -> string
 
   (* Parasite manipulation *)
   val jumpDown : int -> unit
