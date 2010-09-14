@@ -10,11 +10,14 @@ struct
   structure TID = ThreadID
   structure S = Scheduler
   structure PT = ProtoThread
+  structure E = Event
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
   fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
 
   datatype thread = datatype RepTypes.thread
+  datatype thread_type = datatype RepTypes.thread_type
+  type 'a sevt = 'a Event.sevt
 
   datatype 'a chan = CHAN of {prio: int ref,
                               inQ : (int ref * ('a thread)) Q.t,
@@ -98,6 +101,118 @@ struct
     in
       ()
     end (* send ends *)
+
+  fun sendEvt (CHAN {prio, inQ, outQ, lock}, msg) =
+    let
+      fun doitFn () =
+        let
+          val () = Assert.assertAtomic' ("Channel.sendEvt.doitFn", NONE)
+          val () = debug' "Channel.sendEvt(3.1.1)" (* Atomic 1 *)
+          val () = Assert.assertAtomic' ("Channel.sendEvt(3.1.1)", SOME 1)
+          val () = L.getCmlLock lock TID.tidNum
+          fun tryLp () =
+            case cleanAndDeque (inQ) of
+                  SOME (rtxid, rt) =>
+                    (let
+                      val () = debug' "Channel.sendEvt.tryLp"
+                      fun matchLp () =
+                        (let
+                          val () = debug' "Channel.sendEvt.matchLp"
+                          val res = cas (rtxid, 0, 2)
+                        in
+                          if res = 0 then
+                            (let (* WAITING -- we got it *)
+                              val _ = prio := 1
+                              val () = TID.mark (TID.getCurThreadId ())
+                              val () = L.releaseCmlLock lock (TID.tidNum())
+                              val rthrd = PT.prepVal (rt, msg)
+                            in
+                              S.atomicReady (rthrd) (* Implicit atomic end *)
+                            end)
+                          else if res = 1 then matchLp () (* CLAIMED *)
+                          else tryLp () (* SYNCHED *)
+                        end) (* matchLp ends *)
+                    in
+                      matchLp ()
+                    end) (* SOME ends *)
+                | NONE => (L.releaseCmlLock lock (TID.tidNum());
+                           raise E.DOIT_FAIL)
+          (* tryLp ends *)
+          val () = tryLp ()
+        in
+          ()
+        end (* doitFn ends *)
+      fun blockFn (mytxid) =
+        let
+          val () = Assert.assertAtomic' ("Channel.sendEvt.blockFn", NONE)
+          val () = debug' "Channel.sendEvt(3.2.1)" (* Atomic 1 *)
+          val () = Assert.assertAtomic' ("Channel.sendEvt(3.2.1)", SOME 1)
+          val () = L.getCmlLock lock TID.tidNum
+          fun tryLp () =
+            case cleanAndDeque (inQ) of
+                  SOME (v as (rtxid, rt)) =>
+                    let
+                      val () = if mytxid = rtxid then raise Fail "Same event" else ()
+                      val () = debug' "Channel.sendEvt.tryLp"
+                      fun matchLp () =
+                        let
+                          val () = debug' "Channel.sendEvt.matchLp"
+                          val res = cas (mytxid, 0, 1) (* Try to claim it *)
+                        in
+                          if res = 0 then
+                            let
+                              val res2 = cas (rtxid, 0, 2)
+                            in
+                              (if res2 = 0 then
+                                (let (* WAITING -- we got it *)
+                                  val _ = prio := 1
+                                  val _ = mytxid := 2
+                                  val () = TID.mark (TID.getCurThreadId ())
+                                  val () = L.releaseCmlLock lock (TID.tidNum())
+                                  val rthrd = PT.prepVal (rt, msg)
+                                in
+                                  S.atomicReady (rthrd) (* Implicit atomic end *)
+                                end)
+                              else if res2 = 1 then
+                                (mytxid := 0; matchLp ())
+                              else (mytxid := 0; tryLp ()))
+                            end
+                          else if res = 1 then matchLp () (* CLAIMED *)
+                          else (Q.undeque (inQ, v);
+                                L.releaseCmlLock lock (TID.tidNum ());
+                                S.atomicSwitchToNext (fn _ => ()))
+                        end (* matchLp ends *)
+                    in
+                      matchLp ()
+                    end (* SOME ends *)
+                | NONE =>
+                    S.atomicSwitchToNext (fn st => (cleanAndEnque (outQ, (mytxid, (msg, st)))
+                                                  ; L.releaseCmlLock lock (TID.tidNum())))
+          (* tryLp ends *)
+          val () = tryLp ()
+        in
+          ()
+        end (* blockFn ends *)
+    fun pollFn () =
+      let
+        val () = Assert.assertAtomic' ("Channel.sendEvt.pollFn", NONE)
+        val () = debug' "Channel.sendEvt(2)" (* Atomic 1 *)
+        val () = Assert.assertAtomic' ("Channel.sendEvt(2)", SOME 1)
+        val () = L.getCmlLock lock TID.tidNum
+        val v = cleanAndChk (prio, inQ)
+        val () = L.releaseCmlLock lock (TID.tidNum())
+        val () = debug' "Channel.sendEvt(3)" (* Atomic 1 *)
+      in
+        case v of
+            0 => E.blocked blockFn
+          | prio => E.enabled {prio = prio, doitFn = doitFn}
+      end
+    in
+      E.bevt pollFn
+    end
+
+  fun aSendEvt (ch, msg) = E.aevt(sendEvt (ch, msg))
+
 
   fun sendPoll (CHAN {prio, inQ, outQ, lock}, msg) =
     let

@@ -68,13 +68,9 @@ structure RepTypes =
                     |  P_RTHRD of parasite
 
       (** events --- see events.sml **)
-      datatype sync_status = DOIT_FAIL | DOIT_SUCCESS
-
       datatype 'a status =
-         ENABLED of {prio : int, doitFn : ((sync_status thread option) -> 'a option)}
-       | BLOCKED of {transId : int ref,
-                     next : unit -> rdy_thread,
-                     parentThread : (unit -> rdy_thread) option} -> 'a
+         ENABLED of {prio : int, doitFn : unit -> 'a}
+       | BLOCKED of ((int ref) -> 'a)
 
       type 'a base = unit -> 'a status
 

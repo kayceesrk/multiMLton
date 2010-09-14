@@ -13,14 +13,14 @@ sig
     val send : ('a chan * 'a) -> unit
     val recv : 'a chan -> 'a
 
-    (* val sendEvt  : ('a chan * 'a) -> unit EventType.sevt
-    val recvEvt  : 'a chan -> 'a EventType.sevt *)
+    val sendEvt  : ('a chan * 'a) -> unit Event.sevt
+    (* val recvEvt  : 'a chan -> 'a EventType.sevt *)
 
     val sendPoll : ('a chan * 'a) -> bool
     val recvPoll : 'a chan -> 'a option
 
-    (* val aSendEvt : ('a chan * 'a) -> (unit, unit) EventType.aevt
-    val aRecvEvt  : 'a chan -> (unit, 'a) EventType.aevt *)
+    val aSendEvt : ('a chan * 'a) -> (unit, unit) Event.aevt
+    (* val aRecvEvt  : 'a chan -> (unit, 'a) EventType.aevt *)
 end
 
 signature CHANNEL_EXTRA =

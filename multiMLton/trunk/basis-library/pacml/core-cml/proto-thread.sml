@@ -111,6 +111,7 @@ struct
   val prefixAndSwitchTo = ParasiteFFI.prefixAndSwitchTo
   val getFrameBottomAsOffset = ParasiteFFI.getFrameBottomAsOffset
   val jumpDown = ParasiteFFI.jumpDown
+  fun jumpToThreadBelow () = jumpDown (getParasiteBottom ())
 
   datatype prefix_kind = datatype RepTypes.prefix_kind
 

@@ -29,7 +29,7 @@ structure RepTypes =
        | CVAR_set of int
 
       (** thread IDs --- see thread-id.sml and threads.sml **)
-      and thread_id = 
+      and thread_id =
          TID of {
                  (* an unique ID *)
                  id : int,
@@ -38,7 +38,7 @@ structure RepTypes =
                  (* set this whenever this thread does some concurrency operation. *)
                  done_comm : bool ref,
                  (* root-level exception handler hook *)
-                 exnHandler : (exn -> unit) ref, 
+                 exnHandler : (exn -> unit) ref,
                  (* holds thread-local properties *)
                  props : exn list ref,
                  (* the cvar that becomes set when the thread dies *)
@@ -55,7 +55,7 @@ structure RepTypes =
        | BLOCKED of {transId : trans_id,
                      cleanUp : unit -> unit,
                      next : unit -> rdy_thread} -> 'a
-      type 'a base = unit -> 'a status 
+      type 'a base = unit -> 'a status
       datatype 'a event =
          BEVT of 'a base list
        | CHOOSE of 'a event list

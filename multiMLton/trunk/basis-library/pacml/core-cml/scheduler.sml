@@ -159,6 +159,10 @@ struct
                val parasite = PT.copyParasite (PT.getParasiteBottom())
                val thrd = P_THRD (parasite, fn x => r := x)
                val rt = f (thrd)
+               val () = Assert.assert' ("atomicSwitchAux : state corrupted. Unintended inflation??",
+                                        fn () => case PT.getThreadType () of
+                                                      HOST => false
+                                                    | _ => true)
                val _ = SQ.enque (rt, R.PRI) (* ready the given thread *)
                val _ = PT.jumpDown (PT.getParasiteBottom ()) (* Implicit atomic end *)
              in
@@ -184,6 +188,10 @@ struct
                val parasite = PT.copyParasite (PT.getParasiteBottom())
                val thrd = P_THRD (parasite, fn x => r := x)
                val () = f (thrd)
+               val () = Assert.assert' ("atomicSwitchToNext : state corrupted. Unintended inflation??",
+                                        fn () => case PT.getThreadType () of
+                                                      HOST => false
+                                                    | _ => true)
                val _ = PT.jumpDown (PT.getParasiteBottom ()) (* Implicit atomic end *)
              in
                print "Should not see this\n"

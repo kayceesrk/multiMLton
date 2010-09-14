@@ -67,7 +67,7 @@ structure Event : EVENT_EXTRA =
        ** atomic region.
        **)
 
-      (* set a condition variable; 
+      (* set a condition variable;
        * we assume that this function is always executed in an atomic region.
        *)
       fun atomicCVarSet (CVAR state) : unit =
@@ -80,10 +80,10 @@ structure Event : EVENT_EXTRA =
                CVAR_unset waiting =>
                   let
                      fun add waiting : unit =
-                        case waiting of 
+                        case waiting of
                            [] => ()
                          | ({transId = TXID txst, cleanUp: unit -> unit, thread}::waiting) =>
-                              (case !txst of 
+                              (case !txst of
                                   CANCEL => ()
                                 | TRANS =>
                                      (txst := CANCEL
@@ -156,7 +156,7 @@ structure Event : EVENT_EXTRA =
 
 
       (* event combinators *)
-      val never : 'a event = 
+      val never : 'a event =
          BEVT []
       fun alwaysEvt (v : 'a) : 'a event =
          let
@@ -188,13 +188,13 @@ structure Event : EVENT_EXTRA =
             fun wrapF f x = wfn (f x)
             fun wrapBaseEvt pollFn () =
                case pollFn () of
-                  ENABLED {prio, doitFn} => 
+                  ENABLED {prio, doitFn} =>
                      ENABLED {prio = prio, doitFn = wrapF doitFn}
-                | BLOCKED blockFn => 
+                | BLOCKED blockFn =>
                      BLOCKED (wrapF blockFn)
             fun wrap' evt =
                case evt of
-                  BEVT bevts => 
+                  BEVT bevts =>
                      BEVT(List.map wrapBaseEvt bevts)
                 | CHOOSE evts =>
                      CHOOSE(List.map wrap' evts)
@@ -210,13 +210,13 @@ structure Event : EVENT_EXTRA =
             fun wrapF f x = (f x) handle exn => hfn exn
             fun wrapBaseEvt pollFn () =
                case pollFn () of
-                  ENABLED {prio, doitFn} => 
+                  ENABLED {prio, doitFn} =>
                      ENABLED {prio = prio, doitFn = wrapF doitFn}
-                | BLOCKED blockFn => 
+                | BLOCKED blockFn =>
                      BLOCKED (wrapF blockFn)
             fun wrap' evt =
                case evt of
-                  BEVT bevts => 
+                  BEVT bevts =>
                      BEVT(List.map wrapBaseEvt bevts)
                 | CHOOSE evts =>
                      CHOOSE(List.map wrap' evts)
@@ -246,13 +246,13 @@ structure Event : EVENT_EXTRA =
                case (evts, evts') of
                   ([], [evt']) => evt'
                 | ([], evts') => CHOOSE evts'
-                | ((CHOOSE cevts)::evts, evts') => 
+                | ((CHOOSE cevts)::evts, evts') =>
                      gather (evts, cevts @ evts')
                 | ((BEVT [])::evts, evts') =>
                      gather (evts, evts')
                 | ((BEVT bevts)::evts, (BEVT bevts')::evts') =>
                      gather (evts, BEVT (bevts @ bevts')::evts')
-                | (evt::evts, evts') => 
+                | (evt::evts, evts') =>
                      gather (evts, evt::evts')
             val evt = gatherBEvts (List.rev evts, [])
          in
@@ -294,23 +294,23 @@ structure Event : EVENT_EXTRA =
                                         in
                                            if k < numFixed
                                               then List.nth (doitFnsFixed, k)
-                                              else List.nth (doitFnsMaxP, 
+                                              else List.nth (doitFnsMaxP,
                                                              Int.mod(k - numFixed, numMaxP))
                                         end)
                          | {prio, doitFn}::doitFns =>
                               if prio = ~1
-                                 then select(doitFns, maxP, 
+                                 then select(doitFns, maxP,
                                              doitFnsMaxP, numMaxP,
                                              doitFn::doitFnsFixed, numFixed + 1)
-                                 else if prio > maxP 
-                                         then select(doitFns, prio, 
+                                 else if prio > maxP
+                                         then select(doitFns, prio,
                                                      [doitFn], 1,
                                                      doitFnsFixed, numFixed)
                                          else if prio = maxP
-                                                 then select(doitFns, maxP, 
+                                                 then select(doitFns, maxP,
                                                              doitFn::doitFnsMaxP, numMaxP + 1,
                                                              doitFnsFixed, numFixed)
-                                                 else select(doitFns, maxP, 
+                                                 else select(doitFns, maxP,
                                                              doitFnsMaxP, numMaxP,
                                                              doitFnsFixed, numFixed)
                   in
@@ -321,16 +321,16 @@ structure Event : EVENT_EXTRA =
 
       fun syncOnBEvt (pollFn : 'a base) : 'a =
          let
-            val () = Assert.assertNonAtomic' "Event.syncOnBEvt" 
+            val () = Assert.assertNonAtomic' "Event.syncOnBEvt"
             val () = debug' "syncOnBEvt(1)" (* NonAtomic *)
             val () = Assert.assertNonAtomic' "Event.syncOnBEvt(1)"
-            val () = S.atomicBegin ()   
+            val () = S.atomicBegin ()
             val () = debug' "syncOnBEvt(2)" (* Atomic 1 *)
             val () = Assert.assertAtomic' ("Event.syncOnBEvt(2)", SOME 1)
-            val x = 
+            val x =
                case pollFn () of
                   ENABLED {doitFn, ...} => doitFn ()
-                | BLOCKED blockFn => 
+                | BLOCKED blockFn =>
                      let val (transId, cleanUp) = TransID.mkFlg ()
                      in blockFn {transId = transId,
                                  cleanUp = cleanUp,
@@ -342,10 +342,10 @@ structure Event : EVENT_EXTRA =
             x
          end
 
-      (* this function handles the case of synchronizing on a list of 
-       * base events (w/o any negative acknowledgements).   It also handles 
+      (* this function handles the case of synchronizing on a list of
+       * base events (w/o any negative acknowledgements).   It also handles
        * the case of syncrhonizing on NEVER.
-       *) 
+       *)
       fun syncOnBEvts (bevts : 'a base list) : 'a =
          let
             val () = Assert.assertNonAtomic' "Event.syncOnBEvts"
@@ -359,7 +359,7 @@ structure Event : EVENT_EXTRA =
                   case bevts of
                      [] =>
                         let
-                           val () = debug' "syncOnBEvts(2).ext([])" (* Atomic 1 *)      
+                           val () = debug' "syncOnBEvts(2).ext([])" (* Atomic 1 *)
                            val () = Assert.assertAtomic' ("Event.syncOnBEvts(2).ext([])", SOME 1)
                         in
                            S.atomicSwitch
@@ -368,7 +368,7 @@ structure Event : EVENT_EXTRA =
                                val (transId, cleanUp) = TransID.mkFlg ()
                                fun log blockFns : S.rdy_thread =
                                   let
-                                     val () = debug' "syncOnBEvts(2).ext([]).log" (* Atomic 1 *)        
+                                     val () = debug' "syncOnBEvts(2).ext([]).log" (* Atomic 1 *)
                                      val () = Assert.assertAtomic' ("Event.syncOnBEvts(2).ext([]).log", SOME 1)
                                   in
                                      case blockFns of
@@ -376,7 +376,7 @@ structure Event : EVENT_EXTRA =
                                       | blockFn::blockFns =>
                                            (S.prep o S.new)
                                            (fn _ => fn () =>
-                                            let 
+                                            let
                                                val () = S.atomicBegin ()
                                                val x = blockFn {transId = transId,
                                                                 cleanUp = cleanUp,
@@ -399,7 +399,7 @@ structure Event : EVENT_EXTRA =
                   val () = Assert.assertAtomic' ("Event.syncOnBEvts(2).extRdy", SOME 1)
                in
                   case bevts of
-                     [] => 
+                     [] =>
                         let val doitFn = selectDoitFn doitFns
                         in doitFn ()
                         end
@@ -430,12 +430,12 @@ structure Event : EVENT_EXTRA =
       type 'a backs = 'a back list
       type flg_set = cvar * ack_flg list
       type flg_sets = flg_set list
-      fun collect (gevt : 'a group) : 'a backs * flg_sets = 
+      fun collect (gevt : 'a group) : 'a backs * flg_sets =
          let
             fun gatherWrapped (gevt : 'a group, backs : 'a backs, flgSets : flg_sets) :
-                              'a backs * flg_sets = 
+                              'a backs * flg_sets =
                let
-                  fun gather (gevt : 'a group, backs : 'a backs, 
+                  fun gather (gevt : 'a group, backs : 'a backs,
                               ackFlgs : ack_flgs, flgSets : flg_sets) :
                              'a backs * ack_flgs * flg_sets =
                      case gevt of
@@ -458,7 +458,7 @@ structure Event : EVENT_EXTRA =
                                  gather (gevt', backs', ackFlgs', flgSets')
                            in List.foldl f (backs, ackFlgs, flgSets) gevt
                            end
-                      | NACK (cvar, gevt) => 
+                      | NACK (cvar, gevt) =>
                            let
                               val (backs', ackFlgs', flgSets') =
                                  gather (gevt, backs, [], flgSets)
@@ -471,19 +471,19 @@ structure Event : EVENT_EXTRA =
                end
          in
             case gevt of
-               GRP _ => 
+               GRP _ =>
                   let
                      val ackFlg = ref false
                      fun gather (gevt : 'a group, backs : 'a backs, flgSets : flg_sets) :
                                 'a backs * flg_sets =
                         case gevt of
-                           BASE bevts => 
+                           BASE bevts =>
                               let
                                  fun append (bevts, backs) =
                                     case bevts of
                                        [] => backs
                                      | bevt::bevts => append (bevts, (bevt, ackFlg)::backs)
-                              in 
+                              in
                                  (append (bevts, backs), flgSets)
                               end
                          | GRP gevt =>
@@ -532,7 +532,7 @@ structure Event : EVENT_EXTRA =
                   case backs of
                      [] =>
                         let
-                           val () = debug' "syncOnGrp(2).ext([])" (* Atomic 1 *)        
+                           val () = debug' "syncOnGrp(2).ext([])" (* Atomic 1 *)
                            val () = Assert.assertAtomic' ("Event.syncOnGrp(2).ext([])", SOME 1)
                         in
                            S.atomicSwitch
@@ -545,7 +545,7 @@ structure Event : EVENT_EXTRA =
                                    ; chkCVars ())
                                fun log blockFns : S.rdy_thread =
                                   let
-                                     val () = debug' "syncOnGrp(2).ext([]).log" (* Atomic 1 *)  
+                                     val () = debug' "syncOnGrp(2).ext([]).log" (* Atomic 1 *)
                                      val () = Assert.assertAtomic' ("Event.syncOnGrp(2).ext([]).log", SOME 1)
                                   in
                                      case blockFns of
@@ -553,7 +553,7 @@ structure Event : EVENT_EXTRA =
                                       | (blockFn,ackFlg)::blockFns =>
                                            (S.prep o S.new)
                                            (fn _ => fn () =>
-                                            let 
+                                            let
                                                val () = S.atomicBegin ()
                                                val x = blockFn {transId = transId,
                                                                 cleanUp = cleanUp ackFlg,
@@ -567,7 +567,7 @@ structure Event : EVENT_EXTRA =
                         end
                    | (pollFn,ackFlg)::backs =>
                         (case pollFn () of
-                            ENABLED {prio, doitFn} => 
+                            ENABLED {prio, doitFn} =>
                                extRdy (backs, [{prio = prio,doitFn = (doitFn, ackFlg)}])
                           | BLOCKED blockFn => ext (backs, (blockFn,ackFlg)::blockFns))
                end
@@ -586,7 +586,7 @@ structure Event : EVENT_EXTRA =
                            end
                    | (pollFn,ackFlg)::backs =>
                            (case pollFn () of
-                               ENABLED {prio, doitFn} => 
+                               ENABLED {prio, doitFn} =>
                                   extRdy (backs, {prio = prio, doitFn = (doitFn, ackFlg)}::doitFns)
                              | _ => extRdy (backs, doitFns))
                end
@@ -621,13 +621,13 @@ structure Event : EVENT_EXTRA =
                          forceGL (evts, BASE (bevts' @ bevts)::gevts)
                     | (GRP gevts', gevts) =>
                          forceGL (evts, gevts' @ gevts)
-                    | (gevt, gevts) => 
+                    | (gevt, gevts) =>
                          forceGL (evts, gevt::gevts))
          and force (evt : 'a event) : 'a group =
             let
                val gevt =
                   case evt of
-                     BEVT bevts => BASE bevts   
+                     BEVT bevts => BASE bevts
                    | CHOOSE evts => forceBL (evts, [])
                    | GUARD g => force (g ())
                    | WNACK f =>
@@ -643,7 +643,7 @@ structure Event : EVENT_EXTRA =
                val () = Assert.assertNonAtomic' "Event.sync"
                val () = debug' "sync(1)" (* NonAtomic *)
                val () = Assert.assertNonAtomic' "Event.sync(1)"
-               val x = 
+               val x =
                   case force evt of
                      BASE bevts => syncOnBEvts bevts
                    | gevt => syncOnGrp gevt
@@ -657,7 +657,7 @@ structure Event : EVENT_EXTRA =
                val () = Assert.assertNonAtomic' "Event.select"
                val () = debug' "select(1)" (* NonAtomic *)
                val () = Assert.assertNonAtomic' "Event.select(1)"
-               val x = 
+               val x =
                   case forceBL (evts, []) of
                      BASE bevts => syncOnBEvts bevts
                    | gevt => syncOnGrp gevt
