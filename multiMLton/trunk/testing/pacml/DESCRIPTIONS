@@ -1,0 +1,23 @@
+test1_Vanilla - ping-pong with send and recv in Host threads
+test1_Parasite - send and recv in parasites
+test2_Vanilla - 2 tier-ed ping-pong with send and recv in host
+test2_parasite - " in parasites
+
+test3_ - sSync o sendEvt and recv
+test4_ - test3 with spawning order changed //To simulate different timing
+test5_ - aSync o aSendEvt and recv
+test6_ - test5 with order reversed
+test7_ - choice of sync events [2 pongers and one pinger over choice]
+test8_ - test7 reordered
+
+test9_ - send and sSync o recvEvt
+test10_ - test9 with order reversed
+test11_ - send and aSync o aRecvEvt
+test12_ - test11 with order reversed
+test13_ - choice of sync events [2 pingers and one ponger over choice]
+test14_ - test13 reordered
+
+test15_ - sSync o sendEvt and sSync o recvEvt
+test16_ - sSync o sendEvt and aSync o aRecvEvt
+test17_ - aSync o aSendEvt and sSync o sendEvt
+test18_ - aSync o aSendEvt and aSync o aSendEvt

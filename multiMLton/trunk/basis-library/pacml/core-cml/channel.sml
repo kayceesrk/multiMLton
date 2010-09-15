@@ -255,6 +255,117 @@ struct
     end (* sendPoll ends *)
 
 
+  fun recvEvt (CHAN {prio, inQ, outQ, lock}) =
+    let
+      fun doitFn () =
+        let
+          val () = Assert.assertAtomic' ("Channel.recvEvt.doitFn", NONE)
+          val () = debug' "Channel.recvEvt(3.1.1)" (* Atomic 1 *)
+          val () = Assert.assertAtomic' ("Channel.recvEvt(3.1.1)", SOME 1)
+          val () = L.getCmlLock lock TID.tidNum
+          fun tryLp () =
+            case cleanAndDeque (outQ) of
+                  SOME (stxid, (msg, st)) =>
+                    (let
+                      val () = debug' "Channel.recvEvt.tryLp"
+                      fun matchLp () =
+                        (let
+                          val () = debug' "Channel.recvEvt.matchLp"
+                          val res = cas (stxid, 0, 2)
+                        in
+                          if res = 0 then
+                            (let (* WAITING -- we got it *)
+                              val _ = prio := 1
+                              val () = TID.mark (TID.getCurThreadId ())
+                              val () = L.releaseCmlLock lock (TID.tidNum())
+                              val rthrd = PT.prep (st)
+                              val _ = S.atomicReady (rthrd) (* Implicit atomic end *)
+                            in
+                              msg
+                            end)
+                          else if res = 1 then matchLp () (* CLAIMED *)
+                          else tryLp () (* SYNCHED *)
+                        end) (* matchLp ends *)
+                    in
+                      matchLp ()
+                    end) (* SOME ends *)
+                | NONE => (L.releaseCmlLock lock (TID.tidNum());
+                           raise E.DOIT_FAIL)
+          (* tryLp ends *)
+        in
+          tryLp ()
+        end (* doitFn ends *)
+      fun blockFn (mytxid) =
+        let
+          val () = Assert.assertAtomic' ("Channel.recvEvt.blockFn", NONE)
+          val () = debug' "Channel.recvEvt(3.2.1)" (* Atomic 1 *)
+          val () = Assert.assertAtomic' ("Channel.recvEvt(3.2.1)", SOME 1)
+          val () = L.getCmlLock lock TID.tidNum
+          fun tryLp () =
+            case cleanAndDeque (outQ) of
+                  SOME (v as (stxid, (msg, st))) =>
+                    let
+                      val () = if mytxid = stxid then raise Fail "Same event" else ()
+                      val () = debug' "Channel.recvEvt.tryLp"
+                      fun matchLp () =
+                        let
+                          val () = debug' "Channel.recvEvt.matchLp"
+                          val res = cas (mytxid, 0, 1) (* Try to claim it *)
+                        in
+                          if res = 0 then
+                            let
+                              val res2 = cas (stxid, 0, 2)
+                            in
+                              (if res2 = 0 then
+                                (let (* WAITING -- we got it *)
+                                  val _ = prio := 1
+                                  val _ = mytxid := 2
+                                  val () = TID.mark (TID.getCurThreadId ())
+                                  val () = L.releaseCmlLock lock (TID.tidNum())
+                                  val rthrd = PT.prep (st)
+                                  val _ = S.atomicReady (rthrd) (* Implicit atomic end *)
+                                in
+                                  msg
+                                end)
+                              else if res2 = 1 then
+                                (mytxid := 0; matchLp ())
+                              else (mytxid := 0; tryLp ()))
+                            end
+                          else if res = 1 then matchLp () (* CLAIMED *)
+                          else (Q.undeque (outQ, v);
+                                L.releaseCmlLock lock (TID.tidNum ());
+                                S.atomicSwitchToNext (fn _ => ()))
+                        end (* matchLp ends *)
+                    in
+                      matchLp ()
+                    end (* SOME ends *)
+                | NONE =>
+                    S.atomicSwitchToNext (fn rt => (cleanAndEnque (inQ, (mytxid, rt))
+                                                  ; L.releaseCmlLock lock (TID.tidNum())
+                                                  ; debug' ("Channel.recvEvt.NONE."^PT.getThreadTypeString())))
+          (* tryLp ends *)
+        in
+          tryLp ()
+        end (* blockFn ends *)
+    fun pollFn () =
+      let
+        val () = Assert.assertAtomic' ("Channel.recvEvt.pollFn", NONE)
+        val () = debug' "Channel.recvEvt(2)" (* Atomic 1 *)
+        val () = Assert.assertAtomic' ("Channel.recvEvt(2)", SOME 1)
+        val () = L.getCmlLock lock TID.tidNum
+        val v = cleanAndChk (prio, outQ)
+        val () = L.releaseCmlLock lock (TID.tidNum())
+        val () = debug' "Channel.recvEvt(3)" (* Atomic 1 *)
+      in
+        case v of
+            0 => E.blocked blockFn
+          | prio => E.enabled {prio = prio, doitFn = doitFn}
+      end
+    in
+      E.bevt pollFn
+    end
+
+  fun aRecvEvt (ch) = E.aevt(recvEvt (ch))
 
   fun recv (CHAN {prio, inQ, outQ, lock}) =
     let
@@ -267,13 +378,13 @@ struct
       val () = debug' "channel.recv(2)"
       fun tryLp () =
         case cleanAndDeque (outQ) of
-            SOME (rtxid, (msg, st)) =>
+            SOME (stxid, (msg, st)) =>
              (let
                 val () = debug' "Channel.recv.tryLp"
                 fun matchLp () =
                  (let
                     val () = debug' "Channel.recv.matchLp"
-                    val res = cas (rtxid, 0, 2)
+                    val res = cas (stxid, 0, 2)
                   in
                     if res = 0 then
                       (let (* WAITING -- we got it *)
@@ -293,7 +404,8 @@ struct
               end)
           | NONE =>
               S.atomicSwitchToNext (fn rt => (cleanAndEnque (inQ, (mkTxId (), rt))
-                                              ; L.releaseCmlLock lock (TID.tidNum ())))
+                                              ; L.releaseCmlLock lock (TID.tidNum ())
+                                              ; debug' ("Channel.recv.NONE."^PT.getThreadTypeString())))
           (* tryLp ends *)
     in
       tryLp ()
