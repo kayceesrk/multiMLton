@@ -45,17 +45,6 @@ struct
           NONE => ()
         | SOME t => enque1 t)
 
-  fun atomicReadyWMsg (rt : rdy_thread) msg =
-    (debug' ("atomicReadyWMsg(1)."^msg)
-    ; case rt of
-      H_RTHRD (rhost) => (SQ.enque (rhost, R.PRI); atomicEnd ())
-    | P_RTHRD (par) => PT.atomicPrefixAndSwitchTo (par) (* Implicit atomic end *)
-    ; debug' ("atomicReadyWMsg(2)."^msg))
-
-  fun readyWMsg (rt : rdy_thread) msg =
-    (atomicBegin ();
-     atomicReadyWMsg (rt) msg)
-
   fun atomicReady (rt : rdy_thread) =
     (Assert.assertAtomic' ("Scheduler.atomicReady(1)[tid:"^(TID.tidMsg())^"]", SOME 1)
     ; case rt of
@@ -178,6 +167,7 @@ struct
                                                       HOST => false
                                                     | _ => true)
                val _ = SQ.enque (rt, R.PRI) (* ready the given thread *)
+               val _ = PT.disableParasitePreemption ()
                val _ = PT.jumpDown (PT.getParasiteBottom ()) (* Implicit atomic end *)
              in
                print "Should not see this\n"
@@ -206,6 +196,7 @@ struct
                                         fn () => case PT.getThreadType () of
                                                       HOST => false
                                                     | _ => true)
+               val _ = PT.disableParasitePreemption ()
                val _ = PT.jumpDown (PT.getParasiteBottom ()) (* Implicit atomic end *)
              in
                print "Should not see this\n"

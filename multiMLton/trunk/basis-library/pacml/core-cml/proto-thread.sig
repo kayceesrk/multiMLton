@@ -27,7 +27,6 @@ sig
 
   (* Parasite manipulation *)
   val jumpDown : int -> unit
-  val jumpToThreadBelow : unit -> unit
   val copyParasite : int -> RepTypes.parasite
   val toPreemptParasite : unit -> bool
   val proceedToExtractParasite : RepTypes.primHost * int -> bool

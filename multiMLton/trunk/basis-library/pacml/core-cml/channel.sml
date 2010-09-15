@@ -281,7 +281,7 @@ struct
                         val () = TID.mark (TID.getCurThreadId ())
                         val _ = L.releaseCmlLock lock (TID.tidNum())
                         val rthrd = PT.prep (st)
-                        val _ = S.atomicReadyWMsg (rthrd) "Channel.recv.SOME"
+                        val _ = S.atomicReady (rthrd)
                       in
                         msg
                       end)

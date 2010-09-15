@@ -106,7 +106,7 @@ struct
   fun getThreadTypeString () =
     case getThreadType () of
          HOST => "HOST"
-       | _ => "PARASITE"
+       | PARASITE => "PARASITE"
 
   (* Parasite management *)
 
@@ -116,7 +116,6 @@ struct
   val prefixAndSwitchTo = ParasiteFFI.prefixAndSwitchTo
   val getFrameBottomAsOffset = ParasiteFFI.getFrameBottomAsOffset
   val jumpDown = ParasiteFFI.jumpDown
-  fun jumpToThreadBelow () = jumpDown (getParasiteBottom ())
 
   datatype prefix_kind = datatype RepTypes.prefix_kind
 
@@ -135,6 +134,7 @@ struct
     end
     val _ = Primitive.dontInline doit
     val _ = setThreadState (state)
+    val _ = enableParasitePreemption ()
   in
     ()
   end
@@ -156,6 +156,7 @@ struct
       val _ = setParasiteBottom (getFrameBottomAsOffset ())
       val _ = atomicEnd ()
       val _ = f ()
+      val _ = disableParasitePreemption ()
     in
       PacmlFFI.noop () (* Needed to prevent inlining f () *)
     end
@@ -163,8 +164,11 @@ struct
     val _ = atomicBegin ()
     val _ = setThreadType (PARASITE)
     val _ = Primitive.dontInline (doit)
+
+
     val _ = debug' "ProtoThread.spawnParasite.resetting thread state"
     val _ = setThreadState (state)
+    val _ = enableParasitePreemption ()
   in
     ()
   end

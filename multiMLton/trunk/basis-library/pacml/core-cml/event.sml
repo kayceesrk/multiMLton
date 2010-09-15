@@ -1,7 +1,7 @@
 structure Event : EVENT_EXTRA =
 struct
   structure Assert = LocalAssert (val assert = true)
-  structure Debug = LocalDebug (val debug = false)
+  structure Debug = LocalDebug (val debug = true)
 
   open Critical
   structure S = Scheduler
@@ -294,7 +294,7 @@ struct
                                                               in
                                                                 case et of
                                                                      ASYNC => ()
-                                                                   | SYNC => (S.readyWMsg (PT.prepVal (t, SOME x)) "Event.syncOnBEvts.blockFn")
+                                                                   | SYNC => (S.ready (PT.prepVal (t, SOME x)))
                                                               end)
                                  in
                                    if (!transId = 0) then
