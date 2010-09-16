@@ -1,8 +1,8 @@
 structure Scheduler : SCHEDULER =
 struct
 
-  structure Assert = LocalAssert(val assert = true)
-  structure Debug = LocalDebug(val debug = true)
+  structure Assert = LocalAssert(val assert = false)
+  structure Debug = LocalDebug(val debug = false)
 
   open Critical
 
@@ -16,6 +16,7 @@ struct
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
   fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
+  fun debug'' msg = print (msg^" : "^Int.toString(PacmlFFI.processorNumber())^"\n")
 
   datatype thread_type = datatype RepTypes.thread_type
   datatype thread = datatype RepTypes.thread
@@ -173,6 +174,7 @@ struct
                print "Should not see this\n"
              end
              val _ = Primitive.dontInline (dummyFrame)
+             val _ = (atomicBegin (); atomicEnd ())
            in
              !r()
            end)
@@ -202,6 +204,7 @@ struct
                print "Should not see this\n"
              end
              val _ = Primitive.dontInline (dummyFrame)
+             val _ = (atomicBegin (); atomicEnd ())
            in
              !r()
            end

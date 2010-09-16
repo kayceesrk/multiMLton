@@ -1,8 +1,8 @@
 structure ProtoThread : PROTO_THREAD =
 struct
 
-  structure Assert = LocalAssert(val assert = true)
-  structure Debug = LocalDebug(val debug = true)
+  structure Assert = LocalAssert(val assert = false)
+  structure Debug = LocalDebug(val debug = false)
 
   open Critical
   structure TID = ThreadID
@@ -133,6 +133,8 @@ struct
       print "\natomicPrefixAndSwitchTo : Should not see this"
     end
     val _ = Primitive.dontInline doit
+
+    (* control returns *)
     val _ = setThreadState (state)
     val _ = enableParasitePreemption ()
   in
@@ -165,7 +167,7 @@ struct
     val _ = setThreadType (PARASITE)
     val _ = Primitive.dontInline (doit)
 
-
+    (* control returns *)
     val _ = debug' "ProtoThread.spawnParasite.resetting thread state"
     val _ = setThreadState (state)
     val _ = enableParasitePreemption ()

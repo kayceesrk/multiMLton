@@ -11,8 +11,8 @@ struct
   structure MT = MLtonThread
   structure PT = ProtoThread
 
-  structure Assert = LocalAssert(val assert = true)
-  structure Debug = LocalDebug(val debug = true)
+  structure Assert = LocalAssert(val assert = false)
+  structure Debug = LocalDebug(val debug = false)
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
   fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
@@ -39,16 +39,16 @@ struct
     val _ = MLtonProfile.init ()
     val _ = PacmlFFI.disablePreemption ()
     val _ = MLtonSignal.setHandler (Posix.Signal.usr2, h)
-    fun loop () =
+    fun loop procNum =
     let
       val _ = PacmlFFI.maybeWaitForGC ()
     in
       case SQ.deque (RepTypes.PRI) of
-           NONE => (PacmlFFI.wait (); loop ())
+           NONE => (PacmlFFI.wait (); loop procNum)
          | SOME (t) =>
              let
                val _ = if !Config.isRunning then ()
-                       else loop ()
+                       else (loop procNum)
                val _ = atomicBegin ()
                val _ = PacmlFFI.enablePreemption ()
              in
@@ -56,7 +56,7 @@ struct
              end
     end
   in
-    loop ()
+    loop (PacmlFFI.processorNumber ())
   end
 
   val () = (_export "Parallel_run": (unit -> unit) -> unit;) thread_main
