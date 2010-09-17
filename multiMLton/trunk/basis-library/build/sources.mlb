@@ -415,9 +415,11 @@ in
 		../pacml/core-cml/channel.sig
 		../pacml/core-cml/channel.sml
 
-
 		../pacml/core-cml/timeout.sig
 		../pacml/core-cml/timeout.sml
+		../pacml/core-cml/sync-var.sig
+		../pacml/core-cml/sync-var.sml
+
 		../pacml/core-cml/main.sig
 		ann "allowFFI true" in
 			../pacml/core-cml/main.sml

@@ -4,4 +4,5 @@ sig
   include EVENT
   include CHANNEL
   include MAIN
+  structure SyncVar : SYNC_VAR
 end

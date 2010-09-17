@@ -4,4 +4,5 @@ struct
   open Event
   open Channel
   open Main
+  structure SyncVar : SYNC_VAR = SyncVar
 end

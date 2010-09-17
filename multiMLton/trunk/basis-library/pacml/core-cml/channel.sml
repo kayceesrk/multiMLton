@@ -177,7 +177,7 @@ struct
                                 (mytxid := 0; matchLp ())
                               else (mytxid := 0; tryLp ()))
                             end
-                          else if res = 1 then matchLp () (* CLAIMED *)
+                          else if res = 1 then matchLp () (* CLAIMED *) (* In timeEvt *)
                           else (Q.undeque (inQ, v);
                                 L.releaseCmlLock lock (TID.tidNum ());
                                 S.atomicSwitchToNext (fn _ => ()))
