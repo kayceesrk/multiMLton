@@ -95,7 +95,8 @@ struct
                 end) (* SOME ends *)
             | NONE =>
                 S.atomicSwitchToNext (fn st => (cleanAndEnque (outQ, (mkTxId (), (msg, st)))
-                                               ; L.releaseCmlLock lock (TID.tidNum())))
+                                               ; L.releaseCmlLock lock (TID.tidNum())
+                                               ; debug' ("Channel.send.NONE on "^(PT.getThreadTypeString()))))
                 (* tryLp ends *)
       val () = tryLp ()
     in

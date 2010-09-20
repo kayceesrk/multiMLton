@@ -1,16 +1,3 @@
-(* sync-var.sml
- * 2004 Matthew Fluet (mfluet@acm.org)
- *  Ported to MLton threads.
- *)
-
-(* sync-var.sml
- *
- * COPYRIGHT (c) 1995 AT&T Bell Laboratories.
- * COPYRIGHT (c) 1989-1991 John H. Reppy
- *
- * The implementation of Id-style synchronizing memory cells.
- *)
-
 structure SyncVar : SYNC_VAR_EXTRA =
    struct
       structure Assert = LocalAssert(val assert = false)

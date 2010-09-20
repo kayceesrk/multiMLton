@@ -187,6 +187,7 @@ struct
        | PARASITE =>
            let
              val r : (unit -> 'a) ref = ref (fn () => raise Fail "atomicSwitchToNext : Switching to a unprepared thread")
+             val _ = debug' ("Scheduler.atomicSwitchToNext on "^(PT.getThreadTypeString ()))
              fun dummyFrame () =
              let
                val tid = TID.getCurThreadId ()

@@ -89,7 +89,10 @@ GC_thread GC_copyParasite (int startOffset) {
     pointer dest = getStackBottom (s, stk);
     stk->used = numBytes;
 
+    s->amInGC = TRUE; //For profiler safety
     memcpy (dest, start, numBytes);
+    s->amInGC = FALSE;
+
     return th;
 }
 
@@ -178,7 +181,10 @@ GC_thread GC_extractParasite (pointer p, int startOffset) {
 
     pointer dest = getStackBottom (s, stk);
     stk->used = numBytes;
+
+    s->amInGC = TRUE; //For profiler safety
     memcpy (dest, start, numBytes);
+    s->amInGC = FALSE;
 
     /* set control to threadlet sitting below */
     oriStk->used = startOffset;
@@ -191,6 +197,7 @@ void GC_prefixAndSwitchTo (GC_state s, pointer p) {
 
     assert (s->atomicState > 0);
     assert (p);
+
 
     GC_thread thrd = (GC_thread)(p + offsetofThread (s));
 
@@ -208,9 +215,11 @@ void GC_prefixAndSwitchTo (GC_state s, pointer p) {
             fprintf (stderr, "\t\tparasiteSize = %ld\n", stk->used);
         }
 
-        if (i>0) {
-            printf ("SECOND ITERATION!!\n");
-        }
+        /* XXX KC This is a temporary fix. Might break if parasite was
+         * sufficiently large enough that target stack's reserved space is not
+         * enough
+         */
+        if (i>0) { break; }
 
         /* grow stack if needed */
         getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
@@ -230,17 +239,21 @@ void GC_prefixAndSwitchTo (GC_state s, pointer p) {
         stk = (GC_stack) objptrToPointer (thrd->stack, s->heap->start);
         i++;
     }
-    assert (s->stackLimit > s->stackTop + stk->used);
 
     pointer parasiteBottom = getStackBottom (s, stk);
     pointer start = GC_getFrameBottom ();
+
+    s->amInGC = TRUE; //For profiler safety
     memcpy (start, parasiteBottom, stk->used);
+    s->amInGC = FALSE;
+
     s->stackTop = start + stk->used;
     if (DEBUG_SPLICE) {
         fprintf (stderr, "\tprefixing frame of size %ld\n", stk->used);
         fprintf (stderr, "\tnewStackTop = "FMTPTR"\n", (uintptr_t) s->stackTop);
         fflush (stderr);
     }
+
 
     s->atomicState --;
     return;
