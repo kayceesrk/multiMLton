@@ -1,5 +1,0 @@
-
-libdir=/home/felix/wk/sysprogsml/code/swerve/common/tests
-smlbin=/src/smlnj/current/bin
-
-exec $smlbin/.run-sml @SMLload=$libdir/t_main.x86-linux @SMLdebug=/dev/null "$@"

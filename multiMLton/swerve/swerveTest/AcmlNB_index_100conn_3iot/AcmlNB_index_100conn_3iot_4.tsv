@@ -1,5 +1,0 @@
-#Input :: AcmlNB_index_100conn_3iot_4/COLLECT.txt
-#Rate[conn/s]	Total time[ms]	Connection rate[conn/s]	Request rate[replies/s]	Reply rate[replies/s]	Resp time[ms]	Transfer time[ms]	Avg conn time[ms]	Max conn time[ms]	Conn time stddev[ms]	IO[KBps]	Errors
-100	0.993	100.7	100.7	100.704934541793	2.2	0.9	3.0	6.0	0.7	128.9	0
-200	0.498	200.9	200.9	200.803212851406	1.7	0.8	2.5	4.3	0.6	257.0	0
-300	0.332	300.9	300.9	301.204819277108	1.5	0.8	2.4	4.6	0.7	385.0	0

@@ -1,1 +1,0 @@
-exec ../../main/swerve -f norm.cfg "$@"

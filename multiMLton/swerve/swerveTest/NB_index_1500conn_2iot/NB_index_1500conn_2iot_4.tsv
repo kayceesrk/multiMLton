@@ -1,7 +1,0 @@
-#Input :: NB_index_1500conn_2iot_4/COLLECT.txt
-#Rate[conn/s]	Total time[ms]	Connection rate[conn/s]	Request rate[replies/s]	Reply rate[replies/s]	Resp time[ms]	Transfer time[ms]	Avg conn time[ms]	Max conn time[ms]	Conn time stddev[ms]	IO[KBps]	Errors
-1000	1.500	1000.3	0.0	1000	0.0	0.0	0.0	0.0	0.0	0.0	1500
-1000	1.500	1000.3	0.0	1000	0.0	0.0	0.0	0.0	0.0	0.0	1500
-1000	1.500	1000.2	0.0	1000	0.0	0.0	0.0	0.0	0.0	0.0	1500
-1000	1.499	1000.3	0.0	1000.66711140761	0.0	0.0	0.0	0.0	0.0	0.0	1500
-1000	1.500	1000.3	0.0	1000	0.0	0.0	0.0	0.0	0.0	0.0	1500

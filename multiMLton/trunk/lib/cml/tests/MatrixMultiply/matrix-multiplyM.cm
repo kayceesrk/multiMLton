@@ -1,5 +1,0 @@
-Group
-  structure Main
-is
-  $cml/basis.cm
-  matrix-multiplyM.sml
