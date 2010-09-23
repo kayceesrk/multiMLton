@@ -21,3 +21,6 @@ test15_ - sSync o sendEvt and sSync o recvEvt
 test16_ - sSync o sendEvt and aSync o aRecvEvt
 test17_ - aSync o aSendEvt and sSync o sendEvt
 test18_ - aSync o aSendEvt and aSync o aSendEvt
+
+test19_Vanilla - ping-pong with spawn send and recv
+test19_Parasite - ping-pong with aSend and recv

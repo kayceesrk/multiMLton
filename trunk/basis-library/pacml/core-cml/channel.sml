@@ -103,6 +103,16 @@ struct
       ()
     end (* send ends *)
 
+  fun aSend (ch, v) =
+    Thread.spawnParasite
+      (fn () => let
+                  val _ = PT.disableParasitePreemption ()
+                  val _ = send (ch, v)
+                in
+                  PT.enableParasitePreemption ()
+                end)
+
+
   fun sendEvt (CHAN {prio, inQ, outQ, lock}, msg) =
     let
       fun doitFn () =
