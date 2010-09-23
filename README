@@ -1,6 +1,16 @@
 MultiMLton
 ----------
 
+MultiMLton is a compiler and runtime environment that targets scalable
+multicore platforms. It is an extension of MLton, an open-source,
+whole-program, optimizing Standard ML compiler. It combines new language
+abstractions and associated compiler analyses for expressing and implementing
+various kinds of fine-grained parallelism (safe futures, speculation,
+transactions, etc.), along with a sophisticated runtime system tuned to
+efficiently handle large numbers of lightweight threads.
+
+http://sss.cs.purdue.edu/projects/multiMLton
+
 INSTALL
 -------
 Dependencies
@@ -42,9 +52,13 @@ Examples
 
 	Some examples are available in trunk/testing/pacml. A Makefile is provided
 	for building the tests. Individual tests, say test1_parasite.sml, can be
-	built by "make test1_parasite-amd64". The program can be run by invoking
-	"./test1_parasite-amd64 @MLton number-processors 1 enable-timer 20000 --
-	100".
+	built by
+
+		make test1_parasite-amd64
+
+	The program can be run by invoking
+
+		./test1_parasite-amd64 @MLton number-processors 1 enable-timer 20000 -- 100
 
 ACML/Parasite Sources
 ---------------------
