@@ -82,7 +82,7 @@ struct
       parasiteBottom := p
     end
 
-  fun disableParasitePreemption () =
+  fun disableParasitePreemption () = (* XXX KC -- make it return the current state so that it can be restored *)
   let
     val TID.TID {preemptParasite, ...} = TID.getCurThreadId ()
   in
