@@ -20,7 +20,7 @@ signature MAILBOX =
 
       val send     : ('a mbox * 'a) -> unit
       val recv     : 'a mbox -> 'a
-      val recvEvt  : 'a mbox -> 'a EventType.sevt
+      val recvEvt  : 'a mbox -> 'a Event.sevt
       val recvPoll : 'a mbox -> 'a option
    end
 

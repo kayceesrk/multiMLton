@@ -414,6 +414,8 @@ in
 		../pacml/core-cml/event.sml
 		../pacml/core-cml/channel.sig
 		../pacml/core-cml/channel.sml
+                ../pacml/core-cml/mailbox.sig
+                ../pacml/core-cml/mailbox.sml
 
 		../pacml/core-cml/timeout.sig
 		../pacml/core-cml/timeout.sml

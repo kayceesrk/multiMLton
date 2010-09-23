@@ -13,17 +13,22 @@
 
 structure Mailbox : MAILBOX_EXTRA =
    struct
-      
-      datatype 'a mbox = MB of 'a chan
 
-      fun mailbox () = MB (channel())
+      structure E = Event
+      structure C = Channel
 
-      fun sameMailbox (MB (c1), MB (c2) = sameChannle(c1, c2)
+      datatype 'a mbox = MB of ('a C.chan)
 
-      fun send (MB (c), x) = aSync(aSendEvt(c1, x))
+      fun mailbox () = MB (C.channel())
+
+      fun sameMailbox (MB (c1), MB (c2)) = C.sameChannel(c1, c2)
+
+      fun send (MB (c), x) = E.aSync(C.aSendEvt(c, x))
      
-      fun recv (MB (c)) = recv(c)
+      fun recv (MB (c)) = C.recv(c)
+
+      fun recvEvt (MB (c)) = C.recvEvt(c)
        
-      fun recvPoll (MB (c)) = recvPoll(c)
+      fun recvPoll (MB (c)) = C.recvPoll(c)
     
   end

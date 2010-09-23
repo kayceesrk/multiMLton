@@ -5,4 +5,5 @@ sig
   include CHANNEL
   include MAIN
   structure SyncVar : SYNC_VAR
+  structure Mailbox : MAILBOX
 end

@@ -29,6 +29,10 @@ struct
                          outQ = Q.new (),
                          lock = L.initCmlLock ()}
 
+  
+  fun sameChannel (CHAN {prio = prio1, ...}, CHAN {prio =
+        prio2, ...}) =
+            prio1 = prio2
   val cas = PacmlFFI.vCompareAndSwap
   fun mkTxId () = ref 0
 

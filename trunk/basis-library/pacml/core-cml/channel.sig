@@ -3,6 +3,9 @@ sig
     type 'a chan
 
     val channel: unit -> 'a chan
+ 
+    val sameChannel: 'a chan * 'a chan -> bool
+
     val send : ('a chan * 'a) -> unit
     val recv : 'a chan -> 'a
 

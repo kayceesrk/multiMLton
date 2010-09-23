@@ -5,4 +5,5 @@ struct
   open Channel
   open Main
   structure SyncVar : SYNC_VAR = SyncVar
+  structure Mailbox : MAILBOX = Mailbox
 end
