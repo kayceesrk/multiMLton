@@ -450,19 +450,6 @@ struct
             (atomicEnd (); (ignore o forceHelper) (b, ASYNC); atomicBegin (); e)
           fun aTransF e =
             ((ignore o forceHelper) (b, ASYNC); e)
-          (* fun pollAsyncBEvt pollFn =
-            case pollFn () of
-                  ENABLED _ => true
-                | BLOACKED _ => false
-          (* checks if the event is available *)
-          fun pollAsyncHalf evt =
-            case evt of
-                BEVT bevts =>
-                    List.fold (fn (pollFn, acc) => (pollAsyncBEvt pollFn) orelse acc) false bevts
-              | CHOOSE evts =>
-                    List.fold (fn (result, acc) => result orelse acc) false (List.map pollAsyncHalf evts)
-              (* We return false here as we cannot determine the availability of event without evaluating the guard *)
-              | GUARD g => false *)
           fun aTransBaseEvt pollFn () =
               case pollFn () of
                 ENABLED {prio, doitFn} =>
