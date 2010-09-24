@@ -50,9 +50,16 @@ New @MLton parameters
 
 Examples
 
-	Some examples are available in trunk/testing/pacml. A Makefile is provided
-	for building the tests. Individual tests, say test1_parasite.sml, can be
-	built by
+	Some simple examples are available in trunk/testing/pacml. Create a new
+	environment variable called MULTIMLTON, that points to the multiMLton
+	binary. For convenience, add
+
+		export MULTIMLTON=<multiMLtonRoot>/trunk/build/bin/mlton
+
+	to your .bashrc file. Here, <multiMLtonRoot> corresponds to the directory
+	where multiMLton source can be found. A Makefile is provided for building
+	the tests. A make without arguments builds all of the tests in the
+	directory. Individual tests, say test1_parasite.sml, can be built by
 
 		make test1_parasite-amd64
 

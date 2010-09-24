@@ -24,11 +24,11 @@ structure Mailbox : MAILBOX_EXTRA =
       fun sameMailbox (MB (c1), MB (c2)) = C.sameChannel(c1, c2)
 
       fun send (MB (c), x) = E.aSync(C.aSendEvt(c, x))
-     
+
       fun recv (MB (c)) = C.recv(c)
 
       fun recvEvt (MB (c)) = C.recvEvt(c)
-       
+
       fun recvPoll (MB (c)) = C.recvPoll(c)
-    
+
   end
