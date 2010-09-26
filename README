@@ -28,8 +28,10 @@ Build
 
 Known Issues/Caveats
 
-	Build process consumes a lot of memory (> 4 GB) and hence it might take a
-	long time to build on a memory constrained machine.
+	(1) Build process consumes a lot of memory (> 4 GB) and hence it might take
+	a long time to build on a memory constrained machine.
+
+	(2) Regression test Weak.2 fails
 
 Notes
 
