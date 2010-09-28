@@ -29,7 +29,7 @@ struct
                          outQ = Q.new (),
                          lock = L.initCmlLock ()}
 
-  
+
   fun sameChannel (CHAN {prio = prio1, ...}, CHAN {prio =
         prio2, ...}) =
             prio1 = prio2
@@ -108,7 +108,7 @@ struct
     end (* send ends *)
 
   fun aSend (ch, v) =
-    Thread.spawnParasite
+    ProtoThread.spawnParasite
       (fn () => let
                   val _ = PT.disableParasitePreemption ()
                   val _ = send (ch, v)
