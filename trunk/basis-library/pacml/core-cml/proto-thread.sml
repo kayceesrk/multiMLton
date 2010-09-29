@@ -42,32 +42,21 @@ struct
     let
       val TID.TID {pstate, ...} = TID.getCurThreadId ()
     in
-      pstate
+      !pstate
     end
 
-  fun setThreadState (PSTATE (ps)) =
+  fun setThreadState (ps) =
     let
-      val TID.TID {pstate = PSTATE (pstate), ...} = TID.getCurThreadId ()
-      val _ = (#threadType pstate) := !(#threadType ps)
-      val _ = (#parasiteBottom pstate) := !(#parasiteBottom ps)
-      val _ = (#numParasites pstate) := !(#numParasites ps)
-      val _ = (#timeParasites pstate) := !(#timeParasites pstate)
+      val TID.TID {pstate, ...} = TID.getCurThreadId ()
     in
-      ()
+      pstate := ps
     end
 
   fun getProp (x) =
     let
-      val TID.TID {pstate = PSTATE (pstate), ...} = TID.getCurThreadId ()
+      val TID.TID {pstate = ref (PSTATE (ps)), ...} = TID.getCurThreadId ()
     in
-      !(x pstate)
-    end
-
-  fun setProp (x, v) =
-    let
-      val TID.TID {pstate = PSTATE (pstate), ...} = TID.getCurThreadId ()
-    in
-      (x pstate) := v
+      (x ps)
     end
 
   fun getThreadType () = getProp (#threadType)
@@ -75,10 +64,49 @@ struct
   fun getNumParasitesSpawned () = getProp (#numParasites)
   fun getParasiteTimeSpent () = getProp (#timeParasites)
 
-  fun setThreadType (t) = setProp (#threadType, t)
-  fun setParasiteBottom (p) = setProp (#parasiteBottom, p)
-  fun setNumParasitesSpawned (n) = setProp (#numParasites, n)
-  fun setParasiteTimeSpent (ms) = setProp (#timeParasites, ms)
+  fun setThreadType (t) =
+    let
+      val TID.TID {pstate, ...} = TID.getCurThreadId ()
+      val PSTATE (ps) = !pstate
+    in
+      pstate := PSTATE {threadType = t,
+                        parasiteBottom = #parasiteBottom ps,
+                        numParasites = #numParasites ps,
+                        timeParasites = #timeParasites ps}
+    end
+
+  fun setParasiteBottom (pb) =
+    let
+      val TID.TID {pstate, ...} = TID.getCurThreadId ()
+      val PSTATE (ps) = !pstate
+    in
+      pstate := PSTATE {threadType = #threadType ps,
+                        parasiteBottom = pb,
+                        numParasites = #numParasites ps,
+                        timeParasites = #timeParasites ps}
+    end
+
+  fun setNumParasitesSpawned (n) =
+    let
+      val TID.TID {pstate, ...} = TID.getCurThreadId ()
+      val PSTATE (ps) = !pstate
+    in
+      pstate := PSTATE {threadType = #threadType ps,
+                        parasiteBottom = #parasiteBottom ps,
+                        numParasites = n,
+                        timeParasites = #timeParasites ps}
+    end
+
+  fun setParasiteTimeSpent (ms) =
+    let
+      val TID.TID {pstate, ...} = TID.getCurThreadId ()
+      val PSTATE (ps) = !pstate
+    in
+      pstate := PSTATE {threadType = #threadType ps,
+                        parasiteBottom = #parasiteBottom ps,
+                        numParasites = #numParasites ps,
+                        timeParasites = ms}
+    end
 
   fun disableParasitePreemption () =
   let

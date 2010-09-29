@@ -138,14 +138,14 @@ struct
     rhost (* NOTE: This thread must be readied and not readySpawned as numLiveThreads has already been incremented *)
   end
 
-  fun spawnParasite f = PT.spawnParasite f
-    (* let
+  fun spawnParasite f =
+    let
       val start = Time.now ()
       val _ = PT.spawnParasite f
       val stop = Time.now ()
-      val _ = print (concat [LargeInt.toString (Time.toMicroseconds (Time.-(stop,start))), "\n"])
+      (* val _ = print (concat [LargeInt.toString (Time.toMicroseconds (Time.-(stop,start))), "\n"]) *)
     in
       ()
-    end *)
+    end
 
 end

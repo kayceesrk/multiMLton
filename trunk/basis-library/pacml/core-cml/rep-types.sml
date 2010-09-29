@@ -36,14 +36,14 @@ structure RepTypes =
       and parasite_state =
         PSTATE of {
                  (* Whether we are host thread or parasite *)
-                 threadType : thread_type ref,
+                 threadType : thread_type,
                  (* Pointer to the threadlet sitting below us *)
                  (* It is an offset from the bottom of the stack *)
-                 parasiteBottom : int ref,
+                 parasiteBottom : int,
                  (* # parasites created *)
-                 numParasites : real ref,
+                 numParasites : real,
                  (* time spent on parasitic computation in microseconds*)
-                 timeParasites : real ref}
+                 timeParasites : real}
 
       (** thread IDs --- see thread-id.sml and threads.sml **)
       and thread_id =
@@ -60,7 +60,7 @@ structure RepTypes =
                  (* the cvar that becomes set when the thread dies *)
                  dead : cvar,
                  (* parasitic state *)
-                 pstate : parasite_state,
+                 pstate : parasite_state ref,
                  (* Whether to preempt a parasite *)
                  preemptParasite : bool ref,
                  (* Processor Id to which the thread belongs to *)
