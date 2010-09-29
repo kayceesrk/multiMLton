@@ -2,6 +2,7 @@ signature THREAD_ID =
 sig
   type thread_id
   type thread_type
+  type parasite_state = RepTypes.parasite_state
 
   val sameTid    : (thread_id * thread_id) -> bool
   val compareTid : (thread_id * thread_id) -> order

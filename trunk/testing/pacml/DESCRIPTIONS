@@ -26,3 +26,8 @@ test19_Vanilla - ping-pong with spawn send and recv
 test19_Parasite - ping-pong with aSend and recv
 
 test20_Parasite - ping-pong with work + send and recv
+test20_Vanilla - ping-pong with work + send and recv
+test21_Parasite - Parasitic thread creation time
+test21_Vanilla - Host thread creation time
+test22_Parasite - Parasitic thread creation + work
+test22_Vanilla - Host thread creation + work

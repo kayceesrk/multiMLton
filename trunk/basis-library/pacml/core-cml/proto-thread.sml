@@ -19,6 +19,7 @@ struct
   datatype rdy_thread = datatype RepTypes.rdy_thread
   datatype thread_type = datatype RepTypes.thread_type
   datatype runnable_host = datatype RepTypes.runnable_host
+  datatype parasite_state = datatype RepTypes.parasite_state
 
 
   (* Continuation management *)
@@ -39,50 +40,47 @@ struct
   (* Manipulate current thread info *)
   fun getThreadState () =
     let
-      val TID.TID {threadType, parasiteBottom, ...} = TID.getCurThreadId ()
+      val TID.TID {pstate, ...} = TID.getCurThreadId ()
     in
-      (!threadType, !parasiteBottom)
+      pstate
     end
 
-  fun setThreadState (s, n) =
+  fun setThreadState (PSTATE (ps)) =
     let
-      val TID.TID {threadType, parasiteBottom, ...} = TID.getCurThreadId ()
-      val _ = threadType := s
-      val _ = parasiteBottom := n
+      val TID.TID {pstate = PSTATE (pstate), ...} = TID.getCurThreadId ()
+      val _ = (#threadType pstate) := !(#threadType ps)
+      val _ = (#parasiteBottom pstate) := !(#parasiteBottom ps)
+      val _ = (#numParasites pstate) := !(#numParasites ps)
+      val _ = (#timeParasites pstate) := !(#timeParasites pstate)
     in
       ()
     end
 
-  fun getThreadType () =
+  fun getProp (x) =
     let
-      val TID.TID {threadType, ...} = TID.getCurThreadId ()
+      val TID.TID {pstate = PSTATE (pstate), ...} = TID.getCurThreadId ()
     in
-      !threadType
+      !(x pstate)
     end
 
-  fun getParasiteBottom () =
+  fun setProp (x, v) =
     let
-      val TID.TID {parasiteBottom, ...} = TID.getCurThreadId ()
+      val TID.TID {pstate = PSTATE (pstate), ...} = TID.getCurThreadId ()
     in
-      !parasiteBottom
+      (x pstate) := v
     end
 
+  fun getThreadType () = getProp (#threadType)
+  fun getParasiteBottom () = getProp (#parasiteBottom)
+  fun getNumParasitesSpawned () = getProp (#numParasites)
+  fun getParasiteTimeSpent () = getProp (#timeParasites)
 
-  fun setThreadType (t) =
-    let
-      val TID.TID {threadType, ...} = TID.getCurThreadId ()
-    in
-      threadType := t
-    end
+  fun setThreadType (t) = setProp (#threadType, t)
+  fun setParasiteBottom (p) = setProp (#parasiteBottom, p)
+  fun setNumParasitesSpawned (n) = setProp (#numParasites, n)
+  fun setParasiteTimeSpent (ms) = setProp (#timeParasites, ms)
 
-  fun setParasiteBottom (p) =
-    let
-      val TID.TID {parasiteBottom, ...} = TID.getCurThreadId ()
-    in
-      parasiteBottom := p
-    end
-
-  fun disableParasitePreemption () = (* XXX KC -- make it return the current state so that it can be restored *)
+  fun disableParasitePreemption () =
   let
     val TID.TID {preemptParasite, ...} = TID.getCurThreadId ()
   in

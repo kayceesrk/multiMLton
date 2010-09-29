@@ -7,6 +7,7 @@ sig
   type 'a thread = 'a RepTypes.thread
   type rdy_thread = RepTypes.rdy_thread
   type runnable_host = RepTypes.runnable_host
+  type parasite_state = RepTypes.parasite_state
 
   (* Continuation management *)
   val prepend : 'a thread * ('b -> 'a) -> 'b thread
@@ -15,8 +16,8 @@ sig
   val prepFn : 'a thread * (unit -> 'a) -> rdy_thread
 
   (* Manipulate current thread info *)
-  val getThreadState : unit -> (thread_type * int)
-  val setThreadState : (thread_type * int) -> unit
+  val getThreadState : unit -> parasite_state
+  val setThreadState : parasite_state -> unit
   val getThreadType : unit -> thread_type
   val setThreadType : thread_type -> unit
   val getParasiteBottom : unit -> int

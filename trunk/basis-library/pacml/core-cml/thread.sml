@@ -135,8 +135,17 @@ struct
     val _ = Config.incrementNumLiveThreads ()
     val () = atomicEnd ()
   in
-    rhost (* NOTE: This thread must not be readySpawned as numLiveThreads has already been incremented *)
+    rhost (* NOTE: This thread must be readied and not readySpawned as numLiveThreads has already been incremented *)
   end
 
-  val spawnParasite = PT.spawnParasite
+  fun spawnParasite f = PT.spawnParasite f
+    (* let
+      val start = Time.now ()
+      val _ = PT.spawnParasite f
+      val stop = Time.now ()
+      val _ = print (concat [LargeInt.toString (Time.toMicroseconds (Time.-(stop,start))), "\n"])
+    in
+      ()
+    end *)
+
 end

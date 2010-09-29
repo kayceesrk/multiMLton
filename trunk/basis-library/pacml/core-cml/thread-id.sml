@@ -7,6 +7,7 @@ struct
   datatype thread_id = datatype R.thread_id
   datatype thread_id' = datatype thread_id
   datatype thread_type = datatype R.thread_type
+  datatype parasite_state = datatype R.parasite_state
 
   type procNum = int
 
@@ -27,9 +28,8 @@ struct
           exnHandler = ref (!defaultExnHandler),
           props = ref [],
           dead = CVar.new (),
-          threadType = ref HOST,
-          parasiteBottom = ref 0,
           preemptParasite = ref true,
+          pstate = PSTATE {parasiteBottom = ref 0, threadType = ref HOST, numParasites = ref (Real.fromInt 0), timeParasites = ref (Real.fromInt 0)},
           processorId = procNum}
 
   local
