@@ -63,8 +63,9 @@ struct
 
   end
 
-  fun send (CHAN {prio, inQ, outQ, lock}, msg) =
+  fun send (ch as CHAN {prio, inQ, outQ, lock}, msg) =
     let
+      val () = Primitive.MLton.share (ch)
       val () = Assert.assertNonAtomic' "channel.send"
       val () = Assert.assertNonAtomic' "channel.send(1)"
       val () = debug' "channel.send(1)"
