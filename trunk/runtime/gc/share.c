@@ -33,5 +33,5 @@ void GC_share (GC_state s, pointer object) {
   LEAVE0 (s);
 
   size_t res = GC_size (s, object);
-  printf ("Size = %ld\n", res);
+  printf ("%ld\n", res);
 }

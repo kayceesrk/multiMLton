@@ -1577,4 +1577,8 @@ fun exportMLton (): unit =
          SMLofNJ.exportFn (worldFile, fn (_, args) => commandLine args)
     | _ => Error.bug "usage: exportMLton worldFile"
 
+val main = fn (_, args) => commandLine args
+
+val mainWrapped = fn () => OS.Process.exit (commandLine (CommandLine.arguments ()))
+
 end

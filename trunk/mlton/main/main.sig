@@ -19,4 +19,7 @@ signature MAIN =
       val commandLine: string list -> OS.Process.status
       val exportMLton: unit -> unit
       val exportNJ: File.t -> unit
+      val main: string * string list -> OS.Process.status
+      val mainWrapped: unit -> 'a
+
    end
