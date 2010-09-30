@@ -1,0 +1,112 @@
+[chandras@node05 pacml]$ strace -c ./test21_Parasite-amd64 @MLton number-processors 1 enable-timer 20000 gc-summary -- 6000000
+Time diff:  1219ms
+GC type         time ms  number           bytes       bytes/sec
+-------------   ------- ------- --------------- ---------------
+copying               0       1          29,220               -
+mark-compact          0       0               0               -
+minor                 0       0               0               -
+	total time: 1,251 ms
+	total GC time: 0 ms (0.0%)
+	total sync time: 9 ms (0.7%)
+	total rt time: 5 ms (0.4%)
+	max pause time: 0 ms
+	total bytes allocated: 219,912 bytes
+	total bytes filled: 0 bytes
+	max bytes live: 29,220 bytes
+	max heap size: 294,912 bytes
+	max stack size: 1,584 bytes
+	num cards marked: 0
+	bytes scanned: 0 bytes
+	sync for old gen array: 0
+	sync for new gen array: 0
+	sync for stack: 0
+	sync for heap: 1
+	sync misc: 1
+	bytes hash consed: 0 bytes
+	% time     seconds  usecs/call     calls    errors syscall
+	------ ----------- ----------- --------- --------- ----------------
+	nan    0.000000           0         6           read
+	nan    0.000000           0       154           write
+	nan    0.000000           0         7           open
+	nan    0.000000           0         7           close
+	nan    0.000000           0         9           fstat
+	nan    0.000000           0        23           mmap
+	nan    0.000000           0        14           mprotect
+	nan    0.000000           0         4           munmap
+	nan    0.000000           0         3           brk
+	nan    0.000000           0        66         1 rt_sigaction
+	nan    0.000000           0       170           rt_sigprocmask
+	nan    0.000000           0        56           rt_sigreturn
+	nan    0.000000           0         1           ioctl
+	nan    0.000000           0         1         1 access
+	nan    0.000000           0         1           mremap
+	nan    0.000000           0         1           clone
+	nan    0.000000           0         1           execve
+	nan    0.000000           0         1           uname
+	nan    0.000000           0       292           gettimeofday
+	nan    0.000000           0         1           getrlimit
+	nan    0.000000           0         2           getrusage
+	nan    0.000000           0         1           sigaltstack
+	nan    0.000000           0         1           arch_prctl
+	nan    0.000000           0         1           futex
+	nan    0.000000           0         1           set_tid_address
+	nan    0.000000           0         1           set_robust_list
+	------ ----------- ----------- --------- --------- ----------------
+	100.00    0.000000                   825         2 total
+
+
+[chandras@node05 pacml]$ strace -c ./test21_Vanilla-amd64 @MLton number-processors 1 enable-timer 20000 gc-summary -- 6000000
+	Time diff:  85883ms
+	GC type         time ms  number           bytes       bytes/sec
+	-------------   ------- ------- --------------- ---------------
+	copying          12,868   4,586   2,156,619,948     167,595,588
+	mark-compact          0       0               0               -
+	minor                 0       0               0               -
+	total time: 85,900 ms
+	total GC time: 25,231 ms (29.4%)
+	total sync time: 1,736 ms (2.0%)
+	total rt time: 27,778 ms (32.3%)
+	max pause time: 140 ms
+	total bytes allocated: 18,866,645,956 bytes
+	total bytes filled: 0 bytes
+	max bytes live: 16,897,516 bytes
+	max heap size: 135,233,536 bytes
+	max stack size: 1,920 bytes
+	num cards marked: 0
+	bytes scanned: 0 bytes
+	sync for old gen array: 0
+	sync for new gen array: 0
+	sync for stack: 0
+	sync for heap: 13,666
+	sync misc: 1
+	bytes hash consed: 0 bytes
+	% time     seconds  usecs/call     calls    errors syscall
+	------ ----------- ----------- --------- --------- ----------------
+	99.87    4.802737        1167      4117           munmap
+	0.10    0.004754           0    121004           gettimeofday
+	0.01    0.000385           0      9172           getrusage
+	0.01    0.000319           0     12590           rt_sigprocmask
+	0.01    0.000317           0      1243           mremap
+	0.01    0.000273           0      2905           rt_sigreturn
+	0.00    0.000099           0      1266           mmap
+	0.00    0.000000           0         6           read
+	0.00    0.000000           0       128           write
+	0.00    0.000000           0         7           open
+	0.00    0.000000           0         7           close
+	0.00    0.000000           0         9           fstat
+	0.00    0.000000           0        14           mprotect
+	0.00    0.000000           0         3           brk
+	0.00    0.000000           0        66         1 rt_sigaction
+	0.00    0.000000           0         1           ioctl
+	0.00    0.000000           0         1         1 access
+	0.00    0.000000           0         1           clone
+	0.00    0.000000           0         1           execve
+	0.00    0.000000           0         1           uname
+	0.00    0.000000           0         1           getrlimit
+	0.00    0.000000           0         1           sigaltstack
+	0.00    0.000000           0         1           arch_prctl
+	0.00    0.000000           0         1           futex
+	0.00    0.000000           0         1           set_tid_address
+	0.00    0.000000           0         1           set_robust_list
+	------ ----------- ----------- --------- --------- ----------------
+	100.00    4.808884                152548         2 total

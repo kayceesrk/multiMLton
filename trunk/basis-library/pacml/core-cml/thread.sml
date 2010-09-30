@@ -140,9 +140,8 @@ struct
 
   fun spawnParasite f =
     let
-      val start = Time.now ()
+      (* val start = Time.clock () *)
       val _ = PT.spawnParasite f
-      val stop = Time.now ()
       (* val _ = print (concat [LargeInt.toString (Time.toMicroseconds (Time.-(stop,start))), "\n"]) *)
     in
       ()
