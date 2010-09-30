@@ -89,13 +89,6 @@ in
             GREATER => old
           | _ => (prev := t; t)
       end
-
-   fun clock () =
-     let
-       val rawClock = Prim.clock ()
-     in
-       C_Clock.toLargeInt rawClock
-     end
 end
 
 val fmt: int -> time -> string =

@@ -9,7 +9,6 @@ signature TIME =
       val <= : time * time -> bool
       val > : time * time -> bool
       val >= : time * time -> bool
-      val clock : unit -> LargeInt.int
       val compare: time * time -> order
       val fmt: int -> time -> string
       val fromMicroseconds: LargeInt.int -> time
