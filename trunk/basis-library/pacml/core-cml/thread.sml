@@ -140,11 +140,23 @@ struct
 
   fun spawnParasite f =
     let
-      (* val start = Time.clock () *)
-      val _ = PT.spawnParasite f
-      (* val _ = print (concat [LargeInt.toString (Time.toMicroseconds (Time.-(stop,start))), "\n"]) *)
+      val numPenaltySpawnsSpawned = PT.getNumPenaltySpawns ()
     in
-      ()
+      if numPenaltySpawnsSpawned > 0 then
+        (PT.setNumPenaltySpawns (numPenaltySpawnsSpawned - 1);
+        ignore (spawnHost (f)))
+      else
+        (let
+          val ts = Time.now ()
+          val _ = PT.spawnParasite f
+          val te = Time.now ()
+          val d = Time.toMicroseconds (Time.-(te, ts))
+          val _ = if LargeInt.>(d, Config.maxTime) then
+                    PT.setNumPenaltySpawns (Config.penalty)
+                  else ()
+        in
+          ()
+        end)
     end
 
 end

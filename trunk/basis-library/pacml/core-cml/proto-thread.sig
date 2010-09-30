@@ -22,6 +22,9 @@ sig
   val setThreadType : thread_type -> unit
   val getParasiteBottom : unit -> int
   val setParasiteBottom : int -> unit
+  val getNumPenaltySpawns : unit -> int
+  val setNumPenaltySpawns : int -> unit
+
   val enableParasitePreemption : unit -> unit
   val disableParasitePreemption : unit -> unit
   val getThreadTypeString : unit -> string

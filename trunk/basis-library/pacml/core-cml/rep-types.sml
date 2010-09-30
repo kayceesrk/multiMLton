@@ -40,10 +40,9 @@ structure RepTypes =
                  (* Pointer to the threadlet sitting below us *)
                  (* It is an offset from the bottom of the stack *)
                  parasiteBottom : int,
-                 (* # parasites created *)
-                 numParasites : real,
-                 (* time spent on parasitic computation in microseconds*)
-                 timeParasites : real}
+                 (* This parameter is used to penalize a thread for
+                 *  compute intensive parasites*)
+                 numPenaltySpawns : int}
 
       (** thread IDs --- see thread-id.sml and threads.sml **)
       and thread_id =

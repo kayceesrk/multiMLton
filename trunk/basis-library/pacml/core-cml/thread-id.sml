@@ -29,7 +29,7 @@ struct
           props = ref [],
           dead = CVar.new (),
           preemptParasite = ref true,
-          pstate = ref (PSTATE {parasiteBottom = 0, threadType = HOST, numParasites = (Real.fromInt 0), timeParasites = (Real.fromInt 0)}),
+          pstate = ref (PSTATE {parasiteBottom = 0, threadType = HOST, numPenaltySpawns = 0}),
           processorId = procNum}
 
   local

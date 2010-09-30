@@ -61,8 +61,7 @@ struct
 
   fun getThreadType () = getProp (#threadType)
   fun getParasiteBottom () = getProp (#parasiteBottom)
-  fun getNumParasitesSpawned () = getProp (#numParasites)
-  fun getParasiteTimeSpent () = getProp (#timeParasites)
+  fun getNumPenaltySpawns () = getProp (#numPenaltySpawns)
 
   fun setThreadType (t) =
     let
@@ -71,8 +70,7 @@ struct
     in
       pstate := PSTATE {threadType = t,
                         parasiteBottom = #parasiteBottom ps,
-                        numParasites = #numParasites ps,
-                        timeParasites = #timeParasites ps}
+                        numPenaltySpawns = #numPenaltySpawns ps}
     end
 
   fun setParasiteBottom (pb) =
@@ -82,30 +80,17 @@ struct
     in
       pstate := PSTATE {threadType = #threadType ps,
                         parasiteBottom = pb,
-                        numParasites = #numParasites ps,
-                        timeParasites = #timeParasites ps}
+                        numPenaltySpawns = #numPenaltySpawns ps}
     end
 
-  fun setNumParasitesSpawned (n) =
+  fun setNumPenaltySpawns (n) =
     let
       val TID.TID {pstate, ...} = TID.getCurThreadId ()
       val PSTATE (ps) = !pstate
     in
       pstate := PSTATE {threadType = #threadType ps,
                         parasiteBottom = #parasiteBottom ps,
-                        numParasites = n,
-                        timeParasites = #timeParasites ps}
-    end
-
-  fun setParasiteTimeSpent (ms) =
-    let
-      val TID.TID {pstate, ...} = TID.getCurThreadId ()
-      val PSTATE (ps) = !pstate
-    in
-      pstate := PSTATE {threadType = #threadType ps,
-                        parasiteBottom = #parasiteBottom ps,
-                        numParasites = #numParasites ps,
-                        timeParasites = ms}
+                        numPenaltySpawns = n}
     end
 
   fun disableParasitePreemption () =
@@ -182,6 +167,7 @@ struct
     fun doit () =
     let
       val _ = setParasiteBottom (getFrameBottomAsOffset ())
+      val _ = setNumPenaltySpawns (0)
       val _ = atomicEnd ()
       val _ = f ()
       val _ = disableParasitePreemption ()
