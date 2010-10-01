@@ -11,7 +11,7 @@ struct
 
   val maxIter = 5000
   val isRunning = ref false
-  val maxTime : LargeInt.int = 500
+  val maxTime : LargeInt.int = 100
   val penalty = 100
 
   val numLiveThreads = ref 0
