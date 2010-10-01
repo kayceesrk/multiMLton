@@ -46,4 +46,8 @@ val (n,m) =
                   (SOME n, SOME m) => (n, m)
                 | _ => raise Fail "Arguments not valid")
 
+val ts = Time.now ()
 val _ = Main.doit n m
+val te = Time.now ()
+val d = Time.-(te, ts)
+val _ = TextIO.print (concat ["Time diff:  ", LargeInt.toString (Time.toMilliseconds d), "ms\n"])
