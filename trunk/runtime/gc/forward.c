@@ -39,6 +39,13 @@ void forwardObjptr (GC_state s, objptr *opp) {
   header = getHeader (p);
   if (DEBUG_DETAILED and header == GC_FORWARDED)
     fprintf (stderr, "  already FORWARDED\n");
+
+  if (isObjectLifted (header)) {
+      if (DEBUG_LWTGC)
+          fprintf (stderr, " already LIFTED\n");
+      return;
+  }
+
   if (header != GC_FORWARDED) { /* forward the object */
     size_t size, skip;
 

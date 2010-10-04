@@ -5,7 +5,7 @@
  * See the file MLton-LICENSE for details.
  *)
 
-functor DeepFlatten (S: DEEP_FLATTEN_STRUCTS): DEEP_FLATTEN = 
+functor DeepFlatten (S: DEEP_FLATTEN_STRUCTS): DEEP_FLATTEN =
 struct
 
 open S
@@ -287,7 +287,7 @@ structure Value =
                Ground t => Type.layout t
              | Object e =>
                   Equatable.layout
-                  (e, fn {args, con, flat, ...} => 
+                  (e, fn {args, con, flat, ...} =>
                    seq [str "Object ",
                         record [("args", Prod.layout (args, layout)),
                                 ("con", ObjectCon.layout con),
@@ -705,8 +705,9 @@ fun flatten (program as Program.T {datatypes, functions, globals, main}) =
              | MLton_equal => equal ()
              | MLton_size => dontFlatten ()
              | MLton_share => dontFlatten ()
+             | MLton_move => dontFlatten ()
              | Weak_get => deWeak (arg 0)
-             | Weak_new => 
+             | Weak_new =>
                   let val a = arg 0
                   in (Value.dontFlatten a; weak a)
                   end
@@ -794,7 +795,7 @@ fun flatten (program as Program.T {datatypes, functions, globals, main}) =
                     val args =
                        case ! (conValue con) of
                           NONE => args
-                        | SOME v => 
+                        | SOME v =>
                              case Type.dest (Value.finalType v) of
                                 Type.Object {args, ...} => args
                               | _ => Error.bug "DeepFlatten.datatypes: strange con"
@@ -926,7 +927,7 @@ fun flatten (program as Program.T {datatypes, functions, globals, main}) =
                          in
                             case Value.deObject (varValue baseVar) of
                                NONE => simple ()
-                             | SOME obj => 
+                             | SOME obj =>
                                   let
                                      val Tree.T (info, children) =
                                         varTree baseVar
@@ -978,7 +979,7 @@ fun flatten (program as Program.T {datatypes, functions, globals, main}) =
                   in
                      case Value.deObject (varValue baseVar) of
                         NONE => simple ()
-                      | SOME object => 
+                      | SOME object =>
                            let
                               val ss = ref []
                               val child =

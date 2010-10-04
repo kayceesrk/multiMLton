@@ -10,8 +10,6 @@ void GC_share (GC_state s, pointer object) {
   size_t bytesExamined;
   size_t bytesHashConsed;
 
-  //XXX KC : Is this correct?
-  //enter (s); /* update stack in heap, in case it is reached */
   s->syncReason = SYNC_FORCE;
   ENTER0 (s); /* update stack in heap, in case it is reached */
 

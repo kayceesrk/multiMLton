@@ -75,6 +75,7 @@ typedef GC_state GCState_t;
 #include "gc/pack.h"
 #include "gc/size.h"
 #include "gc/share.h"
+#include "gc/lwtgc.h"
 #include "gc/parallel.h"
 #include "gc/processor.h"
 

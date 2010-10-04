@@ -115,3 +115,11 @@ pointer advanceToObjectData (__attribute__ ((unused)) GC_state s, pointer p) {
              (uintptr_t)res, (uintptr_t)p);
   return res;
 }
+
+/* isObjectLifted (GC_header header)
+ *
+ * Returns true if the object belongs to shared heap
+ */
+static inline bool isObjectLifted (GC_header header) {
+    return (header & LIFT_MASK);
+}

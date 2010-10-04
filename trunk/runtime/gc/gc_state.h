@@ -76,6 +76,7 @@ struct GC_state {
   int (*saveGlobals)(FILE *f); /* saves the globals to the file. */
   bool saveWorldStatus; /* */
   struct GC_heap *secondaryHeap; /* Used for major copying collection. */
+  struct GC_heap *auxHeap; /* Used as a uncollected shared heap for testing lwtgc */
   objptr signalHandlerThread; /* Handler for signals (in heap). */
   struct GC_signalsInfo signalsInfo;
   struct GC_sourceMaps sourceMaps;

@@ -296,6 +296,26 @@ structure CFunction =
             target = Direct "GC_share",
             writesStackTop = true}
 
+      (* CHECK; share with objptr *)
+      fun move t =
+         T {args = Vector.new2 (Type.gcState (), t),
+            bytesNeeded = NONE,
+            convention = Cdecl,
+            ensuresBytesFree = false,
+            mayGC = true, (* MLton.share works by tracing an object.
+                           * Make sure all the GC invariants are true,
+                           * because tracing might encounter the current
+                           * stack in the heap.
+                           *)
+            maySwitchThreads = false,
+            modifiesFrontier = true, (* actually, just readsFrontier *)
+            prototype = (Vector.new2 (CType.gcState, CType.cpointer), NONE),
+            readsStackTop = true,
+            return = Type.unit,
+            symbolScope = Private,
+            target = Direct "GC_move",
+            writesStackTop = true}
+
       (* CHECK; size with objptr *)
       fun size t =
          T {args = Vector.new2 (Type.gcState (), t),
@@ -1281,6 +1301,15 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                            else
                                               simpleCCallWithGCState
                                               (CFunction.share (Operand.ty (a 0))))
+                               | MLton_move =>
+                                    (case toRtype (varType (arg 0)) of
+                                        NONE => none ()
+                                      | SOME t =>
+                                           if not (Type.isObjptr t)
+                                              then none ()
+                                           else
+                                              simpleCCallWithGCState
+                                              (CFunction.move (Operand.ty (a 0))))
                                | MLton_size =>
                                     simpleCCallWithGCState
                                     (CFunction.size (Operand.ty (a 0)))

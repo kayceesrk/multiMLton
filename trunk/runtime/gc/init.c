@@ -405,6 +405,8 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->savedThread = BOGUS_OBJPTR;
   s->secondaryHeap = (GC_heap) malloc (sizeof (struct GC_heap));
   initHeap (s, s->secondaryHeap);
+  s->auxHeap = (GC_heap) malloc (sizeof (struct GC_heap));
+  initHeap (s, s->auxHeap);
   s->signalHandlerThread = BOGUS_OBJPTR;
   s->signalsInfo.amInSignalHandler = FALSE;
   s->signalsInfo.gcSignalHandled = FALSE;

@@ -174,6 +174,7 @@ void duplicateWorld (GC_state d, GC_state s) {
   d->cumulativeStatistics->maxHeapSize = s->cumulativeStatistics->maxHeapSize;
   d->heap = s->heap;
   d->secondaryHeap = s->secondaryHeap;
+  d->auxHeap = s->auxHeap;
   d->generationalMaps = s->generationalMaps;
 
   /* Allocation handled in setGCStateCurrentHeap when called from initWorld */

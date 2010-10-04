@@ -62,9 +62,12 @@ COMPILE_TIME_ASSERT(sizeof_objptr__eq__sizeof_header,
                     sizeof(objptr) == sizeof(GC_header));
 
 #define GC_VALID_HEADER_MASK ((GC_header)0x1)
-#define TYPE_INDEX_BITS    19
-#define TYPE_INDEX_MASK    ((GC_header)0x000FFFFE)
+#define TYPE_INDEX_BITS    18
+#define TYPE_INDEX_MASK    ((GC_header)0x0007FFFE)
 #define TYPE_INDEX_SHIFT   1
+#define LIFT_BITS          1
+#define LIFT_MASK          ((GC_header)0x00080000)
+#define LIFT_SHIFT         19
 #define COUNTER_BITS       10
 #define COUNTER_MASK       ((GC_header)0x7FF00000)
 #define COUNTER_SHIFT      20
@@ -177,5 +180,6 @@ static inline void splitHeader (GC_state s, GC_header header,
                                 GC_objectTypeTag *tagRet, bool *hasIdentityRet,
                                 uint16_t *bytesNonObjptrsRet, uint16_t *numObjptrsRet);
 static inline pointer advanceToObjectData (GC_state s, pointer p);
+static inline bool isObjectLifted (GC_header header);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */
