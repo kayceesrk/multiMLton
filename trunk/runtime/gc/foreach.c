@@ -7,8 +7,9 @@
  */
 
 void callIfIsObjptr (GC_state s, GC_foreachObjptrFun f, objptr *opp) {
-  if (isObjptr (*opp))
+  if (isObjptr (*opp)) {
     f (s, opp);
+  }
 }
 
 /* foreachGlobalObjptr (s, f)

@@ -8,6 +8,7 @@
 
 #if (defined (MLTON_GC_INTERNAL_FUNCS))
 
+static inline void assertIsObjptrInFromSpaceOrLifted (GC_state s, objptr *opp);
 static inline void assertIsObjptrInFromSpace (GC_state s, objptr *opp);
 #if ASSERT
 static bool invariantForGC (GC_state s);

@@ -7,7 +7,7 @@
  */
 
 void minorGC (GC_state s) {
-  minorCheneyCopyGC (s);
+  minorCheneyCopyGC (s, FALSE);
 }
 
 void majorGC (GC_state s, size_t bytesRequested, bool mayResize) {
@@ -95,7 +95,8 @@ void performGC (GC_state s,
                 size_t oldGenBytesRequested,
                 size_t nurseryBytesRequested,
                 bool forceMajor,
-                bool mayResize) {
+                bool mayResize,
+                bool isAfterLifting) {
   uintmax_t gcTime;
   bool stackTopOk;
   size_t stackBytesRequested;
@@ -130,10 +131,12 @@ void performGC (GC_state s,
              100.0 * ((double)(nurseryUsed) / (double)(s->heap->size)),
              100.0 * ((double)(nurseryUsed) / (double)(nurserySize)));
   }
-  assert (invariantForGC (s));
+  /* GC invariants do not hold if performing GC for resolving forwarding pointers */
+  if (not isAfterLifting)
+      assert (invariantForGC (s));
   if (needGCTime (s))
     startWallTiming (&tv_start);
-  minorGC (s);
+  minorCheneyCopyGC (s, isAfterLifting);
   stackTopOk = invariantForMutatorStack (s);
   stackBytesRequested =
     stackTopOk
@@ -429,7 +432,7 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
     if ((ensureStack and not invariantForMutatorStack (s))
         or not hasHeapBytesFree (s, oldGenBytesRequested, nurseryBytesRequested)
         or forceGC) {
-      performGC (s, oldGenBytesRequested, nurseryBytesRequested, forceGC, TRUE);
+      performGC (s, oldGenBytesRequested, nurseryBytesRequested, forceGC, TRUE, FALSE);
     }
     else
       if (DEBUG or s->controls->messages)

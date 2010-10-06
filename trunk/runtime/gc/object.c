@@ -59,8 +59,12 @@ void splitHeader(GC_state s, GC_header header,
   bool hasIdentity;
   uint16_t bytesNonObjptrs, numObjptrs;
 
+  if (DEBUG_DETAILED)
+      fprintf (stderr, "splitHeader ("FMTHDR")\n", header);
   assert (1 == (header & GC_VALID_HEADER_MASK));
   objectTypeIndex = (header & TYPE_INDEX_MASK) >> TYPE_INDEX_SHIFT;
+  if (objectTypeIndex > s->objectTypesLength)
+      fprintf (stderr, "objectTypeIndex : %u s->objectTypesLength : %u\n", objectTypeIndex, s->objectTypesLength);
   assert (objectTypeIndex < s->objectTypesLength);
   objectType = &(s->objectTypes[objectTypeIndex]);
   tag = objectType->tag;
@@ -121,5 +125,7 @@ pointer advanceToObjectData (__attribute__ ((unused)) GC_state s, pointer p) {
  * Returns true if the object belongs to shared heap
  */
 static inline bool isObjectLifted (GC_header header) {
-    return (header & LIFT_MASK);
+    return (not (header == GC_FORWARDED) &&
+            (header & LIFT_MASK) &&
+            fprintf (stderr, "Object already LIFTED\n"));
 }

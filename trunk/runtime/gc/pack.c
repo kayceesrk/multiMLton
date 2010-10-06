@@ -20,7 +20,7 @@ void GC_pack (__attribute__ ((unused)) GC_state *gs) {
    * allocated since the last collection.  But you would still need to
    * do a minor GC to make all objects contiguous.
    */
-  performGC (s, 0, 0, TRUE, FALSE);
+  performGC (s, 0, 0, TRUE, FALSE, FALSE);
   keep = s->heap->oldGenSize * 1.1;
   if (keep <= s->heap->size) {
     shrinkHeap (s, s->heap, keep);

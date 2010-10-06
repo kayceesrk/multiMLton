@@ -6,24 +6,72 @@
  * See the file MLton-LICENSE for details.
  */
 
-void forwardObjptrToAuxHeap (GC_state s, objptr *opp) {
-    forwardObjptr (s, opp);
+void forwardObjptrIfInNurseryToAuxHeap (GC_state s, objptr *opp);
+
+void forwardObjptrIfInNurseryToAuxHeap (GC_state s, objptr *opp) {
+
+    if (not isObjptrInNursery (s, *opp)) {
+        if (DEBUG_LWTGC) {
+            fprintf (stderr, "\t is not in nursery\n");
+        }
+        return;
+    }
     objptr op = *opp;
     pointer p = objptrToPointer (op, s->heap->start);
-    GC_header header = getHeader (p);
     GC_header* headerp = getHeaderp (p);
+    GC_header header = getHeader (p);
 
-    *headerp = header & LIFT_MASK;
+    /* If pointer has already been forwarded, skip setting lift bit */
+    if (getHeader (p) == 1) {
+        if (DEBUG_LWTGC) {
+            fprintf (stderr, "\t skipping lift bit setting\n");
+        }
+        return;
+    }
+
+    forwardObjptr (s, opp);
+    assert (*headerp == GC_FORWARDED);
+
+    op = *opp;
+    p = objptrToPointer (op, s->heap->start);
+    assert (header == getHeader (p));
+    headerp = getHeaderp (p);
+    assert (getHeader (p) != 1);
+
+    /* Set lift mask */
+    if (DEBUG_LWTGC)
+        fprintf (stderr, "\t pointer "FMTPTR" headerp "FMTPTR" : setting header "FMTHDR" to "FMTHDR"\n",
+                 (uintptr_t)p, (uintptr_t)headerp, header, header | LIFT_MASK);
+    *headerp = header | LIFT_MASK;
 }
 
 void GC_move (GC_state s, pointer p) {
 
+    /* ENTER (0) */
     s->syncReason = SYNC_FORCE;
-    ENTER0 (s);
+    getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
+    getThreadCurrent(s)->exnStack = s->exnStack;
+    beginAtomic (s);
+    Proc_beginCriticalSection(s);
+
+    if (DEBUG_LWTGC)
+        fprintf (stderr, "GC_move: \n");
+
+    /* If objct has already been lifted, return */
+    if (isObjectLifted (getHeader (p))) {
+        /* LEAVE (0) */
+        s->syncReason = SYNC_NONE;
+        Proc_endCriticalSection(s);
+        endAtomic (s);
+        return;
+    }
 
     //create auxHeap if you haven't already done so
-    if (not isHeapInit (s->auxHeap))
-        createHeap (s, s->auxHeap, s->heap->size * 2, s->heap->size);
+    if (s->auxHeap->size == 0) {
+        if (DEBUG_LWTGC)
+            fprintf (stderr, "\tCreating auxheap of size = %ld bytes\n", s->heap->size);
+        createHeap (s, s->auxHeap, s->heap->size, s->heap->size);
+    }
 
     //Set up the forwarding state
     s->forwardState.toStart = s->auxHeap->start + s->auxHeap->oldGenSize;
@@ -34,16 +82,26 @@ void GC_move (GC_state s, pointer p) {
     /* Forward the given object to auxHeap */
     objptr op = pointerToObjptr (p, s->heap->start);
     objptr* pOp = &op;
-    forwardObjptrToAuxHeap (s, pOp);
-    foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, forwardObjptrToAuxHeap, TRUE);
+    forwardObjptrIfInNurseryToAuxHeap (s, pOp);
+    foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, forwardObjptrIfInNurseryToAuxHeap, TRUE);
     s->auxHeap->oldGenSize = s->forwardState.back - s->auxHeap->start;
-    s->forwardState.amInMinorGC = TRUE;
+    s->forwardState.amInMinorGC = FALSE;
 
-    /* Force a minor collection. Essential to fix the forwarding pointers from
+
+    /* Force a garbage collection. Essential to fix the forwarding pointers from
      * the previous step.
-     */
-    minorCheneyCopyGC (s);
+     * ENTER0 (s) -- atomicState is atomic */
+    if (not s->canMinor)
+        performGC (s, 0, 0, TRUE, TRUE, TRUE);
+    else
+        performGC (s, 0, 0, FALSE, TRUE, TRUE);
 
-    LEAVE0 (s);
+    /* LEAVE0 (s) */
+    Proc_endCriticalSection(s);
+    endAtomic (s);
+
     return;
 }
+
+
+

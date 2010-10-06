@@ -124,6 +124,9 @@ void forwardObjptr (GC_state s, objptr *opp) {
     *((GC_header*)(p - GC_HEADER_SIZE)) = GC_FORWARDED;
     *((objptr*)p) = pointerToObjptr (s->forwardState.back + headerBytes,
                                      s->forwardState.toStart);
+    if (DEBUG_DETAILED)
+        fprintf (stderr, "Setting headerp ="FMTPTR" to "FMTHDR"\n",
+                 (uintptr_t)(p - GC_HEADER_SIZE), *((GC_header*)(p - GC_HEADER_SIZE)));
     /* Update the back of the queue. */
     s->forwardState.back += size + skip;
     assert (isAligned ((size_t)s->forwardState.back + GC_NORMAL_HEADER_SIZE,
@@ -134,7 +137,7 @@ void forwardObjptr (GC_state s, objptr *opp) {
     fprintf (stderr,
              "forwardObjptr --> *opp = "FMTPTR"\n",
              (uintptr_t)*opp);
-  assert (isObjptrInToSpace (s, *opp));
+  assert (isObjptrInToSpace (s, *opp) || isObjptrInSharedHeap (s, *opp));
 }
 
 void forwardObjptrIfInNursery (GC_state s, objptr *opp) {

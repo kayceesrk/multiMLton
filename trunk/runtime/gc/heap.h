@@ -43,10 +43,12 @@ static inline bool isPointerInHeap (GC_state s, pointer p);
 static inline bool isPointerInOldGen (GC_state s, pointer p);
 static inline bool isPointerInNursery (GC_state s, pointer p);
 static inline bool isPointerInFromSpace (GC_state s, pointer p);
+static inline bool isPointerInSharedHeap (GC_state s, pointer p);
 static inline bool isObjptrInHeap (GC_state s, objptr op);
 static inline bool isObjptrInOldGen (GC_state s, objptr op);
 static inline bool isObjptrInNursery (GC_state s, objptr op);
 static inline bool isObjptrInFromSpace (GC_state s, objptr op);
+static inline bool isObjptrInSharedHeap (GC_state s, objptr op);
 static inline bool hasHeapBytesFree (GC_state s, size_t oldGen, size_t nursery);
 static inline bool isHeapInit (GC_heap h);
 

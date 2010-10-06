@@ -6,6 +6,15 @@
  * See the file MLton-LICENSE for details.
  */
 
+void assertIsObjptrInFromSpaceOrLifted (GC_state s, objptr *opp) {
+  assert (isObjptrInFromSpace (s, *opp) || isObjptrInSharedHeap (s, *opp));
+  unless (isObjptrInFromSpace (s, *opp) || isObjptrInSharedHeap (s, *opp))
+    die ("gc.c: assertIsObjptrInFromSpaceOrLifted "
+         "opp = "FMTPTR"  "
+         "*opp = "FMTOBJPTR"\n",
+         (uintptr_t)opp, *opp);
+}
+
 void assertIsObjptrInFromSpace (GC_state s, objptr *opp) {
   assert (isObjptrInFromSpace (s, *opp));
   unless (isObjptrInFromSpace (s, *opp))
@@ -74,12 +83,12 @@ bool invariantForGC (GC_state s) {
   assert (s->secondaryHeap->start == NULL
           or s->heap->size == s->secondaryHeap->size);
   /* Check that all pointers are into from space. */
-  foreachGlobalObjptr (s, assertIsObjptrInFromSpace);
+  foreachGlobalObjptr (s, assertIsObjptrInFromSpaceOrLifted);
   pointer back = s->heap->start + s->heap->oldGenSize;
   if (DEBUG_DETAILED)
     fprintf (stderr, "Checking old generation.\n");
   foreachObjptrInRange (s, alignFrontier (s, s->heap->start), &back,
-                        assertIsObjptrInFromSpace, FALSE);
+                        assertIsObjptrInFromSpaceOrLifted, FALSE);
   if (DEBUG_DETAILED)
     fprintf (stderr, "Checking nursery.\n");
   if (s->procStates) {
@@ -87,18 +96,18 @@ bool invariantForGC (GC_state s) {
     for (proc = 0; proc < s->numberOfProcs; proc++) {
       foreachObjptrInRange (s, s->procStates[proc].start,
                             &s->procStates[proc].frontier,
-                        assertIsObjptrInFromSpace, FALSE);
+                        assertIsObjptrInFromSpaceOrLifted, FALSE);
        if (s->procStates[proc].start
           and s->procStates[proc].start < firstStart)
         firstStart = s->procStates[proc].start;
     }
     foreachObjptrInRange (s, s->heap->nursery,
                           &firstStart,
-                          assertIsObjptrInFromSpace, FALSE);
+                          assertIsObjptrInFromSpaceOrLifted, FALSE);
   }
   else {
     foreachObjptrInRange (s, s->start, &s->frontier,
-                          assertIsObjptrInFromSpace, FALSE);
+                          assertIsObjptrInFromSpaceOrLifted, FALSE);
   }
  /* Current thread. */
   GC_stack stack = getStackCurrent(s);

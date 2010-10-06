@@ -16,11 +16,22 @@ struct translateState {
 };
 static struct translateState translateState;
 
-void translateObjptr (__attribute__ ((unused)) GC_state s,
-                      objptr *opp) {
+void translateObjptr (GC_state s, objptr *opp) {
   pointer p;
 
   p = objptrToPointer (*opp, translateState.from);
+
+  /* Do not translate pointers that does not belong to your heap */
+  if (isPointerInSharedHeap (s, p)) {
+      if (DEBUG)
+          fprintf (stderr, "translateObjptr: shared heap pointer "FMTPTR" translation skipped.\n",
+                   (uintptr_t)p);
+      return;
+  }
+
+  if (DEBUG)
+      fprintf (stderr, "translateObjptr: Remappting pointer "FMTPTR" to "FMTPTR"\n",
+               (uintptr_t)p, (uintptr_t)((p - translateState.from) + translateState.to));
   p = (p - translateState.from) + translateState.to;
   *opp = pointerToObjptr (p, translateState.to);
 }

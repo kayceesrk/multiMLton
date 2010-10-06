@@ -9,7 +9,6 @@
 #if (defined (MLTON_GC_INTERNAL_BASIS))
 
 PRIVATE void GC_move (GC_state s, pointer object);
-
-static inline void forwardObjptrToAuxHeap (GC_state s, objptr *opp);
+PRIVATE void GC_move2 (GC_state s, pointer object);
 
 #endif /* (defined (MLTON_GC_INTERNAL_BASIS)) */
