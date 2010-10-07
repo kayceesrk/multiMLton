@@ -14,7 +14,6 @@ void forwardObjptrIfInNurseryToAuxHeap (GC_state s, objptr *opp) {
         if (DEBUG_LWTGC) {
             fprintf (stderr, "\t is not in nursery\n");
         }
-        return;
     }
     objptr op = *opp;
     pointer p = objptrToPointer (op, s->heap->start);
@@ -91,7 +90,7 @@ void GC_move (GC_state s, pointer p) {
     /* Force a garbage collection. Essential to fix the forwarding pointers from
      * the previous step.
      * ENTER0 (s) -- atomicState is atomic */
-    if (not s->canMinor)
+    if (not s->canMinor || TRUE /* Force Major */)
         performGC (s, 0, 0, TRUE, TRUE, TRUE);
     else
         performGC (s, 0, 0, FALSE, TRUE, TRUE);
