@@ -1,6 +1,5 @@
 structure Main =
 struct
-
   open MLton.Pacml
 
   fun tightLoop2 n =
