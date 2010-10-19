@@ -10,7 +10,3 @@ C_Int_t Time_getTimeOfDay (Ref(C_Time_t) sec, Ref(C_SUSeconds_t) usec) {
   }
   return res;
 }
-
-C_Clock_t Time_clock () {
-    return clock ();
-}

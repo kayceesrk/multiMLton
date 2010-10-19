@@ -22,6 +22,13 @@ struct GC_state {
   size_t alignment; /* */
   bool amInGC;
   bool amOriginal;
+  uint32_t procId;
+
+  /* These fields refer to the shared heap boundaries. They are updated when
+   * the shared heap is resized. */
+  pointer sharedHeapStart;
+  pointer sharedHeapEnd; /* sharedHeapStart + sharedHeapSize */
+
   char **atMLtons; /* Initial @MLton args, processed before command line. */
   uint32_t atMLtonsLength;
   uint32_t atomicState;

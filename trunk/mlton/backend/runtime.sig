@@ -31,7 +31,10 @@ signature RUNTIME =
              | Limit (* frontier + heapSize - LIMIT_SLOP *)
              | LimitPlusSlop (* frontier + heapSize *)
              | MaxFrameSize
+             | ProcId
              | ReturnToC
+             | SharedHeapStart
+             | SharedHeapEnd
              | SignalIsPending
              | StackBottom
              | StackLimit (* Must have StackTop <= StackLimit *)
@@ -50,7 +53,10 @@ signature RUNTIME =
                              limit: Bytes.t,
                              limitPlusSlop: Bytes.t,
                              maxFrameSize: Bytes.t,
+                             procId: Bytes.t,
                              returnToC: Bytes.t,
+                             sharedHeapStart: Bytes.t,
+                             sharedHeapEnd: Bytes.t,
                              signalIsPending: Bytes.t,
                              stackBottom: Bytes.t,
                              stackLimit: Bytes.t,
@@ -66,7 +72,10 @@ signature RUNTIME =
                            limit: Bytes.t,
                            limitPlusSlop: Bytes.t,
                            maxFrameSize: Bytes.t,
+                           procId: Bytes.t,
                            returnToC: Bytes.t,
+                           sharedHeapStart: Bytes.t,
+                           sharedHeapEnd: Bytes.t,
                            signalIsPending: Bytes.t,
                            stackBottom: Bytes.t,
                            stackLimit: Bytes.t,

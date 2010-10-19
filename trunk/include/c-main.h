@@ -245,12 +245,14 @@ PUBLIC int MLton_main (int argc, char* argv[]) {                        \
                 /* Now copy initialization to the first processor state */      \
                 memcpy (&gcState[0], &s, sizeof (struct GC_state));     \
                 gcState[0].procStates = gcState;                        \
+                gcState[0].procId = 0;                                  \
                 GC_lateInit (&gcState[0]);                              \
         }                                                               \
         /* Fill in per-processor data structures */                     \
         for (procNo = 1; procNo <= gcState[0].numberOfProcs; procNo++) { \
                 Duplicate (&gcState[procNo], &gcState[0]);              \
                 gcState[procNo].procStates = gcState;                   \
+                gcState[procNo].procId = procNo;                        \
                 if (procNo == gcState[0].numberOfProcs)                 \
                     gcState[procNo].atomicState = 0;                    \
         }                                                               \

@@ -70,6 +70,13 @@ void GC_move (GC_state s, pointer p) {
         if (DEBUG_LWTGC)
             fprintf (stderr, "\tCreating auxheap of size = %ld bytes\n", s->heap->size);
         createHeap (s, s->auxHeap, s->heap->size, s->heap->size);
+
+        /* set up new offsets in gc_state */
+        for (int proc = 0; proc < s->numberOfProcs; proc ++) {
+            s->procStates[proc].sharedHeapStart = s->auxHeap->start;
+            s->procStates[proc].sharedHeapEnd = s->auxHeap->start + s->auxHeap->size;
+        }
+
     }
 
     //Set up the forwarding state

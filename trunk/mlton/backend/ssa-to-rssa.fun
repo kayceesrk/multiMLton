@@ -644,28 +644,6 @@ structure Type =
 
 val cardSizeLog2 : IntInf.t = 8 (* must agree with CARD_SIZE_LOG2 in gc.c *)
 
-fun updateCard (addr: Operand.t): Statement.t list =
-   let
-      val index = Var.newNoname ()
-      (* CHECK; WordSize.objptr or WordSize.cpointer? *)
-      val sz = WordSize.objptr ()
-      val indexTy = Type.word sz
-      val cardElemSize = WordSize.fromBits Bits.inByte
-   in
-      [PrimApp {args = (Vector.new2
-                        (Operand.cast (addr, Type.bits (WordSize.bits sz)),
-                         Operand.word
-                         (WordX.fromIntInf (cardSizeLog2, WordSize.shiftArg)))),
-                dst = SOME (index, indexTy),
-                prim = Prim.wordRshift (sz, {signed = false})},
-       Move {dst = (ArrayOffset
-                    {base = Runtime GCField.CardMapAbsolute,
-                     index = Var {ty = indexTy, var = index},
-                     offset = Bytes.zero,
-                     scale = Scale.One,
-                     ty = Type.word cardElemSize}),
-             src = Operand.word (WordX.one cardElemSize)}]
-   end
 
 fun convertConst (c: Const.t): Const.t =
    let
@@ -1027,33 +1005,6 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                      fun add s = loop (i - 1, s :: ss, t)
                      fun adds ss' = loop (i - 1, ss' @ ss, t)
                      val s = Vector.sub (statements, i)
-                  in
-                     case s of
-                        S.Statement.Profile e => add (Statement.Profile e)
-                      | S.Statement.Update {base, offset, value} =>
-                           (case toRtype (varType value) of
-                               NONE => none ()
-                             | SOME t =>
-                                  let
-                                     val baseOp = Base.map (base, varOp)
-                                     val ss =
-                                        update
-                                        {base = baseOp,
-                                         baseTy = varType (Base.object base),
-                                         offset = offset,
-                                         value = varOp value}
-                                     val ss =
-                                        if !Control.markCards
-                                           andalso Type.isObjptr t
-                                           then
-                                              updateCard (Base.object baseOp)
-                                              @ ss
-                                        else ss
-                                  in
-                                     adds ss
-                                  end)
-                      | S.Statement.Bind {exp, ty, var} =>
-                  let
                      fun split (args, kind,
                                 ss: Statement.t list,
                                 make: Label.t -> Statement.t list * Transfer.t) =
@@ -1066,6 +1017,135 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                         in
                            loop (i - 1, ss, t)
                         end
+                  in
+                     case s of
+                        S.Statement.Profile e => add (Statement.Profile e)
+                      | S.Statement.Update {base, offset, value} =>
+                          let
+                            fun updateCard (lhsAddr: Operand.t, rhsAddr: Operand.t, continue: Label.t): (Statement.t list * Transfer.t) =
+                              let
+                                  val index = Var.newNoname ()
+                                  (* CHECK; WordSize.objptr or WordSize.cpointer? *)
+                                  val sz = WordSize.objptr ()
+                                  val indexTy = Type.word sz
+                                  val cardElemSize = WordSize.fromBits Bits.inByte
+                                  val cardMarkStmts =
+                                    [PrimApp {args = (Vector.new2
+                                                      (Operand.cast (lhsAddr, Type.bits (WordSize.bits sz)),
+                                                      Operand.word
+                                                      (WordX.fromIntInf (cardSizeLog2, WordSize.shiftArg)))),
+                                              dst = SOME (index, indexTy),
+                                              prim = Prim.wordRshift (sz, {signed = false})},
+                                    Move {dst = (ArrayOffset
+                                                  {base = Runtime GCField.CardMapAbsolute,
+                                                  index = Var {ty = indexTy, var = index},
+                                                  offset = Bytes.zero,
+                                                  scale = Scale.One,
+                                                  ty = Type.word cardElemSize}),
+                                          src = Operand.word (WordX.one cardElemSize)}]
+                                val cardMarkBlock =
+                                  newBlock
+                                  {args = Vector.new0 (),
+                                  kind = Kind.Jump,
+                                  statements = Vector.fromList cardMarkStmts,
+                                  transfer =
+                                  Goto {args = Vector.new0 (),
+                                        dst = continue}}
+
+                                fun addressInSharedHeap (addr) =
+                                let
+                                  val c1 = Var.newNoname ()
+                                  val c2 = Var.newNoname ()
+                                  val c3 = Var.newNoname ()
+                                  val c4 = Var.newNoname ()
+                                  val cond = Var.newNoname ()
+                                  val stmts =
+                                    [PrimApp {args = Vector.new2 (Operand.cast (Runtime GCField.SharedHeapStart, indexTy), addr),
+                                              dst = SOME (c1, indexTy),
+                                              prim = Prim.wordLt (sz, {signed = false})},
+                                    PrimApp {args = Vector.new2 (addr, Operand.cast (Runtime GCField.SharedHeapEnd, indexTy)),
+                                              dst = SOME (c2, indexTy),
+                                              prim = Prim.wordLt (sz, {signed = false})},
+                                    PrimApp {args = Vector.new2 (addr, Operand.cast (Runtime GCField.SharedHeapStart, indexTy)),
+                                              dst = SOME (c3, indexTy),
+                                              prim = Prim.wordEqual sz},
+                                    PrimApp {args = Vector.new2 (Operand.Var {var = c1, ty = indexTy},
+                                                                  Operand.Var {var = c2, ty = indexTy}),
+                                              dst = SOME (c4, indexTy),
+                                              prim = Prim.wordAndb sz},
+                                    PrimApp {args = Vector.new2 (Operand.Var {var = c3, ty = indexTy},
+                                                                  Operand.Var {var = c4, ty = indexTy}),
+                                              dst = SOME (cond, indexTy),
+                                              prim = Prim.wordOrb sz}]
+                                in
+                                  (stmts, cond)
+                                end
+
+                                val (stmts1, cond1) = addressInSharedHeap (lhsAddr)
+                                val (stmts2, cond2) = addressInSharedHeap (rhsAddr)
+
+                                val returnFromHandler =
+                                  newBlock
+                                  {args = Vector.new0 (),
+                                   kind = Kind.CReturn {func = CFunction.move indexTy},
+                                   statements = Vector.new0 (),
+                                   transfer =
+                                   Goto {args = Vector.new0 (),
+                                         dst = continue}}
+                                val moveBlock =
+                                  newBlock
+                                  {args = Vector.new0 (),
+                                   kind = Kind.Jump,
+                                   statements = Vector.new0 (),
+                                   transfer =
+                                    Transfer.CCall
+                                    {args = Vector.new2 (GCState, rhsAddr),
+                                    func = CFunction.move indexTy,
+                                    return = SOME returnFromHandler}}
+
+                                val maybeMoveBlock =
+                                  newBlock
+                                  {args = Vector.new0 (),
+                                   kind = Kind.Jump,
+                                   statements = Vector.fromList stmts2,
+                                   transfer =
+                                    Transfer.ifBool
+                                    (Operand.Var {var = cond2, ty = indexTy},
+                                     {truee = moveBlock,
+                                      falsee = continue})}
+
+                              in
+                                (stmts1,
+                                 Transfer.ifBool
+                                 (Operand.Var {var = cond1, ty = indexTy},
+                                  {truee = maybeMoveBlock,
+                                   falsee = cardMarkBlock}))
+                              end
+                          in
+                           (case toRtype (varType value) of
+                               NONE => none ()
+                             | SOME ty =>
+                                  let
+                                     val baseOp = Base.map (base, varOp)
+                                     val valueOp = varOp value
+                                     val ss' =
+                                        update
+                                        {base = baseOp,
+                                         baseTy = varType (Base.object base),
+                                         offset = offset,
+                                         value = varOp value}
+                                  in
+                                    if (!Control.markCards
+                                        andalso Type.isObjptr ty)
+                                        then
+                                          split (Vector.new0 (), Kind.Jump, ss' @ ss,
+                                                 fn l => updateCard (Base.object baseOp, valueOp, l))
+                                    else
+                                      adds ss'
+                                  end)
+                          end
+                      | S.Statement.Bind {exp, ty, var} =>
+                  let
                      fun maybeMove (f: Type.t -> Operand.t) =
                         case toRtype ty of
                            NONE => none ()

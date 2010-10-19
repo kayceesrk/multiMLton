@@ -8,7 +8,7 @@
 
 type word = Word.t
 
-signature LOOKUP_CONSTANT_STRUCTS = 
+signature LOOKUP_CONSTANT_STRUCTS =
    sig
       structure Const: CONST
       structure ConstType: CONST_TYPE
@@ -16,7 +16,7 @@ signature LOOKUP_CONSTANT_STRUCTS =
       sharing ConstType = Const.ConstType
    end
 
-signature LOOKUP_CONSTANT = 
+signature LOOKUP_CONSTANT =
    sig
       include LOOKUP_CONSTANT_STRUCTS
 
