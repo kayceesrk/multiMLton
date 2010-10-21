@@ -66,4 +66,7 @@ static void growHeap (GC_state s, size_t desiredSize, size_t minSize);
 static void resizeHeap (GC_state s, size_t minSize);
 static void resizeHeapSecondary (GC_state s);
 
+
+static inline bool isObjectLifted (GC_header header);
+
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

@@ -95,3 +95,13 @@ bool hasHeapBytesFree (GC_state s, size_t oldGen, size_t nursery) {
 bool isHeapInit (GC_heap h) {
   return (0 == h->size);
 }
+
+/* isObjectLifted (GC_header header)
+ *
+ * Returns true if the object belongs to shared heap
+ */
+static inline bool isObjectLifted (GC_header header) {
+    return (not (header == GC_FORWARDED) &&
+            (header & LIFT_MASK) &&
+            fprintf (stderr, "Object already LIFTED\n"));
+}

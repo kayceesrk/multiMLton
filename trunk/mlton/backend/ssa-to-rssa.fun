@@ -1111,8 +1111,8 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                    transfer =
                                     Transfer.ifBool
                                     (Operand.Var {var = cond2, ty = indexTy},
-                                     {truee = moveBlock,
-                                      falsee = continue})}
+                                     {truee = continue,
+                                      falsee = moveBlock})}
 
                               in
                                 (stmts1,

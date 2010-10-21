@@ -35,16 +35,15 @@ void forwardObjptr (GC_state s, objptr *opp) {
     fprintf (stderr,
              "forwardObjptr  opp = "FMTPTR"  op = "FMTOBJPTR"  p = "FMTPTR"\n",
              (uintptr_t)opp, op, (uintptr_t)p);
-  assert (isObjptrInFromSpace (s, *opp));
   header = getHeader (p);
-  if (DEBUG_DETAILED and header == GC_FORWARDED)
-    fprintf (stderr, "  already FORWARDED\n");
 
   if (isObjectLifted (header)) {
       if (DEBUG_LWTGC)
           fprintf (stderr, " already LIFTED\n");
       return;
   }
+
+  assert (isObjptrInFromSpace (s, *opp));
 
   if (header != GC_FORWARDED) { /* forward the object */
     size_t size, skip;
