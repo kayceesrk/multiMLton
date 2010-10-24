@@ -116,6 +116,7 @@ struct
     val tid = TID.new ()
     fun thrdFun () = ((f ()) handle ex => doHandler (tid, ex);
                      generalExit (SOME tid, false))
+    val _ = Primitive.MLton.move (thrdFun)
     val thrd = H_THRD (tid, MT.new thrdFun)
     val rhost = PT.getRunnableHost (PT.prep (thrd))
     val () = S.readyForSpawn (rhost)
