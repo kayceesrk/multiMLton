@@ -15,9 +15,6 @@ struct
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
   fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
 
-  fun preempt () = NONE
-  fun reset () = ()
-
   (* this holds an approximation of the current time of day.  It is
     * cleared at each pre-emption, and initialized on demand (by getTime).
     *)
