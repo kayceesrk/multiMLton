@@ -19,7 +19,7 @@ val isMLton = true
  *)
 
 val share = Primitive.MLton.share
-val move = Primitive.MLton.move
+fun move x = Primitive.MLton.move (ref x)
 
 structure GC = MLtonGC
 
@@ -34,6 +34,7 @@ fun size x =
    in
       C_Size.toInt (Primitive.MLton.size (ref x)) - refOverhead
    end
+
 
 (* fun cleanAtExit () = let open Cleaner in clean atExit end *)
 
