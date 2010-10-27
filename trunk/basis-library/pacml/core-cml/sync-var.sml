@@ -1,7 +1,7 @@
 structure SyncVar : SYNC_VAR_EXTRA =
 struct
-  structure Assert = LocalAssert(val assert = false)
-  structure Debug = LocalDebug(val debug = false)
+  structure Assert = LocalAssert(val assert = true)
+  structure Debug = LocalDebug(val debug = true)
 
   open Critical
 
@@ -81,9 +81,8 @@ struct
                   val () = debug' "SyncVar.relayMsg.NONE"
                   val rdyLst = !readyList
                   val _ = L.releaseCmlLock lock (TID.tidNum())
-                  val _ = atomicEnd ()
                 in
-                  ignore (List.map (fn (rthrd) => S.ready (rthrd)) rdyLst)
+                  ignore (List.map (fn (rthrd) => S.atomicReady (rthrd)) rdyLst)
                 end
        (* tryLp ends *)
     in
