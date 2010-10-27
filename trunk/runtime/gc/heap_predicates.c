@@ -101,7 +101,6 @@ bool isHeapInit (GC_heap h) {
  * Returns true if the object belongs to shared heap
  */
 static inline bool isObjectLifted (GC_header header) {
-    return (not (header == GC_FORWARDED) &&
-            (header & LIFT_MASK) &&
-            fprintf (stderr, "Object already LIFTED\n"));
+    return (not (header == GC_FORWARDED)
+            && (header & LIFT_MASK));
 }

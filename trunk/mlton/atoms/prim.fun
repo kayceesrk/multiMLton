@@ -107,6 +107,7 @@ datatype 'a t =
   *)
  | MLton_handlesSignals (* closure conversion *)
  | MLton_installSignalHandler (* backend *)
+ | MLton_parInit
  | MLton_serialize (* unused *)
  | MLton_share
  | MLton_move
@@ -280,6 +281,7 @@ fun toString (n: 'a t): string =
        | MLton_hash => "MLton_hash"
        | MLton_handlesSignals => "MLton_handlesSignals"
        | MLton_installSignalHandler => "MLton_installSignalHandler"
+       | MLton_parInit => "MLton_parInit"
        | MLton_serialize => "MLton_serialize"
        | MLton_share => "MLton_share"
        | MLton_move => "MLton_move"
@@ -425,6 +427,7 @@ val equals: 'a t * 'a t -> bool =
     | (MLton_hash, MLton_hash) => true
     | (MLton_handlesSignals, MLton_handlesSignals) => true
     | (MLton_installSignalHandler, MLton_installSignalHandler) => true
+    | (MLton_parInit, MLton_parInit) => true
     | (MLton_serialize, MLton_serialize) => true
     | (MLton_share, MLton_share) => true
     | (MLton_move, MLton_move) => true
@@ -593,6 +596,7 @@ val map: 'a t * ('a -> 'b) -> 'b t =
     | MLton_hash => MLton_hash
     | MLton_handlesSignals => MLton_handlesSignals
     | MLton_installSignalHandler => MLton_installSignalHandler
+    | MLton_parInit => MLton_parInit
     | MLton_serialize => MLton_serialize
     | MLton_share => MLton_share
     | MLton_move => MLton_move
@@ -846,6 +850,7 @@ val kind: 'a t -> Kind.t =
        | MLton_hash => Functional
        | MLton_handlesSignals => Functional
        | MLton_installSignalHandler => SideEffect
+       | MLton_parInit => SideEffect
        | MLton_serialize => DependsOnState
        | MLton_share => SideEffect
        | MLton_move=> SideEffect
@@ -1050,6 +1055,7 @@ in
        MLton_hash,
        MLton_handlesSignals,
        MLton_installSignalHandler,
+       MLton_parInit,
        MLton_serialize,
        MLton_share,
        MLton_move,
@@ -1314,6 +1320,7 @@ fun 'a checkApp (prim: 'a t,
        | MLton_hash => oneTarg (fn t => (twoArgs (seqIndex, t), word32))
        | MLton_handlesSignals => noTargs (fn () => (noArgs, bool))
        | MLton_installSignalHandler => noTargs (fn () => (noArgs, unit))
+       | MLton_parInit => noTargs (fn () => (noArgs, unit))
        | MLton_serialize => oneTarg (fn t => (oneArg t, word8Vector))
        | MLton_share => oneTarg (fn t => (oneArg t, unit))
        | MLton_move => oneTarg (fn t => (oneArg t, unit))

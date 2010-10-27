@@ -302,18 +302,29 @@ structure CFunction =
             bytesNeeded = NONE,
             convention = Cdecl,
             ensuresBytesFree = false,
-            mayGC = true, (* MLton.share works by tracing an object.
-                           * Make sure all the GC invariants are true,
-                           * because tracing might encounter the current
-                           * stack in the heap.
-                           *)
+            mayGC = true,
             maySwitchThreads = false,
-            modifiesFrontier = true, (* actually, just readsFrontier *)
+            modifiesFrontier = true,
             prototype = (Vector.new2 (CType.gcState, CType.cpointer), NONE),
             readsStackTop = true,
             return = Type.unit,
             symbolScope = Private,
             target = Direct "GC_move",
+            writesStackTop = true}
+
+      fun parallelInit t =
+         T {args = Vector.new0 (),
+            bytesNeeded = NONE,
+            convention = Cdecl,
+            ensuresBytesFree = false,
+            mayGC = true,
+            maySwitchThreads = false,
+            modifiesFrontier = true,
+            prototype = (Vector.new0 (), NONE),
+            readsStackTop = true,
+            return = Type.unit,
+            symbolScope = Private,
+            target = Direct "Parallel_init",
             writesStackTop = true}
 
       (* CHECK; size with objptr *)
@@ -1372,6 +1383,8 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                            (Prim.wordEqual
                                             (WordSize.fromBits (Type.width t))))
                                | MLton_installSignalHandler => none ()
+                               | MLton_parInit =>
+                                   simpleCCall (CFunction.parallelInit ())
                                | MLton_share =>
                                     (case toRtype (varType (arg 0)) of
                                         NONE => none ()

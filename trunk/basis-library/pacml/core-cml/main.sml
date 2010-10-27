@@ -60,8 +60,6 @@ struct
   end
 
   val () = (_export "Parallel_run": (unit -> unit) -> unit;) thread_main
-  (* init MUST come after waitForWorkLoop has been exported *)
-  val () = (_import "Parallel_init": unit -> unit;) ()
 
   fun alrmHandler thrd =
     let
@@ -120,5 +118,8 @@ struct
     in
       status
     end
+
+  (* init MUST come after waitForWorkLoop has been exported *)
+  val () = Primitive.MLton.parallelInit ()
 
 end

@@ -6,6 +6,8 @@
  * See the file MLton-LICENSE for details.
  */
 
+#define FACT 4
+
 void liftObjptr (GC_state s, objptr *opp);
 
 /* Move an object from local heap to the shared heap */
@@ -48,6 +50,48 @@ void liftObjptr (GC_state s, objptr *opp) {
     *new_headerp = new_header | LIFT_MASK;
 }
 
+void liftAllObjectsDuringInit (GC_state s) {
+    s->syncReason = SYNC_FORCE;
+    getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
+    getThreadCurrent(s)->exnStack = s->exnStack;
+    beginAtomic (s);
+
+    if (DEBUG_LWTGC)
+        fprintf (stderr, "liftAllObjectsDuringInit: \n");
+
+    assert (s->auxHeap->size == 0);
+    if (DEBUG_LWTGC)
+        fprintf (stderr, "\tCreating auxheap of size = %ld bytes\n", s->heap->size * FACT);
+    createHeap (s, s->auxHeap, s->heap->size * FACT, s->heap->size * FACT);
+
+    /* set up new offsets in gc_state */
+    for (int proc = 0; proc < s->numberOfProcs; proc ++) {
+        s->procStates[proc].sharedHeapStart = s->auxHeap->start;
+        s->procStates[proc].sharedHeapEnd = s->auxHeap->start + s->auxHeap->size;
+    }
+
+    //Set up the forwarding state
+    pointer toStart = alignFrontier (s, s->auxHeap->start);
+    s->forwardState.toStart = s->auxHeap->start;
+    s->forwardState.toLimit = s->auxHeap->start + s->auxHeap->size;
+    s->forwardState.back = toStart;
+
+    //Forward
+    foreachGlobalObjptr (s, liftObjptr);
+    foreachObjptrInRange (s, toStart, &s->forwardState.back, liftObjptr, TRUE);
+    updateWeaksForCheneyCopy (s);
+    resizeHeap (s, s->heap->oldGenSize);
+
+    //suffix
+    s->auxHeap->oldGenSize = s->forwardState.back - s->auxHeap->start;
+
+    /* Force a major GC to clean up the local heap. Local heap should be empty
+     * now. */
+
+    performGC (s, 0, 0, TRUE, TRUE, TRUE);
+    endAtomic (s);
+}
+
 void GC_move (GC_state s, pointer p) {
 
     /* ENTER (0) */
@@ -82,6 +126,8 @@ void GC_move (GC_state s, pointer p) {
         }
 
     }
+    else
+        assert (s->auxHeap->size > s->auxHeap->oldGenSize);
 
     //Set up the forwarding state
     s->forwardState.toStart = s->auxHeap->start + s->auxHeap->oldGenSize;
@@ -96,6 +142,8 @@ void GC_move (GC_state s, pointer p) {
     foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, liftObjptr, TRUE);
     s->auxHeap->oldGenSize = s->forwardState.back - s->auxHeap->start;
     s->forwardState.amInMinorGC = FALSE;
+
+    assert (s->auxHeap->size > s->auxHeap->oldGenSize);
 
 
     /* Force a garbage collection. Essential to fix the forwarding pointers from

@@ -97,6 +97,7 @@ signature PRIM =
               *)
              | MLton_handlesSignals (* closure conversion *)
              | MLton_installSignalHandler (* backend *)
+             | MLton_parInit
              | MLton_serialize (* unused *)
              | MLton_share
              | MLton_move

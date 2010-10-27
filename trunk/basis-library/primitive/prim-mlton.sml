@@ -25,8 +25,8 @@ val share = _prim "MLton_share": 'a -> unit;
 val move = _prim "MLton_move": 'a -> unit;
 val size = _prim "MLton_size": 'a ref -> C_Size.t;
 
-val installSignalHandler =
-   _prim "MLton_installSignalHandler": unit -> unit;
+val parallelInit = _prim "MLton_parInit": unit -> unit;
+val installSignalHandler = _prim "MLton_installSignalHandler": unit -> unit;
 
 structure GCState =
    struct

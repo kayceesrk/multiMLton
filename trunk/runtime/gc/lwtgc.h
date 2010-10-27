@@ -9,6 +9,6 @@
 #if (defined (MLTON_GC_INTERNAL_BASIS))
 
 PRIVATE void GC_move (GC_state s, pointer object);
-PRIVATE void GC_move2 (GC_state s, pointer object);
+void liftAllObjectsDuringInit (GC_state s);
 
 #endif /* (defined (MLTON_GC_INTERNAL_BASIS)) */
