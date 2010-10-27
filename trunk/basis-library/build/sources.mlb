@@ -416,12 +416,16 @@ in
 		../pacml/core-cml/channel.sml
                 ../pacml/core-cml/mailbox.sig
                 ../pacml/core-cml/mailbox.sml
-
+                ../pacml/core-cml/lock.sig
+                ../pacml/core-cml/lock.sml
 		../pacml/core-cml/timeout.sig
 		../pacml/core-cml/timeout.sml
 		../pacml/core-cml/sync-var.sig
 		../pacml/core-cml/sync-var.sml
-
+                ../pacml/lib/multicast.sig
+		../pacml/lib/multicast.sml
+		../pacml/lib/simple-rpc.sig
+		../pacml/lib/simple-rpc.sml
 		../pacml/core-cml/main.sig
 		ann "allowFFI true" in
 			../pacml/core-cml/main.sml

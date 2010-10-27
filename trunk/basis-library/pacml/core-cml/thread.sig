@@ -1,8 +1,10 @@
 signature THREAD =
 sig
   type thread_id
+  val getTid : unit -> thread_id
   val exit : unit -> unit
   val spawnHost : (unit -> unit) -> thread_id
+  val spawn : (unit -> unit) -> thread_id
   val spawnParasite : (unit -> unit) -> unit
 end
 
