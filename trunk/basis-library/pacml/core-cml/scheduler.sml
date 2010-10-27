@@ -155,7 +155,7 @@ struct
            end)
        | PARASITE =>
            let
-             val r : (unit -> 'a) ref = ref (fn () => raise Fail "atomicSwithc : Switching to a unprepared thread")
+             val r : (unit -> 'a) ref = ref (fn () => raise Fail "atomicSwitch : Switching to a unprepared thread")
              fun dummyFrame () =
              let
                val tid = TID.getCurThreadId ()
@@ -180,6 +180,8 @@ struct
            end)
 
   fun atomicSwitch (f) = atomicSwitchAux "atomicSwitch" f
+
+  fun switch (f) = (atomicBegin(); atomicSwitch(f))
 
   fun atomicSwitchToNext (f : 'a thread -> unit) =
     case PT.getThreadType () of

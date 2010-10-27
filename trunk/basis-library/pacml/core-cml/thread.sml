@@ -19,6 +19,8 @@ struct
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
   fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
 
+  val getTid = TID.getCurThreadId
+
   fun generalExit (tid', clr') =
     let
       val () = Assert.assertNonAtomic' "Thread.generalExit"
@@ -123,6 +125,8 @@ struct
   in
     tid
   end
+
+  fun spawn f = spawnHost f
 
   fun createHost f =
   let

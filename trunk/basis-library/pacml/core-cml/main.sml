@@ -121,4 +121,9 @@ struct
       status
     end
 
+   fun shutdown status =
+         if (!Config.isRunning)
+            then S.switch (fn _ => PT.getRunnableHost(PT.prepVal (!SH.shutdownHook, status)))
+            else raise Fail "CML is not running"
+
 end
