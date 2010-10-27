@@ -1,6 +1,5 @@
 structure MLtonPacml : MLTON_PACML=
 struct
-  open ThreadID
   open Thread
   open Event
   open Channel

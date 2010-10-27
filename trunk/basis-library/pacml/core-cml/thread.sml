@@ -5,6 +5,7 @@ struct
   structure Debug = LocalDebug(val debug = false)
 
   open Critical
+  open ThreadID
   structure MT = MLtonThread
   structure S = Scheduler
   structure SH = SchedulerHooks

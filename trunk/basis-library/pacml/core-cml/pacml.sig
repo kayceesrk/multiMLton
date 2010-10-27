@@ -1,6 +1,5 @@
 signature MLTON_PACML=
 sig
-  include THREAD_ID
   include THREAD
   include EVENT
   include CHANNEL
