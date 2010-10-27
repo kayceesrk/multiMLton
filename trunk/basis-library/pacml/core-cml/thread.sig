@@ -1,13 +1,13 @@
 signature THREAD =
 sig
-  type thread_id
-  val getTid : unit -> thread_id
+  
+  val getTid : unit -> ThreadID.thread_id
   val exit : unit -> unit
-  val spawnHost : (unit -> unit) -> thread_id
+  val spawnHost : (unit -> unit) -> ThreadID.thread_id
   val spawnParasite : (unit -> unit) -> unit
 
-  val spawn : (unit -> unit) -> thread_id
-  val spawnOnProc : ((unit -> unit) * int) -> thread_id
+  val spawn : (unit -> unit) -> ThreadID.thread_id
+  val spawnOnProc : ((unit -> unit) * int) -> ThreadID.thread_id
 
 end
 

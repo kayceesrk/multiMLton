@@ -1,5 +1,6 @@
 structure MLtonPacml : MLTON_PACML=
 struct
+  open ThreadID
   open Thread
   open Event
   open Channel
@@ -11,4 +12,5 @@ struct
   structure Mailbox : MAILBOX = Mailbox
   structure Multicast : MULTICAST = Multicast 
   structure SimpleRPC : SIMPLE_RPC = SimpleRPC
+  structure NonBlocking : NON_BLOCKING_EXTRA = NonBlocking
 end

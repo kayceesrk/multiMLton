@@ -426,6 +426,8 @@ in
 		../pacml/lib/multicast.sml
 		../pacml/lib/simple-rpc.sig
 		../pacml/lib/simple-rpc.sml
+		../pacml/core-cml/non-blocking.sig
+		../pacml/core-cml/non-blocking.sml
 		../pacml/core-cml/main.sig
 		ann "allowFFI true" in
 			../pacml/core-cml/main.sml
