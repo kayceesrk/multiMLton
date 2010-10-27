@@ -96,6 +96,8 @@ struct
       ; TO.reset ())
 
 
+  val numIOThreads = PacmlFFI.numIOProcessors
+
   fun run (initialProc : unit -> unit) =
   let
     val installAlrmHandler = fn (h) => MLtonSignal.setHandler (Posix.Signal.alrm, h)
@@ -110,7 +112,7 @@ struct
           val handler = MLtonSignal.Handler.handler (S.unwrap alrmHandler Thread.reifyHostFromParasite)
           val () = installAlrmHandler handler
           (* Spawn the Non-blocking worker threads *)
-          (* val _ = List.tabulate (numIOThreads * 5, fn _ => NonBlocking.mkNBThread ()) *)
+          val _ = List.tabulate (numIOThreads * 5, fn _ => NonBlocking.mkNBThread ())
         in
             ()
         end)
