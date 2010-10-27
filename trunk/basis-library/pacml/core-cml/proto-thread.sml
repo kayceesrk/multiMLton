@@ -1,7 +1,7 @@
 structure ProtoThread : PROTO_THREAD =
 struct
 
-  structure Assert = LocalAssert(val assert= true)
+  structure Assert = LocalAssert(val assert = true)
   structure Debug = LocalDebug(val debug = true)
 
   open Critical
@@ -34,6 +34,7 @@ struct
 
   fun prepFn (H_THRD (tid, t), f) = H_RTHRD (RHOST ((tid, MT.prepare (MT.prepend (t,f), ()))))
     | prepFn (p, f) = prep (prepend (p, f))
+
 
 
   (* Manipulate current thread info *)

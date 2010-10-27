@@ -1,6 +1,6 @@
 structure Event : EVENT_EXTRA =
 struct
-  structure Assert = LocalAssert (val assert= true)
+  structure Assert = LocalAssert (val assert = true)
   structure Debug = LocalDebug (val debug = true)
 
   open Critical
