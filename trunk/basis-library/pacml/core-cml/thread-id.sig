@@ -27,6 +27,7 @@ sig
   val setCurThreadId : thread_id -> unit
 
   val new : unit -> thread_id
+  val newOnProc : int -> thread_id
   val bogus : string -> thread_id
 
   val mark     : thread_id -> unit

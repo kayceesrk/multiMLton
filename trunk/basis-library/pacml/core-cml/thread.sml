@@ -128,6 +128,22 @@ struct
 
   fun spawn f = spawnHost f
 
+  fun spawnOnProc (f, n) =
+  let
+    val () = atomicBegin ()
+    val tid = TID.newOnProc (n)
+    fun thrdFun () = ((f ()) handle ex => doHandler (tid, ex);
+                     generalExit (SOME tid, false))
+    val thrd = H_THRD (tid, MT.new thrdFun)
+    val rhost = PT.getRunnableHost (PT.prep (thrd))
+    val () = S.readyForSpawn (rhost)
+    val () = atomicEnd ()
+  in
+    tid
+  end
+
+
+
   fun createHost f =
   let
     val () = atomicBegin ()
