@@ -1,18 +1,17 @@
 structure NonBlocking =
 struct
 
-  structure Assert = LocalAssert(val assert = false)
-  structure Debug = LocalDebug(val debug = false)
+  structure Assert = LocalAssert(val assert= true)
+  structure Debug = LocalDebug(val debug = true)
 
   open Channel
   open Critical
 
   fun debug msg = Debug.sayDebug ([atomicMsg, ThreadID.tidMsg], msg)
-  fun debug' msg = debug (fn () => msg^" : "
-                                ^Int.toString(PacmlFFI.processorNumber()))
+  fun debug' msg = debug (fn () => msg^" : " ^Int.toString(PacmlFFI.processorNumber()))
 
 
- 
+
 
   type proc = ((unit -> exn) * exn chan) chan
 

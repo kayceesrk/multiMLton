@@ -1,8 +1,8 @@
 structure Scheduler : SCHEDULER =
 struct
 
-  structure Assert = LocalAssert(val assert = false)
-  structure Debug = LocalDebug(val debug = false)
+  structure Assert = LocalAssert(val assert= true)
+  structure Debug = LocalDebug(val debug = true)
 
   open Critical
 
@@ -174,7 +174,7 @@ struct
                print "Should not see this\n"
              end
              val _ = Primitive.dontInline (dummyFrame)
-             val _ = (atomicBegin (); atomicEnd ())
+             val _ = (atomicBegin (); atomicEnd ()) (* Yield if timer interrupt is present *)
            in
              !r()
            end)
