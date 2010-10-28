@@ -29,7 +29,6 @@ struct
                 in clock := SOME t;  t
                 end
       | SOME t => t
-  fun preemptTime () = clock := NONE
 
   (* The queue of threads waiting for timeouts.
     * It is sorted in increasing order of time value.
@@ -45,6 +44,17 @@ struct
     let
       val now = getTime ()
       val (txid, t) = TQ.Elt.value elt
+      fun inflateAndReady (t) =
+      let
+        val rt = case t of
+                      RepTypes.P_RTHRD (parasite) => RepTypes.H_RTHRD (Thread.reifyHostFromParasite (parasite))
+                    | _ => t
+        val rhost = case rt of
+                         RepTypes.H_RTHRD (rhost) => rhost
+                       | _ => raise Fail "TimeOut.cleaner: Impossible. Must be a host thread"
+      in
+        S.readyForSpawn (rhost)
+      end
       fun matchLp () =
         let
           val res = cas (txid, 0, 1) (* Try to claim it *)
@@ -53,7 +63,7 @@ struct
             (if Time.<=(TQ.Elt.key elt, now) then
               (readied ()
               ; txid := 2 (* SYNCHED *)
-              ; S.ready (t)
+              ; inflateAndReady (t)
               ; true)
             else
               (txid := 0; (* Reset to WAITING *)
@@ -95,9 +105,12 @@ struct
         val () = debug' "timeOutEvt(2)" (* Atomic 1 *)
         val () = Assert.assertAtomic' ("TimeOut.timeOutEvt(2)", SOME 1)
       in
+        (print (concat ["Timeout: time = ", LargeInt.toString (Time.toSeconds (time)),
+                        "zeroTime = ", LargeInt.toString (Time.toSeconds (Time.zeroTime)),
+                        "\n"]);
         if Time.<=(time, Time.zeroTime) then
-          E.enabled {prio = ~1, doitFn = fn () => (atomicEnd ())}
-        else E.blocked blockFn
+          E.enabled {prio = ~1, doitFn = fn () => (debug' "timeOutEvt(3.1)"; atomicEnd ())}
+        else E.blocked blockFn)
       end
   in
     E.bevt pollFn
@@ -143,34 +156,39 @@ struct
 
   (* reset various pieces of state *)
   fun reset () = timeQ := TQ.new ()
+  fun preemptTime () = clock := NONE
 
   (* what to do at a preemption *)
   fun preempt () : Time.time option option =
     let
       val () = Assert.assertAtomic' ("TimeOut.preempt", SOME 1)
       val timeQ' = !timeQ
-    in
-      if not (PacmlFFI.processorNumber () = 0) then
-        NONE
-      else
-        if TQ.empty timeQ' then NONE
+      val res =
+        if not (PacmlFFI.processorNumber () = 0) then
+          NONE
         else
-          let
-            val _ = L.getCmlLock lock TID.tidNum
-            val readied = ref false
-            val timeQ' = TQ.clean (timeQ', cleaner (fn () => readied := true))
-            val () = timeQ := timeQ'
-            val res =
-              if !readied
-              then SOME NONE
-              else case TQ.peek timeQ' of
-                        NONE => NONE
-                      | SOME elt => SOME(SOME(Time.-(TQ.Elt.key elt, getTime ())))
-
-            val _ = L.releaseCmlLock lock (TID.tidNum())
-          in
-            res
-          end
+          (debug' ("TimeOut.preempt");
+          preemptTime ();
+          if TQ.empty timeQ' then NONE
+          else
+            let
+              val _ = L.getCmlLock lock TID.tidNum
+              val readied = ref false
+              val timeQ' = TQ.clean (timeQ', cleaner (fn () => readied := true))
+              val () = timeQ := timeQ'
+              val res =
+                if !readied
+                then SOME NONE
+                else case TQ.peek timeQ' of
+                          NONE => NONE
+                        | SOME elt => SOME(SOME(Time.-(TQ.Elt.key elt, getTime ())))
+              val _ = L.releaseCmlLock lock (TID.tidNum ())
+            in
+              res
+            end)
+      val () = Assert.assertAtomic' ("TimeOut.preempt", SOME 1)
+    in
+      res
     end
 
 

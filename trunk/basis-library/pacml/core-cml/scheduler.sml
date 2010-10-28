@@ -30,6 +30,7 @@ struct
 
   fun enque2 thrd =
    (Assert.assertAtomic' ("Scheduler.enque2", NONE)
+    ; print "Scheduler.enque2"
     ; SQ.enque (thrd, R.SEC))
 
   fun deque1 () =
@@ -52,6 +53,12 @@ struct
       H_RTHRD (rhost) => (SQ.enque (rhost, R.PRI); atomicEnd ())
     | P_RTHRD (par) => PT.atomicPrefixAndSwitchTo (par) (* Implicit atomic end *)
     ; Assert.assertNonAtomic (fn () => "Scheduler.atomicReady(2)[tid:"^(TID.tidMsg())^"]"))
+
+  fun atomicReadyHost (rhost: runnable_host) =
+    (Assert.assertAtomic' ("Scheduler.atomicReadyHost(1)[tid:"^(TID.tidMsg())^"]", SOME 1)
+    ; SQ.enque (rhost, R.PRI)
+    ; Assert.assertAtomic' ("Scheduler.atomicReadyHost(2)[tid:"^(TID.tidMsg())^"]", SOME 1))
+
 
   fun ready (rt : rdy_thread) =
     (atomicBegin ();
@@ -135,7 +142,8 @@ struct
           then (TID.unmark tid
                 ; promote ()
                 ; SQ.enque (thrd, R.PRI))
-          else SQ.enque (thrd,R.SEC)
+          else (SQ.enque (thrd,R.SEC);
+                print "Scheduler.adding to second queue\n")
       in
         ()
       end

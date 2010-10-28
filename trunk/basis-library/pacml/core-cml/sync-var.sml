@@ -82,7 +82,7 @@ struct
                   val rdyLst = !readyList
                   val _ = L.releaseCmlLock lock (TID.tidNum())
                 in
-                  ignore (List.map (fn (rthrd) => S.atomicReady (rthrd)) rdyLst)
+                  ignore (List.map (fn (rthrd) => (S.atomicReady (rthrd); atomicBegin ())) rdyLst)
                 end
        (* tryLp ends *)
     in
@@ -106,9 +106,9 @@ struct
                   val () = Assert.assertAtomic (fn () => concat ["SyncVar.", name, "(3.1.1)"], SOME 1)
                   val () = value := SOME x
                   val () = prio := 1
+                  val () = ThreadID.mark (TID.getCurThreadId ())
                   (* Implicitly releases lock *)
                   val () = relayMsg (readQ, x, lock)
-                  val () = ThreadID.mark (TID.getCurThreadId ())
                   val () = atomicEnd ()
                   val () = debug' ( concat [name, "(3.1.2)"]) (* NonAtomic *)
                   val () = Assert.assertNonAtomic (fn () => concat ["SyncVar.", name, "(3.1.2)"])

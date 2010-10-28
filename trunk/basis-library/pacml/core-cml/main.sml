@@ -60,8 +60,6 @@ struct
   end
 
   val () = (_export "Parallel_run": (unit -> unit) -> unit;) thread_main
-  (* init MUST come after waitForWorkLoop has been exported *)
-  val () = (_import "Parallel_init": unit -> unit;) ()
 
   fun alrmHandler thrd =
     let
@@ -80,7 +78,6 @@ struct
     let
       (* If there are waiting time events, then make proc 0 spin *)
       val to = TO.preempt ()
-
       val iter = case to of
                       NONE => if (iter > Config.maxIter) then (PacmlFFI.wait (); iter-1) else iter
                     | _ => (iter - 1)
@@ -127,5 +124,8 @@ struct
          if (!Config.isRunning)
             then S.switch (fn _ => PT.getRunnableHost(PT.prepVal (!SH.shutdownHook, status)))
             else raise Fail "CML is not running"
+
+  (* init MUST come after waitForWorkLoop has been exported *)
+  val () = (_import "Parallel_init": unit -> unit;) ()
 
 end

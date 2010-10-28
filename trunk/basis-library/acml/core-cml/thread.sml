@@ -11,8 +11,8 @@
 
 structure Thread : THREAD =
    struct
-      structure Assert = LocalAssert(val assert = false)
-      structure Debug = LocalDebug(val debug = false)
+      structure Assert = LocalAssert(val assert = true)
+      structure Debug = LocalDebug(val debug = true)
 
       structure S = Scheduler
       structure SH = SchedulerHooks

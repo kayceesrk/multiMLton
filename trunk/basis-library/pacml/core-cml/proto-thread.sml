@@ -169,7 +169,7 @@ struct
       val _ = setParasiteBottom (getFrameBottomAsOffset ())
       val _ = setNumPenaltySpawns (0)
       val _ = atomicEnd ()
-      val _ = f ()
+      val _ = f () handle e => (debug' "SpawnParasite: parasite threw an exception\n"; raise e)
       val _ = disableParasitePreemption ()
     in
       PacmlFFI.noop () (* Needed to prevent inlining f () *)

@@ -14,9 +14,9 @@
 
 structure Scheduler : SCHEDULER =
    struct
-      structure Assert = LocalAssert(val assert = false)
+      structure Assert = LocalAssert(val assert = true)
       structure GlobalDebug = Debug
-      structure Debug = LocalDebug(val debug = false)
+      structure Debug = LocalDebug(val debug = true)
       structure Pointer = Primitive.MLton.Pointer
 
       open Critical
