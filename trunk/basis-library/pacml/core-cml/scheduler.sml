@@ -142,8 +142,7 @@ struct
           then (TID.unmark tid
                 ; promote ()
                 ; SQ.enque (thrd, R.PRI))
-          else (SQ.enque (thrd,R.SEC);
-                print "Scheduler.adding to second queue\n")
+          else (SQ.enque (thrd,R.SEC))
       in
         ()
       end

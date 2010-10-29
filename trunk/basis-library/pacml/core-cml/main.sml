@@ -74,13 +74,27 @@ struct
       nextThrd
     end
 
+  fun pause () =
+  let
+    fun tightLoop2 n =
+      if n=0 then ()
+      else tightLoop2 (n-1)
+
+    fun tightLoop n = (* tightLoop (1000) ~= 1ms on 1.8Ghz core *)
+      if n=0 then ()
+      else (tightLoop2 300; tightLoop (n-1))
+  in
+    tightLoop (5000)
+  end
+
+
   fun pauseHook (iter) =
     let
       (* If there are waiting time events, then make proc 0 spin *)
       val to = TO.preempt ()
       val iter = case to of
-                      NONE => if (iter > Config.maxIter) then (PacmlFFI.wait (); iter-1) else iter
-                    | _ => (iter - 1)
+                      SOME (SOME (t)) => (pause (); iter)
+                    | _ => if (iter > Config.maxIter) then (PacmlFFI.wait (); iter-1) else iter
       val () = if not (!Config.isRunning) then (atomicEnd ();ignore (SchedulerHooks.deathTrap())) else ()
     in
       S.nextWithCounter (iter + 1)
