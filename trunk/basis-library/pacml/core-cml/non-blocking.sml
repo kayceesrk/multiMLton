@@ -47,7 +47,7 @@ struct
                         ; inputChan)
       val (f, outputChan) = recv (iChan)
       val _ = debug' "NB.mainLoop : got task. Executing..."
-      val res = f () handle x => x
+      val res = f () handle x => (print "got exception";x)
       val _ = send (outputChan, res)
     in
       loop ()
@@ -71,8 +71,8 @@ struct
         ignore (Thread.spawnOnProc (main, p))
       end
 
-  fun executeOn ch f =
-  let
+  fun executeOn ch f = f()
+ (* let
     val _ = if numIOProcessors = 0 then raise Fail "NonBlocking.execute : no io-threads" else ()
     val _ = if sameChannel (ch, inputChan) andalso !numDedicated = numIOProcessors then
                 raise Fail "NonBlocking.execute : All io threads have been grabbed by createProcessor ()s"
@@ -91,7 +91,7 @@ struct
     case r of
          R (res) => res
        | x => raise x
-  end
+  end*)
 
   fun execute f = executeOn inputChan f
 
