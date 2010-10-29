@@ -132,6 +132,8 @@ struct
 
   fun atomicPrefixAndSwitchToHelper (thlet, kind) =
   let
+    val () = Assert.assertAtomic' ("ProtoThread.atomicPrefixAndSwitchToHelper", NONE)
+    val () = TID.mark (TID.getCurThreadId ())
     val state = getThreadState ()
     val _ = case kind of
                   PREFIX_REGULAR => setThreadType (PARASITE)
@@ -176,6 +178,7 @@ struct
     end
     val state = getThreadState ()
     val _ = atomicBegin ()
+    val () = TID.mark (TID.getCurThreadId ())
     val _ = setThreadType (PARASITE)
     val _ = Primitive.dontInline (doit)
 
