@@ -108,7 +108,6 @@ struct
                   val () = prio := 1
                   (* Implicitly releases lock *)
                   val () = relayMsg (readQ, x, lock)
-                  val () = ThreadID.mark (TID.getCurThreadId ())
                   val () = atomicEnd ()
                   val () = debug' ( concat [name, "(3.1.2)"]) (* NonAtomic *)
                   val () = Assert.assertNonAtomic (fn () => concat ["SyncVar.", name, "(3.1.2)"])
@@ -164,7 +163,6 @@ struct
                   val () = prio := 1
                   val () = doSwap value
                   val () = L.releaseCmlLock lock (TID.tidNum())
-                  val () = ThreadID.mark (TID.getCurThreadId ())
                   val () = atomicEnd ()
                   val () = debug' ( concat [name, "(3.2.2)"]) (* NonAtomic *)
                   val () = Assert.assertNonAtomic (fn () => concat ["SyncVar.", name, "(3.2.2)"])

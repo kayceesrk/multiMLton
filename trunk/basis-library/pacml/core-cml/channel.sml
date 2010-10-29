@@ -85,7 +85,6 @@ struct
                       if res = 0 then
                         (let (* WAITING -- we got it *)
                           val _ = prio := 1
-                          val () = TID.mark (TID.getCurThreadId ())
                           val () = L.releaseCmlLock lock (TID.tidNum())
                           val rthrd = PT.prepVal (rt, msg)
                         in
@@ -138,7 +137,6 @@ struct
                           if res = 0 then
                             (let (* WAITING -- we got it *)
                               val _ = prio := 1
-                              val () = TID.mark (TID.getCurThreadId ())
                               val () = L.releaseCmlLock lock (TID.tidNum())
                               val rthrd = PT.prepVal (rt, msg)
                             in
@@ -182,7 +180,6 @@ struct
                                 (let (* WAITING -- we got it *)
                                   val _ = prio := 1
                                   val _ = mytxid := 2
-                                  val () = TID.mark (TID.getCurThreadId ())
                                   val () = L.releaseCmlLock lock (TID.tidNum())
                                   val rthrd = PT.prepVal (rt, msg)
                                 in
@@ -250,7 +247,6 @@ struct
                       if res = 0 then
                         (let (* WAITING -- we got it *)
                           val _ = prio := 1
-                          val () = TID.mark (TID.getCurThreadId ())
                           val () = L.releaseCmlLock lock (TID.tidNum())
                           val rthrd = PT.prepVal (rt, msg)
                           val _ = S.atomicReady (rthrd) (* Implicit atomic end *)
@@ -291,7 +287,6 @@ struct
                           if res = 0 then
                             (let (* WAITING -- we got it *)
                               val _ = prio := 1
-                              val () = TID.mark (TID.getCurThreadId ())
                               val () = L.releaseCmlLock lock (TID.tidNum())
                               val rthrd = PT.prep (st)
                               val _ = S.atomicReady (rthrd) (* Implicit atomic end *)
@@ -335,7 +330,6 @@ struct
                                 (let (* WAITING -- we got it *)
                                   val _ = prio := 1
                                   val _ = mytxid := 2
-                                  val () = TID.mark (TID.getCurThreadId ())
                                   val () = L.releaseCmlLock lock (TID.tidNum())
                                   val rthrd = PT.prep (st)
                                   val _ = S.atomicReady (rthrd) (* Implicit atomic end *)
@@ -404,7 +398,6 @@ struct
                     if res = 0 then
                       (let (* WAITING -- we got it *)
                         val _ = prio := 1
-                        val () = TID.mark (TID.getCurThreadId ())
                         val _ = L.releaseCmlLock lock (TID.tidNum())
                         val rthrd = PT.prep (st)
                         val _ = S.atomicReady (rthrd)
@@ -446,7 +439,6 @@ struct
                     if res = 0 then
                       (let (* WAITING -- we got it *)
                         val _ = prio := 1
-                        val () = TID.mark (TID.getCurThreadId ())
                         val _ = L.releaseCmlLock lock (TID.tidNum())
                         val rthrd = PT.prep (st)
                         val _ = S.atomicReady (rthrd)

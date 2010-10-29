@@ -32,8 +32,8 @@
  * Haven't ported nacks *)
 structure Event : EVENT_EXTRA =
    struct
-      structure Assert = LocalAssert (val assert = false)
-      structure Debug = LocalDebug (val debug = false)
+      structure Assert = LocalAssert (val assert = true)
+      structure Debug = LocalDebug (val debug = true)
 
       structure S = Scheduler
       structure L = Lock

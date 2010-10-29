@@ -20,7 +20,7 @@ struct
   (* These processors are used only to run IO CML thread *)
   val numIOProcs = PacmlFFI.numIOProcessors
 
-  val numberOfProcessors = PacmlFFI.numberOfProcessors
+  val numberOfProcessors = PacmlFFI.numberOfProcessors+numIOProcs
 
   (* Only these processors are used to run general CML threads *)
   val numComputeProcessors = numberOfProcessors - numIOProcs
@@ -37,6 +37,7 @@ struct
   let
     val _ = atomicBegin ()
     val targetProc = ThreadID.getProcId (tid)
+    val _ = print ("~~ enque on processor number" ^ Int.toString(targetProc))
     val _ = acquireQlock targetProc
     val (pri, sec) = A.unsafeSub (threadQs, targetProc)
     val q = case prio of

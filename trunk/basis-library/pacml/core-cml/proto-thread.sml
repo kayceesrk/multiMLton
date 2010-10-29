@@ -132,6 +132,8 @@ struct
 
   fun atomicPrefixAndSwitchToHelper (thlet, kind) =
   let
+    val () = Assert.assertAtomic' ("ProtoThread.atomicPrefixAndSwitchToHelper", NONE)
+    val () = TID.mark (TID.getCurThreadId ())
     val state = getThreadState ()
     val _ = case kind of
                   PREFIX_REGULAR => setThreadType (PARASITE)
@@ -169,13 +171,14 @@ struct
       val _ = setParasiteBottom (getFrameBottomAsOffset ())
       val _ = setNumPenaltySpawns (0)
       val _ = atomicEnd ()
-      val _ = f ()
+      val _ = f () handle e => (debug' "SpawnParasite: parasite threw an exception\n"; raise e)
       val _ = disableParasitePreemption ()
     in
       PacmlFFI.noop () (* Needed to prevent inlining f () *)
     end
     val state = getThreadState ()
     val _ = atomicBegin ()
+    val () = TID.mark (TID.getCurThreadId ())
     val _ = setThreadType (PARASITE)
     val _ = Primitive.dontInline (doit)
 
