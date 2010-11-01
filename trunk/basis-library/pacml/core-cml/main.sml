@@ -93,8 +93,8 @@ struct
       (* If there are waiting time events, then make proc 0 spin *)
       val to = TO.preempt ()
       val iter = case to of
-                      SOME (SOME (t)) => (pause (); iter)
-                    | _ => if (iter > Config.maxIter) then (PacmlFFI.wait (); iter-1) else iter
+                    NONE => if (iter > Config.maxIter) then (PacmlFFI.wait (); iter-1) else iter
+                  | _ => (pause (); iter - 1)
       val () = if not (!Config.isRunning) then (atomicEnd ();ignore (SchedulerHooks.deathTrap())) else ()
     in
       S.nextWithCounter (iter + 1)
