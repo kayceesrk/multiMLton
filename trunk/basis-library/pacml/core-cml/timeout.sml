@@ -162,30 +162,35 @@ struct
   fun preempt () : Time.time option option =
     let
       val () = Assert.assertAtomic' ("TimeOut.preempt", SOME 1)
-      val timeQ' = !timeQ
       val res =
-        if not (PacmlFFI.processorNumber () = 0) then
+        (if not (PacmlFFI.processorNumber () = 0) then
           NONE
         else
-          (debug' ("TimeOut.preempt");
-          preemptTime ();
-          if TQ.empty timeQ' then NONE
-          else
-            let
-              val _ = L.getCmlLock lock TID.tidNum
-              val readied = ref false
-              val timeQ' = TQ.clean (timeQ', cleaner (fn () => readied := true))
-              val () = timeQ := timeQ'
-              val res =
-                if !readied
-                then SOME NONE
-                else case TQ.peek timeQ' of
-                          NONE => NONE
-                        | SOME elt => SOME(SOME(Time.-(TQ.Elt.key elt, getTime ())))
-              val _ = L.releaseCmlLock lock (TID.tidNum ())
-            in
-              res
-            end)
+          let
+            val _ = L.getCmlLock lock TID.tidNum
+            val timeQ' = !timeQ
+            val _ = debug' ("TimeOut.preempt")
+            val _ = preemptTime ()
+            val res =
+              (if TQ.empty timeQ' then NONE
+              else
+                let
+                  val readied = ref false
+                  val timeQ' = TQ.clean (timeQ', cleaner (fn () => readied := true))
+                  val () = timeQ := timeQ'
+                  val res =
+                    if !readied
+                    then SOME NONE
+                    else case TQ.peek timeQ' of
+                              NONE => NONE
+                            | SOME elt => SOME(SOME(Time.-(TQ.Elt.key elt, getTime ())))
+                in
+                  res
+                end)
+            val _ = L.releaseCmlLock lock (TID.tidNum ())
+          in
+            res
+          end)
       val () = Assert.assertAtomic' ("TimeOut.preempt", SOME 1)
     in
       res

@@ -15,70 +15,47 @@
 structure Multicast : MULTICAST =
    struct
 
-      structure SV = SyncVar
-
       type 'a event = 'a Event.sevt
 
       datatype 'a request =
          Message of 'a
-       | NewPort
-      datatype 'a mc_state = MCState of ('a * 'a mc_state SV.ivar)
+       | NewPort of 'a Channel.chan
+      
       datatype 'a port =
-         Port of (('a * 'a mc_state SV.ivar) Channel.chan * 'a mc_state SV.ivar SV.mvar)
+         Port of 'a Channel.chan 
+     
       datatype 'a mchan =
-         MChan of ('a request Channel.chan * 'a port Channel.chan)
-
-    fun mkPort cv =
-       let
-          val outCh = Channel.channel()
-          val stateVar = SV.mVarInit cv
-          fun tee cv =
-             let
-                val (MCState(v, nextCV)) = SV.iGet cv
-             in
-                Channel.send (outCh, (v, nextCV))
-                ; tee nextCV
-             end
-          val _ = Thread.spawn (fn () => tee cv)
-       in
-          Port(outCh, stateVar)
-       end
+         MChan of ('a request Channel.chan * 'a Channel.chan list ref)
 
     fun mChannel () =
        let
           val reqCh = Channel.channel()
-          and replyCh = Channel.channel()
-          fun server cv =
+          and channels = ref []
+          fun server () =
              case (Channel.recv reqCh) of
-                NewPort =>
-                   (Channel.send (replyCh, mkPort cv)
-                    ; server cv)
-              | (Message m) =>
-                   let
-                      val nextCV = SV.iVar()
-                   in
-                      SV.iPut (cv, MCState(m, nextCV))
-                      ; server nextCV
+                NewPort chan => (channels := (chan::(!channels)); server()) 
+                | (Message m) =>
+                   let val chanList = !channels
+                       fun sender(channels) =
+                         case channels
+                           of x::xs => (Channel.aSend(x, m); sender(xs))
+                            | [] => ()
+                       val _ = sender(chanList)
+                   in server ()
                    end
-          val _ = Thread.spawn (fn () => server (SV.iVar()))
+          val _ = Thread.spawn (fn () => server ())
        in
-          MChan(reqCh, replyCh)
+          MChan(reqCh, channels)
        end
 
     fun multicast (MChan(ch, _), m) = Channel.send (ch, Message m)
 
-    fun port (MChan(reqCh, replyCh)) =
-       (Channel.send (reqCh, NewPort)
-        ; Channel.recv replyCh)
-
-    fun copy (Port(_, stateV)) = mkPort(SV.mGet stateV)
-
-    fun recvMsg stateV (v, nextCV) =
-       let val _ = SV.mSwap (stateV, nextCV)
-       in v
-       end
-
-    fun recv (Port(ch, stateV)) = recvMsg stateV (Channel.recv ch)
-    fun recvEvt (Port(ch, stateV)) = Event.wrap(Channel.recvEvt ch, recvMsg stateV)
+    fun port (MChan(reqCh, channels)) =
+      let val ch = Channel.channel()
+          val _ =  Channel.send(reqCh, NewPort(ch))
+      in Port(ch)
+      end
+    fun recv (Port(ch)) = Channel.recv ch
+    fun recvEvt (Port(ch)) = Channel.recvEvt ch
    end
 

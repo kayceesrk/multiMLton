@@ -8,11 +8,8 @@ struct
   open Critical
 
   fun debug msg = Debug.sayDebug ([atomicMsg, ThreadID.tidMsg], msg)
-  fun debug' msg = print msg (*debug (fn () => msg^" : "
-                                ^Int.toString(PacmlFFI.processorNumber()))*)
-
-
-
+  fun debug' msg = debug (fn () => msg^" : "
+                                ^Int.toString(PacmlFFI.processorNumber()))
 
   type proc = ((unit -> exn) * exn chan) chan
 
@@ -35,7 +32,7 @@ struct
 
   fun main () =
   let
-    val _ = debug' ("Executing Main\n")
+    val _ = debug' ("Executing Main")
     val pn = processorNumber ()
     val _ = debug' ("I think I am on proc num: " ^ Int.toString(pn) ^ "requesting channel num: " ^ Int.toString(pn - numComputeThreads) ^ "\n")
     val myDedicatedChan = Array.sub (dedicatedChannels, pn - numComputeThreads)
@@ -74,7 +71,8 @@ struct
       end
 
 
-  fun executeOn ch f = let
+  fun executeOn ch f = f() (*  
+ let
     val _ = if numIOProcessors = 0 then raise Fail "NonBlocking.execute : no io-threads" else ()
     val _ = if sameChannel (ch, inputChan) andalso !numDedicated = numIOProcessors then
                 raise Fail "NonBlocking.execute : All io threads have been grabbed by createProcessor ()s"
@@ -96,7 +94,7 @@ struct
     case r of
          R (res) => res
        | x => raise x
-  end 
+  end *)
 
   fun execute f = executeOn inputChan f
 
