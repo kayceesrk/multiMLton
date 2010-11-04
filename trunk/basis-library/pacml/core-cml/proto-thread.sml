@@ -142,12 +142,19 @@ struct
     let
       val _ = setParasiteBottom (getFrameBottomAsOffset ())
       val _ = prefixAndSwitchTo (thlet) (* Implicit atomic End *)
+      val _ = disableParasitePreemption ()
     in
-      print "\natomicPrefixAndSwitchTo : Should not see this"
+      PacmlFFI.noop ()
     end
     val _ = Primitive.dontInline doit
 
     (* control returns *)
+    fun foo () = case kind of
+                     PREFIX_REGULAR => ("PrefixRegular "^(Bool.toString (toPreemptParasite ())))
+                   | _ => ("PrefixSpecial"^(Bool.toString (toPreemptParasite ())))
+    val _ = Assert.assert ([],
+                           fn () => "ProtoThread.atomicPrefixAndSwitchToHelper: Preemption enabled! -- "^foo(),
+                           fn () => (toPreemptParasite () = false))
     val _ = setThreadState (state)
     val _ = enableParasitePreemption ()
   in
@@ -183,6 +190,8 @@ struct
     val _ = Primitive.dontInline (doit)
 
     (* control returns *)
+    val _ = Assert.assert' ("ProtoThread.atomicPrefixAndSwitchToHelper: Preemption enabled!",
+                            fn () => (toPreemptParasite () = false))
     val _ = debug' "ProtoThread.spawnParasite.resetting thread state"
     val _ = setThreadState (state)
     val _ = enableParasitePreemption ()

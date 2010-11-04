@@ -2,7 +2,7 @@ structure Timeout : TIME_OUT_EXTRA =
 struct
 
   structure Assert = LocalAssert(val assert = true)
-  structure Debug = LocalDebug(val debug = false)
+  structure Debug = LocalDebug(val debug = true)
 
   open Critical
 
@@ -166,7 +166,6 @@ struct
           let
             val _ = L.getCmlLock lock TID.tidNum
             val timeQ' = !timeQ
-            val _ = debug' ("TimeOut.preempt")
             val _ = preemptTime ()
             val res =
               (if TQ.empty timeQ' then NONE

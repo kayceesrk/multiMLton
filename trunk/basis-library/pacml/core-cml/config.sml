@@ -4,7 +4,7 @@ struct
   open Critical
 
   structure Assert = LocalAssert(val assert = true)
-  structure Debug = LocalDebug(val debug = true)
+  structure Debug = LocalDebug(val debug = false)
 
   fun debug msg = Debug.sayDebug ([atomicMsg], msg)
   fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
@@ -13,6 +13,7 @@ struct
   val isRunning = ref false
   val maxTime : LargeInt.int = 100
   val penalty = 100
+  val pauseToken = 5000 (* 1000 ~= 1ms pause *)
 
   val numLiveThreads = ref 0
   fun decrementNumLiveThreads () =

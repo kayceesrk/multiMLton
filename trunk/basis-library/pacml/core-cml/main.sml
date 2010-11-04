@@ -12,7 +12,7 @@ struct
   structure PT = ProtoThread
 
   structure Assert = LocalAssert(val assert = true)
-  structure Debug = LocalDebug(val debug = true)
+  structure Debug = LocalDebug(val debug = false)
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
   fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
@@ -84,7 +84,7 @@ struct
       if n=0 then ()
       else (tightLoop2 300; tightLoop (n-1))
   in
-    tightLoop (5000)
+    tightLoop (Config.pauseToken)
   end
 
 

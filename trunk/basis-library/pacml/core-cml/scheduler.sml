@@ -16,7 +16,7 @@ struct
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
   fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
-  fun debug'' msg = print (msg^" : "^Int.toString(PacmlFFI.processorNumber())^"\n")
+  fun debug'' msg = (* print (msg^" : "^Int.toString(PacmlFFI.processorNumber())^"\n") *) ()
 
   datatype thread_type = datatype RepTypes.thread_type
   datatype thread = datatype RepTypes.thread
@@ -101,6 +101,7 @@ struct
                                     val newHost = reify (thlet)
                                     val _ = readyForSpawn newHost
                                     val host'' = MT.fromPrimitive host'
+                                    val _ = PT.disableParasitePreemption ()
                                   in
                                     host''
                                   end
@@ -167,6 +168,7 @@ struct
              let
                val tid = TID.getCurThreadId ()
                val _ = TID.mark tid
+               val _ = debug'' (concat["atomicSwitchAux.parasiteBottom = ", Int.toString (PT.getParasiteBottom ())])
                val parasite = PT.copyParasite (PT.getParasiteBottom())
                val thrd = P_THRD (parasite, fn x => r := x)
                val rt = f (thrd)
@@ -191,6 +193,7 @@ struct
   fun switch (f) = (atomicBegin(); atomicSwitch(f))
 
   fun atomicSwitchToNext (f : 'a thread -> unit) =
+    (Assert.assertAtomic (fn () => "Scheduler.atomicSwitchToNext", NONE);
     case PT.getThreadType () of
          HOST => atomicSwitchAux "atomicSwitchToNext" (fn thrd => (f thrd; next ()))
        | PARASITE =>
@@ -201,6 +204,7 @@ struct
              let
                val tid = TID.getCurThreadId ()
                val _ = TID.mark tid
+               val _ = debug'' (concat["atomicSwitchToNext.parasiteBottom = ", Int.toString (PT.getParasiteBottom ())])
                val parasite = PT.copyParasite (PT.getParasiteBottom())
                val thrd = P_THRD (parasite, fn x => r := x)
                val () = f (thrd)
@@ -217,7 +221,7 @@ struct
              val _ = (atomicBegin (); atomicEnd ())
            in
              !r()
-           end
+           end)
 
   fun switchToNext (f : 'a thread -> unit) = (atomicBegin (); atomicSwitchToNext (f))
 

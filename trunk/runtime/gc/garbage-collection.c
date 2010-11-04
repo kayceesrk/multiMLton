@@ -364,6 +364,7 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
   bool stackTopOk;
   size_t stackBytesRequested;
 
+  assert ((int)nurseryBytesRequested >=0 );
   /* To ensure the mutator frontier invariant, set the requested bytes
      to include those needed by the thread.
    */
