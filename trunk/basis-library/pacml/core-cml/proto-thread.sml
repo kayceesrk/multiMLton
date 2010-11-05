@@ -60,7 +60,9 @@ struct
     end
 
   fun getThreadType () = getProp (#threadType)
-  fun getParasiteBottom () = getProp (#parasiteBottom)
+  fun getParasiteBottom () = case getProp (#parasiteBottom) of
+                                  (offset, tid) => (Assert.assert' ("PT.getParasiteBottom", fn () => (tid = TID.tidNum ()));
+                                                    offset)
   fun getNumPenaltySpawns () = getProp (#numPenaltySpawns)
 
   fun setThreadType (t) =
@@ -79,7 +81,7 @@ struct
       val PSTATE (ps) = !pstate
     in
       pstate := PSTATE {threadType = #threadType ps,
-                        parasiteBottom = pb,
+                        parasiteBottom = (pb, TID.tidNum ()),
                         numPenaltySpawns = #numPenaltySpawns ps}
     end
 
@@ -140,7 +142,8 @@ struct
                 | _ => ()
     fun doit () =
     let
-      val _ = setParasiteBottom (getFrameBottomAsOffset ())
+      val offset = getFrameBottomAsOffset ()
+      val _ = setParasiteBottom (offset)
       val _ = prefixAndSwitchTo (thlet) (* Implicit atomic End *)
       val _ = disableParasitePreemption ()
     in
@@ -175,10 +178,13 @@ struct
   let
     fun doit () =
     let
-      val _ = setParasiteBottom (getFrameBottomAsOffset ())
+      val offset = getFrameBottomAsOffset ()
+      val _ = setParasiteBottom (offset)
       val _ = setNumPenaltySpawns (0)
       val _ = atomicEnd ()
-      val _ = f () handle e => (debug' "SpawnParasite: parasite threw an exception\n"; raise e)
+      val _ = f () handle e => (debug' "SpawnParasite: parasite threw an exception";
+                                ignore (OS.Process.exit OS.Process.failure);
+                                raise e)
       val _ = disableParasitePreemption ()
     in
       PacmlFFI.noop () (* Needed to prevent inlining f () *)

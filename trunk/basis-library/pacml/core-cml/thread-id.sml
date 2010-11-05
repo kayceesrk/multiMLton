@@ -1,6 +1,6 @@
 structure ThreadID : THREAD_ID_EXTRA =
 struct
-  structure Assert = LocalAssert(val assert = true)
+  structure Assert = LocalAssert(val assert = false)
   structure R = RepTypes
   structure L = Lock
 
@@ -29,7 +29,7 @@ struct
           props = ref [],
           dead = CVar.new (),
           preemptParasite = ref true,
-          pstate = ref (PSTATE {parasiteBottom = 0, threadType = HOST, numPenaltySpawns = 0}),
+          pstate = ref (PSTATE {parasiteBottom = (0, n), threadType = HOST, numPenaltySpawns = 0}),
           processorId = procNum}
 
   local

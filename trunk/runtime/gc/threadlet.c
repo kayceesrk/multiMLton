@@ -49,7 +49,7 @@ int GC_getFrameBottomAsOffset (void) {
     GC_state s = pthread_getspecific (gcstate_key);
     pointer p = GC_getFrameBottom ();
     int res = p - s->stackBottom;
-    assert (res >= 0);
+    assert (res >= 0 && res < (s->stackTop - s->stackBottom));
     return res;
 }
 
