@@ -2,7 +2,7 @@ structure ProtoThread : PROTO_THREAD =
 struct
 
   structure Assert = LocalAssert(val assert = true)
-  structure Debug = LocalDebug(val debug = true)
+  structure Debug = LocalDebug(val debug = false)
 
   open Critical
   structure TID = ThreadID
@@ -176,31 +176,45 @@ struct
 
   fun spawnParasite f =
   let
+
+    val _ = atomicBegin ()
+    val state = getThreadState () (* Save state on stack *)
+    val () = TID.mark (TID.getCurThreadId ())
+
+    fun cleanUp () =
+    let
+      val _ = Assert.assert' ("ProtoThread.atomicPrefixAndSwitchToHelper: Preemption enabled!",
+                              fn () => (toPreemptParasite () = false))
+      val _ = debug' "ProtoThread.spawnParasite.resetting thread state"
+      val _ = setThreadState (state)
+      val _ = enableParasitePreemption ()
+    in
+      ()
+    end
+
     fun doit () =
     let
       val offset = getFrameBottomAsOffset ()
       val _ = setParasiteBottom (offset)
       val _ = setNumPenaltySpawns (0)
       val _ = atomicEnd ()
-      val _ = f () handle e => (debug' "SpawnParasite: parasite threw an exception";
-                                ignore (OS.Process.exit OS.Process.failure);
-                                raise e)
+      val _ = f () handle e => case e of
+                                  RepTypes.DOIT_FAIL => (debug' "DOIT_FAIL. Letting though";
+                                                          disableParasitePreemption ();
+                                                          cleanUp ();
+                                                          raise e)
+                                | _ => (debug' (concat["SpawnParasite: parasite threw an exception -- Exn: ", exnName e, " Msg: ", exnMessage e]);
+                                        ignore (OS.Process.exit OS.Process.failure))
       val _ = disableParasitePreemption ()
     in
       PacmlFFI.noop () (* Needed to prevent inlining f () *)
     end
-    val state = getThreadState ()
-    val _ = atomicBegin ()
-    val () = TID.mark (TID.getCurThreadId ())
+
     val _ = setThreadType (PARASITE)
-    val _ = Primitive.dontInline (doit)
+    val _ = Primitive.dontInline (doit) (* call the parasite *)
 
     (* control returns *)
-    val _ = Assert.assert' ("ProtoThread.atomicPrefixAndSwitchToHelper: Preemption enabled!",
-                            fn () => (toPreemptParasite () = false))
-    val _ = debug' "ProtoThread.spawnParasite.resetting thread state"
-    val _ = setThreadState (state)
-    val _ = enableParasitePreemption ()
+    val _ = cleanUp ()
   in
     ()
   end

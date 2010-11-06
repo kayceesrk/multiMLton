@@ -11,7 +11,7 @@ struct
   structure MT = MLtonThread
   structure PT = ProtoThread
 
-  structure Assert = LocalAssert(val assert = false)
+  structure Assert = LocalAssert(val assert = true)
   structure Debug = LocalDebug(val debug = false)
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)

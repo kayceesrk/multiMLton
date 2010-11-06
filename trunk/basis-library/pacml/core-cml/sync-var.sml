@@ -1,7 +1,7 @@
 structure SyncVar : SYNC_VAR_EXTRA =
 struct
-  structure Assert = LocalAssert(val assert = false)
-  structure Debug = LocalDebug(val debug = true)
+  structure Assert = LocalAssert(val assert = true)
+  structure Debug = LocalDebug(val debug = false)
 
   open Critical
 
@@ -186,7 +186,7 @@ struct
           val x =
             case !value of
                   NONE => (L.releaseCmlLock lock (TID.tidNum());
-                           raise E.DOIT_FAIL)
+                           raise RepTypes.DOIT_FAIL)
                 | SOME x => let
                               val () = prio := 1
                               val () = doSwap value

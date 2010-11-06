@@ -15,4 +15,4 @@ SRC_RULS := $(subst .sml,-amd64,$(SRCS))
 all: $(SRC_RULS)
 
 clean:
-	rm -rf $(SRC_RULS) *~ op *.out *.c
+	rm -rf $(SRC_RULS) *~ op *.out *.c *.ssa *.rssa *xml *-ml *ssa2 *machine

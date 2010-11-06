@@ -14,6 +14,16 @@
 structure Mailbox : MAILBOX_EXTRA =
    struct
 
+      structure Assert = LocalAssert(val assert = true)
+      structure Debug = LocalDebug(val debug = false)
+
+      open Critical
+      structure TID = ThreadID
+      structure PT= ProtoThread
+
+      fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
+      fun debug' msg = debug (fn () => msg^"."^(PT.getThreadTypeString()) ^" : "^Int.toString(PacmlFFI.processorNumber()))
+
       structure E = Event
       structure C = Channel
 
@@ -23,12 +33,44 @@ structure Mailbox : MAILBOX_EXTRA =
 
       fun sameMailbox (MB (c1), MB (c2)) = C.sameChannel(c1, c2)
 
-      fun send (MB (c), x) = E.aSync(C.aSendEvt(c, x))
+      fun send (MB (c), x) =
+      let
+        val () = Assert.assertNonAtomic' "Mailbox.send(1)"
+        val () = debug' "Mailbox.send(1)"
+        val () = E.aSync(C.aSendEvt(c, x))
+        val () = Assert.assertNonAtomic' "Mailbox.send(2)"
+        val () = debug' "Mailbox.send(2)"
+      in
+        ()
+      end
 
-      fun recv (MB (c)) = C.recv(c)
+      fun recv (MB (c)) =
+      let
+        val () = Assert.assertNonAtomic' "Mailbox.recv(1)"
+        val () = debug' "Mailbox.recv(1)"
+        val v = C.recv (c)
+        val () = Assert.assertNonAtomic' "Mailbox.recv(2)"
+        val () = debug' "Mailbox.recv(2)"
+      in
+        v
+      end
 
-      fun recvEvt (MB (c)) = C.recvEvt(c)
+      fun recvEvt (MB (c)) =
+        let
+          val () = debug' "Mailbox.recvEvt(1)"
+          val e = C.recvEvt(c)
+          val () = debug' "Mailbox.recvEvt(2)"
+        in
+          e
+        end
 
-      fun recvPoll (MB (c)) = C.recvPoll(c)
+      fun recvPoll (MB (c)) =
+        let
+          val () = debug' "Mailbox.recvPoll(1)"
+          val v = C.recvPoll (c)
+          val () = debug' "Mailbox.recvPoll(2)"
+        in
+          v
+        end
 
   end

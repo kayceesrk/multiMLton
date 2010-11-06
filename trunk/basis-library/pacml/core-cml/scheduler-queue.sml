@@ -7,7 +7,7 @@ struct
   structure R = RepTypes
   structure L = Lock
 
-  structure Assert = LocalAssert(val assert = false)
+  structure Assert = LocalAssert(val assert = true)
   structure Debug = LocalDebug(val debug = false)
 
   datatype runnable_host = datatype RepTypes.runnable_host

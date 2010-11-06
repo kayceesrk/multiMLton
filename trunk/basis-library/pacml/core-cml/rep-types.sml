@@ -18,6 +18,8 @@ structure RepTypes =
 
       type proc_num = int
 
+      exception DOIT_FAIL
+
       datatype queue_prio = PRI | SEC | ANY
       datatype thread_type = PARASITE | HOST
 

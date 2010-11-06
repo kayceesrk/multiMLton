@@ -1,7 +1,7 @@
 structure Channel : CHANNEL_EXTRA =
 struct
-  structure Assert = LocalAssert(val assert = false)
-  structure Debug = LocalDebug(val debug = true)
+  structure Assert = LocalAssert(val assert = true)
+  structure Debug = LocalDebug(val debug = false)
 
   open Critical
 
@@ -13,7 +13,8 @@ struct
   structure E = Event
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
-  fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
+  fun debug' msg = debug (fn () => msg^"."^(PT.getThreadTypeString())
+                                   ^" : "^Int.toString(PacmlFFI.processorNumber()))
 
   datatype thread = datatype RepTypes.thread
   datatype thread_type = datatype RepTypes.thread_type
@@ -99,7 +100,7 @@ struct
             | NONE =>
                 S.atomicSwitchToNext (fn st => (cleanAndEnque (outQ, (mkTxId (), (msg, st)))
                                                ; L.releaseCmlLock lock (TID.tidNum())
-                                               ; debug' ("Channel.send.NONE on "^(PT.getThreadTypeString()))))
+                                               ; debug' ("Channel.send.NONE")))
                 (* tryLp ends *)
       val () = tryLp ()
     in
@@ -149,7 +150,7 @@ struct
                       matchLp ()
                     end) (* SOME ends *)
                 | NONE => (L.releaseCmlLock lock (TID.tidNum());
-                           raise E.DOIT_FAIL)
+                           raise RepTypes.DOIT_FAIL)
           (* tryLp ends *)
           val () = tryLp ()
         in
@@ -200,7 +201,7 @@ struct
                 | NONE =>
                     S.atomicSwitchToNext (fn st => (cleanAndEnque (outQ, (mytxid, (msg, st)))
                                                   ; L.releaseCmlLock lock (TID.tidNum())
-                                                  ; debug' ("Channel.sendEvt.NONE."^PT.getThreadTypeString())))
+                                                  ; debug' ("Channel.sendEvt.NONE")))
           (* tryLp ends *)
           val () = tryLp ()
         in
@@ -300,7 +301,7 @@ struct
                       matchLp ()
                     end) (* SOME ends *)
                 | NONE => (L.releaseCmlLock lock (TID.tidNum());
-                           raise E.DOIT_FAIL)
+                           raise RepTypes.DOIT_FAIL)
           (* tryLp ends *)
         in
           tryLp ()
@@ -351,7 +352,7 @@ struct
                 | NONE =>
                     S.atomicSwitchToNext (fn rt => (cleanAndEnque (inQ, (mytxid, rt))
                                                   ; L.releaseCmlLock lock (TID.tidNum())
-                                                  ; debug' ("Channel.recvEvt.NONE."^PT.getThreadTypeString())))
+                                                  ; debug' ("Channel.recvEvt.NONE")))
           (* tryLp ends *)
         in
           tryLp ()
@@ -413,7 +414,7 @@ struct
           | NONE =>
               S.atomicSwitchToNext (fn rt => (cleanAndEnque (inQ, (mkTxId (), rt))
                                               ; L.releaseCmlLock lock (TID.tidNum ())
-                                              ; debug' ("Channel.recv.NONE."^PT.getThreadTypeString())))
+                                              ; debug' ("Channel.recv.NONE")))
           (* tryLp ends *)
     in
       tryLp ()

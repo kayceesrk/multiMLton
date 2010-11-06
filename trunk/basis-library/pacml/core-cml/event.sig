@@ -36,8 +36,6 @@ sig
   val sWrapHandler : (('a, 'b) aevt * (exn -> 'a)) -> ('a, 'b) aevt
   val aWrapHandler : (('a, 'b) aevt * (exn -> 'b)) -> ('a, 'b) aevt
 
-  exception DOIT_FAIL
-
   val enabled : {prio : int, doitFn : unit -> 'a} -> 'a status
   val blocked : (int ref -> 'a) -> 'a status
   val bevt : (unit -> 'a status) -> 'a sevt
