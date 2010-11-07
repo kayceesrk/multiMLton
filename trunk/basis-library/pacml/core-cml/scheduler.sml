@@ -30,7 +30,6 @@ struct
 
   fun enque2 thrd =
    (Assert.assertAtomic' ("Scheduler.enque2", NONE)
-    ; print "Scheduler.enque2"
     ; SQ.enque (thrd, R.SEC))
 
   fun deque1 () =
@@ -142,8 +141,8 @@ struct
           if TID.isMarked tid
           then (TID.unmark tid
                 ; promote ()
-                ; SQ.enque (thrd, R.PRI))
-          else (SQ.enque (thrd,R.SEC))
+                ; enque1 (thrd))
+          else (enque2 (thrd))
       in
         ()
       end

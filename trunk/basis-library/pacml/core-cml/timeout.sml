@@ -2,7 +2,7 @@ structure Timeout : TIME_OUT_EXTRA =
 struct
 
   structure Assert = LocalAssert(val assert = true)
-  structure Debug = LocalDebug(val debug = false)
+  structure Debug = LocalDebug(val debug = true)
 
   open Critical
 
@@ -26,7 +26,9 @@ struct
   fun getTime () =
       case !clock of
         NONE => let val t = Time.now()
-                in clock := SOME t;  t
+                in (clock := SOME t;
+                    debug' "Timeout.getTime.NONE";
+                    t)
                 end
       | SOME t => t
 
@@ -35,8 +37,7 @@ struct
     *)
   structure TQ = FunPriorityQueue(structure Key = struct open Time type t = time end)
   type item = int ref * S.rdy_thread
-  val timeQ : item TQ.t ref = ref (TQ.new ())
-  val lock = L.initCmlLock ()
+  val timeQArray : item TQ.t array = Array.tabulate (PacmlFFI.numberOfProcessors, fn _ => TQ.new ())
 
   val cas = PacmlFFI.vCompareAndSwap
 
@@ -78,9 +79,13 @@ struct
     end
 
   fun timeWait (time, txid, t) =
-    (Assert.assertAtomic' ("TimeOut.timeWait", NONE);
-     timeQ := TQ.enqueAndClean (!timeQ, time, (txid, t), cleaner (fn () => ()));
-     PacmlFFI.wakeUp (0, 1))
+  let
+    val _ = Assert.assertAtomic' ("TimeOut.timeWait", NONE)
+    val timeQ = Array.sub (timeQArray, PacmlFFI.processorNumber ())
+    val timeQ = TQ.enqueAndClean (timeQ, time, (txid, t), cleaner (fn () => ()))
+  in
+    Array.update (timeQArray, PacmlFFI.processorNumber (), timeQ)
+  end
 
   fun timeOutEvt time =
   let
@@ -88,12 +93,9 @@ struct
       let
         val () = debug' "timeOutEvt(3.2.1)" (* Atomic 1 *)
         val () = Assert.assertAtomic' ("TimeOut.timeOutEvt(3.2.1)", SOME 1)
-        val _ = L.getCmlLock lock TID.tidNum
         val () =
           S.atomicSwitchToNext
-          (fn t =>
-             (timeWait (Time.+(time, getTime ()), txid, PT.prep t)
-              ; L.releaseCmlLock lock (TID.tidNum ())))
+            (fn t => timeWait (Time.+(time, getTime ()), txid, PT.prep t))
         val () = debug' "timeOutEvt(3.2.3)" (* NonAtomic *)
         val () = Assert.assertNonAtomic' "TimeOut.timeOutEvt(3.2.3)"
       in
@@ -127,12 +129,8 @@ struct
         let
           val () = debug' "atTimeEvt(3.2.1)" (* Atomic 1 *)
           val () = Assert.assertAtomic' ("TimeOut.atTimeEvt(3.2.1)", SOME 1)
-          val _ = L.getCmlLock lock TID.tidNum
           val () =
-              S.atomicSwitchToNext
-              (fn t =>
-              (timeWait (time, txid, PT.prep t)
-                ; L.releaseCmlLock lock (TID.tidNum ())))
+              S.atomicSwitchToNext (fn t => (timeWait (time, txid, PT.prep t)))
           val () = debug' "atTimeEvt(3.2.3)" (* NonAtomic *)
           val () = Assert.assertNonAtomic' "TimeOut.atTimeEvt(3.2.3)"
         in
@@ -152,47 +150,44 @@ struct
     end
 
   (* reset various pieces of state *)
-  fun reset () = timeQ := TQ.new ()
-  fun preemptTime () = clock := NONE
+  fun reset () = Array.modify (fn _ => TQ.new ()) timeQArray
+  fun preemptTime () =
+    (clock := NONE;
+     debug' "Timeout.preemptTime")
 
   (* what to do at a preemption *)
   fun preempt () : Time.time option option =
     let
       val () = Assert.assertAtomic' ("TimeOut.preempt", SOME 1)
+      val timeQ = Array.sub (timeQArray, PacmlFFI.processorNumber ())
       val res =
-        (if not (PacmlFFI.processorNumber () = 0) then
-          NONE
-        else
           let
-            val _ = L.getCmlLock lock TID.tidNum
-            val timeQ' = !timeQ
-            val _ = preemptTime ()
             val res =
-              (if TQ.empty timeQ' then NONE
+              (if TQ.empty timeQ then NONE
               else
                 let
                   val readied = ref false
-                  val timeQ' = TQ.clean (timeQ', cleaner (fn () => readied := true))
-                  val () = timeQ := timeQ'
+                  val timeQ = TQ.clean (timeQ, cleaner (fn () => readied := true))
+                  val () = Array.update (timeQArray, PacmlFFI.processorNumber (), timeQ)
                   val res =
                     if !readied
                     then SOME NONE
-                    else case TQ.peek timeQ' of
+                    else case TQ.peek timeQ of
                               NONE => NONE
-                            | SOME elt => SOME(SOME(Time.-(TQ.Elt.key elt, getTime ())))
+                            | SOME elt => SOME(SOME(Time.zeroTime))
                 in
                   res
                 end)
-            val _ = L.releaseCmlLock lock (TID.tidNum ())
           in
             res
-          end)
+          end
       val () = Assert.assertAtomic' ("TimeOut.preempt", SOME 1)
     in
       res
     end
 
-
+  (* Assign timeoutCleanup function. This will be used by Thread.yield *)
+  val _ = Thread.timeoutCleanup := (fn () => (preemptTime (); ignore (preempt ())))
 
 
 

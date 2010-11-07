@@ -32,3 +32,4 @@ test22_Parasite - Parasitic thread creation + work
 test22_Vanilla - Host thread creation + work
 
 test23 - Non-blocking
+test25 - yield

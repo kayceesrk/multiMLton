@@ -11,7 +11,7 @@ struct
   structure MT = MLtonThread
   structure PT = ProtoThread
 
-  structure Assert = LocalAssert(val assert = true)
+  structure Assert = LocalAssert(val assert = false)
   structure Debug = LocalDebug(val debug = false)
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
@@ -67,8 +67,8 @@ struct
       val () = debug' "alrmHandler" (* Atomic 1 *)
       val () = Assert.assertAtomic' ("RunCML.alrmHandler", SOME 1)
       val () = S.preempt thrd
-      val () = if (PacmlFFI.processorNumber () = 0) then ignore (TO.preempt ())
-                else ()
+      val () = TO.preemptTime ()
+      val _ = TO.preempt ()
       val nextThrd = S.next()
     in
       nextThrd
@@ -94,7 +94,7 @@ struct
       val to = TO.preempt ()
       val iter = case to of
                     NONE => if (iter > Config.maxIter) then (PacmlFFI.wait (); iter-1) else iter
-                  | _ => (pause (); iter - 1)
+                  | _ => if (iter > Config.maxIter) then (TO.preemptTime (); 0) else iter
       val () = if not (!Config.isRunning) then (atomicEnd ();ignore (SchedulerHooks.deathTrap())) else ()
     in
       S.nextWithCounter (iter + 1)

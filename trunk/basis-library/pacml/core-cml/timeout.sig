@@ -10,4 +10,5 @@ sig
 
   val reset : unit -> unit
   val preempt : unit -> Time.time option option
+  val preemptTime : unit -> unit
 end

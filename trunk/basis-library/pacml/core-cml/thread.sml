@@ -2,7 +2,7 @@ structure Thread : THREAD_EXTRA =
 struct
 
   structure Assert = LocalAssert(val assert = true)
-  structure Debug = LocalDebug(val debug = false)
+  structure Debug = LocalDebug(val debug = true)
 
   open Critical
   open ThreadID
@@ -78,13 +78,30 @@ struct
         generalExit (NONE, true)
       end
 
+  (* This will be assigned by Timeout *)
+  val timeoutCleanup = ref (fn () => raise Fail "Thread.timeoutCleanUp not set")
+
   fun yield () =
       let
         val () = Assert.assertNonAtomic' "Thread.yield"
-        val () = debug' "yield" (* NonAtomic *)
-        val () = Assert.assertNonAtomic' "Thread.yield"
+        val () = Assert.assert' ("Thread.yield: threadType must be HOST",
+                                  fn () => case PT.getThreadType () of
+                                                RepTypes.PARASITE => true
+                                              | _ => false)
+        val () = atomicBegin ()
+        (* Clean up for timeouts *)
+        val () = !timeoutCleanup ()
       in
-        raise Fail "Thread.yield not implemented"
+        S.atomicSwitchToNext
+        (fn t =>
+          let
+            val RHOST (tid,mt) = PT.getRunnableHost (PT.prep (t))
+            (* Force this thread into the secondary scheduler queue *)
+            val _ = TID.unmark (tid)
+            val rhost = RHOST (tid, mt)
+          in
+            S.preempt (rhost)
+          end)
       end
 
   fun reifyHostFromParasite (parasite) =
