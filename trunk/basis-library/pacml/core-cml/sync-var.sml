@@ -10,9 +10,11 @@ struct
   structure Q = ImpQueue
   structure TID = ThreadID
   structure E = Event
+  structure PT= ProtoThread
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
-  fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
+  fun debug' msg = debug (fn () => msg^"."^(PT.getThreadTypeString())
+                                   ^" : "^Int.toString(PacmlFFI.processorNumber()))
 
   datatype 'a cell =
       CELL of {prio  : int ref,

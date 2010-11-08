@@ -1,7 +1,7 @@
 structure Scheduler : SCHEDULER =
 struct
 
-  structure Assert = LocalAssert(val assert = true)
+  structure Assert = LocalAssert(val assert = false)
   structure Debug = LocalDebug(val debug = false)
 
   open Critical
@@ -39,6 +39,8 @@ struct
   fun deque2 () =
    (Assert.assertAtomic' ("Scheduler.deque2", NONE)
    ; SQ.deque (R.SEC))
+
+  val deque = deque1
 
   fun promote () =
    (Assert.assertAtomic' ("Scheduler.promote", NONE)

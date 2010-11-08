@@ -1,8 +1,8 @@
 structure Timeout : TIME_OUT_EXTRA =
 struct
 
-  structure Assert = LocalAssert(val assert = true)
-  structure Debug = LocalDebug(val debug = true)
+  structure Assert = LocalAssert(val assert = false)
+  structure Debug = LocalDebug(val debug = false)
 
   open Critical
 
@@ -25,10 +25,10 @@ struct
     *)
   fun getTime () =
       case !clock of
-        NONE => let val t = Time.now()
-                in (clock := SOME t;
-                    debug' "Timeout.getTime.NONE";
-                    t)
+        NONE => let
+                  val t = Time.now()
+                in
+                  (clock := SOME t; t)
                 end
       | SOME t => t
 
@@ -81,7 +81,7 @@ struct
   fun timeWait (time, txid, t) =
   let
     val _ = Assert.assertAtomic' ("TimeOut.timeWait", NONE)
-    val timeQ = Array.sub (timeQArray, PacmlFFI.processorNumber ())
+    val timeQ = Array.unsafeSub (timeQArray, PacmlFFI.processorNumber ())
     val timeQ = TQ.enqueAndClean (timeQ, time, (txid, t), cleaner (fn () => ()))
   in
     Array.update (timeQArray, PacmlFFI.processorNumber (), timeQ)
@@ -151,15 +151,13 @@ struct
 
   (* reset various pieces of state *)
   fun reset () = Array.modify (fn _ => TQ.new ()) timeQArray
-  fun preemptTime () =
-    (clock := NONE;
-     debug' "Timeout.preemptTime")
+  fun preemptTime () = clock := NONE
 
   (* what to do at a preemption *)
   fun preempt () : Time.time option option =
     let
       val () = Assert.assertAtomic' ("TimeOut.preempt", SOME 1)
-      val timeQ = Array.sub (timeQArray, PacmlFFI.processorNumber ())
+      val timeQ = Array.unsafeSub (timeQArray, PacmlFFI.processorNumber ())
       val res =
           let
             val res =
@@ -187,7 +185,8 @@ struct
     end
 
   (* Assign timeoutCleanup function. This will be used by Thread.yield *)
-  val _ = Thread.timeoutCleanup := (fn () => (preemptTime (); ignore (preempt ())))
+  val _ = Thread.timeoutCleanup := (fn () => (preemptTime ();
+                                              ignore (preempt ())))
 
 
 

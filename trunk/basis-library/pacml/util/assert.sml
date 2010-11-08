@@ -10,7 +10,7 @@ structure Assert: ASSERT =
 
       fun fail msg =
          (C.atomicBegin ();
-          TextIO.print (concat ["ASSERT: ", msg, "[", Int.toString (PacmlFFI.processorNumber ()), "]\n"]);
+          TextIO.print (concat ["ASSERT: ", msg, " [", Int.toString (PacmlFFI.processorNumber ()), "]\n"]);
           OS.Process.exit OS.Process.failure)
 
       fun assert (msgs: (unit -> string) list,

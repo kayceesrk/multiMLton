@@ -1,8 +1,8 @@
 structure Thread : THREAD_EXTRA =
 struct
 
-  structure Assert = LocalAssert(val assert = true)
-  structure Debug = LocalDebug(val debug = true)
+  structure Assert = LocalAssert(val assert = false)
+  structure Debug = LocalDebug(val debug = false)
 
   open Critical
   open ThreadID
@@ -18,7 +18,8 @@ struct
   datatype rdy_thread = datatype RepTypes.rdy_thread
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
-  fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
+  fun debug' msg = debug (fn () => msg^"."^(PT.getThreadTypeString())
+                                   ^" : "^Int.toString(PacmlFFI.processorNumber()))
 
   val getTid = TID.getCurThreadId
 
@@ -27,6 +28,9 @@ struct
       val () = Assert.assertNonAtomic' "Thread.generalExit"
       val () = debug' "Thread.generalExit(1)" (* NonAtomic *)
       val () = Assert.assertNonAtomic' "Thread.generalExit"
+      val () = Assert.assert' ("Thread.generalExit", fn () => case PT.getThreadType () of
+                                                                   RepTypes.HOST => true
+                                                                 | _ => false)
       val () = atomicBegin ()
       val tid as TID {dead, props, ...} = TID.getCurThreadId ()
       val () = Assert.assert ([], fn () =>
@@ -55,8 +59,8 @@ struct
       (fn t => ())
     end
 
-  fun doHandler (TID {exnHandler, ...}, exn) =
-    (print (concat ["\nException: ", exnName exn, " : ", exnMessage exn])
+  fun doHandler (TID {exnHandler, id,...}, exn) =
+    (print (concat ["Exception in [",Int.toString (id),"] : ", exnName exn, " : ", exnMessage exn,"\n"])
     ; ignore (OS.Process.exit OS.Process.failure)
     ; ((!exnHandler) exn) handle _ => ())
 
@@ -80,29 +84,6 @@ struct
 
   (* This will be assigned by Timeout *)
   val timeoutCleanup = ref (fn () => raise Fail "Thread.timeoutCleanUp not set")
-
-  fun yield () =
-      let
-        val () = Assert.assertNonAtomic' "Thread.yield"
-        val () = Assert.assert' ("Thread.yield: threadType must be HOST",
-                                  fn () => case PT.getThreadType () of
-                                                RepTypes.PARASITE => true
-                                              | _ => false)
-        val () = atomicBegin ()
-        (* Clean up for timeouts *)
-        val () = !timeoutCleanup ()
-      in
-        S.atomicSwitchToNext
-        (fn t =>
-          let
-            val RHOST (tid,mt) = PT.getRunnableHost (PT.prep (t))
-            (* Force this thread into the secondary scheduler queue *)
-            val _ = TID.unmark (tid)
-            val rhost = RHOST (tid, mt)
-          in
-            S.preempt (rhost)
-          end)
-      end
 
   fun reifyHostFromParasite (parasite) =
   let
@@ -128,6 +109,62 @@ struct
   in
     RHOST (tid, nRt)
   end
+
+  fun reifyCurrent () =
+  let
+    val () = Assert.assertAtomic' ("Thread.reifyCurrent", SOME 1)
+    val () = Assert.assert' ("Thread.reifyCurrent: Must be PARASITE",
+                             fn () => case PT.getThreadType () of
+                                           RepTypes.PARASITE => true
+                                         | _ => false)
+  in
+   S.atomicSwitchToNext
+    (fn t =>
+        let
+          val rt = PT.prep t
+          val par = case rt of
+                         P_RTHRD (p) => p
+                       | _ => raise Fail "Thread.reifyCurrent: Impossible"
+          val rhost = reifyHostFromParasite (par)
+        in
+          S.readyForSpawn (rhost)
+        end)
+  end
+
+  fun reifyCurrentIfParasite () =
+  let
+    val () = Assert.assertAtomic' ("Thread.reifyCurrentIfParasite", SOME 1)
+    val () = atomicBegin ()
+  in
+    case PT.getThreadType () of
+         RepTypes.PARASITE => (atomicBegin (); reifyCurrent ())
+       | _ => atomicEnd ()
+  end
+
+
+  fun yield () =
+      let
+        val () = Assert.assertNonAtomic' "Thread.yield"
+        val () = atomicBegin ()
+        (* Clean up for timeouts *)
+        val () = !timeoutCleanup ()
+      in
+        case PT.getThreadType () of
+             RepTypes.PARASITE => reifyCurrent ()
+           | _ =>
+              S.atomicSwitchToNext
+              (fn t =>
+                let
+                  val RHOST (tid,mt) = PT.getRunnableHost (PT.prep (t))
+                  (* Force this thread into the secondary scheduler queue *)
+                  val _ = TID.unmark (tid)
+                  val rhost = RHOST (tid, mt)
+                in
+                  S.preempt (rhost)
+                end)
+      end
+
+
 
 
   fun spawnHost f =
@@ -170,7 +207,8 @@ struct
   fun createHost f =
   let
     val () = atomicBegin ()
-    val tid = TID.new ()
+    val () = debug' "Thread.createHost"
+    val tid = TID.newOnProc (PacmlFFI.processorNumber ())
     fun thrdFun () = ((f ()) handle ex => doHandler (tid, ex);
                     generalExit (SOME tid, false))
     val thrd = H_THRD (tid, MT.new thrdFun)
@@ -201,5 +239,6 @@ struct
           ()
         end)
     end
+
 
 end

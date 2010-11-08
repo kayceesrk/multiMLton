@@ -64,12 +64,13 @@ struct
   fun alrmHandler thrd =
     let
       val () = Assert.assertAtomic' ("RunCML.alrmHandler", NONE)
-      val () = debug' "alrmHandler" (* Atomic 1 *)
+      val () = debug' "alrmHandler(1)" (* Atomic 1 *)
       val () = Assert.assertAtomic' ("RunCML.alrmHandler", SOME 1)
       val () = S.preempt thrd
       val () = TO.preemptTime ()
       val _ = TO.preempt ()
       val nextThrd = S.next()
+      val () = debug' "alrmHandler(2)"
     in
       nextThrd
     end
@@ -92,6 +93,7 @@ struct
     let
       (* If there are waiting time events, then make proc 0 spin *)
       val to = TO.preempt ()
+      (* val _ = debug' (concat["Main.pauseHook.iter = ", Int.toString (iter)]) *)
       val iter = case to of
                     NONE => if (iter > Config.maxIter) then (PacmlFFI.wait (); iter-1) else iter
                   | _ => if (iter > Config.maxIter) then (TO.preemptTime (); 0) else iter

@@ -22,4 +22,8 @@ sig
   val readyForSpawn : runnable_host -> unit (* Increments live threads by 1 *)
   val atomicSwitchToNext : ('a thread -> unit) -> 'a
   val switchToNext : ('a thread -> unit) -> 'a
+
+  (* scheduler control *)
+  val deque : unit -> runnable_host option
+
 end

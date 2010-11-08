@@ -17,4 +17,6 @@ sig
   val timeoutCleanup : (unit -> unit) ref
   val createHost : (unit->unit) -> RepTypes.runnable_host
   val reifyHostFromParasite : RepTypes.parasite -> RepTypes.runnable_host
+  val reifyCurrent : unit -> unit
+  val reifyCurrentIfParasite : unit -> unit
 end

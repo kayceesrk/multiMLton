@@ -62,6 +62,7 @@ struct
         new' (n, ~1)
       end
 
+  val dummyTid = bogus "dummy"
 
   fun mark (TID{done_comm, ...}) =
       (Assert.assertAtomic' ("ThreadID.mark", NONE)
@@ -73,18 +74,31 @@ struct
 
   fun getProcId (TID {processorId, ...}) = processorId
 
-  fun sameProcessor (TID{processorId = p1, ...},
-                     TID{processorId = p2, ...}) =
-                     p1 = p2
+  fun sameProcessor (TID{processorId = p1, ...}, TID{processorId = p2, ...}) =
+    if ((p1 = ~1) andalso (p2 = ~1)) then
+      true
+    else p1 = p2
 
-  val dummyTid = bogus "dummy"
 
   val curTid : thread_id array = Array.tabulate(PacmlFFI.numberOfProcessors, fn _ => dummyTid)
 
-  fun getCurThreadId () = Array.sub (curTid, PacmlFFI.processorNumber ())
-  fun setCurThreadId tid = Array.update (curTid, PacmlFFI.processorNumber (), tid)
+  fun getCurThreadId () =
+    let
+      val tid as TID {processorId, ...} = Array.unsafeSub (curTid, PacmlFFI.processorNumber ())
+      val () = Assert.assert ([], fn () => concat ["ThreadID.getCurThreadID: procId = ", Int.toString (processorId)],
+                               fn () => (processorId = ~1 orelse processorId = PacmlFFI.processorNumber ()))
+    in
+      tid
+    end
 
   fun tidMsg () = tidToString (getCurThreadId ())
+
+  fun setCurThreadId (tid as TID {processorId, ...}) =
+    (Assert.assert ([], fn () => concat ["ThreadID.setCurThreadID: procId = ", Int.toString (processorId),
+                                         " tidNum = ", tidMsg ()],
+                    fn () => (processorId = ~1 orelse processorId = PacmlFFI.processorNumber ()))
+    ; Array.update (curTid, PacmlFFI.processorNumber (), tid))
+
   fun tidNum () = tidToInt (getCurThreadId ())
 
 end

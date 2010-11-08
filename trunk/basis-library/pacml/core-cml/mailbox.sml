@@ -15,14 +15,15 @@ structure Mailbox : MAILBOX_EXTRA =
    struct
 
       structure Assert = LocalAssert(val assert = false)
-      structure Debug = LocalDebug(val debug = false)
+      structure Debug = LocalDebug(val debug = true)
 
       open Critical
       structure TID = ThreadID
       structure PT= ProtoThread
 
       fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
-      fun debug' msg = debug (fn () => msg^"."^(PT.getThreadTypeString()) ^" : "^Int.toString(PacmlFFI.processorNumber()))
+      fun debug' msg = debug (fn () => msg^"."^(PT.getThreadTypeString())
+                                   ^" : "^Int.toString(PacmlFFI.processorNumber()))
 
       structure E = Event
       structure C = Channel
