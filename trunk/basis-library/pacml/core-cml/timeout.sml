@@ -111,7 +111,10 @@ struct
         val () = debug' "timeOutEvt(2)" (* Atomic 1 *)
         val () = Assert.assertAtomic' ("TimeOut.timeOutEvt(2)", SOME 1)
       in
-         if Time.<=(time, Time.zeroTime) then
+       (* (print (concat ["Timeout: time = ", LargeInt.toString (Time.toSeconds (time)),
+                        "zeroTime = ", LargeInt.toString (Time.toSeconds (Time.zeroTime)),
+                        "\n"]); *)
+        if Time.<=(time, Time.zeroTime) then
           E.enabled {prio = ~1, doitFn = fn () => (debug' "timeOutEvt(3.1)"; atomicEnd ())}
         else E.blocked blockFn
       end

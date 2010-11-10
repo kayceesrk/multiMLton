@@ -84,7 +84,7 @@ struct
                   val rdyLst = !readyList
                   val _ = L.releaseCmlLock lock (TID.tidNum())
                 in
-                  ignore (List.map (fn (rthrd) => (S.atomicReady (rthrd); atomicBegin ())) rdyLst)
+                  ignore (List.map (fn (rthrd) => (S.atomicReady (rthrd); atomicBegin())) rdyLst)
                 end
        (* tryLp ends *)
     in

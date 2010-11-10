@@ -11,9 +11,6 @@ struct
   fun debug' msg = debug (fn () => msg^" : "
                                 ^Int.toString(PacmlFFI.processorNumber()))
 
-
-
-
   type proc = ((unit -> exn) * exn chan) chan
 
   val inputChan : ((unit -> exn) * exn chan) chan = channel ()
@@ -35,7 +32,9 @@ struct
 
   fun main () =
   let
+    val _ = debug' ("Executing Main")
     val pn = processorNumber ()
+    val _ = debug' ("I think I am on proc num: " ^ Int.toString(pn) ^ "requesting channel num: " ^ Int.toString(pn - numComputeThreads) ^ "\n")
     val myDedicatedChan = Array.sub (dedicatedChannels, pn - numComputeThreads)
     val myDedStr = Int.toString (pn - numComputeThreads)
     fun loop () =
@@ -47,7 +46,7 @@ struct
                         ; inputChan)
       val (f, outputChan) = recv (iChan)
       val _ = debug' "NB.mainLoop : got task. Executing..."
-      val res = f () handle x => x
+      val res = f () handle x => (print "got exception";x)
       val _ = send (outputChan, res)
     in
       loop ()
@@ -71,8 +70,9 @@ struct
         ignore (Thread.spawnOnProc (main, p))
       end
 
-  fun executeOn ch f = f ()
-  (* let
+
+  fun executeOn ch f = f() (*  
+ let
     val _ = if numIOProcessors = 0 then raise Fail "NonBlocking.execute : no io-threads" else ()
     val _ = if sameChannel (ch, inputChan) andalso !numDedicated = numIOProcessors then
                 raise Fail "NonBlocking.execute : All io threads have been grabbed by createProcessor ()s"
@@ -85,8 +85,11 @@ struct
       R (res)
     end
     val outputChan : exn chan = channel ()
+    val _ = print "NB send"
     val _ = send (ch, (fn () => executeAndWrap (f), outputChan))
+    val _ = print "NB post send"
     val r = recv (outputChan)
+    val _ = print "NB post recv"
   in
     case r of
          R (res) => res
