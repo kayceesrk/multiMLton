@@ -53,7 +53,8 @@ structure ImpQueue : IMP_QUEUE =
                           ; SOME x)
                 | x::front' => (front := front'
                                 ; back := filter (!back, p)
-                                ; SOME x))
+                                ; SOME x)) handle ex => (print "ImpQueue.cleanAndDeque"; raise ex)
+
 
       fun deque (T {front, back}) =
          (Assert.assertAtomic' ("ImpQueue.deque", NONE)
@@ -68,7 +69,7 @@ structure ImpQueue : IMP_QUEUE =
                                         ; back := []
                                         ; SOME x)
                               end)
-             | x::front' => (front := front'; SOME x))
+             | x::front' => (front := front'; SOME x)) handle ex => (print "ImpQueue.deque"; raise ex)
 
       fun dequeLazyClean (q as T {front, back}, p) =
          (Assert.assertAtomic' ("ImpQueue.dequeLazyClean", NONE)
@@ -98,14 +99,14 @@ structure ImpQueue : IMP_QUEUE =
 
       fun enque (T {back, ...}, x) =
          (Assert.assertAtomic' ("ImpQueue.enque", NONE)
-          ; back := x::(!back))
+          ; back := x::(!back)) handle ex => (print "ImpQueue.enque"; raise ex)
 
       fun undeque (T {front, ...}, x) =
          (Assert.assertAtomic' ("ImpQueue.undeque", NONE)
-          ; front := x::(!front))
+          ; front := x::(!front))handle ex => (print "ImpQueue.undeque"; raise ex)
 
       fun enqueAndClean (q, y, p) =
-         (enque (q, y); clean (q, p))
+         (enque (q, y); clean (q, p)) handle ex => (print "ImpQueue.enqueAndClean"; raise ex)
 
       fun new () = T {front = ref [], back = ref []}
 
@@ -122,7 +123,7 @@ structure ImpQueue : IMP_QUEUE =
                                         ; back := []
                                         ; SOME x)
                               end)
-             | x::_ => SOME x)
+             | x::_ => SOME x) handle ex => (print "ImpQueue.peek"; raise ex)
 
       fun reset (T {front, back}) =
          (Assert.assertAtomic' ("ImpQueue.reset", NONE)

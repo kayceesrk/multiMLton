@@ -127,7 +127,7 @@ struct
         val () = Assert.assertAtomic' ("Scheduler.nextWithCounter", NONE)
         val thrd =
             case deque1 () of
-              NONE =>  !SH.pauseHook (iter)
+              NONE => (!SH.pauseHook(iter))
             | SOME thrd => thrd
       in
         thrd

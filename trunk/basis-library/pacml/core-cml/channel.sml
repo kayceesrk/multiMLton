@@ -1,7 +1,7 @@
 structure Channel : CHANNEL_EXTRA =
 struct
-  structure Assert = LocalAssert(val assert = true)
-  structure Debug = LocalDebug(val debug = true)
+  structure Assert = LocalAssert(val assert = false)
+  structure Debug = LocalDebug(val debug = false)
 
   open Critical
 
@@ -11,6 +11,7 @@ struct
   structure S = Scheduler
   structure PT = ProtoThread
   structure E = Event
+  structure T = Thread
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
   fun debug' msg = debug (fn () => msg^"."^(PT.getThreadTypeString())
@@ -183,8 +184,9 @@ struct
                                   val _ = mytxid := 2
                                   val () = L.releaseCmlLock lock (TID.tidNum())
                                   val rthrd = PT.prepVal (rt, msg)
+                                  val () = T.reifyCurrentIfParasite () (* XXX KC temp fix for exceptions *)
                                 in
-                                  S.atomicReady (rthrd) (* Implicit atomic end *)
+                                  S.ready (rthrd) (* Implicit atomic end *)
                                 end)
                               else if res2 = 1 then
                                 (mytxid := 0; matchLp ())
@@ -199,9 +201,16 @@ struct
                       matchLp ()
                     end (* SOME ends *)
                 | NONE =>
-                    S.atomicSwitchToNext (fn st => (cleanAndEnque (outQ, (mytxid, (msg, st)))
+                    let
+                      val msg = S.atomicSwitchToNext (fn st => (cleanAndEnque (outQ, (mytxid, (msg, st)))
                                                   ; L.releaseCmlLock lock (TID.tidNum())
                                                   ; debug' ("Channel.sendEvt.NONE")))
+                      (* XXX KC temp fix for exceptions *)
+                      val () = atomicBegin ()
+                      val () = T.reifyCurrentIfParasite ()
+                    in
+                      msg
+                    end
           (* tryLp ends *)
           val () = tryLp ()
         in
@@ -333,7 +342,8 @@ struct
                                   val _ = mytxid := 2
                                   val () = L.releaseCmlLock lock (TID.tidNum())
                                   val rthrd = PT.prep (st)
-                                  val _ = S.atomicReady (rthrd) (* Implicit atomic end *)
+                                  val () = T.reifyCurrentIfParasite () (* XXX KC temp fix for exceptions *)
+                                  val _ = S.ready (rthrd) (* Implicit atomic end *)
                                 in
                                   msg
                                 end)
@@ -350,9 +360,17 @@ struct
                       matchLp ()
                     end (* SOME ends *)
                 | NONE =>
-                    S.atomicSwitchToNext (fn rt => (cleanAndEnque (inQ, (mytxid, rt))
+                    let
+                      val msg = S.atomicSwitchToNext (fn rt => (cleanAndEnque (inQ, (mytxid, rt))
                                                   ; L.releaseCmlLock lock (TID.tidNum())
                                                   ; debug' ("Channel.recvEvt.NONE")))
+                      (* XXX KC temp fix for exceptions *)
+                      val () = atomicBegin ()
+                      val () = T.reifyCurrentIfParasite ()
+                    in
+                      msg
+                    end
+
           (* tryLp ends *)
         in
           tryLp ()

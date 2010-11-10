@@ -91,9 +91,7 @@ struct
 
   fun pauseHook (iter) =
     let
-      (* If there are waiting time events, then make proc 0 spin *)
       val to = TO.preempt ()
-      (* val _ = debug' (concat["Main.pauseHook.iter = ", Int.toString (iter)]) *)
       val iter = case to of
                     NONE => if (iter > Config.maxIter) then (PacmlFFI.wait (); iter-1) else iter
                   | _ => if (iter > Config.maxIter) then (TO.preemptTime (); 0) else iter

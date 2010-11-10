@@ -18,19 +18,24 @@ struct
   (* this holds an approximation of the current time of day.  It is
     * cleared at each pre-emption, and initialized on demand (by getTime).
     *)
-  val clock = ref NONE
+  val clockArr = Array.tabulate (PacmlFFI.numberOfProcessors, fn _ => NONE)
 
   (* returns an approximation of the current time of day
     * (this is at least as accurate as the time quantum).
     *)
   fun getTime () =
-      case !clock of
+  let
+    val clock = Array.unsafeSub (clockArr, PacmlFFI.processorNumber ())
+  in
+      case clock of
         NONE => let
                   val t = Time.now()
                 in
-                  (clock := SOME t; t)
+                  (Array.update (clockArr, PacmlFFI.processorNumber (), SOME t);
+                  t)
                 end
       | SOME t => t
+  end
 
   (* The queue of threads waiting for timeouts.
     * It is sorted in increasing order of time value.
@@ -56,24 +61,23 @@ struct
       in
         S.readyForSpawn (rhost)
       end
+
       fun matchLp () =
-        let
-          val res = cas (txid, 0, 1) (* Try to claim it *)
-        in
-          (if (res = 0) then (* Was WAITING.. we got it *)
-            (if Time.<=(TQ.Elt.key elt, now) then
-              (readied ()
-              ; txid := 2 (* SYNCHED *)
-              ; inflateAndReady (t)
-              ; true)
-            else
-              (txid := 0; (* Reset to WAITING *)
-              false))
-          else if (res = 1) then
-            matchLp ()
-          else
-            true)
-        end
+        if Time.>(TQ.Elt.key elt, now) then
+          false
+        else
+          let
+            val res = cas (txid, 0, 2) (* Try to sync it *)
+          in
+            if (res = 0) then (* We got it *)
+              (readied ();
+               inflateAndReady (t);
+               true)
+            else if (res = 1) then (* Someone has claimed it.. try again *)
+              matchLp ()
+            else (* already synched *)
+              true
+          end
     in
       matchLp ()
     end
@@ -151,7 +155,7 @@ struct
 
   (* reset various pieces of state *)
   fun reset () = Array.modify (fn _ => TQ.new ()) timeQArray
-  fun preemptTime () = clock := NONE
+  fun preemptTime () = Array.update (clockArr, PacmlFFI.processorNumber (), NONE)
 
   (* what to do at a preemption *)
   fun preempt () : Time.time option option =

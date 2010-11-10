@@ -1,7 +1,7 @@
 structure SyncVar : SYNC_VAR_EXTRA =
 struct
   structure Assert = LocalAssert(val assert = false)
-  structure Debug = LocalDebug(val debug = true)
+  structure Debug = LocalDebug(val debug = false)
 
   open Critical
 
@@ -216,6 +216,8 @@ struct
                                     (fn rt =>
                                       (enqueAndClean (readQ, (mytxid, rt, fn () => doSwap value))
                                       ; L.releaseCmlLock lock (TID.tidNum ())))
+                          val () = atomicBegin ()
+                          val () = Thread.reifyCurrentIfParasite ()
                         in
                           msg
                         end
@@ -226,13 +228,12 @@ struct
                       let
                         fun matchLp () =
                           let
-                            val res = cas (mytxid, 0, 1)
+                            val res = cas (mytxid, 0, 2)
                           in
                             if res = 0 then
                               (prio := 1
-                              ; mytxid := 2
                               ; L.releaseCmlLock lock (TID.tidNum ())
-                              ; atomicEnd ()
+                              ; Thread.reifyCurrentIfParasite ()
                               ; x)
                             else if res = 1 then matchLp ()
                             else (L.releaseCmlLock lock (TID.tidNum ())

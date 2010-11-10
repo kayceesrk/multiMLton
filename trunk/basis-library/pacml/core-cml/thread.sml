@@ -134,10 +134,9 @@ struct
   fun reifyCurrentIfParasite () =
   let
     val () = Assert.assertAtomic' ("Thread.reifyCurrentIfParasite", SOME 1)
-    val () = atomicBegin ()
   in
     case PT.getThreadType () of
-         RepTypes.PARASITE => (atomicBegin (); reifyCurrent ())
+         RepTypes.PARASITE => reifyCurrent ()
        | _ => atomicEnd ()
   end
 

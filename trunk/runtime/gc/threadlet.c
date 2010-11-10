@@ -111,6 +111,7 @@ void GC_jumpDown (GC_state s, int offset) {
         fflush (stderr);
     }
     s->stackTop = p;
+    assert (s->stackBottom <= s->stackTop);
     s->atomicState --;
 }
 
