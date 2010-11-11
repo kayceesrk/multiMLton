@@ -116,10 +116,15 @@ struct
         S.switchToNext
         (fn thrd =>
         let
+          fun wait(n) =
+            if n = 0
+            then ()
+            else wait(n-1)
+          (*val _ = List.tabulate (numIOThreads * 5, fn _ => NonBlocking.mkNBThread ())*)
           val () = reset true
           val () = SH.shutdownHook := PT.prepend (thrd, fn arg => (atomicBegin (); arg))
           val () = SH.pauseHook := pauseHook
-          val () = ignore (Thread.spawnHost (fn ()=> (Config.isRunning := true;initialProc ())))
+          val () = ignore (Thread.spawnHost (fn ()=> (Config.isRunning := true; initialProc ())))
           val handler = MLtonSignal.Handler.handler (S.unwrap alrmHandler Thread.reifyHostFromParasite)
           val () = installAlrmHandler handler
           (* Spawn the Non-blocking worker threads *)

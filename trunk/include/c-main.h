@@ -256,7 +256,8 @@ PUBLIC int MLton_main (int argc, char* argv[]) {                        \
         }                                                               \
         /* Now create the threads */                                    \
         for (procNo = 1; procNo < gcState[0].numberOfProcs; procNo++) { \
-                if (pthread_create (&threads[procNo - 1], NULL, &run, (void *)&gcState[procNo])) { \
+	  fprintf (stdout, "PThread Start"); \
+                if (pthread_create (&threads[procNo - 1], NULL, &run, (void *)&gcState[procNo])) { \ 
                         fprintf (stderr, "pthread_create failed: %s\n", strerror (errno)); \
                         exit (1);                                       \
                 }                                                       \

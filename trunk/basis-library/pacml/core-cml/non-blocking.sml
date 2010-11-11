@@ -11,6 +11,7 @@ struct
   fun debug' msg = debug (fn () => msg^" : "
                                 ^Int.toString(PacmlFFI.processorNumber()))
 
+ 
   type proc = ((unit -> exn) * exn chan) chan
 
   val inputChan : ((unit -> exn) * exn chan) chan = channel ()
@@ -32,20 +33,20 @@ struct
 
   fun main () =
   let
-    val _ = debug' ("Executing Main")
+    val _ = print ("Executing Main")
     val pn = processorNumber ()
-    val _ = debug' ("I think I am on proc num: " ^ Int.toString(pn) ^ "requesting channel num: " ^ Int.toString(pn - numComputeThreads) ^ "\n")
+    val _ = print ("I think I am on proc num: " ^ Int.toString(pn) ^ "requesting channel num: " ^ Int.toString(pn - numComputeThreads) ^ "\n")
     val myDedicatedChan = Array.sub (dedicatedChannels, pn - numComputeThreads)
     val myDedStr = Int.toString (pn - numComputeThreads)
     fun loop () =
     let
       val iChan = if pn < (numComputeThreads + !numDedicated)
-                  then (debug' ("choosing dedicated chan"^myDedStr)
+                  then (print ("choosing dedicated chan"^myDedStr)
                         ; myDedicatedChan)
-                  else (debug' ("choosing global inputChan"^(Int.toString (pn - numComputeThreads)))
+                  else (print ("choosing global inputChan"^(Int.toString (pn - numComputeThreads)))
                         ; inputChan)
       val (f, outputChan) = recv (iChan)
-      val _ = debug' "NB.mainLoop : got task. Executing..."
+      val _ = print "NB.mainLoop : got task. Executing..."
       val res = f () handle x => (print "got exception";x)
       val _ = send (outputChan, res)
     in
@@ -71,7 +72,7 @@ struct
       end
 
 
-  fun executeOn ch f = f() (*  
+  fun executeOn ch f = 
  let
     val _ = if numIOProcessors = 0 then raise Fail "NonBlocking.execute : no io-threads" else ()
     val _ = if sameChannel (ch, inputChan) andalso !numDedicated = numIOProcessors then
@@ -94,7 +95,7 @@ struct
     case r of
          R (res) => res
        | x => raise x
-  end *)
+  end 
 
   fun execute f = executeOn inputChan f
 
@@ -102,6 +103,8 @@ struct
   let
     val _ = if numIOProcessors = 0 then raise Fail "NonBlocking.execute : no io-threads" else ()
     val myChannelIdx = fetchAndAdd (numDedicated, 1)
+    val _ = print ("Channel Index: " ^ Int.toString(myChannelIdx))
+    val _ = print ("processor: "^ Int.toString(numComputeThreads + myChannelIdx))
   in
     if myChannelIdx < numIOProcessors then
       (ignore (List.tabulate (5, fn _ => Thread.spawnOnProc (main, numComputeThreads + myChannelIdx)));
