@@ -50,10 +50,9 @@ struct
     ()
   end
 
-  fun deque (prio) =
+  fun dequeFromProc (prio, fromProc) =
   let
     val _ = atomicBegin ()
-    val fromProc = PacmlFFI.processorNumber ()
     val _ = acquireQlock fromProc
     val (pri, sec) = A.unsafeSub (threadQs, fromProc)
     val rthrd = case prio of
@@ -68,14 +67,44 @@ struct
     rthrd
   end
 
-  fun empty () =
+  fun deque (prio) =
   let
-    val _ = PacmlFFI.maybeWaitForGC ()
-    val proc = PacmlFFI.processorNumber ()
+    val fromProc = PacmlFFI.processorNumber ()
+  in
+    dequeFromProc (prio, fromProc)
+  end
+
+  fun emptyProc (proc) =
+  let
     val (pri, sec) = A.unsafeSub (threadQs, proc)
   in
     (Q.empty pri) andalso (Q.empty sec)
   end
+
+  fun empty () =
+  let
+    val _ = PacmlFFI.maybeWaitForGC ()
+    val proc = PacmlFFI.processorNumber ()
+  in
+    emptyProc (proc)
+  end
+
+  fun dequeAny () =
+  let
+    val _ = PacmlFFI.maybeWaitForGC ()
+    val procNum = PacmlFFI.processorNumber ()
+    val numProc = PacmlFFI.numberOfProcessors
+    fun loop (n) =
+      if n = numProc then NONE
+      else if emptyProc ((n + procNum) mod numProc) then
+        loop (n+1)
+      else (case dequeFromProc (R.ANY, (n + procNum) mod numProc) of
+                 NONE => loop (n+1)
+               | v => v)
+  in
+    loop (0)
+  end
+
 
   fun clean () = Array.app (fn (x,y) => (Q.reset x;Q.reset y)) threadQs
 

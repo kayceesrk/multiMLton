@@ -74,8 +74,6 @@ struct
     (ignore (Config.incrementNumLiveThreads ())
     ; enque1 t)
 
-
-
   fun unwrap (f : runnable_host -> runnable_host) (reify : parasite -> runnable_host) (host: MT.Runnable.t) : MT.Runnable.t =
     let
       val () = debug' "Scheduler.unwrap"
@@ -120,18 +118,15 @@ struct
     end
 
   fun nextWithCounter iter =
-    if SQ.empty () then
-      (!SH.pauseHook(iter))
-    else
-      (let
-        val () = Assert.assertAtomic' ("Scheduler.nextWithCounter", NONE)
-        val thrd =
-            case deque1 () of
-              NONE => nextWithCounter (iter)
-            | SOME thrd => thrd
-      in
-        thrd
-      end)
+    let
+      val () = Assert.assertAtomic' ("Scheduler.nextWithCounter", NONE)
+      val thrd =
+          case SQ.dequeAny () of
+            NONE => (!SH.pauseHook(iter))
+          | SOME thrd => thrd
+    in
+      thrd
+    end
 
   fun next () = nextWithCounter 0
 

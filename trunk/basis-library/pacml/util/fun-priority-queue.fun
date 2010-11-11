@@ -3,7 +3,7 @@
  *  Ported to MLton threads.
  *)
 
-functor FunPriorityQueue(S: FUN_PRIORITY_QUEUE_ARG) : 
+functor FunPriorityQueue(S: FUN_PRIORITY_QUEUE_ARG) :
    FUN_PRIORITY_QUEUE where type Key.t = S.Key.t =
    struct
       open S
@@ -44,8 +44,8 @@ functor FunPriorityQueue(S: FUN_PRIORITY_QUEUE_ARG) :
              | SOME (x, q) => (SOME x, q)
          end
 
-      fun empty (T xs) = 
-         (case xs of 
+      fun empty (T xs) =
+         (case xs of
              [] => true
            | _ => false)
 
@@ -55,7 +55,7 @@ functor FunPriorityQueue(S: FUN_PRIORITY_QUEUE_ARG) :
             fun loop (xs, ys) =
                case xs of
                   [] => List.revAppend(ys, [x'])
-                | (z as Elt.T (k, _))::zs => 
+                | (z as Elt.T (k, _))::zs =>
                      (case Key.compare (k, k') of
                          GREATER => List.revAppend(ys, x'::xs)
                        | _ => loop(zs, z::ys))
@@ -65,6 +65,9 @@ functor FunPriorityQueue(S: FUN_PRIORITY_QUEUE_ARG) :
 
       fun enqueAndClean (q, k, v, p) =
          clean (enque (q, k, v), p)
+
+      fun enqueAndCleanPrefix (q, k, v, p) =
+         cleanPrefix (enque (q, k, v), p)
 
       fun new () = T []
 

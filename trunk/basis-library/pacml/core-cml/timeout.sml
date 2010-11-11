@@ -86,7 +86,7 @@ struct
   let
     val _ = Assert.assertAtomic' ("TimeOut.timeWait", NONE)
     val timeQ = Array.unsafeSub (timeQArray, PacmlFFI.processorNumber ())
-    val timeQ = TQ.enqueAndClean (timeQ, time, (txid, t), cleaner (fn () => ()))
+    val timeQ = TQ.enqueAndCleanPrefix (timeQ, time, (txid, t), cleaner (fn () => ()))
   in
     Array.update (timeQArray, PacmlFFI.processorNumber (), timeQ)
   end
@@ -172,7 +172,7 @@ struct
               else
                 let
                   val readied = ref false
-                  val timeQ = TQ.clean (timeQ, cleaner (fn () => readied := true))
+                  val timeQ = TQ.cleanPrefix (timeQ, cleaner (fn () => readied := true))
                   val () = Array.update (timeQArray, PacmlFFI.processorNumber (), timeQ)
                   val res =
                     if !readied
