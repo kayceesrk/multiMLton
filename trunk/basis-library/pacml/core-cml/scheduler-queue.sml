@@ -23,7 +23,7 @@ struct
   val numberOfProcessors = PacmlFFI.numberOfProcessors
 
   (* Only these processors are used to run general CML threads *)
-  val numComputeProcessors = numberOfProcessors - numIOProcs
+  val numComputeProcessors = PacmlFFI.numComputeProcessors
 
   (* Create separate queues for each processor. Each processor has a
    * primary and a secondary queue *)
@@ -93,12 +93,12 @@ struct
   let
     val _ = PacmlFFI.maybeWaitForGC ()
     val procNum = PacmlFFI.processorNumber ()
-    val numProc = PacmlFFI.numberOfProcessors
+    val numComp = PacmlFFI.numComputeProcessors
     fun loop (n) =
-      if n = numProc then NONE
-      else if emptyProc ((n + procNum) mod numProc) then
+      if n = numComp then NONE
+      else if emptyProc ((n + procNum) mod numComp) then
         loop (n+1)
-      else (case dequeFromProc (R.ANY, (n + procNum) mod numProc) of
+      else (case dequeFromProc (R.ANY, (n + procNum) mod numComp) of
                  NONE => loop (n+1)
                | v => v)
   in

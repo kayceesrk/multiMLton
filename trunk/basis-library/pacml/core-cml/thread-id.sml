@@ -40,7 +40,7 @@ struct
             val _ = Assert.assertAtomic' ("ThreadID.newTid(1)", NONE)
             val n = PacmlFFI.fetchAndAdd(tidCounter, 1)
         in
-          new' (n, n mod PacmlFFI.numberOfProcessors)
+          new' (n, n mod PacmlFFI.numComputeProcessors)
         end
 
       fun newOnProc (p) =
