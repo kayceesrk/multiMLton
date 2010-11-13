@@ -8,8 +8,7 @@ struct
   open Critical
 
   fun debug msg = Debug.sayDebug ([atomicMsg, ThreadID.tidMsg], msg)
-  fun debug' msg = debug (fn () => msg^" : "
-                                ^Int.toString(PacmlFFI.processorNumber()))
+  fun debug' msg = debug (fn () => msg^" : " ^Int.toString(PacmlFFI.processorNumber()))
 
   type proc = ((unit -> exn) * exn chan) chan
 
@@ -32,21 +31,16 @@ struct
 
   fun main () =
   let
-    val _ = debug' ("Executing Main")
     val pn = processorNumber ()
-    val _ = debug' ("I think I am on proc num: " ^ Int.toString(pn) ^ "requesting channel num: " ^ Int.toString(pn - numComputeProcessors))
     val myDedicatedChan = Array.sub (dedicatedChannels, pn - numComputeProcessors)
     val myDedStr = Int.toString (pn - numComputeProcessors)
     fun loop () =
     let
       val iChan = if pn < (numComputeProcessors + !numDedicated)
-                  then (debug' ("choosing dedicated chan"^myDedStr)
-                        ; myDedicatedChan)
-                  else (debug' ("choosing global inputChan"^(Int.toString (pn - numComputeProcessors)))
-                        ; inputChan)
+                  then myDedicatedChan
+                  else inputChan
       val (f, outputChan) = recv (iChan)
-      val _ = debug' "NB.mainLoop : got task. Executing..."
-      val res = f () handle x => (print "got exception";x)
+      val res = f () handle x => (debug' "got exception";x)
       val _ = send (outputChan, res)
     in
       loop ()
@@ -85,11 +79,8 @@ struct
         R (res)
       end
       val outputChan : exn chan = channel ()
-      val _ = debug' "NB send"
       val _ = send (ch, (fn () => executeAndWrap (f), outputChan))
-      val _ = debug' "NB post send"
       val r = recv (outputChan)
-      val _ = debug' "NB post recv"
     in
       case r of
           R (res) => res
@@ -105,7 +96,7 @@ struct
   in
     if myChannelIdx < numIOProcessors then
       (ignore (List.tabulate (5, fn _ => Thread.spawnOnProc (main, numComputeProcessors + myChannelIdx)));
-      SOME (Array.sub (dedicatedChannels, myChannelIdx)))
+      SOME (Array.unsafeSub (dedicatedChannels, myChannelIdx)))
     else
       NONE
   end
