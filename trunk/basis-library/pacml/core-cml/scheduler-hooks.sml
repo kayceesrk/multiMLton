@@ -5,7 +5,7 @@ struct
 
   fun deathTrap () = (PacmlFFI.maybeWaitForGC (); deathTrap ())
 
-  val pauseHookDefault : int -> runnable_host =
+  val pauseHookDefault : int * Time.time option option -> runnable_host =
     if not (!Config.isRunning) then
       fn _ =>
       (let

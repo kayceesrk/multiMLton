@@ -32,7 +32,7 @@ struct
   fun main () =
   let
     val pn = processorNumber ()
-    val myDedicatedChan = Array.sub (dedicatedChannels, pn - numComputeProcessors)
+    val myDedicatedChan = Array.unsafeSub (dedicatedChannels, pn - numComputeProcessors)
     val myDedStr = Int.toString (pn - numComputeProcessors)
     fun loop () =
     let

@@ -119,21 +119,21 @@ struct
       host'
     end
 
-  fun nextWithCounter iter =
+  fun nextWithCounter (iter, to) =
     if SQ.empty () then
-      (!SH.pauseHook(iter))
+      (!SH.pauseHook(iter, to))
     else
       (let
         val () = Assert.assertAtomic' ("Scheduler.nextWithCounter", NONE)
         val thrd =
             case deque1 () of
-              NONE => nextWithCounter (iter)
+              NONE => nextWithCounter (iter, to)
             | SOME thrd => thrd
       in
         thrd
       end)
 
-  fun next () = nextWithCounter 0
+  fun next () = nextWithCounter (0, NONE)
 
   (* what to do at a preemption (with the current thread) *)
   fun preempt (thrd as RHOST (tid, _)) =

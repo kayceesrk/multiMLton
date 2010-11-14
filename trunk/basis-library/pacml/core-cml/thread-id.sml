@@ -85,8 +85,6 @@ struct
   fun getCurThreadId () =
     let
       val tid as TID {processorId, ...} = Array.unsafeSub (curTid, PacmlFFI.processorNumber ())
-      val () = Assert.assert ([], fn () => concat ["ThreadID.getCurThreadID: procId = ", Int.toString (processorId)],
-                               fn () => (processorId = ~1 orelse processorId = PacmlFFI.processorNumber ()))
     in
       tid
     end
@@ -94,10 +92,7 @@ struct
   fun tidMsg () = tidToString (getCurThreadId ())
 
   fun setCurThreadId (tid as TID {processorId, ...}) =
-    (Assert.assert ([], fn () => concat ["ThreadID.setCurThreadID: procId = ", Int.toString (processorId),
-                                         " tidNum = ", tidMsg ()],
-                    fn () => (processorId = ~1 orelse processorId = PacmlFFI.processorNumber ()))
-    ; Array.update (curTid, PacmlFFI.processorNumber (), tid))
+    Array.update (curTid, PacmlFFI.processorNumber (), tid)
 
   fun tidNum () = tidToInt (getCurThreadId ())
 

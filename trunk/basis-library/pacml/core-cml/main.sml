@@ -89,15 +89,15 @@ struct
   end
 
 
-  fun pauseHook (iter) =
+  fun pauseHook (iter, to) =
     let
-      val to = TO.preempt ()
+      val to = if iter=0 then TO.preempt () else to
       val iter = case to of
                     NONE => if (iter > Config.maxIter) then (PacmlFFI.wait (); iter-1) else iter
-                  | _ => if (iter > Config.maxIter) then (TO.preemptTime (); 0) else iter
+                  | _ => if (iter > Config.maxIter) then (TO.preemptTime (); ignore (TO.preempt ()); 0) else iter
       val () = if not (!Config.isRunning) then (atomicEnd ();ignore (SchedulerHooks.deathTrap())) else ()
     in
-      S.nextWithCounter (iter + 1)
+      S.nextWithCounter (iter + 1, to)
     end
 
   fun reset running =
@@ -134,8 +134,6 @@ struct
           val () = ignore (Thread.spawnHost (fn ()=> (lateInit ();initialProc ())))
           val handler = MLtonSignal.Handler.handler (S.unwrap alrmHandler Thread.reifyHostFromParasite)
           val () = installAlrmHandler handler
-          (* Spawn the Non-blocking worker threads *)
-          val _ = List.tabulate (numIOThreads * 5, fn _ => NonBlocking.mkNBThread ())
         in
             ()
         end)

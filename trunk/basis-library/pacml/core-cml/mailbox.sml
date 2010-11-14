@@ -22,8 +22,7 @@ structure Mailbox : MAILBOX_EXTRA =
       structure PT= ProtoThread
 
       fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
-      fun debug' msg = debug (fn () => msg^"."^(PT.getThreadTypeString())
-                                   ^" : "^Int.toString(PacmlFFI.processorNumber()))
+      fun debug' msg = debug (fn () => msg^"."^(PT.getThreadTypeString()) ^" : "^Int.toString(PacmlFFI.processorNumber()))
 
       structure E = Event
       structure C = Channel
@@ -38,7 +37,7 @@ structure Mailbox : MAILBOX_EXTRA =
       let
         val () = Assert.assertNonAtomic' "Mailbox.send(1)"
         val () = debug' "Mailbox.send(1)"
-        val () = E.aSync(C.aSendEvt(c, x))
+        val () = C.aSend (c, x)
         val () = Assert.assertNonAtomic' "Mailbox.send(2)"
         val () = debug' "Mailbox.send(2)"
       in
