@@ -21,7 +21,9 @@ struct
     val _ = pause ()
     val te = Time.now ()
     val diff = Time.-(te,ts)
-    val _ = print (concat[Time.toString diff, "\n"])
+    val str = LargeInt.toString (Time.toMilliseconds diff)
+    (* val str = Time.toString diff (* This segfaults *) *)
+    val _ = print (concat[str, "\n"])
   in
     foo ()
   end

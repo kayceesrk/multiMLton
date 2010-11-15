@@ -5,12 +5,13 @@ PROFILE := no
 STACK := false
 BRANCH := false
 KEEPC := false
+MORE :=
 
 SRCS := $(wildcard *.sml)
 SRC_RULS := $(subst .sml,-amd64,$(SRCS))
 
 %-amd64 : $(SRCS)
-	$(MULTIMLTON) -debug $(DEBUG) -profile $(PROFILE) -profile-stack $(STACK) -profile-branch $(BRANCH) -output $@ "$(subst -amd64,,$@).sml"
+	$(MULTIMLTON) $(MORE) -debug $(DEBUG) -profile $(PROFILE) -profile-stack $(STACK) -profile-branch $(BRANCH) -output $@ "$(subst -amd64,,$@).sml"
 
 all: $(SRC_RULS)
 
