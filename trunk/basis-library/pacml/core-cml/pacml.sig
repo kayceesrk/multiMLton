@@ -5,7 +5,7 @@ sig
   include CHANNEL
   include MAIN
   include TIME_OUT_EXTRA
-  structure Lock : LOCK
+  structure MutexLock : MUTEX_LOCK
   structure SyncVar : SYNC_VAR
   structure Mailbox : MAILBOX
   structure Multicast : MULTICAST

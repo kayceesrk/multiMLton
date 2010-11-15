@@ -224,6 +224,10 @@ in
    ../posix/error.sig
    ../posix/error.sml
 
+   ann "allowFFI true" in
+      ../pacml/core-cml/ffi.sml
+   end
+
    ../system/time.sig
    ../system/time.sml
    ../system/date.sig
@@ -287,9 +291,6 @@ in
    ../mlton/exn.sig
    ../mlton/exn.sml
 
-   ann "allowFFI true" in
-      ../pacml/core-cml/ffi.sml
-   end
    ../mlton/thread.sig
    ../mlton/thread.sml
    ../mlton/signal.sig
@@ -428,6 +429,8 @@ in
 		../pacml/lib/simple-rpc.sml
 		../pacml/core-cml/non-blocking.sig
 		../pacml/core-cml/non-blocking.sml
+        ../pacml/core-cml/mutex-lock.sig
+        ../pacml/core-cml/mutex-lock.sml
 		../pacml/core-cml/main.sig
 		ann "allowFFI true" in
 			../pacml/core-cml/main.sml

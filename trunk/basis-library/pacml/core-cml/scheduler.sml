@@ -32,6 +32,12 @@ struct
    (Assert.assertAtomic' ("Scheduler.enque2", NONE)
     ; SQ.enque (thrd, R.SEC))
 
+  fun enque (thrd as R.RHOST (tid, _)) =
+    if TID.isMarked (tid) then
+      enque1 thrd
+    else
+      enque2 thrd
+
   fun deque1 () =
    (Assert.assertAtomic' ("Scheduler.deque1", NONE)
     ; SQ.deque (R.ANY))
@@ -169,17 +175,17 @@ struct
              let
                val tid = TID.getCurThreadId ()
                val _ = TID.mark tid
-               val _ = debug'' (concat["atomicSwitchAux.parasiteBottom = ", Int.toString (PT.getParasiteBottom ())])
-               val parasite = PT.copyParasite (PT.getParasiteBottom())
+               val bottom = PT.getParasiteBottom ()
+               val parasite = PT.copyParasite (bottom)
                val thrd = P_THRD (parasite, fn x => r := x)
                val rt = f (thrd)
                val () = Assert.assert' ("atomicSwitchAux : state corrupted. Unintended inflation??",
                                         fn () => case PT.getThreadType () of
                                                       HOST => false
                                                     | _ => true)
-               val _ = SQ.enque (rt, R.PRI) (* ready the given thread *)
+               val _ = enque (rt) (* ready the given thread *)
                val _ = PT.disableParasitePreemption ()
-               val _ = PT.jumpDown (PT.getParasiteBottom ()) (* Implicit atomic end *)
+               val _ = PT.jumpDown (bottom) (* Implicit atomic end *)
              in
                print "Should not see this\n"
              end
@@ -205,8 +211,8 @@ struct
              let
                val tid = TID.getCurThreadId ()
                val _ = TID.mark tid
-               val _ = debug'' (concat["atomicSwitchToNext.parasiteBottom = ", Int.toString (PT.getParasiteBottom ())])
-               val parasite = PT.copyParasite (PT.getParasiteBottom())
+               val bottom = PT.getParasiteBottom ()
+               val parasite = PT.copyParasite (bottom)
                val thrd = P_THRD (parasite, fn x => r := x)
                val () = f (thrd)
                val () = Assert.assert' ("atomicSwitchToNext : state corrupted. Unintended inflation??",
@@ -214,7 +220,7 @@ struct
                                                       HOST => false
                                                     | _ => true)
                val _ = PT.disableParasitePreemption ()
-               val _ = PT.jumpDown (PT.getParasiteBottom ()) (* Implicit atomic end *)
+               val _ = PT.jumpDown (bottom) (* Implicit atomic end *)
              in
                print "Should not see this\n"
              end
