@@ -10,9 +10,9 @@ struct
   fun debug msg = Debug.sayDebug ([atomicMsg, ThreadID.tidMsg], msg)
   fun debug' msg = debug (fn () => msg^" : " ^Int.toString(PacmlFFI.processorNumber()))
 
-  type proc = ((unit -> exn) * exn chan) chan
+  type proc = ((unit -> exn) * exn chan option) chan
 
-  val inputChan : ((unit -> exn) * exn chan) chan = channel ()
+  val inputChan : ((unit -> exn) * exn chan option) chan = channel ()
 
   val compareAndSwap = PacmlFFI.compareAndSwap
   val fetchAndAdd = PacmlFFI.fetchAndAdd
@@ -41,7 +41,9 @@ struct
                   else inputChan
       val (f, outputChan) = recv (iChan)
       val res = f () handle x => (debug' "got exception";x)
-      val _ = send (outputChan, res)
+      val _ = case outputChan of
+                   SOME c => send (c, res)
+                 | NONE => ()
     in
       loop ()
     end
@@ -65,7 +67,9 @@ struct
       end
 
 
-  fun executeOn ch f =
+  datatype exec_type = RESULT | SPAWN
+
+  fun executionHelper ch f et =
   let
       val _ = if numIOProcessors = 0 then raise Fail "NonBlocking.execute : no io-threads" else ()
       val _ = if sameChannel (ch, inputChan) andalso !numDedicated = numIOProcessors then
@@ -78,16 +82,23 @@ struct
       in
         R (res)
       end
-      val outputChan : exn chan = channel ()
-      val _ = send (ch, (fn () => executeAndWrap (f), outputChan))
-      val r = recv (outputChan)
+      val outputChan : exn chan option = case et of
+                                              RESULT => SOME (channel ())
+                                            | _ => NONE
+      val _ = aSend (ch, (fn () => executeAndWrap (f), outputChan))
     in
-      case r of
-          R (res) => res
-        | x => raise x
+      case et of
+           RESULT => (case recv (valOf outputChan) of
+                          R (res) => SOME (res)
+                        | x => raise x)
+         | SPAWN => NONE
     end
 
-  fun execute f = executeOn inputChan f
+  fun executeOn ch f = valOf (executionHelper ch f RESULT)
+
+  fun execute f = valOf (executionHelper inputChan f RESULT)
+
+  fun spawnOn ch f = ignore (executionHelper ch f SPAWN)
 
   fun createProcessor () : proc option =
   let
