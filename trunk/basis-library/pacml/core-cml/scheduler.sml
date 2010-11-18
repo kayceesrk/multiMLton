@@ -16,7 +16,7 @@ struct
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
   fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
-  fun debug'' msg = print (msg^" : "^Int.toString(PacmlFFI.processorNumber())^"\n")
+  fun debug'' msg = (* print (msg^" : "^Int.toString(PacmlFFI.processorNumber())^"\n") *) ()
 
   datatype thread_type = datatype RepTypes.thread_type
   datatype thread = datatype RepTypes.thread
@@ -32,6 +32,12 @@ struct
    (Assert.assertAtomic' ("Scheduler.enque2", NONE)
     ; SQ.enque (thrd, R.SEC))
 
+  fun enque (thrd as R.RHOST (tid, _)) =
+    if TID.isMarked (tid) then
+      enque1 thrd
+    else
+      enque2 thrd
+
   fun deque1 () =
    (Assert.assertAtomic' ("Scheduler.deque1", NONE)
     ; SQ.deque (R.ANY))
@@ -39,6 +45,8 @@ struct
   fun deque2 () =
    (Assert.assertAtomic' ("Scheduler.deque2", NONE)
    ; SQ.deque (R.SEC))
+
+  val deque = deque1
 
   fun promote () =
    (Assert.assertAtomic' ("Scheduler.promote", NONE)
@@ -52,6 +60,12 @@ struct
       H_RTHRD (rhost) => (SQ.enque (rhost, R.PRI); atomicEnd ())
     | P_RTHRD (par) => PT.atomicPrefixAndSwitchTo (par) (* Implicit atomic end *)
     ; Assert.assertNonAtomic (fn () => "Scheduler.atomicReady(2)[tid:"^(TID.tidMsg())^"]"))
+
+  fun atomicReadyHost (rhost: runnable_host) =
+    (Assert.assertAtomic' ("Scheduler.atomicReadyHost(1)[tid:"^(TID.tidMsg())^"]", SOME 1)
+    ; SQ.enque (rhost, R.PRI)
+    ; Assert.assertAtomic' ("Scheduler.atomicReadyHost(2)[tid:"^(TID.tidMsg())^"]", SOME 1))
+
 
   fun ready (rt : rdy_thread) =
     (atomicBegin ();
@@ -94,6 +108,7 @@ struct
                                     val newHost = reify (thlet)
                                     val _ = readyForSpawn newHost
                                     val host'' = MT.fromPrimitive host'
+                                    val _ = PT.disableParasitePreemption ()
                                   in
                                     host''
                                   end
@@ -110,21 +125,21 @@ struct
       host'
     end
 
-  fun nextWithCounter iter =
+  fun nextWithCounter (iter, to) =
     if SQ.empty () then
-      (!SH.pauseHook(iter))
+      (!SH.pauseHook(iter, to))
     else
       (let
         val () = Assert.assertAtomic' ("Scheduler.nextWithCounter", NONE)
         val thrd =
             case deque1 () of
-              NONE =>  !SH.pauseHook (iter)
+              NONE => nextWithCounter (iter, to)
             | SOME thrd => thrd
       in
         thrd
       end)
 
-  fun next () = nextWithCounter 0
+  fun next () = nextWithCounter (0, NONE)
 
   (* what to do at a preemption (with the current thread) *)
   fun preempt (thrd as RHOST (tid, _)) =
@@ -134,8 +149,8 @@ struct
           if TID.isMarked tid
           then (TID.unmark tid
                 ; promote ()
-                ; SQ.enque (thrd, R.PRI))
-          else SQ.enque (thrd,R.SEC)
+                ; enque1 (thrd))
+          else (enque2 (thrd))
       in
         ()
       end
@@ -155,21 +170,22 @@ struct
            end)
        | PARASITE =>
            let
-             val r : (unit -> 'a) ref = ref (fn () => raise Fail "atomicSwithc : Switching to a unprepared thread")
+             val r : (unit -> 'a) ref = ref (fn () => raise Fail "atomicSwitch : Switching to a unprepared thread")
              fun dummyFrame () =
              let
                val tid = TID.getCurThreadId ()
                val _ = TID.mark tid
-               val parasite = PT.copyParasite (PT.getParasiteBottom())
+               val bottom = PT.getParasiteBottom ()
+               val parasite = PT.copyParasite (bottom)
                val thrd = P_THRD (parasite, fn x => r := x)
                val rt = f (thrd)
                val () = Assert.assert' ("atomicSwitchAux : state corrupted. Unintended inflation??",
                                         fn () => case PT.getThreadType () of
                                                       HOST => false
                                                     | _ => true)
-               val _ = SQ.enque (rt, R.PRI) (* ready the given thread *)
+               val _ = enque (rt) (* ready the given thread *)
                val _ = PT.disableParasitePreemption ()
-               val _ = PT.jumpDown (PT.getParasiteBottom ()) (* Implicit atomic end *)
+               val _ = PT.jumpDown (bottom) (* Implicit atomic end *)
              in
                print "Should not see this\n"
              end
@@ -181,7 +197,10 @@ struct
 
   fun atomicSwitch (f) = atomicSwitchAux "atomicSwitch" f
 
+  fun switch (f) = (atomicBegin(); atomicSwitch(f))
+
   fun atomicSwitchToNext (f : 'a thread -> unit) =
+    (Assert.assertAtomic (fn () => "Scheduler.atomicSwitchToNext", NONE);
     case PT.getThreadType () of
          HOST => atomicSwitchAux "atomicSwitchToNext" (fn thrd => (f thrd; next ()))
        | PARASITE =>
@@ -192,7 +211,8 @@ struct
              let
                val tid = TID.getCurThreadId ()
                val _ = TID.mark tid
-               val parasite = PT.copyParasite (PT.getParasiteBottom())
+               val bottom = PT.getParasiteBottom ()
+               val parasite = PT.copyParasite (bottom)
                val thrd = P_THRD (parasite, fn x => r := x)
                val () = f (thrd)
                val () = Assert.assert' ("atomicSwitchToNext : state corrupted. Unintended inflation??",
@@ -200,7 +220,7 @@ struct
                                                       HOST => false
                                                     | _ => true)
                val _ = PT.disableParasitePreemption ()
-               val _ = PT.jumpDown (PT.getParasiteBottom ()) (* Implicit atomic end *)
+               val _ = PT.jumpDown (bottom) (* Implicit atomic end *)
              in
                print "Should not see this\n"
              end
@@ -208,7 +228,7 @@ struct
              val _ = (atomicBegin (); atomicEnd ())
            in
              !r()
-           end
+           end)
 
   fun switchToNext (f : 'a thread -> unit) = (atomicBegin (); atomicSwitchToNext (f))
 

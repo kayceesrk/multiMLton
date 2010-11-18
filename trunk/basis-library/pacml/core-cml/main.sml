@@ -64,27 +64,40 @@ struct
   fun alrmHandler thrd =
     let
       val () = Assert.assertAtomic' ("RunCML.alrmHandler", NONE)
-      val () = debug' "alrmHandler" (* Atomic 1 *)
+      val () = debug' "alrmHandler(1)" (* Atomic 1 *)
       val () = Assert.assertAtomic' ("RunCML.alrmHandler", SOME 1)
       val () = S.preempt thrd
-      val () = if (PacmlFFI.processorNumber () = 0) then ignore (TO.preempt ())
-                else ()
+      val () = TO.preemptTime ()
+      val _ = TO.preempt ()
       val nextThrd = S.next()
+      val () = debug' "alrmHandler(2)"
     in
       nextThrd
     end
 
-  fun pauseHook (iter) =
-    let
-      (* If there are waiting time events, then make proc 0 spin *)
-      val to = TO.preempt ()
+  fun pause () =
+  let
+    fun tightLoop2 n =
+      if n=0 then ()
+      else tightLoop2 (n-1)
 
+    fun tightLoop n = (* tightLoop (1000) ~= 1ms on 1.8Ghz core *)
+      if n=0 then ()
+      else (tightLoop2 300; tightLoop (n-1))
+  in
+    tightLoop (Config.pauseToken)
+  end
+
+
+  fun pauseHook (iter, to) =
+    let
+      val to = if iter=0 then TO.preempt () else to
       val iter = case to of
-                      NONE => if (iter > Config.maxIter) then (PacmlFFI.wait (); iter-1) else iter
-                    | _ => (iter - 1)
+                    NONE => if (iter > Config.maxIter) then (PacmlFFI.wait (); iter-1) else iter
+                  | _ => if (iter > Config.maxIter) then (TO.preemptTime (); ignore (TO.preempt ()); 0) else iter
       val () = if not (!Config.isRunning) then (atomicEnd ();ignore (SchedulerHooks.deathTrap())) else ()
     in
-      S.nextWithCounter (iter + 1)
+      S.nextWithCounter (iter + 1, to)
     end
 
   fun reset running =
@@ -94,6 +107,8 @@ struct
       ; TO.reset ())
 
 
+  val numIOThreads = PacmlFFI.numIOProcessors
+
   fun run (initialProc : unit -> unit) =
   let
     val installAlrmHandler = fn (h) => MLtonSignal.setHandler (Posix.Signal.alrm, h)
@@ -101,14 +116,24 @@ struct
         S.switchToNext
         (fn thrd =>
         let
+          fun lateInit () =
+          let
+            val () = Config.isRunning := true
+            (* Spawn the Non-blocking worker threads *)
+            val _ = List.tabulate (numIOThreads * 5, fn _ => NonBlocking.mkNBThread ())
+            val _ = List.tabulate (numIOThreads, fn i => PacmlFFI.wakeUp (PacmlFFI.numComputeProcessors + i, 1))
+          in
+            ()
+          end
+          val () = debug' (concat ["numberOfProcessors = ", Int.toString (PacmlFFI.numberOfProcessors)])
+          val () = debug' (concat ["numComputeProcessors = ", Int.toString (PacmlFFI.numComputeProcessors)])
+          val () = debug' (concat ["numIOProcessors = ", Int.toString (PacmlFFI.numIOProcessors)])
           val () = reset true
           val () = SH.shutdownHook := PT.prepend (thrd, fn arg => (atomicBegin (); arg))
           val () = SH.pauseHook := pauseHook
-          val () = ignore (Thread.spawnHost (fn ()=> (Config.isRunning := true;initialProc ())))
+          val () = ignore (Thread.spawnHost (fn ()=> (lateInit ();initialProc ())))
           val handler = MLtonSignal.Handler.handler (S.unwrap alrmHandler Thread.reifyHostFromParasite)
           val () = installAlrmHandler handler
-          (* Spawn the Non-blocking worker threads *)
-          (* val _ = List.tabulate (numIOThreads * 5, fn _ => NonBlocking.mkNBThread ()) *)
         in
             ()
         end)
@@ -118,6 +143,11 @@ struct
     in
       status
     end
+
+   fun shutdown status =
+         if (!Config.isRunning)
+            then S.switch (fn _ => PT.getRunnableHost(PT.prepVal (!SH.shutdownHook, status)))
+            else raise Fail "CML is not running"
 
   (* init MUST come after waitForWorkLoop has been exported *)
   val () = Primitive.MLton.parallelInit ()

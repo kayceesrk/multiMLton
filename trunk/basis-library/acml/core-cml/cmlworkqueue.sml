@@ -1,8 +1,8 @@
 functor WorkQueue (W : sig type work val numberOfProcessors : unit -> int end) : WORKQUEUE =
 struct
 
-  structure Assert = LocalAssert(val assert = false)
-  structure Debug = LocalDebug(val debug = false)
+  structure Assert = LocalAssert(val assert = true)
+  structure Debug = LocalDebug(val debug = true)
 
   fun debug msg = Debug.sayDebug ([], (msg))
   fun debug' msg = debug (fn () => msg^" : "

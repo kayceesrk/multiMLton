@@ -23,7 +23,7 @@ struct
   val numberOfProcessors = PacmlFFI.numberOfProcessors
 
   (* Only these processors are used to run general CML threads *)
-  val numComputeProcessors = numberOfProcessors - numIOProcs
+  val numComputeProcessors = PacmlFFI.numComputeProcessors
 
   (* Create separate queues for each processor. Each processor has a
    * primary and a secondary queue *)
@@ -50,11 +50,10 @@ struct
     ()
   end
 
-  fun deque (prio) =
+  fun dequeFromProc (prio, fromProc, lockProc) =
   let
     val _ = atomicBegin ()
-    val fromProc = PacmlFFI.processorNumber ()
-    val _ = acquireQlock fromProc
+    val _ = acquireQlock lockProc
     val (pri, sec) = A.unsafeSub (threadQs, fromProc)
     val rthrd = case prio of
                      R.PRI => Q.deque (pri)
@@ -62,20 +61,60 @@ struct
                    | R.ANY => case Q.deque (pri) of
                                    SOME t => SOME t
                                  | NONE => Q.deque (sec)
-    val _ = releaseQlock fromProc
+    val _ = releaseQlock lockProc
     val _ = atomicEnd ()
   in
     rthrd
+  end
+
+  fun deque (prio) =
+  let
+    val fromProc = PacmlFFI.processorNumber ()
+  in
+    dequeFromProc (prio, fromProc, fromProc)
+  end
+
+  fun emptyProc (proc) =
+  let
+    val (pri, sec) = A.unsafeSub (threadQs, proc)
+  in
+    (Q.empty pri) andalso (Q.empty sec)
   end
 
   fun empty () =
   let
     val _ = PacmlFFI.maybeWaitForGC ()
     val proc = PacmlFFI.processorNumber ()
-    val (pri, sec) = A.unsafeSub (threadQs, proc)
   in
-    (Q.empty pri) andalso (Q.empty sec)
+    emptyProc (proc)
   end
+
+  fun dequeAny () =
+  let
+    val _ = PacmlFFI.maybeWaitForGC ()
+    val procNum = PacmlFFI.processorNumber ()
+    val numComp = PacmlFFI.numComputeProcessors
+  in
+    (* the io processors do not steal *)
+    if (procNum >= numComp) then
+      (if emptyProc (procNum) then
+        NONE
+      else
+        dequeFromProc (R.ANY, procNum, procNum))
+    else (* Try to steal from someone else's queue, starting from yours *)
+      (let
+        fun loop (n) =
+          if n = numComp then NONE
+          else if emptyProc ((n + procNum) mod numComp) then
+            loop (n+1)
+          else (case dequeFromProc (R.ANY, (n + procNum) mod numComp, procNum) of
+                    NONE => loop (n+1)
+                  | v => v)
+      in
+        loop (0)
+      end)
+  end
+
 
   fun clean () = Array.app (fn (x,y) => (Q.reset x;Q.reset y)) threadQs
 

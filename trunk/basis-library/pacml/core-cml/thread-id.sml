@@ -29,7 +29,7 @@ struct
           props = ref [],
           dead = CVar.new (),
           preemptParasite = ref true,
-          pstate = ref (PSTATE {parasiteBottom = 0, threadType = HOST, numPenaltySpawns = 0}),
+          pstate = ref (PSTATE {parasiteBottom = (0, n), threadType = HOST, numPenaltySpawns = 0}),
           processorId = procNum}
 
   local
@@ -37,11 +37,20 @@ struct
   in
       fun new () =
         let
-            val _ = Assert.assertAtomic' ("ThreadID.newTid", NONE)
+            val _ = Assert.assertAtomic' ("ThreadID.newTid(1)", NONE)
             val n = PacmlFFI.fetchAndAdd(tidCounter, 1)
         in
-          new' (n, n mod PacmlFFI.numberOfProcessors)
+          new' (n, n mod PacmlFFI.numComputeProcessors)
         end
+
+      fun newOnProc (p) =
+        let
+            val _ = Assert.assertAtomic' ("ThreadID.newTid(2)", NONE)
+            val n = PacmlFFI.fetchAndAdd(tidCounter, 1)
+        in
+          new' (n, p)
+        end
+
 
       fun reset () = tidCounter := 0
   end
@@ -53,6 +62,7 @@ struct
         new' (n, ~1)
       end
 
+  val dummyTid = bogus "dummy"
 
   fun mark (TID{done_comm, ...}) =
       (Assert.assertAtomic' ("ThreadID.mark", NONE)
@@ -64,18 +74,26 @@ struct
 
   fun getProcId (TID {processorId, ...}) = processorId
 
-  fun sameProcessor (TID{processorId = p1, ...},
-                     TID{processorId = p2, ...}) =
-                     p1 = p2
+  fun sameProcessor (TID{processorId = p1, ...}, TID{processorId = p2, ...}) =
+    if ((p1 = ~1) andalso (p2 = ~1)) then
+      true
+    else p1 = p2
 
-  val dummyTid = bogus "dummy"
 
   val curTid : thread_id array = Array.tabulate(PacmlFFI.numberOfProcessors, fn _ => dummyTid)
 
-  fun getCurThreadId () = Array.sub (curTid, PacmlFFI.processorNumber ())
-  fun setCurThreadId tid = Array.update (curTid, PacmlFFI.processorNumber (), tid)
+  fun getCurThreadId () =
+    let
+      val tid as TID {processorId, ...} = Array.unsafeSub (curTid, PacmlFFI.processorNumber ())
+    in
+      tid
+    end
 
   fun tidMsg () = tidToString (getCurThreadId ())
+
+  fun setCurThreadId (tid as TID {processorId, ...}) =
+    Array.update (curTid, PacmlFFI.processorNumber (), tid)
+
   fun tidNum () = tidToInt (getCurThreadId ())
 
 end

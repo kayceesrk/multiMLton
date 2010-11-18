@@ -48,7 +48,9 @@ pointer GC_getFrameBottom (void) {
 int GC_getFrameBottomAsOffset (void) {
     GC_state s = pthread_getspecific (gcstate_key);
     pointer p = GC_getFrameBottom ();
-    return p - s->stackBottom;
+    int res = p - s->stackBottom;
+    assert (res >= 0 && res < (s->stackTop - s->stackBottom));
+    return res;
 }
 
 int GC_getCopiedSize (void) {
@@ -61,11 +63,15 @@ GC_thread GC_copyParasite (int startOffset) {
      * from stackTop to get end pointer */
     GC_state s = pthread_getspecific (gcstate_key);
 
+    assert (startOffset >=0);
+
     pointer start = s->stackBottom + startOffset;
     pointer end = GC_getFrameBottom ();
 
     getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
     getThreadCurrent(s)->exnStack = s->exnStack;
+
+    assert (end-start > 0);
 
     GC_thread th = newThread (s, end-start);
     GC_stack stk = (GC_stack) objptrToPointer (th->stack, s->heap->start);
@@ -105,6 +111,7 @@ void GC_jumpDown (GC_state s, int offset) {
         fflush (stderr);
     }
     s->stackTop = p;
+    assert (s->stackBottom <= s->stackTop);
     s->atomicState --;
 }
 
@@ -133,7 +140,7 @@ bool GC_proceedToExtract (pointer p, int startOffset) {
     long int size = -1;
     GC_stack oriStk = (GC_stack) objptrToPointer (oriThrd->stack, s->heap->start);
     size = oriStk->used - startOffset;
-    if (size == 0) return false;
+    if (size <= 0) return false;
     return true;
 }
 

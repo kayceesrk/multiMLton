@@ -1,7 +1,0 @@
-$(SML_LIB)/basis/basis.mlb
-$(SML_LIB)/basis/mlton.mlb
-../cml.mlb
-(*../../newMLton/mlton/lib/cml/cml.mlb*)
-
-redblack-chan.sml
-

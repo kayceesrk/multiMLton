@@ -10,7 +10,8 @@ struct
   structure TID = ThreadID
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
-  fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
+  fun debug' msg = debug (fn () => msg^"."^(PT.getThreadTypeString())
+                                   ^" : "^Int.toString(PacmlFFI.processorNumber()))
 
   datatype status = datatype RepTypes.status
 
@@ -33,16 +34,15 @@ struct
 
   datatype thread = datatype RepTypes.thread
 
-  exception DOIT_FAIL
 
   datatype 'a group =
       BASE of 'a base list
 
   fun wrapForDoit (doit : unit -> 'a, evt) : 'a doit_result =
     case evt of
-          SYNC => (SYNC_DONE (doit ()) handle DOIT_FAIL => RETRY)
+          SYNC => (SYNC_DONE (doit ()) handle RepTypes.DOIT_FAIL => RETRY)
         | ASYNC => (PT.spawnParasite (fn () => ignore (doit ()))
-                   ; ASYNC_DONE) handle DOIT_FAIL => RETRY
+                   ; ASYNC_DONE) handle RepTypes.DOIT_FAIL => RETRY
 
   val never : 'a sevt = BEVT []
 
@@ -217,10 +217,15 @@ struct
       end
   end
 
+  fun syncTypeToString (et) =
+    case et of
+         SYNC => "SYNC"
+       | ASYNC => "ASYNC"
+
   fun syncOnBEvt (pollFn : 'a base, et : event_type) : 'a option=
     let
       val () = Assert.assertNonAtomic' "Event.syncOnBEvt"
-      val () = debug' "syncOnBEvt(1)" (* NonAtomic *)
+      val () = debug' ("syncOnBEvt(1): SyncType : "^(syncTypeToString(et))) (* NonAtomic *)
       val () = Assert.assertNonAtomic' "Event.syncOnBEvt(1)"
       val () = atomicBegin ()
       val () = debug' "syncOnBEvt(2)" (* Atomic 1 *)
@@ -261,7 +266,7 @@ struct
   fun syncOnBEvts (bevts' : 'a base list, et : event_type) : 'a option =
     let
       val () = Assert.assertNonAtomic' "Event.syncOnBEvts"
-      val () = debug' "syncOnBEvts(1)" (* NonAtomic *)
+      val () = debug' ("syncOnBEvts(1) : SyncType : "^(syncTypeToString (et))) (* NonAtomic *)
       val () = Assert.assertNonAtomic' "Event.syncOnBEvts(1)"
       fun ext (bevts, blockFns) =
           let
@@ -407,10 +412,15 @@ struct
           (case force e of
             BASE bevts => syncOnBEvts (bevts, t))
 
+        fun eventTypeToString (et) =
+          case et of
+               SEVT _ => "SEVT"
+             | AEVT _ => "AEVT"
+
         fun sync (con_evt : ('a,'b) cevt) : 'a =
           let
               val () = Assert.assertNonAtomic' "Event.sync"
-              val () = debug' "sync(1)" (* NonAtomic *)
+              val () = debug' ("sync(1) : EventType : "^(eventTypeToString (con_evt))) (* NonAtomic *)
               val () = Assert.assertNonAtomic' "Event.sync(1)"
               val x = case con_evt of
                         SEVT evt => forceHelper (evt, SYNC)

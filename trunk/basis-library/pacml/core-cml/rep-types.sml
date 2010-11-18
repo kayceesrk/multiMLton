@@ -18,6 +18,8 @@ structure RepTypes =
 
       type proc_num = int
 
+      exception DOIT_FAIL
+
       datatype queue_prio = PRI | SEC | ANY
       datatype thread_type = PARASITE | HOST
 
@@ -39,7 +41,7 @@ structure RepTypes =
                  threadType : thread_type,
                  (* Pointer to the threadlet sitting below us *)
                  (* It is an offset from the bottom of the stack *)
-                 parasiteBottom : int,
+                 parasiteBottom : (int * int), (* First int is offset, second is tidNum *)
                  (* This parameter is used to penalize a thread for
                  *  compute intensive parasites*)
                  numPenaltySpawns : int}

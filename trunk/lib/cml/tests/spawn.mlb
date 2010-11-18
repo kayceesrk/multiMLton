@@ -1,9 +1,0 @@
-local
-   $(SML_LIB)/basis/basis.mlb
-   $(SML_LIB)/basis/mlton.mlb
-   ../cml.mlb
-   print.mlb
-in
-   spawn.sml
-   run-main.sml
-end

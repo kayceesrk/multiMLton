@@ -13,6 +13,7 @@ struct
   val isRunning = ref false
   val maxTime : LargeInt.int = 100
   val penalty = 100
+  val pauseToken = 5000 (* 1000 ~= 1ms pause *)
 
   val numLiveThreads = ref 0
   fun decrementNumLiveThreads () =

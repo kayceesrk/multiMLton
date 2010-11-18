@@ -1,7 +1,7 @@
 structure SyncVar : SYNC_VAR_EXTRA =
    struct
-      structure Assert = LocalAssert(val assert = false)
-      structure Debug = LocalDebug(val debug = false)
+      structure Assert = LocalAssert(val assert = true)
+      structure Debug = LocalDebug(val debug = true)
 
       structure Q = ImpQueue
       structure S = Scheduler

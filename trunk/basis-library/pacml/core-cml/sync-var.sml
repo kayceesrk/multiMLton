@@ -10,9 +10,11 @@ struct
   structure Q = ImpQueue
   structure TID = ThreadID
   structure E = Event
+  structure PT= ProtoThread
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
-  fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
+  fun debug' msg = debug (fn () => msg^"."^(PT.getThreadTypeString())
+                                   ^" : "^Int.toString(PacmlFFI.processorNumber()))
 
   datatype 'a cell =
       CELL of {prio  : int ref,
@@ -81,9 +83,8 @@ struct
                   val () = debug' "SyncVar.relayMsg.NONE"
                   val rdyLst = !readyList
                   val _ = L.releaseCmlLock lock (TID.tidNum())
-                  val _ = atomicEnd ()
                 in
-                  ignore (List.map (fn (rthrd) => S.ready (rthrd)) rdyLst)
+                  ignore (List.map (fn (rthrd) => (S.atomicReady (rthrd); atomicBegin())) rdyLst)
                 end
        (* tryLp ends *)
     in
@@ -109,7 +110,6 @@ struct
                   val () = prio := 1
                   (* Implicitly releases lock *)
                   val () = relayMsg (readQ, x, lock)
-                  val () = ThreadID.mark (TID.getCurThreadId ())
                   val () = atomicEnd ()
                   val () = debug' ( concat [name, "(3.1.2)"]) (* NonAtomic *)
                   val () = Assert.assertNonAtomic (fn () => concat ["SyncVar.", name, "(3.1.2)"])
@@ -165,7 +165,6 @@ struct
                   val () = prio := 1
                   val () = doSwap value
                   val () = L.releaseCmlLock lock (TID.tidNum())
-                  val () = ThreadID.mark (TID.getCurThreadId ())
                   val () = atomicEnd ()
                   val () = debug' ( concat [name, "(3.2.2)"]) (* NonAtomic *)
                   val () = Assert.assertNonAtomic (fn () => concat ["SyncVar.", name, "(3.2.2)"])
@@ -189,7 +188,7 @@ struct
           val x =
             case !value of
                   NONE => (L.releaseCmlLock lock (TID.tidNum());
-                           raise E.DOIT_FAIL)
+                           raise RepTypes.DOIT_FAIL)
                 | SOME x => let
                               val () = prio := 1
                               val () = doSwap value
@@ -217,6 +216,8 @@ struct
                                     (fn rt =>
                                       (enqueAndClean (readQ, (mytxid, rt, fn () => doSwap value))
                                       ; L.releaseCmlLock lock (TID.tidNum ())))
+                          val () = atomicBegin ()
+                          val () = Thread.reifyCurrentIfParasite ()
                         in
                           msg
                         end
@@ -227,13 +228,12 @@ struct
                       let
                         fun matchLp () =
                           let
-                            val res = cas (mytxid, 0, 1)
+                            val res = cas (mytxid, 0, 2)
                           in
                             if res = 0 then
                               (prio := 1
-                              ; mytxid := 2
                               ; L.releaseCmlLock lock (TID.tidNum ())
-                              ; atomicEnd ()
+                              ; Thread.reifyCurrentIfParasite ()
                               ; x)
                             else if res = 1 then matchLp ()
                             else (L.releaseCmlLock lock (TID.tidNum ())
@@ -296,11 +296,8 @@ struct
                   val () = Assert.assertAtomic (fn () => concat ["SyncVar.", name, "(3.2.1)"], SOME 1)
                   val () = prio := 1
                   val () = doSwap value
-                  (* XXX KC : Don't we need to propagate the msg here *)
                   val () = L.releaseCmlLock lock (TID.tidNum ())
                   val () = atomicEnd ()
-                  (* yield *)
-                  (*val () = S.readyAndSwitchToNext (fn ()=>())*)
                   val () = debug' ( concat [name, "(3.2.2)"]) (* NonAtomic *)
                   val () = Assert.assertNonAtomic (fn () => concat ["SyncVar.", name, "(3.2.2)"])
                 in

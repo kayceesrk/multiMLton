@@ -9,6 +9,7 @@ struct
   val noop = _import "GC_noop": unit -> unit;
   val numberOfProcessors = Int32.toInt ((_import "Parallel_numberOfProcessors": unit -> Int32.int;) ())
   val numIOProcessors = Int32.toInt ((_import "Parallel_numIOThreads": unit -> Int32.int;) ())
+  val numComputeProcessors = numberOfProcessors - numIOProcessors
   val processorNumber = _import "Parallel_processorNumber": unit -> Int32.int;
   val vCompareAndSwap = _import "Parallel_vCompareAndSwap": Int32.int ref * Int32.int * Int32.int -> Int32.int;
   val wait = _import "Parallel_wait": unit -> unit;

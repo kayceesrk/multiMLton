@@ -182,7 +182,6 @@ libraries-no-check:
 	$(MAKE) -C "$(SRC)/lib/ckit-lib"
 	$(MAKE) -C "$(SRC)/lib/mlrisc-lib"
 	$(MAKE) -C "$(SRC)/lib/smlnj-lib"
-	$(CP) "$(SRC)/lib/cml/." "$(LIB)/sml/cml"
 	$(CP) "$(SRC)/lib/ckit-lib/ckit/." "$(LIB)/sml/ckit-lib"
 	$(CP) "$(SRC)/lib/mlnlffi/." "$(LIB)/sml/mlnlffi-lib"
 	$(CP) "$(SRC)/lib/mlrisc-lib/MLRISC/." "$(LIB)/sml/mlrisc-lib"
