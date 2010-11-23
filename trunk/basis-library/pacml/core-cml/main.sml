@@ -149,7 +149,9 @@ struct
             then S.switch (fn _ => PT.getRunnableHost(PT.prepVal (!SH.shutdownHook, status)))
             else raise Fail "CML is not running"
 
+  val () = print "Before Init\n"
   (* init MUST come after waitForWorkLoop has been exported *)
   val () = Primitive.MLton.parallelInit ()
+  val () = print "After Init\n"
 
 end

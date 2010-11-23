@@ -41,9 +41,17 @@
 #define C(ty, x) (*(ty*)(x))
 #define G(ty, i) (global##ty [i])
 #define GPNR(i) (((Pointer*)(GCState + GlobalObjptrNonRootOffset))[i])
-#define O(ty, b, o) (*(ty*)((b) + (o)))
-#define X(ty, b, i, s, o) (*(ty*)((b) + ((i) * (s)) + (o)))
-#define S(ty, i) *(ty*)(StackTop + (i))
+
+#ifdef DEBUG_MEMORY
+    #define O(ty, b, o) (*((fprintf (stderr, "O: %p\n", (void*)((ty*)((b) + (o))))), ((ty*)((b) + (o)))))
+    #define X(ty, b, i, s, o) (*((fprintf (stderr, "X: %p\n", (void*)((b) + ((i) * (s)) + (o)))), ((ty*)((b) + ((i) * (s)) + (o)))))
+    #define S(ty, i) (*((fprintf (stderr, "S: %p\n", (void*)(StackTop + (i)))) , (ty*)(StackTop + (i))))
+#else
+    #define O(ty, b, o) (*((ty*)((b) + (o))))
+    #define X(ty, b, i, s, o) (*((ty*)((b) + ((i) * (s)) + (o))))
+    #define S(ty, i) (*((ty*)(StackTop + (i))))
+#endif
+
 
 /* ------------------------------------------------- */
 /*                       Tests                       */

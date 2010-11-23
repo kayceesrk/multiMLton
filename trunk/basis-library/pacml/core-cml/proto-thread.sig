@@ -9,6 +9,8 @@ sig
   type runnable_host = RepTypes.runnable_host
   type parasite_state = RepTypes.parasite_state
 
+  (* Thread management *)
+  val new : (unit -> unit) -> unit MLtonThread.t
   (* Continuation management *)
   val prepend : 'a thread * ('b -> 'a) -> 'b thread
   val prep : unit thread -> rdy_thread

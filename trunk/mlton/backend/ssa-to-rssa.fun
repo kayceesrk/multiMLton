@@ -318,7 +318,7 @@ structure CFunction =
             convention = Cdecl,
             ensuresBytesFree = false,
             mayGC = true,
-            maySwitchThreads = false,
+            maySwitchThreads = true,
             modifiesFrontier = true,
             prototype = (Vector.new0 (), NONE),
             readsStackTop = true,
@@ -1130,7 +1130,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                  Transfer.ifBool
                                  (Operand.Var {var = cond1, ty = indexTy},
                                   {truee = maybeMoveBlock,
-                                   falsee = cardMarkBlock}))
+                                   falsee = if (!Control.markCards) then cardMarkBlock else continue}))
                               end
                           in
                            (case toRtype (varType value) of
@@ -1146,8 +1146,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                          offset = offset,
                                          value = varOp value}
                                   in
-                                    if (!Control.markCards
-                                        andalso Type.isObjptr ty)
+                                    if (Type.isObjptr ty)
                                         then
                                           split (Vector.new0 (), Kind.Jump, ss' @ ss,
                                                  fn l => updateCard (Base.object baseOp, valueOp, l))

@@ -219,4 +219,12 @@ struct
     ()
   end
 
+  fun new f =
+  let
+    val nt = MLtonThread.new f
+    val () = PacmlPrim.move (nt)
+  in
+    nt
+  end
+
 end
