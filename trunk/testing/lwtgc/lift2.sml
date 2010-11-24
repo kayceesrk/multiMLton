@@ -1,0 +1,7 @@
+val a = Array.tabulate (10, fn x=> x)
+val _ = MLton.move (a)
+val _ = print (concat ["VALUE : ", Int.toString (Array.sub (a, 4))])
+val _ = Array.update (a, 0, 1)
+val _ = print (concat ["VALUE : ", Int.toString (Array.sub (a, 0))])
+val _ = MLton.move (a)
+val _ = print (concat ["VALUE : ", Int.toString (Array.sub (a, 0))])
