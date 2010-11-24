@@ -463,6 +463,15 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
   }
   assert (not ensureFrontier or invariantForMutatorFrontier(s));
   assert (not ensureStack or invariantForMutatorStack(s));
+
+
+  if (DEBUG_LWTGC and s->auxHeap->size > 0) {
+    fprintf (stderr, "GC_collect: check\n");
+    s->forwardState.toStart = s->auxHeap->start;
+    s->forwardState.toLimit = s->auxHeap->start + s->auxHeap->size;
+    s->forwardState.back = s->auxHeap->start + s->auxHeap->oldGenSize;
+    foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, assertLiftedObjptr, TRUE);
+  }
 }
 
 void GC_collect (GC_state s, size_t bytesRequested, bool force,

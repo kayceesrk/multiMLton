@@ -13,38 +13,32 @@ static inline void liftObjptr (GC_state s, objptr *opp);
 /* Move an object from local heap to the shared heap */
 static inline void liftObjptr (GC_state s, objptr *opp) {
 
-  if (not isObjptrInNursery (s, *opp)) {
-    if (DEBUG_LWTGC) {
-      fprintf (stderr, "\t is not in nursery\n");
+    if (not isObjptrInNursery (s, *opp)) {
+        if (DEBUG_LWTGC) {
+            fprintf (stderr, "\t is not in nursery\n");
+        }
     }
-  }
-  {
-    objptr op = *opp;
-    pointer p = objptrToPointer (op, s->heap->start);
-
     /* If pointer has already been forwarded, skip setting lift bit */
     if (isObjptrInSharedHeap (s, *opp)) {
-      if (DEBUG_LWTGC) {
-        fprintf (stderr, "\t object in shared heap\n");
-      }
-      return;
+        if (DEBUG_LWTGC) {
+            fprintf (stderr, "\t object in shared heap\n");
+        }
+        return;
     }
     forwardObjptr (s, opp);
-  }
 
-  objptr new_op = *opp;
-  pointer new_p = objptrToPointer (new_op, s->heap->start);
-  GC_header new_header = getHeader(new_p);
-  GC_header* new_headerp = getHeaderp (new_p);
+    objptr new_op = *opp;
+    pointer new_p = objptrToPointer (new_op, s->heap->start);
+    GC_header new_header = getHeader(new_p);
+    GC_header* new_headerp = getHeaderp (new_p);
 
-  /* Set lift mask */
-  if (DEBUG_LWTGC)
-    fprintf (stderr, "\t pointer "FMTPTR" headerp "FMTPTR" : setting header "FMTHDR" to "FMTHDR"\n",
-             (uintptr_t)new_p, (uintptr_t)new_headerp, new_header, new_header | LIFT_MASK);
-  *new_headerp = new_header | LIFT_MASK;
+    /* Set lift mask */
+    if (DEBUG_LWTGC)
+        fprintf (stderr, "\t pointer "FMTPTR" headerp "FMTPTR" : setting header "FMTHDR" to "FMTHDR"\n",
+                 (uintptr_t)new_p, (uintptr_t)new_headerp, new_header, new_header | LIFT_MASK);
+    *new_headerp = new_header | LIFT_MASK;
 }
 
-static inline void assertLiftedObjptr (GC_state s, objptr *opp);
 
 static inline void assertLiftedObjptr (GC_state s, objptr *opp) {
     objptr op = *opp;

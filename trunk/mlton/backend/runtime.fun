@@ -250,6 +250,8 @@ val headerSize : unit -> Bytes.t =
 val headerOffset : unit -> Bytes.t =
    Promise.lazy (Bytes.~ o headerSize)
 
+val lwtgcMask = Word.toIntInf 0wxFFF7FFFF
+
 (* see gc/array.h *)
 val arrayLengthSize : unit -> Bytes.t =
    Promise.lazy (Bits.toBytes o Control.Target.Size.seqIndex)

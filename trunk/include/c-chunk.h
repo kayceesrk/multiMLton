@@ -27,6 +27,8 @@
 #define DEBUG_CCODEGEN FALSE
 #endif
 
+#define DEBUG_MEMORY
+
 #define ExnStack *(size_t*)(GCState + ExnStackOffset)
 #define FrontierMem *(Pointer*)(GCState + FrontierOffset)
 #define Frontier frontier
@@ -43,9 +45,9 @@
 #define GPNR(i) (((Pointer*)(GCState + GlobalObjptrNonRootOffset))[i])
 
 #ifdef DEBUG_MEMORY
-    #define O(ty, b, o) (*((fprintf (stderr, "O: %p\n", (void*)((ty*)((b) + (o))))), ((ty*)((b) + (o)))))
-    #define X(ty, b, i, s, o) (*((fprintf (stderr, "X: %p\n", (void*)((b) + ((i) * (s)) + (o)))), ((ty*)((b) + ((i) * (s)) + (o)))))
-    #define S(ty, i) (*((fprintf (stderr, "S: %p\n", (void*)(StackTop + (i)))) , (ty*)(StackTop + (i))))
+    #define O(ty, b, o) (*((fprintf (stderr, "O: Addr=%p Val=%x\n", (void*)((b) + (o)), *((ty*)((b) + (o))))), ((ty*)((b) + (o)))))
+    #define X(ty, b, i, s, o) (*((fprintf (stderr, "X: Addr=%p Val=%x\n", (void*)((b) + ((i) * (s)) + (o)), *(ty*)((b) + ((i) * (s)) + (o)))), ((ty*)((b) + ((i) * (s)) + (o)))))
+    #define S(ty, i) (*((fprintf (stderr, "S: Addr=%p Val=%x\n", (void*)(StackTop + (i)), *(ty*)(StackTop + (i)))) , (ty*)(StackTop + (i))))
 #else
     #define O(ty, b, o) (*((ty*)((b) + (o))))
     #define X(ty, b, i, s, o) (*((ty*)((b) + ((i) * (s)) + (o))))

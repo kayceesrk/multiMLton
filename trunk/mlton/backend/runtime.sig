@@ -106,6 +106,7 @@ signature RUNTIME =
       val headerToTypeIndex: word -> int
       val labelSize: unit -> Bytes.t
       val limitSlop: Bytes.t
+      val lwtgcMask: IntInf.t
       val maxFrameSize: Bytes.t
       val cpointerSize: unit -> Bytes.t
       val objptrSize: unit -> Bytes.t

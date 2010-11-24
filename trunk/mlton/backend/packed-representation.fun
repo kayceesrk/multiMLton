@@ -1568,13 +1568,17 @@ structure Objptrs =
                QuickSort.sortVector (cases, fn ((w, _), (w', _)) =>
                                      WordX.le (w, w', {signed = false}))
             val shift = Operand.word (WordX.one WordSize.shiftArg)
-            val (s, tag) =
-               Statement.rshift (Offset {base = test,
+            val mask = Operand.word (WordX.fromIntInf (Runtime.lwtgcMask, WordSize.objptrHeader ()))
+            val (s1, tmp) =
+               Statement.andb (Offset {base = test,
                                          offset = Runtime.headerOffset (),
                                          ty = Type.objptrHeader ()},
-                                 shift)
+                               mask)
+           val (s2, tag) =
+             Statement.rshift (tmp, shift)
+
          in
-            ([s], Switch (Switch.T {cases = cases,
+            ([s1,s2], Switch (Switch.T {cases = cases,
                                     default = default,
                                     size = WordSize.objptrHeader (),
                                     test = tag}))
