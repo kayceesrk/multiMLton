@@ -63,8 +63,6 @@ val gcFields =
     "maxFrameSize",
     "procId",
     "returnToC",
-    "sharedHeapStart",
-    "sharedHeapEnd",
     "signalsInfo.signalIsPending",
     "stackBottom",
     "stackLimit",

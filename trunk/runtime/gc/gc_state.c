@@ -138,7 +138,7 @@ void setGCStateCurrentSharedHeap (GC_state s,
              uintmaxToCommaString(nurseryBytesRequested));
   h = s->sharedHeap;
   assert (h==s->sharedHeap);
-  assert (isFrontierAligned (s, h->sharedStart + h->oldGenSize + oldGenBytesRequested));
+  assert (isFrontierAligned (s, h->start + h->oldGenSize + oldGenBytesRequested));
   limit = h->start + h->size - bonus;
   nurserySize = h->size - (h->oldGenSize + oldGenBytesRequested) - bonus;
   assert (isFrontierAligned (s, limit - nurserySize));
@@ -291,7 +291,7 @@ void setGCStateCurrentSharedHeap (GC_state s,
     frontier = s->sharedLimitPlusSlop + GC_BONUS_SLOP;
   }
   h->frontier = frontier;
-  assert (h->sharedFrontier <= h->sharedStart + h->availableSize);
+  assert (h->frontier <= h->start + h->availableSize);
 
   if (not duringInit) {
     assert (getThreadCurrent(s)->bytesNeeded <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier));

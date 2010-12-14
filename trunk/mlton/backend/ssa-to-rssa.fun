@@ -1040,6 +1040,28 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                   val sz = WordSize.objptr ()
                                   val indexTy = Type.word sz
                                   val cardElemSize = WordSize.fromBits Bits.inByte
+
+                                  fun addressInLocalHeap (addr) =
+                                  let
+                                    val c1 = Var.newNoname ()
+                                    val cond = Var.newNoname ()
+                                    val mask = Operand.word (WordX.fromIntInf (Runtime.lwtgcInvMask, sz))
+                                    val stmts =
+                                      [PrimApp {args = Vector.new2 (addr, mask),
+                                                dst = SOME (c1, indexTy),
+                                                prim = Prim.wordAndb (sz)},
+                                      PrimApp {args = Vector.new2 (Operand.Var {var = c1, ty = indexTy},
+                                                                  Operand.word (WordX.zero sz)),
+                                                dst = SOME (cond, indexTy),
+                                                prim = Prim.wordEqual sz}]
+                                  in
+                                    (stmts, cond)
+                                  end
+
+                                  val (stmts1, cond1) = addressInLocalHeap (lhsAddr)
+                                  val (stmts2, cond2) = addressInLocalHeap (rhsAddr)
+
+
                                   val cardMarkStmts =
                                     [PrimApp {args = (Vector.new2
                                                       (Operand.cast (lhsAddr, Type.bits (WordSize.bits sz)),
@@ -1063,24 +1085,6 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                   Goto {args = Vector.new0 (),
                                         dst = continue}}
 
-                                fun addressInSharedHeap (addr) =
-                                let
-                                  val c1 = Var.newNoname ()
-                                  val cond = Var.newNoname ()
-                                  val stmts =
-                                    [PrimApp {args = Vector.new2 (Operand.cast (Runtime.lwtgcInvMask, indexTy), addr),
-                                              dst = SOME (c1, indexTy),
-                                              prim = Prim.wordAndb (sz, {signed = false})},
-                                    PrimApp {args = Vector.new2 (Operand.Var {var = c1, ty = indexTy},
-                                                                 Operand.word (WordX.zero indexTy)),
-                                              dst = SOME (cond, indexTy),
-                                              prim = Prim.wordGt sz}]
-                                in
-                                  (stmts, cond)
-                                end
-
-                                val (stmts1, cond1) = addressInSharedHeap (lhsAddr)
-                                val (stmts2, cond2) = addressInSharedHeap (rhsAddr)
 
                                 val returnFromHandler =
                                   newBlock
@@ -1109,15 +1113,27 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                    transfer =
                                     Transfer.ifBool
                                     (Operand.Var {var = cond2, ty = indexTy},
-                                     {truee = continue,
-                                      falsee = moveBlock})}
+                                     {truee = moveBlock,
+                                      falsee = continue})}
+
+                                val maybeCardMarkBlock =
+                                  newBlock
+                                  {args = Vector.new0 (),
+                                   kind = Kind.Jump,
+                                   statements = Vector.fromList stmts2,
+                                   transfer =
+                                    Transfer.ifBool
+                                    (Operand.Var {var = cond2, ty = indexTy},
+                                     {truee = cardMarkBlock,
+                                      falsee = continue})}
+
 
                               in
                                 (stmts1,
                                  Transfer.ifBool
                                  (Operand.Var {var = cond1, ty = indexTy},
-                                  {truee = maybeMoveBlock,
-                                   falsee = if (!Control.markCards) then cardMarkBlock else continue}))
+                                  {truee = if (!Control.markCards) then maybeCardMarkBlock else continue,
+                                   falsee = maybeMoveBlock}))
                               end
                           in
                            (case toRtype (varType value) of
