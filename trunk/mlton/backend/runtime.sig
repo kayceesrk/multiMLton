@@ -33,8 +33,6 @@ signature RUNTIME =
              | MaxFrameSize
              | ProcId
              | ReturnToC
-             | SharedHeapStart
-             | SharedHeapEnd
              | SignalIsPending
              | StackBottom
              | StackLimit (* Must have StackTop <= StackLimit *)
@@ -55,8 +53,6 @@ signature RUNTIME =
                              maxFrameSize: Bytes.t,
                              procId: Bytes.t,
                              returnToC: Bytes.t,
-                             sharedHeapStart: Bytes.t,
-                             sharedHeapEnd: Bytes.t,
                              signalIsPending: Bytes.t,
                              stackBottom: Bytes.t,
                              stackLimit: Bytes.t,
@@ -74,8 +70,6 @@ signature RUNTIME =
                            maxFrameSize: Bytes.t,
                            procId: Bytes.t,
                            returnToC: Bytes.t,
-                           sharedHeapStart: Bytes.t,
-                           sharedHeapEnd: Bytes.t,
                            signalIsPending: Bytes.t,
                            stackBottom: Bytes.t,
                            stackLimit: Bytes.t,

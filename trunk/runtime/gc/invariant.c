@@ -80,8 +80,8 @@ bool invariantForGC (GC_state s) {
     assert ((s->limit == 0) or (s->limit == s->limitPlusSlop - GC_HEAP_LIMIT_SLOP));
     assert (hasHeapBytesFree (s, 0, 0));
   }
-  assert (s->secondaryHeap->start == NULL
-          or s->heap->size == s->secondaryHeap->size);
+  assert (s->secondaryLocalHeap->start == NULL
+          or s->heap->size == s->secondaryLocalHeap->size);
   /* Check that all pointers are into from space. */
   foreachGlobalObjptr (s, assertIsObjptrInFromSpaceOrLifted);
   pointer back = s->heap->start + s->heap->oldGenSize;

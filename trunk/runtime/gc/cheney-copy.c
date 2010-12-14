@@ -40,8 +40,8 @@ void swapHeapsForCheneyCopy (GC_state s) {
   GC_heap tempHeap;
 
   for (int proc = 0; proc < s->numberOfProcs; proc++) {
-    tempHeap = s->procStates[proc].secondaryHeap;
-    s->procStates[proc].secondaryHeap = s->procStates[proc].heap;
+    tempHeap = s->procStates[proc].secondaryLocalHeap;
+    s->procStates[proc].secondaryLocalHeap = s->procStates[proc].heap;
     s->procStates[proc].heap = tempHeap;
     setCardMapAbsolute (&s->procStates[proc]);
   }
@@ -52,7 +52,7 @@ void majorCheneyCopyGC (GC_state s) {
   struct rusage ru_start;
   pointer toStart;
 
-  assert (s->secondaryHeap->size >= s->heap->oldGenSize);
+  assert (s->secondaryLocalHeap->size >= s->heap->oldGenSize);
   if (detailedGCTime (s))
     startTiming (&ru_start);
   s->cumulativeStatistics->numCopyingGCs++;
@@ -66,25 +66,25 @@ void majorCheneyCopyGC (GC_state s) {
              uintmaxToCommaString(s->heap->size));
     fprintf (stderr,
              "[GC:\tto heap at "FMTPTR" of size %s bytes.]\n",
-             (uintptr_t)(s->secondaryHeap->start),
-             uintmaxToCommaString(s->secondaryHeap->size));
+             (uintptr_t)(s->secondaryLocalHeap->start),
+             uintmaxToCommaString(s->secondaryLocalHeap->size));
   }
-  s->forwardState.toStart = s->secondaryHeap->start;
-  s->forwardState.toLimit = s->secondaryHeap->start + s->secondaryHeap->size;
-  assert (s->secondaryHeap->start != (pointer)NULL);
+  s->forwardState.toStart = s->secondaryLocalHeap->start;
+  s->forwardState.toLimit = s->secondaryLocalHeap->start + s->secondaryLocalHeap->size;
+  assert (s->secondaryLocalHeap->start != (pointer)NULL);
   /* The next assert ensures there is enough space for the copy to
    * succeed.  It does not assert
-   *   (s->secondaryHeap->size >= s->heap->size)
+   *   (s->secondaryLocalHeap->size >= s->heap->size)
    * because that is too strong.
    */
-  assert (s->secondaryHeap->size >= s->heap->oldGenSize);
-  toStart = alignFrontier (s, s->secondaryHeap->start);
+  assert (s->secondaryLocalHeap->size >= s->heap->oldGenSize);
+  toStart = alignFrontier (s, s->secondaryLocalHeap->start);
   s->forwardState.back = toStart;
   foreachGlobalObjptr (s, forwardObjptr);
   foreachObjptrInRange (s, toStart, &s->forwardState.back, forwardObjptr, TRUE);
   updateWeaksForCheneyCopy (s);
-  s->secondaryHeap->oldGenSize = s->forwardState.back - s->secondaryHeap->start;
-  bytesCopied = s->secondaryHeap->oldGenSize;
+  s->secondaryLocalHeap->oldGenSize = s->forwardState.back - s->secondaryLocalHeap->start;
+  bytesCopied = s->secondaryLocalHeap->oldGenSize;
   s->cumulativeStatistics->bytesCopied += bytesCopied;
   swapHeapsForCheneyCopy (s);
   s->lastMajorStatistics->kind = GC_COPYING;

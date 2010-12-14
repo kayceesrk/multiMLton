@@ -8,10 +8,9 @@
 
 /* newObject (s, header, bytesRequested, allocInOldGen)
  *
- * Allocate a new object in the heap->
+ * Allocate a new object in the local heap->
  * bytesRequested includes the size of the header.
  */
-/* XXX DOC spoons must hold the runtime lock if allocInOldGen is true! */
 pointer newObject (GC_state s,
                    GC_header header,
                    size_t bytesRequested,

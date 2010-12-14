@@ -25,10 +25,10 @@ void GC_pack (__attribute__ ((unused)) GC_state *gs) {
   if (keep <= s->heap->size) {
     shrinkHeap (s, s->heap, keep);
     setCardMapAndCrossMap (s);
-    setGCStateCurrentHeap (s, 0, 0, true);
+    setGCStateCurrentSharedHeap (s, 0, 0, true);
     setGCStateCurrentThreadAndStack (s);
   }
-  releaseHeap (s, s->secondaryHeap);
+  releaseHeap (s, s->secondaryLocalHeap);
   if (DEBUG or s->controls->messages)
     fprintf (stderr,
              "[GC: Packed heap at "FMTPTR" to size %s bytes.]\n",
@@ -55,7 +55,7 @@ void GC_unpack (__attribute__ ((unused)) GC_state *gs) {
   resizeHeap (s, s->heap->oldGenSize);
   setCardMapAndCrossMap (s);
   resizeHeapSecondary (s);
-  setGCStateCurrentHeap (s, 0, 0, true);
+  setGCStateCurrentSharedHeap (s, 0, 0, true);
   setGCStateCurrentThreadAndStack (s);
   leaveGC (s);
   if (DEBUG or s->controls->messages)

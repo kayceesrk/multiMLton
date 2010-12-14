@@ -27,7 +27,7 @@ void majorGC (GC_state s, size_t bytesRequested, bool mayResize) {
   if (not FORCE_MARK_COMPACT
       and not s->hashConsDuringGC // only markCompact can hash cons
       and s->heap->size < s->sysvals.ram
-      and (not isHeapInit (s->secondaryHeap)
+      and (not isHeapInit (s->secondaryLocalHeap)
            or createHeapSecondary (s, desiredSize)))
     majorCheneyCopyGC (s);
   else
@@ -161,7 +161,7 @@ void performGC (GC_state s,
   if (forceMajor
       or totalBytesRequested > s->heap->availableSize - s->heap->oldGenSize)
     majorGC (s, totalBytesRequested, mayResize);
-  setGCStateCurrentHeap (s, oldGenBytesRequested + stackBytesRequested,
+  setGCStateCurrentSharedHeap (s, oldGenBytesRequested + stackBytesRequested,
                          nurseryBytesRequested, false);
   assert (hasHeapBytesFree (s, oldGenBytesRequested + stackBytesRequested,
                             nurseryBytesRequested));
@@ -270,6 +270,84 @@ size_t fillGap (__attribute__ ((unused)) GC_state s, pointer start, pointer end)
   }
 }
 
+static void allocChunkInSharedHeap (GC_state s,
+                                    size_t nurseryBytesRequested) {
+  /* First try and take another chunk from the shared nursery */
+  while (TRUE)
+  {
+    /* This is the only read of the global frontier -- never read it again
+       until after the swap. */
+    pointer oldFrontier = s->sharedHeap->frontier;
+    pointer newHeapFrontier, newProcFrontier;
+    pointer newStart;
+    /* heap->start and heap->size are read-only (unless you hold the global
+       lock) so it's ok to read them here */
+    size_t availableBytes = (size_t)((s->sharedHeap->start + s->sharedHeap->availableSize)
+                                     - oldFrontier);
+
+    /* See if the mutator frontier invariant is already true */
+    assert (s->sharedLimitPlusSlop >= s->sharedFrontier);
+    if (nurseryBytesRequested <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier)) {
+      if (DEBUG)
+        fprintf (stderr, "[GC: shared alloc: satisfied.]\n");
+      return;
+    }
+    /* Perhaps there is not enough space in the nursery to satify this
+       request; if that's true then we need to do a full collection */
+    if (nurseryBytesRequested + GC_BONUS_SLOP > availableBytes) {
+      fprintf (stderr, "[GC: aborting shared alloc: no space.]\n");
+      assert (0);
+      return;
+    }
+
+    /* OK! We might possibly satisfy this request without the runtime lock!
+       Let's see what that will entail... */
+
+    /* Now see if we were the most recent thread to allocate */
+    if (oldFrontier == s->sharedLimitPlusSlop + GC_BONUS_SLOP) {
+      /* This is the next chunk so no need to fill */
+      newHeapFrontier = s->sharedFrontier + nurseryBytesRequested + GC_BONUS_SLOP;
+      /* Leave "start" and "frontier" where they are */
+      newStart = s->sharedStart;
+      newProcFrontier = s->sharedFrontier;
+    }
+    else {
+      /* Fill the old gap */
+      fillGap (s, s->sharedFrontier, s->sharedLimitPlusSlop + GC_BONUS_SLOP);
+      /* Don't update frontier or limitPlusSlop since we will either
+         overwrite them (if we succeed) or just fill the same gap again
+         (if we fail).  (There is no obvious other pair of values that
+         we can set them to that is safe.) */
+      newHeapFrontier = oldFrontier + nurseryBytesRequested + GC_BONUS_SLOP;
+      newProcFrontier = oldFrontier;
+      /* Move "start" since the space between old-start and frontier is not
+         necessary filled */
+      newStart = oldFrontier;
+    }
+
+    if (__sync_bool_compare_and_swap (&s->sharedHeap->frontier,
+                                      oldFrontier, newHeapFrontier)) {
+      if (DEBUG)
+        fprintf (stderr, "[GC: Shared alloction of chunk @ "FMTPTR".]\n",
+                 (uintptr_t)newProcFrontier);
+
+      s->sharedStart = newStart;
+      s->sharedFrontier = newProcFrontier;
+      assert (isFrontierAligned (s, s->sharedFrontier));
+      s->sharedLimitPlusSlop = newHeapFrontier - GC_BONUS_SLOP;
+      s->sharedLimit = s->sharedLimitPlusSlop - GC_HEAP_LIMIT_SLOP;
+
+      return;
+    }
+    else {
+      if (DEBUG)
+        fprintf (stderr, "[GC: Contention for shared alloction (frontier is "FMTPTR").]\n",
+                 (uintptr_t)s->sharedHeap->frontier);
+    }
+  }
+}
+
+
 static void maybeSatisfyAllocationRequestLocally (GC_state s,
                                                   size_t nurseryBytesRequested) {
   /* First try and take another chunk from the shared nursery */
@@ -285,13 +363,6 @@ static void maybeSatisfyAllocationRequestLocally (GC_state s,
     size_t availableBytes = (size_t)((s->heap->start + s->heap->availableSize)
                                      - oldFrontier);
 
-    /* If another thread is trying to get exclusive access, the join the
-       queue. */
-    if (Proc_threadInSection (s)) {
-      if (DEBUG)
-        fprintf (stderr, "[GC: aborting local alloc: mutex.]\n");
-      return;
-    }
     /* See if the mutator frontier invariant is already true */
     assert (s->limitPlusSlop >= s->frontier);
     if (nurseryBytesRequested <= (size_t)(s->limitPlusSlop - s->frontier)) {
@@ -427,7 +498,6 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
     if (isObjptr (getThreadCurrentObjptr(s)))
       getThreadCurrent(s)->bytesNeeded = nurseryBytesRequested;
 
-    ENTER0 (s);
     if (fromGCCollect and (not s->signalsInfo.amInSignalHandler))
         switchToSignalHandlerThreadIfNonAtomicAndSignalPending (s);
     if ((ensureStack and not invariantForMutatorStack (s))
@@ -438,8 +508,6 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
     else
       if (DEBUG or s->controls->messages)
         fprintf (stderr, "GC: Skipping GC (inside of sync). [%d]\n", s->procStates ? Proc_processorNumber (s) : -1);
-
-    LEAVE0 (s);
   }
   else {
     if (DEBUG or s->controls->messages)
@@ -465,11 +533,11 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
   assert (not ensureStack or invariantForMutatorStack(s));
 
 
-  if (DEBUG_LWTGC and s->auxHeap->size > 0) {
+  if (DEBUG_LWTGC and s->sharedHeap->size > 0) {
     fprintf (stderr, "GC_collect: check\n");
-    s->forwardState.toStart = s->auxHeap->start;
-    s->forwardState.toLimit = s->auxHeap->start + s->auxHeap->size;
-    s->forwardState.back = s->auxHeap->start + s->auxHeap->oldGenSize;
+    s->forwardState.toStart = s->sharedHeap->start;
+    s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
+    s->forwardState.back = s->sharedHeap->start + s->sharedHeap->oldGenSize;
     foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, assertLiftedObjptr, TRUE);
   }
 }

@@ -1066,28 +1066,15 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                 fun addressInSharedHeap (addr) =
                                 let
                                   val c1 = Var.newNoname ()
-                                  val c2 = Var.newNoname ()
-                                  val c3 = Var.newNoname ()
-                                  val c4 = Var.newNoname ()
                                   val cond = Var.newNoname ()
                                   val stmts =
-                                    [PrimApp {args = Vector.new2 (Operand.cast (Runtime GCField.SharedHeapStart, indexTy), addr),
+                                    [PrimApp {args = Vector.new2 (Operand.cast (Runtime.lwtgcInvMask, indexTy), addr),
                                               dst = SOME (c1, indexTy),
-                                              prim = Prim.wordLt (sz, {signed = false})},
-                                    PrimApp {args = Vector.new2 (addr, Operand.cast (Runtime GCField.SharedHeapEnd, indexTy)),
-                                              dst = SOME (c2, indexTy),
-                                              prim = Prim.wordLt (sz, {signed = false})},
-                                    PrimApp {args = Vector.new2 (addr, Operand.cast (Runtime GCField.SharedHeapStart, indexTy)),
-                                              dst = SOME (c3, indexTy),
-                                              prim = Prim.wordEqual sz},
+                                              prim = Prim.wordAndb (sz, {signed = false})},
                                     PrimApp {args = Vector.new2 (Operand.Var {var = c1, ty = indexTy},
-                                                                  Operand.Var {var = c2, ty = indexTy}),
-                                              dst = SOME (c4, indexTy),
-                                              prim = Prim.wordAndb sz},
-                                    PrimApp {args = Vector.new2 (Operand.Var {var = c3, ty = indexTy},
-                                                                  Operand.Var {var = c4, ty = indexTy}),
+                                                                 Operand.word (WordX.zero indexTy)),
                                               dst = SOME (cond, indexTy),
-                                              prim = Prim.wordOrb sz}]
+                                              prim = Prim.wordGt sz}]
                                 in
                                   (stmts, cond)
                                 end

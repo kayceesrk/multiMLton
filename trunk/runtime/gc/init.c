@@ -403,12 +403,12 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->roots = NULL;
   s->rootsLength = 0;
   s->savedThread = BOGUS_OBJPTR;
-  s->secondaryHeap = (GC_heap) malloc (sizeof (struct GC_heap));
-  initHeap (s, s->secondaryHeap);
-  s->auxHeap = (GC_heap) malloc (sizeof (struct GC_heap));
-  initHeap (s, s->auxHeap);
-  s->sharedHeapStart = NULL;
-  s->sharedHeapEnd = NULL;
+  s->secondaryLocalHeap = (GC_heap) malloc (sizeof (struct GC_heap));
+  initHeap (s, s->secondaryLocalHeap);
+  s->sharedHeap = (GC_heap) malloc (sizeof (struct GC_heap));
+  initHeap (s, s->sharedHeap);
+  s->secondarySharedHeap = (GC_heap) malloc (sizeof (struct GC_heap));
+  initHeap (s, s->secondarySharedHeap);
   s->signalHandlerThread = BOGUS_OBJPTR;
   s->signalsInfo.amInSignalHandler = FALSE;
   s->signalsInfo.gcSignalHandled = FALSE;

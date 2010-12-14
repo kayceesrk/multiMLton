@@ -28,7 +28,8 @@ static void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s,
                                                             size_t nurseryBytesRequested,
                                                             bool handlesSignals,
                                                             bool forceStackGrowth);
-
+static void allocChunkInSharedHeap (GC_state s,
+                                    size_t nurseryBytesRequested);
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */
 
 #if (defined (MLTON_GC_INTERNAL_BASIS))

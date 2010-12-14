@@ -148,6 +148,7 @@ void initWorld (GC_state s) {
               sizeofHeapDesired (s, minSize, 0),
               minSize);
 
+  //set up local heap
   setCardMapAndCrossMap (s);
   start = alignFrontier (s, s->heap->start);
   s->start = s->frontier = start;
@@ -157,27 +158,55 @@ void initWorld (GC_state s) {
   initVectors (s);
   assert ((size_t)(s->frontier - start) <= s->lastMajorStatistics->bytesLive);
   s->heap->oldGenSize = s->frontier - s->heap->start;
-  setGCStateCurrentHeap (s, 0, 0, true);
+  setGCStateCurrentLocalHeap (s, 0, 0);
+
+  //set up shared heap
+  //Create an initial heap of size 10M
+  createHeap (s, s->sharedHeap, 1024 * 1024 * 10, 1024 * 1024 * 10);
+  start = alignFrontier (s, s->sharedHeap->start);
+  s->start = s->frontier = start;
+  s->limitPlusSlop = s->sharedHeap->start + s->sharedHeap->size - GC_BONUS_SLOP;
+  s->limit = s->limitPlusSlop - GC_HEAP_LIMIT_SLOP;
+  s->sharedHeap->oldGenSize = s->frontier - s->sharedHeap->start;
+  setGCStateCurrentSharedHeap (s, 0, 0, true);
+
   thread = newThread (s, sizeofStackInitialReserved (s));
   switchToThread (s, pointerToObjptr((pointer)thread - offsetofThread (s), s->heap->start));
 }
 
 void duplicateWorld (GC_state d, GC_state s) {
   GC_thread thread;
+  pointer start;
 
   d->lastMajorStatistics->bytesLive = 0;
+  //set up local heap
+  d->heap = (GC_heap) malloc (sizeof (struct GC_heap));
+  initHeap (d, d->heap);
+  createHeap (d, d->heap, 8192, 8192);
+  start = alignFrontier (d, d->heap->start);
+  d->start = d->frontier = start;
+  d->limitPlusSlop = d->heap->start + d->heap->size - GC_BONUS_SLOP;
+  d->limit = d->limitPlusSlop - GC_HEAP_LIMIT_SLOP;
+  d->heap->oldGenSize = d->frontier - d->heap->start;
+  setGCStateCurrentLocalHeap (d, 0, 0);
+  setCardMapAndCrossMap (d);
+
+  //set up shared local heap
+  d->secondaryLocalHeap = (GC_heap) malloc (sizeof (struct GC_heap));
+  initHeap (d, d->secondaryLocalHeap);
+
 
   /* Use the original to allocate */
-  thread = newThread (s, sizeofStackInitialReserved (s));
+  //XXX KC SPH does this violate GC invariants
+  thread = newThread (d, sizeofStackInitialReserved (d));
 
   /* Now copy stats, heap data from original */
   d->cumulativeStatistics->maxHeapSize = s->cumulativeStatistics->maxHeapSize;
-  d->heap = s->heap;
-  d->secondaryHeap = s->secondaryHeap;
-  d->auxHeap = s->auxHeap;
+  d->secondaryLocalHeap = s->secondaryLocalHeap;
+  d->sharedHeap = s->sharedHeap;
   d->generationalMaps = s->generationalMaps;
 
-  /* Allocation handled in setGCStateCurrentHeap when called from initWorld */
+  /* Allocation handled in setGCStateCurrentSharedHeap when called from initWorld */
 
   switchToThread (d, pointerToObjptr((pointer)thread - offsetofThread (d), d->heap->start));
 }

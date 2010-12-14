@@ -33,11 +33,11 @@ GC_objectHashTable allocHashTable (GC_state s) {
 
   t = (GC_objectHashTable)(malloc_safe (sizeof(*t)));
   // Try to use space in the heap for the elements.
-  if (not (isHeapInit (s->secondaryHeap))) {
+  if (not (isHeapInit (s->secondaryLocalHeap))) {
     if (DEBUG_SHARE)
-      fprintf (stderr, "using secondaryHeap\n");
-    regionStart = s->secondaryHeap->start;
-    regionEnd = s->secondaryHeap->start + s->secondaryHeap->size;
+      fprintf (stderr, "using secondaryLocalHeap\n");
+    regionStart = s->secondaryLocalHeap->start;
+    regionEnd = s->secondaryLocalHeap->start + s->secondaryLocalHeap->size;
   } else if (s->amInGC or not s->canMinor) {
     if (DEBUG_SHARE)
       fprintf (stderr, "using end of heap\n");

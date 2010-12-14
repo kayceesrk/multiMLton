@@ -138,5 +138,5 @@ void GC_done (GC_state s) {
              uintmaxToCommaString (s->cumulativeStatistics->bytesHashConsed));
   }
   releaseHeap (s, s->heap);
-  releaseHeap (s, s->secondaryHeap);
+  releaseHeap (s, s->secondaryLocalHeap);
 }

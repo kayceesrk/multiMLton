@@ -11,6 +11,8 @@ void GC_share (GC_state s, pointer object) {
   size_t bytesHashConsed;
 
   s->syncReason = SYNC_FORCE;
+  //XXX SPH I shouldn't need ENTER/LEAVE here as share will only be
+  // invoked on objects I own. But it might traverse shared heap... So??
   ENTER0 (s); /* update stack in heap, in case it is reached */
 
   if (DEBUG_SHARE)

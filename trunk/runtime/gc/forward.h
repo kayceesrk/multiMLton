@@ -24,6 +24,7 @@ struct GC_forwardState {
 static inline bool isPointerInToSpace (GC_state s, pointer p);
 static inline bool isObjptrInToSpace (GC_state s, objptr op);
 static inline void forwardObjptr (GC_state s, objptr *opp);
+static inline void forwardObjptrToSharedHeap (GC_state s, objptr *opp);
 static inline void forwardObjptrIfInNursery (GC_state s, objptr *opp);
 static inline void forwardInterGenerationalObjptrs (GC_state s);
 

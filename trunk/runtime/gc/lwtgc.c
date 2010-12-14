@@ -25,7 +25,7 @@ static inline void liftObjptr (GC_state s, objptr *opp) {
         }
         return;
     }
-    forwardObjptr (s, opp);
+    forwardObjptrToSharedHeap (s, opp);
 
     objptr new_op = *opp;
     pointer new_p = objptrToPointer (new_op, s->heap->start);
@@ -79,21 +79,10 @@ void liftAllObjectsDuringInit (GC_state s) {
   if (DEBUG_LWTGC)
     fprintf (stderr, "liftAllObjectsDuringInit: \n");
 
-  assert (s->auxHeap->size == 0);
-  if (DEBUG_LWTGC)
-    fprintf (stderr, "\tCreating auxheap of size = %ld bytes\n", s->heap->size * FACT);
-  createHeap (s, s->auxHeap, s->heap->size * FACT, s->heap->size * FACT);
-
-  /* set up new offsets in gc_state */
-  for (int proc = 0; proc < s->numberOfProcs; proc ++) {
-    s->procStates[proc].sharedHeapStart = s->auxHeap->start;
-    s->procStates[proc].sharedHeapEnd = s->auxHeap->start + s->auxHeap->size;
-  }
-
   //Set up the forwarding state
-  pointer toStart = alignFrontier (s, s->auxHeap->start);
-  s->forwardState.toStart = s->auxHeap->start;
-  s->forwardState.toLimit = s->auxHeap->start + s->auxHeap->size;
+  pointer toStart = alignFrontier (s, s->sharedFrontier);
+  s->forwardState.toStart = s->sharedFrontier;
+  s->forwardState.toLimit = s->sharedLimit;
   s->forwardState.back = toStart;
 
   //Forward
@@ -137,9 +126,6 @@ void liftAllObjectsDuringInit (GC_state s) {
     fprintf (stderr, "liftAllObjectsDuringInit: resizeHeap\n");
   //resizeHeap (s, s->heap->oldGenSize);
 
-  //suffix
-  s->auxHeap->oldGenSize = s->forwardState.back - s->auxHeap->start;
-
   //Check
   if (DEBUG_LWTGC) {
     fprintf (stderr, "liftAllObjectsDuringInit: check\n");
@@ -162,7 +148,6 @@ void GC_move (GC_state s, pointer p) {
   getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
   getThreadCurrent(s)->exnStack = s->exnStack;
   beginAtomic (s);
-  Proc_beginCriticalSection(s);
 
   if (DEBUG_LWTGC)
     fprintf (stderr, "GC_move: \n");
@@ -171,42 +156,22 @@ void GC_move (GC_state s, pointer p) {
   if (isObjectLifted (getHeader (p))) {
     /* LEAVE (0) */
     s->syncReason = SYNC_NONE;
-    Proc_endCriticalSection(s);
     endAtomic (s);
     return;
   }
 
-  //create auxHeap if you haven't already done so
-  if (s->auxHeap->size == 0) {
-    if (DEBUG_LWTGC)
-      fprintf (stderr, "\tCreating auxheap of size = %ld bytes\n", s->heap->size);
-    createHeap (s, s->auxHeap, s->heap->size, s->heap->size);
-
-    /* set up new offsets in gc_state */
-    for (int proc = 0; proc < s->numberOfProcs; proc ++) {
-      s->procStates[proc].sharedHeapStart = s->auxHeap->start;
-      s->procStates[proc].sharedHeapEnd = s->auxHeap->start + s->auxHeap->size;
-    }
-
-  }
-  else
-    assert (s->auxHeap->size > s->auxHeap->oldGenSize);
-
   //Set up the forwarding state
-  s->forwardState.toStart = s->auxHeap->start + s->auxHeap->oldGenSize;
-  s->forwardState.toLimit = s->auxHeap->start + s->auxHeap->size;
+  s->forwardState.toStart = s->sharedFrontier;
+  s->forwardState.toLimit = s->sharedLimit;
   s->forwardState.back = s->forwardState.toStart;
   s->forwardState.amInMinorGC = TRUE;
 
-  /* Forward the given object to auxHeap */
+  /* Forward the given object to sharedHeap */
   objptr op = pointerToObjptr (p, s->heap->start);
   objptr* pOp = &op;
   liftObjptr (s, pOp);
   foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, liftObjptr, TRUE);
-  s->auxHeap->oldGenSize = s->forwardState.back - s->auxHeap->start;
   s->forwardState.amInMinorGC = FALSE;
-
-  assert (s->auxHeap->size > s->auxHeap->oldGenSize);
 
   //Check
   if (DEBUG_LWTGC) {

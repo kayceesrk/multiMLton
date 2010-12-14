@@ -19,8 +19,8 @@ bool isPointerInOldGen (GC_state s, pointer p) {
 
 bool isPointerInSharedHeap (GC_state s, pointer p) {
   return (not (isPointer (p))
-          or (s->auxHeap->start <= p
-              and p < s->auxHeap->start + s->auxHeap->oldGenSize));
+          or (s->sharedHeap->start <= p
+              and p < s->sharedHeap->start + s->sharedHeap->oldGenSize));
 }
 
 bool isPointerInNursery (GC_state s, pointer p) {

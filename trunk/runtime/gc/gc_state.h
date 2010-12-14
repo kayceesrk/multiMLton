@@ -17,18 +17,14 @@ struct GC_state {
   pointer limit; /* limit = heap->start + heap->size */
   pointer stackTop; /* Top of stack in current thread. */
   pointer stackLimit; /* stackBottom + stackSize - maxFrameSize */
+  pointer sharedFrontier;
+  pointer sharedLimit;
   size_t exnStack;
   /* Alphabetized fields follow. */
   size_t alignment; /* */
   bool amInGC;
   bool amOriginal;
   uint32_t procId;
-
-  /* These fields refer to the shared heap boundaries. They are updated when
-   * the shared heap is resized. */
-  pointer sharedHeapStart;
-  pointer sharedHeapEnd; /* sharedHeapStart + sharedHeapSize */
-
   char **atMLtons; /* Initial @MLton args, processed before command line. */
   uint32_t atMLtonsLength;
   uint32_t atomicState;
@@ -42,7 +38,7 @@ struct GC_state {
   pointer ffiOpArgsResPtr;
   GC_frameLayout frameLayouts; /* Array of frame layouts. */
   uint32_t frameLayoutsLength; /* Cardinality of frameLayouts array. */
-  struct GC_generationalMaps generationalMaps;
+  struct GC_generationalMaps generationalMaps; /* generational maps for this heap */
   /* Currently only used to hold raise operands. XXX at least i think so */
   Pointer *globalObjptrNonRoot;
   /* Ordinary globals */
@@ -54,6 +50,9 @@ struct GC_state {
   uint32_t intInfInitsLength;
   struct GC_lastMajorStatistics *lastMajorStatistics;
   pointer limitPlusSlop; /* limit + GC_HEAP_LIMIT_SLOP */
+  pointer sharedLimitPlusSlop;
+  pointer start; /* Like heap->nursery but per processor.  nursery <= start <= frontier */
+  pointer sharedStart;
   int (*loadGlobals)(FILE *f); /* loads the globals from the file. */
   uint32_t magic; /* The magic number for this executable. */
   uint32_t maxFrameSize;
@@ -82,13 +81,13 @@ struct GC_state {
                        */
   int (*saveGlobals)(FILE *f); /* saves the globals to the file. */
   bool saveWorldStatus; /* */
-  struct GC_heap *secondaryHeap; /* Used for major copying collection. */
-  struct GC_heap *auxHeap; /* Used as a uncollected shared heap for testing lwtgc */
+  struct GC_heap *secondaryLocalHeap; /* Used for major copying collection. */
+  struct GC_heap *sharedHeap; /* Used as a uncollected shared heap for testing lwtgc */
+  struct GC_heap *secondarySharedHeap; /* Used for major copying collection on shared heap */
   objptr signalHandlerThread; /* Handler for signals (in heap). */
   struct GC_signalsInfo signalsInfo;
   struct GC_sourceMaps sourceMaps;
   pointer stackBottom; /* Bottom of stack in current thread. */
-  pointer start; /* Like heap->nursery but per processor.  nursery <= start <= frontier */
   uintmax_t startTime; /* The time when GC_init or GC_loadWorld was called. */
   int32_t copiedSize;
   int32_t syncReason;
@@ -107,10 +106,14 @@ static void displayGCState (GC_state s, FILE *stream);
 
 static inline size_t sizeofGCStateCurrentStackUsed (GC_state s);
 static inline void setGCStateCurrentThreadAndStack (GC_state s);
-static void setGCStateCurrentHeap (GC_state s,
-                                   size_t oldGenBytesRequested,
-                                   size_t nurseryBytesRequested,
-                                   bool duringInit);
+static void setGCStateCurrentSharedHeap (GC_state s,
+                                         size_t oldGenBytesRequested,
+                                         size_t nurseryBytesRequested,
+                                         bool duringInit);
+static void setGCStateCurrentLocalHeap (GC_state s,
+                                        size_t oldGenBytesRequested,
+                                        size_t nurseryBytesRequested);
+
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */
 

@@ -270,7 +270,7 @@ bool createHeapSecondary (GC_state s, size_t desiredSize) {
       or (s->controls->maxHeap > 0
           and s->heap->size + desiredSize > s->controls->maxHeap))
     return FALSE;
-  return createHeap (s, s->secondaryHeap, desiredSize, s->heap->oldGenSize);
+  return createHeap (s, s->secondaryLocalHeap, desiredSize, s->heap->oldGenSize);
 }
 
 /* remapHeap (s, h, desiredSize, minSize)
@@ -480,7 +480,7 @@ void resizeHeap (GC_state s, size_t minSize) {
   if (desiredSize <= s->heap->size) {
     shrinkHeap (s, s->heap, desiredSize);
   } else {
-    releaseHeap (s, s->secondaryHeap);
+    releaseHeap (s, s->secondaryLocalHeap);
     growHeap (s, desiredSize, minSize);
   }
   assert (s->heap->size >= minSize);
@@ -493,19 +493,19 @@ void resizeHeapSecondary (GC_state s) {
   size_t secondarySize;
 
   primarySize = s->heap->size;
-  secondarySize = s->secondaryHeap->size;
+  secondarySize = s->secondaryLocalHeap->size;
   if (DEBUG_RESIZING)
-    fprintf (stderr, "secondaryHeapResize\n");
+    fprintf (stderr, "secondaryLocalHeapResize\n");
   if (0 == secondarySize)
     return;
   if (2 * primarySize > s->sysvals.ram)
-    /* Holding on to secondaryHeap might cause paging.  So don't. */
-    releaseHeap (s, s->secondaryHeap);
+    /* Holding on to secondaryLocalHeap might cause paging.  So don't. */
+    releaseHeap (s, s->secondaryLocalHeap);
   else if (secondarySize < primarySize) {
-    unless (remapHeap (s, s->secondaryHeap, primarySize, primarySize))
-      releaseHeap (s, s->secondaryHeap);
+    unless (remapHeap (s, s->secondaryLocalHeap, primarySize, primarySize))
+      releaseHeap (s, s->secondaryLocalHeap);
   } else if (secondarySize > primarySize)
-    shrinkHeap (s, s->secondaryHeap, primarySize);
-  assert (0 == s->secondaryHeap->size
-          or s->heap->size == s->secondaryHeap->size);
+    shrinkHeap (s, s->secondaryLocalHeap, primarySize);
+  assert (0 == s->secondaryLocalHeap->size
+          or s->heap->size == s->secondaryLocalHeap->size);
 }
