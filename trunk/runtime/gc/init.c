@@ -145,6 +145,8 @@ int processAtMLton (GC_state s, int argc, char **argv,
         } else if (0 == strcmp (arg, "restrict-available")) {
           i++;
           s->controls->restrictAvailableSize = TRUE;
+          fprintf (stderr, "restrict-available has been disabled\n");
+          exit (1);
         } else if (0 == strcmp (arg, "available-ratio")) {
           i++;
           if (i == argc)

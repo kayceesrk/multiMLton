@@ -61,12 +61,13 @@ void setGCStateCurrentLocalHeap (GC_state s,
   size_t genNurserySize;
 
   if (DEBUG_DETAILED)
-    fprintf (stderr, "setGCStateCurrentSharedHeap(%s, %s)\n",
+    fprintf (stderr, "setGCStateCurrentLocalHeap(%s, %s)\n",
              uintmaxToCommaString(oldGenBytesRequested),
              uintmaxToCommaString(nurseryBytesRequested));
   h = s->heap;
   assert (isFrontierAligned (s, h->start + h->oldGenSize + oldGenBytesRequested));
   s->limitPlusSlop = h->start + h->size;
+  h->availableSize = h->size;
   s->limit = s->limitPlusSlop - GC_HEAP_LIMIT_SLOP;
   nurserySize = h->size - (h->oldGenSize + oldGenBytesRequested);
   assert (isFrontierAligned (s, s->limitPlusSlop - nurserySize));
@@ -105,9 +106,10 @@ void setGCStateCurrentLocalHeap (GC_state s,
   assert (nurseryBytesRequested <= nurserySize);
   s->heap->nursery = nursery;
   s->frontier = nursery;
+  h->frontier = s->frontier;
   assert (nurseryBytesRequested <= (size_t)(s->limitPlusSlop - s->frontier));
   assert (isFrontierAligned (s, s->heap->nursery));
-  assert (hasHeapBytesFree (s, oldGenBytesRequested, nurseryBytesRequested));
+  assert (hasLocalHeapBytesFree (s, oldGenBytesRequested, nurseryBytesRequested));
 }
 
 void setGCStateCurrentSharedHeap (GC_state s,
@@ -295,11 +297,11 @@ void setGCStateCurrentSharedHeap (GC_state s,
 
   if (not duringInit) {
     assert (getThreadCurrent(s)->bytesNeeded <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier));
-    assert (hasHeapBytesFree (s, oldGenBytesRequested, getThreadCurrent(s)->bytesNeeded));
+    assert (hasSharedHeapBytesFree (s, oldGenBytesRequested, getThreadCurrent(s)->bytesNeeded));
   }
   else {
     assert (nurseryBytesRequested <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier));
-    assert (hasHeapBytesFree (s, oldGenBytesRequested, nurseryBytesRequested));
+    assert (hasSharedHeapBytesFree (s, oldGenBytesRequested, nurseryBytesRequested));
   }
   assert (isFrontierAligned (s, s->sharedFrontier));
 }

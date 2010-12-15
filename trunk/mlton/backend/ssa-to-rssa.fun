@@ -1060,6 +1060,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
 
                                   val (stmts1, cond1) = addressInLocalHeap (lhsAddr)
                                   val (stmts2, cond2) = addressInLocalHeap (rhsAddr)
+                                  val (stmts3, cond3) = addressInLocalHeap (rhsAddr)
 
 
                                   val cardMarkStmts =
@@ -1109,10 +1110,10 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                   newBlock
                                   {args = Vector.new0 (),
                                    kind = Kind.Jump,
-                                   statements = Vector.fromList stmts2,
+                                   statements = Vector.fromList stmts3,
                                    transfer =
                                     Transfer.ifBool
-                                    (Operand.Var {var = cond2, ty = indexTy},
+                                    (Operand.Var {var = cond3, ty = indexTy},
                                      {truee = moveBlock,
                                       falsee = continue})}
 

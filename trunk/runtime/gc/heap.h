@@ -49,7 +49,8 @@ static inline bool isObjptrInOldGen (GC_state s, objptr op);
 static inline bool isObjptrInNursery (GC_state s, objptr op);
 static inline bool isObjptrInFromSpace (GC_state s, objptr op);
 static inline bool isObjptrInSharedHeap (GC_state s, objptr op);
-static inline bool hasHeapBytesFree (GC_state s, size_t oldGen, size_t nursery);
+static inline bool hasLocalHeapBytesFree (GC_state s, size_t oldGen, size_t nursery);
+static inline bool hasSharedHeapBytesFree (GC_state s, size_t oldGen, size_t nursery);
 static inline bool isHeapInit (GC_heap h);
 
 static void displayHeap (GC_state s, GC_heap heap, FILE *stream);

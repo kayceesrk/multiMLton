@@ -25,7 +25,7 @@ void GC_pack (__attribute__ ((unused)) GC_state *gs) {
   if (keep <= s->heap->size) {
     shrinkHeap (s, s->heap, keep);
     setCardMapAndCrossMap (s);
-    setGCStateCurrentSharedHeap (s, 0, 0, true);
+    setGCStateCurrentLocalHeap (s, 0, 0);
     setGCStateCurrentThreadAndStack (s);
   }
   releaseHeap (s, s->secondaryLocalHeap);
@@ -55,7 +55,7 @@ void GC_unpack (__attribute__ ((unused)) GC_state *gs) {
   resizeHeap (s, s->heap->oldGenSize);
   setCardMapAndCrossMap (s);
   resizeHeapSecondary (s);
-  setGCStateCurrentSharedHeap (s, 0, 0, true);
+  setGCStateCurrentLocalHeap (s, 0, 0);
   setGCStateCurrentThreadAndStack (s);
   leaveGC (s);
   if (DEBUG or s->controls->messages)

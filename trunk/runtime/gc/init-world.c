@@ -158,7 +158,9 @@ void initWorld (GC_state s) {
   initVectors (s);
   assert ((size_t)(s->frontier - start) <= s->lastMajorStatistics->bytesLive);
   s->heap->oldGenSize = s->frontier - s->heap->start;
+  fprintf (stderr, "initWorld (1)\n");
   setGCStateCurrentLocalHeap (s, 0, 0);
+  fprintf (stderr, "initWorld (2)\n");
 
   //set up shared heap
   //Create an initial heap of size 10M

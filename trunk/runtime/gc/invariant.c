@@ -78,7 +78,7 @@ bool invariantForGC (GC_state s) {
   unless (0 == s->heap->size or 0 == s->frontier) {
     assert (s->frontier <= s->limitPlusSlop);
     assert ((s->limit == 0) or (s->limit == s->limitPlusSlop - GC_HEAP_LIMIT_SLOP));
-    assert (hasHeapBytesFree (s, 0, 0));
+    assert (hasLocalHeapBytesFree (s, 0, 0));
   }
   assert (s->secondaryLocalHeap->start == NULL
           or s->heap->size == s->secondaryLocalHeap->size);

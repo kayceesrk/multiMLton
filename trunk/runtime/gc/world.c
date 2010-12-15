@@ -34,7 +34,7 @@ void loadWorldFromFILE (GC_state s, FILE *f) {
    * since it changes pointers in all of them.
    */
   translateHeap (s, start, s->heap->start, s->heap->oldGenSize);
-  setGCStateCurrentSharedHeap (s, 0, 0, true);
+  setGCStateCurrentLocalHeap (s, 0, 0);
   setGCStateCurrentThreadAndStack (s);
 }
 
