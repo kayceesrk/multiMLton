@@ -1085,8 +1085,6 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                   transfer =
                                   Goto {args = Vector.new0 (),
                                         dst = continue}}
-
-
                                 val returnFromHandler =
                                   newBlock
                                   {args = Vector.new0 (),
@@ -1127,8 +1125,6 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                     (Operand.Var {var = cond2, ty = indexTy},
                                      {truee = cardMarkBlock,
                                       falsee = continue})}
-
-
                               in
                                 (stmts1,
                                  Transfer.ifBool
