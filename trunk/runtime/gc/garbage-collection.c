@@ -533,7 +533,7 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
   assert (not ensureStack or invariantForMutatorStack(s));
 
 
-  if (DEBUG_LWTGC and s->sharedHeap->size > 0) {
+  if (DEBUG_LWTGC and s->sharedHeap and s->sharedHeap->size > 0) {
     fprintf (stderr, "GC_collect: check\n");
     s->forwardState.toStart = s->sharedHeap->start;
     s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;

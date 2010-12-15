@@ -293,6 +293,8 @@ void setGCStateCurrentSharedHeap (GC_state s,
     frontier = s->sharedLimitPlusSlop + GC_BONUS_SLOP;
   }
   h->frontier = frontier;
+  if (DEBUG)
+      fprintf (stderr, "setGCStateCurrentSharedHeap: h->frontier: %p", h->frontier);
   assert (h->frontier <= h->start + h->availableSize);
 
   if (not duringInit) {

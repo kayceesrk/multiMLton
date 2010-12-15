@@ -166,10 +166,10 @@ void initWorld (GC_state s) {
   //Create an initial heap of size 10M
   createHeap (s, s->sharedHeap, 1024 * 1024 * 10, 1024 * 1024 * 10);
   start = alignFrontier (s, s->sharedHeap->start);
-  s->start = s->frontier = start;
-  s->limitPlusSlop = s->sharedHeap->start + s->sharedHeap->size - GC_BONUS_SLOP;
-  s->limit = s->limitPlusSlop - GC_HEAP_LIMIT_SLOP;
-  s->sharedHeap->oldGenSize = s->frontier - s->sharedHeap->start;
+  s->sharedStart = s->sharedFrontier = start;
+  s->sharedLimitPlusSlop = s->sharedHeap->start + s->sharedHeap->size - GC_BONUS_SLOP;
+  s->sharedLimit = s->sharedLimitPlusSlop - GC_HEAP_LIMIT_SLOP;
+  s->sharedHeap->oldGenSize = s->sharedFrontier - s->sharedHeap->start;
   setGCStateCurrentSharedHeap (s, 0, 0, true);
 
   thread = newThread (s, sizeofStackInitialReserved (s));
