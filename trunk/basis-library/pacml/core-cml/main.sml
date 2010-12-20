@@ -119,6 +119,7 @@ struct
           fun lateInit () =
           let
             val () = Config.isRunning := true
+            val () = debug' "lateInit"
             (* Spawn the Non-blocking worker threads *)
             val _ = List.tabulate (numIOThreads * 5, fn _ => NonBlocking.mkNBThread ())
             val _ = List.tabulate (numIOThreads, fn i => PacmlFFI.wakeUp (PacmlFFI.numComputeProcessors + i, 1))

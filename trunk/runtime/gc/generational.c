@@ -65,21 +65,21 @@ bool isCardMarked (GC_state s, pointer p) {
 void markCard (GC_state s, pointer p) {
   if (DEBUG_CARD_MARKING)
     fprintf (stderr, "markCard ("FMTPTR")\n", (uintptr_t)p);
-  if (s->mutatorMarksCards && !isPointerInSharedHeap (s, p))
+  if (s->mutatorMarksCards && !isPointerInHeap (s, s->sharedHeap, p))
     *(pointerToCardMapAddr (s, p)) = 0x1;
 }
 
 void markIntergenerationalPointer (GC_state s, pointer *pp) {
   if (s->mutatorMarksCards
-      and isPointerInOldGen (s, (pointer)pp)
-      and isPointerInNursery (s, *pp))
+      and isPointerInOldGen (s, s->heap, (pointer)pp)
+      and isPointerInNursery (s, s->heap, *pp))
     markCard (s, (pointer)pp);
 }
 
 void markIntergenerationalObjptr (GC_state s, objptr *opp) {
   if (s->mutatorMarksCards
-      and isPointerInOldGen (s, (pointer)opp)
-      and isObjptrInNursery (s, *opp))
+      and isPointerInOldGen (s, s->heap, (pointer)opp)
+      and isObjptrInNursery (s, s->heap, *opp))
     markCard (s, (pointer)opp);
 }
 

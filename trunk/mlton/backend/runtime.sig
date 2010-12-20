@@ -33,6 +33,8 @@ signature RUNTIME =
              | MaxFrameSize
              | ProcId
              | ReturnToC
+             | SharedHeapStart
+             | SharedHeapEnd
              | SignalIsPending
              | StackBottom
              | StackLimit (* Must have StackTop <= StackLimit *)
@@ -53,6 +55,8 @@ signature RUNTIME =
                              maxFrameSize: Bytes.t,
                              procId: Bytes.t,
                              returnToC: Bytes.t,
+                             sharedHeapStart: Bytes.t,
+                             sharedHeapEnd: Bytes.t,
                              signalIsPending: Bytes.t,
                              stackBottom: Bytes.t,
                              stackLimit: Bytes.t,
@@ -70,6 +74,8 @@ signature RUNTIME =
                            maxFrameSize: Bytes.t,
                            procId: Bytes.t,
                            returnToC: Bytes.t,
+                           sharedHeapStart: Bytes.t,
+                           sharedHeapEnd: Bytes.t,
                            signalIsPending: Bytes.t,
                            stackBottom: Bytes.t,
                            stackLimit: Bytes.t,
@@ -101,7 +107,6 @@ signature RUNTIME =
       val labelSize: unit -> Bytes.t
       val limitSlop: Bytes.t
       val lwtgcMask: IntInf.t
-      val lwtgcInvMask: IntInf.t
       val maxFrameSize: Bytes.t
       val cpointerSize: unit -> Bytes.t
       val objptrSize: unit -> Bytes.t

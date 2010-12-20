@@ -57,10 +57,10 @@ pointer GC_arrayAllocate (GC_state s,
     //XXX SPH I dont need ENTER/LEAVE
     s->syncReason = SYNC_OLD_GEN_ARRAY;
     ENTER0 (s);
-    if (not hasLocalHeapBytesFree (s, arraySizeAligned, ensureBytesFree)) {
+    if (not hasHeapBytesFree (s, s->heap, arraySizeAligned, ensureBytesFree)) {
       performGC (s, arraySizeAligned, ensureBytesFree, FALSE, TRUE, FALSE);
     }
-    assert (hasLocalHeapBytesFree (s, arraySizeAligned, ensureBytesFree));
+    assert (hasHeapBytesFree (s, s->heap, arraySizeAligned, ensureBytesFree));
     frontier = s->heap->start + s->heap->oldGenSize;
     assert (isFrontierAligned (s, frontier));
 
@@ -76,13 +76,13 @@ pointer GC_arrayAllocate (GC_state s,
     pointer newFrontier;
 
     bytesRequested = arraySizeAligned + ensureBytesFree;
-    if (not hasLocalHeapBytesFree (s, 0, bytesRequested)) {
+    if (not hasHeapBytesFree (s, s->heap, 0, bytesRequested)) {
       /* Local alloc may still require getting the lock, but we will release
          it before initialization. */
       ensureHasHeapBytesFreeAndOrInvariantForMutator (s, FALSE, FALSE, FALSE,
                                                       0, bytesRequested, FALSE, FALSE);
     }
-    assert (hasLocalHeapBytesFree (s, 0, bytesRequested));
+    assert (hasHeapBytesFree (s, s->heap, 0, bytesRequested));
     frontier = s->frontier;
     newFrontier = frontier + arraySizeAligned;
     assert (isFrontierAligned (s, newFrontier));

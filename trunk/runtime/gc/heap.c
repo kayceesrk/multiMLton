@@ -27,7 +27,8 @@ void displayHeap (__attribute__ ((unused)) GC_state s,
 
 
 void initHeap (__attribute__ ((unused)) GC_state s,
-               GC_heap h) {
+               GC_heap h, GC_heapKind kind) {
+  h->kind = kind;
   h->nursery = NULL;
   h->oldGenSize = 0;
   h->size = 0;
@@ -129,7 +130,7 @@ void releaseHeap (GC_state s, GC_heap h) {
              uintmaxToCommaString(h->size),
              uintmaxToCommaString(h->withMapsSize - h->size));
   GC_release (h->start, h->withMapsSize);
-  initHeap (s, h);
+  initHeap (s, h, h->kind);
 }
 
 /* shrinkHeap (s, h, keepSize)
@@ -389,7 +390,7 @@ void growHeap (GC_state s, size_t desiredSize, size_t minSize) {
   }
   if (!useCurrent)
     shrinkHeap (s, curHeapp, liveSize);
-  initHeap (s, newHeapp);
+  initHeap (s, newHeapp, curHeapp->kind);
   /* Allocate a space of the desired size. */
   if (createHeap (s, newHeapp, desiredSize, minSize)) {
     pointer from;

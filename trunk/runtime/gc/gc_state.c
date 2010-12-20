@@ -106,10 +106,11 @@ void setGCStateCurrentLocalHeap (GC_state s,
   assert (nurseryBytesRequested <= nurserySize);
   s->heap->nursery = nursery;
   s->frontier = nursery;
+  s->start = nursery;
   h->frontier = s->frontier;
   assert (nurseryBytesRequested <= (size_t)(s->limitPlusSlop - s->frontier));
   assert (isFrontierAligned (s, s->heap->nursery));
-  assert (hasLocalHeapBytesFree (s, oldGenBytesRequested, nurseryBytesRequested));
+  assert (hasHeapBytesFree (s, s->heap, oldGenBytesRequested, nurseryBytesRequested));
 }
 
 void setGCStateCurrentSharedHeap (GC_state s,
@@ -299,13 +300,19 @@ void setGCStateCurrentSharedHeap (GC_state s,
   fprintf (stderr, "Frontier : %p h->frontier %p\n", (void*)frontier, (void*)h->frontier);
   assert (h->frontier <= h->start + h->availableSize);
 
+  //Set sharedHeap limits in gcState
+  for (int proc=0; proc < s->numberOfProcs; proc++) {
+      s->procStates[proc].sharedHeapStart = s->sharedHeap->start;
+      s->procStates[proc].sharedHeapEnd = s->sharedHeap->start + s->sharedHeap->size;
+  }
+
   if (not duringInit) {
     assert (getThreadCurrent(s)->bytesNeeded <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier));
-    assert (hasSharedHeapBytesFree (s, oldGenBytesRequested, getThreadCurrent(s)->bytesNeeded));
+    assert (hasHeapBytesFree (s, s->sharedHeap, oldGenBytesRequested, getThreadCurrent(s)->bytesNeeded));
   }
   else {
     assert (nurseryBytesRequested <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier));
-    assert (hasSharedHeapBytesFree (s, oldGenBytesRequested, nurseryBytesRequested));
+    assert (hasHeapBytesFree (s, s->sharedHeap, oldGenBytesRequested, nurseryBytesRequested));
   }
   assert (isFrontierAligned (s, s->sharedFrontier));
 }

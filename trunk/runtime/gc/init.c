@@ -389,7 +389,7 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->currentThread = BOGUS_OBJPTR;
   s->hashConsDuringGC = FALSE;
   s->heap = (GC_heap) malloc (sizeof (struct GC_heap));
-  initHeap (s, s->heap);
+  initHeap (s, s->heap, LOCAL_HEAP);
   s->lastMajorStatistics = (struct GC_lastMajorStatistics *)
     malloc (sizeof (struct GC_lastMajorStatistics));
   s->lastMajorStatistics->bytesHashConsed = 0;
@@ -406,11 +406,13 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->rootsLength = 0;
   s->savedThread = BOGUS_OBJPTR;
   s->secondaryLocalHeap = (GC_heap) malloc (sizeof (struct GC_heap));
-  initHeap (s, s->secondaryLocalHeap);
+  initHeap (s, s->secondaryLocalHeap, LOCAL_HEAP);
   s->sharedHeap = (GC_heap) malloc (sizeof (struct GC_heap));
-  initHeap (s, s->sharedHeap);
+  initHeap (s, s->sharedHeap, SHARED_HEAP);
+  s->sharedHeapStart = 0;
+  s->sharedHeapEnd = 0;
   s->secondarySharedHeap = (GC_heap) malloc (sizeof (struct GC_heap));
-  initHeap (s, s->secondarySharedHeap);
+  initHeap (s, s->secondarySharedHeap, SHARED_HEAP);
   s->signalHandlerThread = BOGUS_OBJPTR;
   s->signalsInfo.amInSignalHandler = FALSE;
   s->signalsInfo.gcSignalHandled = FALSE;
@@ -511,6 +513,8 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->numIOThreads = s->numIOThreads;
   d->enableTimer = s->enableTimer;
   d->timeInterval = s->timeInterval;
+  d->sharedHeapStart = s->sharedHeapStart;
+  d->sharedHeapEnd = s->sharedHeapEnd;
   d->roots = NULL;
   d->rootsLength = 0;
   d->savedThread = BOGUS_OBJPTR;

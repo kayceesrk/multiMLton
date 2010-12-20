@@ -51,6 +51,7 @@ struct GC_state {
   struct GC_lastMajorStatistics *lastMajorStatistics;
   pointer limitPlusSlop; /* limit + GC_HEAP_LIMIT_SLOP */
   pointer sharedLimitPlusSlop;
+  //XXX SPH -- This should not be needed for local heaps
   pointer start; /* Like heap->nursery but per processor.  nursery <= start <= frontier */
   pointer sharedStart;
   int (*loadGlobals)(FILE *f); /* loads the globals from the file. */
@@ -85,6 +86,8 @@ struct GC_state {
   struct GC_heap *sharedHeap; /* Used as a uncollected shared heap for testing lwtgc */
   struct GC_heap *secondarySharedHeap; /* Used for major copying collection on shared heap */
   objptr signalHandlerThread; /* Handler for signals (in heap). */
+  pointer sharedHeapStart;
+  pointer sharedHeapEnd;
   struct GC_signalsInfo signalsInfo;
   struct GC_sourceMaps sourceMaps;
   pointer stackBottom; /* Bottom of stack in current thread. */

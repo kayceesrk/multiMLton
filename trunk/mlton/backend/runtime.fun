@@ -26,6 +26,8 @@ structure GCField =
        | MaxFrameSize
        | ProcId
        | ReturnToC
+       | SharedHeapStart
+       | SharedHeapEnd
        | SignalIsPending
        | StackBottom
        | StackLimit
@@ -44,6 +46,8 @@ structure GCField =
       val maxFrameSizeOffset: Bytes.t ref = ref Bytes.zero
       val procIdOffset: Bytes.t ref = ref Bytes.zero
       val returnToCOffset: Bytes.t ref = ref Bytes.zero
+      val sharedHeapStartOffset: Bytes.t ref = ref Bytes.zero
+      val sharedHeapEndOffset: Bytes.t ref = ref Bytes.zero
       val signalIsPendingOffset: Bytes.t ref = ref Bytes.zero
       val stackBottomOffset: Bytes.t ref = ref Bytes.zero
       val stackLimitOffset: Bytes.t ref = ref Bytes.zero
@@ -51,8 +55,8 @@ structure GCField =
 
       fun setOffsets {atomicState, cardMapAbsolute, currentThread, curSourceSeqsIndex,
                       exnStack, ffiOpArgsResPtr, frontier, globalObjptrNonRoot, limit,
-                      limitPlusSlop, maxFrameSize, procId, returnToC, signalIsPending,
-                      stackBottom, stackLimit, stackTop} =
+                      limitPlusSlop, maxFrameSize, procId, returnToC, sharedHeapStart,
+                      sharedHeapEnd, signalIsPending, stackBottom, stackLimit, stackTop} =
          (atomicStateOffset := atomicState
           ; cardMapAbsoluteOffset := cardMapAbsolute
           ; currentThreadOffset := currentThread
@@ -66,6 +70,8 @@ structure GCField =
           ; maxFrameSizeOffset := maxFrameSize
           ; procIdOffset := procId
           ; returnToCOffset := returnToC
+          ; sharedHeapStartOffset := sharedHeapStart
+          ; sharedHeapEndOffset := sharedHeapEnd
           ; signalIsPendingOffset := signalIsPending
           ; stackBottomOffset := stackBottom
           ; stackLimitOffset := stackLimit
@@ -85,6 +91,8 @@ structure GCField =
           | MaxFrameSize => !maxFrameSizeOffset
           | ProcId => !procIdOffset
           | ReturnToC => !returnToCOffset
+          | SharedHeapStart => !sharedHeapStartOffset
+          | SharedHeapEnd => !sharedHeapEndOffset
           | SignalIsPending => !signalIsPendingOffset
           | StackBottom => !stackBottomOffset
           | StackLimit => !stackLimitOffset
@@ -103,6 +111,8 @@ structure GCField =
       val maxFrameSizeSize: Bytes.t ref = ref Bytes.zero
       val procIdSize: Bytes.t ref = ref Bytes.zero
       val returnToCSize: Bytes.t ref = ref Bytes.zero
+      val sharedHeapStartSize: Bytes.t ref = ref Bytes.zero
+      val sharedHeapEndSize: Bytes.t ref = ref Bytes.zero
       val signalIsPendingSize: Bytes.t ref = ref Bytes.zero
       val stackBottomSize: Bytes.t ref = ref Bytes.zero
       val stackLimitSize: Bytes.t ref = ref Bytes.zero
@@ -110,8 +120,8 @@ structure GCField =
 
       fun setSizes {atomicState, cardMapAbsolute, currentThread, curSourceSeqsIndex,
                     exnStack, ffiOpArgsResPtr, frontier, globalObjptrNonRoot, limit,
-                    limitPlusSlop, maxFrameSize,  procId, returnToC, signalIsPending,
-                    stackBottom, stackLimit, stackTop} =
+                    limitPlusSlop, maxFrameSize,  procId, returnToC, sharedHeapStart,
+                    sharedHeapEnd, signalIsPending, stackBottom, stackLimit, stackTop} =
          (atomicStateSize := atomicState
           ; cardMapAbsoluteSize := cardMapAbsolute
           ; currentThreadSize := currentThread
@@ -125,6 +135,8 @@ structure GCField =
           ; maxFrameSizeSize := maxFrameSize
           ; procIdSize := procId
           ; returnToCSize := returnToC
+          ; sharedHeapStartSize := sharedHeapStart
+          ; sharedHeapEndSize := sharedHeapEnd
           ; signalIsPendingSize := signalIsPending
           ; stackBottomSize := stackBottom
           ; stackLimitSize := stackLimit
@@ -144,6 +156,8 @@ structure GCField =
           | MaxFrameSize => !maxFrameSizeSize
           | ProcId => !procIdSize
           | ReturnToC => !returnToCSize
+          | SharedHeapStart => !sharedHeapStartSize
+          | SharedHeapEnd => !sharedHeapEndSize
           | SignalIsPending => !signalIsPendingSize
           | StackBottom => !stackBottomSize
           | StackLimit => !stackLimitSize
@@ -163,6 +177,8 @@ structure GCField =
           | MaxFrameSize => "MaxFrameSize"
           | ProcId => "ProcIdSize"
           | ReturnToC => "ReturnToC"
+          | SharedHeapStart => "SharedHeapStart"
+          | SharedHeapEnd => "SharedHeapEnd"
           | SignalIsPending => "SignalIsPending"
           | StackBottom => "StackBottom"
           | StackLimit => "StackLimit"
@@ -235,7 +251,6 @@ val headerOffset : unit -> Bytes.t =
    Promise.lazy (Bytes.~ o headerSize)
 
 val lwtgcMask = Word.toIntInf 0wxFFF7FFFF
-val lwtgcInvMask = Word.toIntInf 0wx00080000
 
 (* see gc/array.h *)
 val arrayLengthSize : unit -> Bytes.t =

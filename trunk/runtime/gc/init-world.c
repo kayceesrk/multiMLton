@@ -183,7 +183,7 @@ void duplicateWorld (GC_state d, GC_state s) {
   d->lastMajorStatistics->bytesLive = 0;
   //set up local heap
   d->heap = (GC_heap) malloc (sizeof (struct GC_heap));
-  initHeap (d, d->heap);
+  initHeap (d, d->heap, LOCAL_HEAP);
   createHeap (d, d->heap, 8192, 8192);
   start = alignFrontier (d, d->heap->start);
   d->start = d->frontier = start;
@@ -195,7 +195,7 @@ void duplicateWorld (GC_state d, GC_state s) {
 
   //set up shared local heap
   d->secondaryLocalHeap = (GC_heap) malloc (sizeof (struct GC_heap));
-  initHeap (d, d->secondaryLocalHeap);
+  initHeap (d, d->secondaryLocalHeap, LOCAL_HEAP);
 
 
   /* Use the original to allocate */

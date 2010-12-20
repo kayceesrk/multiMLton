@@ -44,7 +44,7 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
       return;
   }
 
-  assert (isObjptrInFromSpace (s, *opp));
+  assert (isObjptrInFromSpace (s, s->heap, *opp));
 
   if (header != GC_FORWARDED) { /* forward the object */
     size_t size, skip;
@@ -112,7 +112,7 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
                  (uintptr_t)w);
       if (isObjptr (w->objptr)
           and (not s->forwardState.amInMinorGC
-               or isObjptrInNursery (s, w->objptr))) {
+               or isObjptrInNursery (s, s->heap, w->objptr))) {
         if (DEBUG_WEAK)
           fprintf (stderr, "linking\n");
         w->link = s->weaks;
@@ -141,7 +141,7 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
     fprintf (stderr,
              "forwardObjptr --> *opp = "FMTPTR"\n",
              (uintptr_t)*opp);
-  assert (isObjptrInToSpace (s, *opp) || isObjptrInSharedHeap (s, *opp));
+  assert (isObjptrInToSpace (s, *opp) || isObjptrInHeap (s, s->sharedHeap, *opp));
 }
 
 /* forward (s, opp)
@@ -167,7 +167,7 @@ void forwardObjptr (GC_state s, objptr *opp) {
       return;
   }
 
-  assert (isObjptrInFromSpace (s, *opp));
+  assert (isObjptrInFromSpace (s, s->heap, *opp));
 
   if (header != GC_FORWARDED) { /* forward the object */
     size_t size, skip;
@@ -233,7 +233,7 @@ void forwardObjptr (GC_state s, objptr *opp) {
                  (uintptr_t)w);
       if (isObjptr (w->objptr)
           and (not s->forwardState.amInMinorGC
-               or isObjptrInNursery (s, w->objptr))) {
+               or isObjptrInNursery (s, s->heap, w->objptr))) {
         if (DEBUG_WEAK)
           fprintf (stderr, "linking\n");
         w->link = s->weaks;
@@ -260,7 +260,7 @@ void forwardObjptr (GC_state s, objptr *opp) {
     fprintf (stderr,
              "forwardObjptr --> *opp = "FMTPTR"\n",
              (uintptr_t)*opp);
-  assert (isObjptrInToSpace (s, *opp) || isObjptrInSharedHeap (s, *opp));
+  assert (isObjptrInToSpace (s, *opp) || isObjptrInHeap (s, s->heap, *opp));
 }
 
 void forwardObjptrIfInNursery (GC_state s, objptr *opp) {

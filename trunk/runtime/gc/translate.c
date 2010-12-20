@@ -22,7 +22,8 @@ void translateObjptr (GC_state s, objptr *opp) {
   p = objptrToPointer (*opp, translateState.from);
 
   /* Do not translate pointers that does not belong to your heap */
-  if (isPointerInSharedHeap (s, p)) {
+  //XXX GCSH -- this needs to change
+  if (isPointerInHeap (s, s->sharedHeap, p)) {
       if (DEBUG)
           fprintf (stderr, "translateObjptr: shared heap pointer "FMTPTR" translation skipped.\n",
                    (uintptr_t)p);

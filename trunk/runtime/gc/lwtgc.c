@@ -13,13 +13,13 @@ static inline void liftObjptr (GC_state s, objptr *opp);
 /* Move an object from local heap to the shared heap */
 static inline void liftObjptr (GC_state s, objptr *opp) {
 
-    if (not isObjptrInNursery (s, *opp)) {
+    if (not isObjptrInNursery (s, s->heap, *opp)) {
         if (DEBUG_LWTGC) {
             fprintf (stderr, "\t is not in nursery\n");
         }
     }
     /* If pointer has already been forwarded, skip setting lift bit */
-    if (isObjptrInSharedHeap (s, *opp)) {
+    if (isObjptrInHeap (s, s->heap, *opp)) {
         if (DEBUG_LWTGC) {
             fprintf (stderr, "\t object in shared heap\n");
         }
@@ -42,7 +42,7 @@ static inline void liftObjptr (GC_state s, objptr *opp) {
 
 static inline void assertLiftedObjptr (GC_state s, objptr *opp) {
     objptr op = *opp;
-    bool res = isObjptrInSharedHeap (s, op);
+    bool res = isObjptrInHeap (s, s->sharedHeap, op);
     assert (res);
 }
 
@@ -188,7 +188,6 @@ void GC_move (GC_state s, pointer p) {
     performGC (s, 0, 0, FALSE, TRUE, TRUE);
 
   /* LEAVE0 (s) */
-  Proc_endCriticalSection(s);
   endAtomic (s);
 
   if (DEBUG_LWTGC)

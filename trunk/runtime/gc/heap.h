@@ -22,15 +22,23 @@
  *  |------------------------------withMapsSize-----------------------------|
 */
 
+typedef enum {
+    LOCAL_HEAP,
+    SHARED_HEAP
+} GC_heapKind;
+
 typedef struct GC_heap {
-  size_t availableSize; /* may be smaller than size if we are limiting
-                           allocation for profiling purposes */
-  pointer frontier; /* next (globally) unallocated space */
+  GC_heapKind kind;
   pointer nursery; /* start of nursery */
   size_t oldGenSize; /* size of old generation */
   size_t size; /* size of heap */
   pointer start; /* start of heap (and old generation) */
   size_t withMapsSize; /* size of heap with card/cross maps */
+
+  //The following structures are only used in shared heaps
+  size_t availableSize; /* may be smaller than size if we are limiting
+                           allocation for profiling purposes */
+  pointer frontier; /* next (globally) unallocated space */
 } *GC_heap;
 
 #define GC_HEAP_LIMIT_SLOP 512
@@ -39,23 +47,20 @@ typedef struct GC_heap {
 
 #if (defined (MLTON_GC_INTERNAL_FUNCS))
 
-static inline bool isPointerInHeap (GC_state s, pointer p);
-static inline bool isPointerInOldGen (GC_state s, pointer p);
-static inline bool isPointerInNursery (GC_state s, pointer p);
-static inline bool isPointerInFromSpace (GC_state s, pointer p);
-static inline bool isPointerInSharedHeap (GC_state s, pointer p);
-static inline bool isObjptrInHeap (GC_state s, objptr op);
-static inline bool isObjptrInOldGen (GC_state s, objptr op);
-static inline bool isObjptrInNursery (GC_state s, objptr op);
-static inline bool isObjptrInFromSpace (GC_state s, objptr op);
-static inline bool isObjptrInSharedHeap (GC_state s, objptr op);
-static inline bool hasLocalHeapBytesFree (GC_state s, size_t oldGen, size_t nursery);
-static inline bool hasSharedHeapBytesFree (GC_state s, size_t oldGen, size_t nursery);
+static inline bool isPointerInHeap (GC_state s, GC_heap h, pointer p);
+static inline bool isPointerInOldGen (GC_state s, GC_heap h, pointer p);
+static inline bool isPointerInNursery (GC_state s, GC_heap h, pointer p);
+static inline bool isPointerInFromSpace (GC_state s, GC_heap h, pointer p);
+static inline bool isObjptrInHeap (GC_state s, GC_heap h, objptr op);
+static inline bool isObjptrInOldGen (GC_state s, GC_heap h, objptr op);
+static inline bool isObjptrInNursery (GC_state s, GC_heap h, objptr op);
+static inline bool isObjptrInFromSpace (GC_state s, GC_heap h, objptr op);
+static inline bool hasHeapBytesFree (GC_state s, GC_heap h, size_t oldGen, size_t nursery);
 static inline bool isHeapInit (GC_heap h);
 
 static void displayHeap (GC_state s, GC_heap heap, FILE *stream);
 
-static inline void initHeap (GC_state s, GC_heap h);
+static inline void initHeap (GC_state s, GC_heap h, GC_heapKind);
 static inline size_t sizeofHeapDesired (GC_state s, size_t live, size_t currentSize);
 
 static inline void releaseHeap (GC_state s, GC_heap h);

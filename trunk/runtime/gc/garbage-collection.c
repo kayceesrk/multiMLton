@@ -61,8 +61,8 @@ void growStackCurrent (GC_state s, bool allocInOldGen) {
              uintmaxToCommaString(reserved),
              uintmaxToCommaString(getStackCurrent(s)->used));
   assert (allocInOldGen ?
-          hasLocalHeapBytesFree (s, sizeofStackWithHeader (s, reserved), 0) :
-          hasLocalHeapBytesFree (s, 0, sizeofStackWithHeader (s, reserved)));
+          hasHeapBytesFree (s, s->heap, sizeofStackWithHeader (s, reserved), 0) :
+          hasHeapBytesFree (s, s->heap, 0, sizeofStackWithHeader (s, reserved)));
   stack = newStack (s, reserved, allocInOldGen);
   copyStack (s, getStackCurrent(s), stack);
   getThreadCurrent(s)->stack = pointerToObjptr ((pointer)stack, s->heap->start);
@@ -162,8 +162,8 @@ void performGC (GC_state s,
       or totalBytesRequested > s->heap->availableSize - s->heap->oldGenSize)
     majorGC (s, totalBytesRequested, mayResize);
   setGCStateCurrentLocalHeap (s, oldGenBytesRequested + stackBytesRequested,
-                         nurseryBytesRequested);
-  assert (hasLocalHeapBytesFree (s, oldGenBytesRequested + stackBytesRequested,
+                              nurseryBytesRequested);
+  assert (hasHeapBytesFree (s, s->heap, oldGenBytesRequested + stackBytesRequested,
                             nurseryBytesRequested));
   unless (stackTopOk)
     growStackCurrent (s, TRUE);
@@ -208,7 +208,7 @@ void performGC (GC_state s,
   }
   if (DEBUG)
     displayGCState (s, stderr);
-  assert (hasLocalHeapBytesFree (s, oldGenBytesRequested, nurseryBytesRequested));
+  assert (hasHeapBytesFree (s, s->heap, oldGenBytesRequested, nurseryBytesRequested));
   assert (invariantForGC (s));
   leaveGC (s);
 }
@@ -460,7 +460,7 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
   maybeSatisfyAllocationRequestLocally (s, nurseryBytesRequested + stackBytesRequested);
 
   if (not stackTopOk
-      and (hasLocalHeapBytesFree (s, 0, stackBytesRequested))) {
+      and (hasHeapBytesFree (s, s->heap, 0, stackBytesRequested))) {
     if (DEBUG or s->controls->messages)
       fprintf (stderr, "GC: growing stack locally... [%d]\n",
                s->procStates ? Proc_processorNumber (s) : -1);
@@ -471,7 +471,7 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
   if (DEBUG or s->controls->messages) {
     fprintf (stderr, "GC: stackInvariant: %d,%d hasLocalHeapBytesFree: %d inSection: %d force: %d [%d]\n",
              ensureStack, ensureStack and invariantForMutatorStack (s),
-             hasLocalHeapBytesFree (s, oldGenBytesRequested, nurseryBytesRequested),
+             hasHeapBytesFree (s, s->heap, oldGenBytesRequested, nurseryBytesRequested),
              Proc_threadInSection (s),
              forceGC,
              s->procStates ? Proc_processorNumber (s) : -1);
@@ -484,7 +484,7 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
       or ((ensureStack and not invariantForMutatorStack (s))
           and (s->syncReason = SYNC_STACK))
       /* this subsumes invariantForMutatorFrontier */
-      or (not hasLocalHeapBytesFree (s, oldGenBytesRequested, nurseryBytesRequested)
+      or (not hasHeapBytesFree (s, s->heap, oldGenBytesRequested, nurseryBytesRequested)
             and (s->syncReason = SYNC_HEAP))
       /* another thread is waiting for exclusive access */
       or Proc_threadInSection (s)
@@ -501,7 +501,7 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
     if (fromGCCollect and (not s->signalsInfo.amInSignalHandler))
         switchToSignalHandlerThreadIfNonAtomicAndSignalPending (s);
     if ((ensureStack and not invariantForMutatorStack (s))
-        or not hasLocalHeapBytesFree (s, oldGenBytesRequested, nurseryBytesRequested)
+        or not hasHeapBytesFree (s, s->heap, oldGenBytesRequested, nurseryBytesRequested)
         or forceGC) {
       performGC (s, oldGenBytesRequested, nurseryBytesRequested, forceGC, TRUE, FALSE);
     }
@@ -526,7 +526,7 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
     unless (0 == s->heap->size or 0 == s->frontier) {
       assert (s->frontier <= s->limitPlusSlop);
       assert ((s->limit == 0) or (s->limit == s->limitPlusSlop - GC_HEAP_LIMIT_SLOP));
-      assert (hasLocalHeapBytesFree (s, 0, 0));
+      assert (hasHeapBytesFree (s, s->heap, 0, 0));
     }
   }
   assert (not ensureFrontier or invariantForMutatorFrontier(s));

@@ -7,8 +7,8 @@
  */
 
 void assertIsObjptrInFromSpaceOrLifted (GC_state s, objptr *opp) {
-  assert (isObjptrInFromSpace (s, *opp) || isObjptrInSharedHeap (s, *opp));
-  unless (isObjptrInFromSpace (s, *opp) || isObjptrInSharedHeap (s, *opp))
+  assert (isObjptrInFromSpace (s, s->heap, *opp) || isObjptrInHeap (s, s->sharedHeap, *opp));
+  unless (isObjptrInFromSpace (s, s->heap, *opp) || isObjptrInHeap (s, s->sharedHeap, *opp))
     die ("gc.c: assertIsObjptrInFromSpaceOrLifted "
          "opp = "FMTPTR"  "
          "*opp = "FMTOBJPTR"\n",
@@ -16,8 +16,8 @@ void assertIsObjptrInFromSpaceOrLifted (GC_state s, objptr *opp) {
 }
 
 void assertIsObjptrInFromSpace (GC_state s, objptr *opp) {
-  assert (isObjptrInFromSpace (s, *opp));
-  unless (isObjptrInFromSpace (s, *opp))
+  assert (isObjptrInFromSpace (s, s->heap, *opp));
+  unless (isObjptrInFromSpace (s, s->heap, *opp))
     die ("gc.c: assertIsObjptrInFromSpace "
          "opp = "FMTPTR"  "
          "*opp = "FMTOBJPTR"\n",
@@ -28,8 +28,8 @@ void assertIsObjptrInFromSpace (GC_state s, objptr *opp) {
    * marked, but any remaining cards aren't.
    */
   if (FALSE and s->mutatorMarksCards
-      and isPointerInOldGen (s, (pointer)opp)
-      and isObjptrInNursery (s, *opp)
+      and isPointerInOldGen (s, s->heap, (pointer)opp)
+      and isObjptrInNursery (s, s->heap, *opp)
       and not isCardMarked (s, (pointer)opp)) {
     displayGCState (s, stderr);
     die ("gc.c: intergenerational pointer from "FMTPTR" to "FMTOBJPTR" with unmarked card.\n",
@@ -78,7 +78,7 @@ bool invariantForGC (GC_state s) {
   unless (0 == s->heap->size or 0 == s->frontier) {
     assert (s->frontier <= s->limitPlusSlop);
     assert ((s->limit == 0) or (s->limit == s->limitPlusSlop - GC_HEAP_LIMIT_SLOP));
-    assert (hasLocalHeapBytesFree (s, 0, 0));
+    assert (hasHeapBytesFree (s, s->heap, 0, 0));
   }
   assert (s->secondaryLocalHeap->start == NULL
           or s->heap->size == s->secondaryLocalHeap->size);
@@ -91,7 +91,7 @@ bool invariantForGC (GC_state s) {
                         assertIsObjptrInFromSpaceOrLifted, FALSE);
   if (DEBUG_DETAILED)
     fprintf (stderr, "Checking nursery.\n");
-  if (s->procStates) {
+  if (s->procStates && FALSE) { //XXX SPH GCSH -- do not read the global info here as we only do local gc
     pointer firstStart = s->heap->frontier;
     for (proc = 0; proc < s->numberOfProcs; proc++) {
       foreachObjptrInRange (s, s->procStates[proc].start,
