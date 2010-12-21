@@ -75,11 +75,8 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
       headerBytes = GC_STACK_HEADER_SIZE;
       stack = (GC_stack)p;
 
-      /* Check if the pointer is the current stack of any processor. */
-      for (int proc = 0; proc < s->numberOfProcs; proc++) {
-        isCurrentStack |= (getStackCurrent(&s->procStates[proc]) == stack
-                           && not isStackEmpty(stack));
-      }
+      /* Check if the pointer is the current stack of current processor. */
+      isCurrentStack = (getStackCurrent(s) == stack && not isStackEmpty(stack));
 
       reservedNew = sizeofStackShrinkReserved (s, stack, isCurrentStack);
       if (reservedNew < stack->reserved) {
@@ -198,11 +195,8 @@ void forwardObjptr (GC_state s, objptr *opp) {
       headerBytes = GC_STACK_HEADER_SIZE;
       stack = (GC_stack)p;
 
-      /* Check if the pointer is the current stack of any processor. */
-      for (int proc = 0; proc < s->numberOfProcs; proc++) {
-        isCurrentStack |= (getStackCurrent(&s->procStates[proc]) == stack
-                           && not isStackEmpty(stack));
-      }
+      /* Check if the pointer is the current stack of current processor. */
+      isCurrentStack |= (getStackCurrent(s) == stack && not isStackEmpty(stack));
 
       reservedNew = sizeofStackShrinkReserved (s, stack, isCurrentStack);
       if (reservedNew < stack->reserved) {

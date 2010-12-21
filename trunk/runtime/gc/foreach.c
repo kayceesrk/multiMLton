@@ -24,26 +24,10 @@ void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f) {
   }
   if (DEBUG_DETAILED)
     fprintf (stderr, "foreachGlobal threads\n");
-  if (s->procStates) {
-    for (int proc = 0; proc < s->numberOfProcs; proc++) {
-      callIfIsObjptr (s, f, &s->procStates[proc].callFromCHandlerThread);
-      callIfIsObjptr (s, f, &s->procStates[proc].currentThread);
-      callIfIsObjptr (s, f, &s->procStates[proc].savedThread);
-      callIfIsObjptr (s, f, &s->procStates[proc].signalHandlerThread);
-
-      if (s->procStates[proc].roots) {
-        for (uint32_t i = 0; i < s->procStates[proc].rootsLength; i++) {
-          callIfIsObjptr (s, f, &s->procStates[proc].roots[i]);
-        }
-      }
-    }
-  }
-  else {
-    callIfIsObjptr (s, f, &s->callFromCHandlerThread);
-    callIfIsObjptr (s, f, &s->currentThread);
-    callIfIsObjptr (s, f, &s->savedThread);
-    callIfIsObjptr (s, f, &s->signalHandlerThread);
-  }
+  callIfIsObjptr (s, f, &s->callFromCHandlerThread);
+  callIfIsObjptr (s, f, &s->currentThread);
+  callIfIsObjptr (s, f, &s->savedThread);
+  callIfIsObjptr (s, f, &s->signalHandlerThread);
 }
 
 

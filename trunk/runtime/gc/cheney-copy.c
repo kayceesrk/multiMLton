@@ -38,13 +38,10 @@ void updateWeaksForCheneyCopy (GC_state s) {
 
 void swapHeapsForCheneyCopy (GC_state s) {
   GC_heap tempHeap;
-
-  for (int proc = 0; proc < s->numberOfProcs; proc++) {
-    tempHeap = s->procStates[proc].secondaryLocalHeap;
-    s->procStates[proc].secondaryLocalHeap = s->procStates[proc].heap;
-    s->procStates[proc].heap = tempHeap;
-    setCardMapAbsolute (&s->procStates[proc]);
-  }
+  tempHeap = s->secondaryLocalHeap;
+  s->secondaryLocalHeap = s->heap;
+  s->heap = tempHeap;
+  setCardMapAbsolute (s);
 }
 
 void majorCheneyCopyGC (GC_state s) {
@@ -129,21 +126,16 @@ void minorCheneyCopyGC (GC_state s, bool isAfterLifting) {
   if (bytesAllocated == 0)
     return;
   if (not s->canMinor) {
-    for (int proc = 0; proc < s->numberOfProcs; proc++) {
-      /* Add in the bonus slop now since we need to fill it */
-      s->procStates[proc].limitPlusSlop += GC_BONUS_SLOP;
-      if (s->procStates[proc].limitPlusSlop != s->heap->frontier) {
-        /* Fill to avoid an uninitialized gap in the middle of the heap */
-        bytesFilled += fillGap (s, s->procStates[proc].frontier,
-                                s->procStates[proc].limitPlusSlop);
-      }
-      else {
-        /* If this is at the end of the heap there is no need to fill the gap
+    if (s->limitPlusSlop != s->heap->frontier) {
+      /* Fill to avoid an uninitialized gap in the middle of the heap */
+      bytesFilled += fillGap (s, s->frontier, s->limitPlusSlop);
+    }
+    else {
+      /* If this is at the end of the heap there is no need to fill the gap
          -- there will be no break in the initialized portion of the
          heap.  Also, this is the last chunk allocated in the nursery, so it is
          safe to use the frontier from this processor as the global frontier.  */
-        s->heap->oldGenSize = s->procStates[proc].frontier - s->heap->start;
-      }
+      s->heap->oldGenSize = s->frontier - s->heap->start;
     }
     bytesCopied = 0;
   } else {

@@ -1,7 +1,7 @@
 structure Scheduler : SCHEDULER =
 struct
 
-  structure Assert = LocalAssert(val assert = false)
+  structure Assert = LocalAssert(val assert = true)
   structure Debug = LocalDebug(val debug = true)
 
   open Critical
@@ -114,10 +114,11 @@ struct
                                   end
                   | HOST =>
                       let
-                        val _ = debug' "Scheduler.unwrap.HOST"
+                        val _ = debug' "Scheduler.unwrap.HOST(1)"
                         val tid = TID.getCurThreadId ()
                         val RHOST (tid', host') = f (RHOST (tid, host))
                         val () = TID.setCurThreadId tid'
+                        val _ = debug' "Scheduler.unwrap.HOST(2)"
                       in
                         host'
                       end

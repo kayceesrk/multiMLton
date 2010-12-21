@@ -11,7 +11,7 @@ struct
   structure MT = MLtonThread
   structure PT = ProtoThread
 
-  structure Assert = LocalAssert(val assert = false)
+  structure Assert = LocalAssert(val assert = true)
   structure Debug = LocalDebug(val debug = true)
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
@@ -63,9 +63,8 @@ struct
 
   fun alrmHandler thrd =
     let
-      val () = Assert.assertAtomic' ("RunCML.alrmHandler", NONE)
-      val () = debug' "alrmHandler(1)" (* Atomic 1 *)
       val () = Assert.assertAtomic' ("RunCML.alrmHandler", SOME 1)
+      val () = debug' "alrmHandler(1)" (* Atomic 1 *)
       val () = S.preempt thrd
       val () = TO.preemptTime ()
       val _ = TO.preempt ()

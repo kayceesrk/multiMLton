@@ -53,8 +53,6 @@ pointer GC_arrayAllocate (GC_state s,
   holdLock = arraySizeAligned >= s->controls->oldGenArraySize;
 
   if (holdLock) {
-    /* Global alloc */
-    //XXX SPH I dont need ENTER/LEAVE
     s->syncReason = SYNC_OLD_GEN_ARRAY;
     ENTER0 (s);
     if (not hasHeapBytesFree (s, s->heap, arraySizeAligned, ensureBytesFree)) {

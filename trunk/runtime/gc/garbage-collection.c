@@ -146,17 +146,6 @@ void performGC (GC_state s,
     oldGenBytesRequested
     + stackBytesRequested;
   getThreadCurrent(s)->bytesNeeded = nurseryBytesRequested;
-  for (int proc = 0; proc < s->numberOfProcs; proc++) {
-    /* It could be that other threads have already worked to satisfy their own
-       requests.  We need to make sure that we don't invalidate the work
-       they've done.
-    */
-    if (getThreadCurrent(&s->procStates[proc])->bytesNeeded == 0) {
-      getThreadCurrent(&s->procStates[proc])->bytesNeeded = GC_HEAP_LIMIT_SLOP;
-    }
-    totalBytesRequested += getThreadCurrent(&s->procStates[proc])->bytesNeeded;
-    totalBytesRequested += GC_BONUS_SLOP;
-  }
 
   if (forceMajor
       or totalBytesRequested > s->heap->availableSize - s->heap->oldGenSize)
@@ -167,11 +156,7 @@ void performGC (GC_state s,
                             nurseryBytesRequested));
   unless (stackTopOk)
     growStackCurrent (s, TRUE);
-  for (int proc = 0; proc < s->numberOfProcs; proc++) {
-    /* DOC XXX must come first to setup maps properly */
-    s->procStates[proc].generationalMaps = s->generationalMaps;
-    setGCStateCurrentThreadAndStack (&s->procStates[proc]);
-  }
+  setGCStateCurrentThreadAndStack (s);
   if (needGCTime (s)) {
     gcTime = stopWallTiming (&tv_start, &s->cumulativeStatistics->ru_gc);
     s->cumulativeStatistics->maxPauseTime =
@@ -498,6 +483,7 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
     if (isObjptr (getThreadCurrentObjptr(s)))
       getThreadCurrent(s)->bytesNeeded = nurseryBytesRequested;
 
+    ENTER_LOCAL0 (s);
     if (fromGCCollect and (not s->signalsInfo.amInSignalHandler))
         switchToSignalHandlerThreadIfNonAtomicAndSignalPending (s);
     if ((ensureStack and not invariantForMutatorStack (s))
@@ -508,6 +494,7 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
     else
       if (DEBUG or s->controls->messages)
         fprintf (stderr, "GC: Skipping GC (inside of sync). [%d]\n", s->procStates ? Proc_processorNumber (s) : -1);
+    LEAVE_LOCAL0 (s);
   }
   else {
     if (DEBUG or s->controls->messages)

@@ -10,6 +10,8 @@
 
 static inline void enter (GC_state s);
 static inline void leave (GC_state s);
+static inline void enter_local (GC_state s);
+static inline void leave_local (GC_state s);
 
 #define ENTER0(s) do { enter (s); } while(0)
 #define ENTER1(s, p) do { objptr roots[1]; \
@@ -44,4 +46,15 @@ static inline void leave (GC_state s);
                           s->rootsLength = 0; \
                         } while(0)
 
+#define ENTER_LOCAL0(s) do { enter_local (s); } while(0)
+#define LEAVE_LOCAL0(s) do { leave_local (s); } while(0)
+#define LEAVE_LOCAL1(s, p) do { objptr roots[1]; \
+                                roots[0] = pointerToObjptr (p, s->heap->start); \
+                                s->roots = roots; \
+                                s->rootsLength = 1; \
+                                leave_local (s); \
+                                p = objptrToPointer (roots[0], s->heap->start); \
+                                s->roots = NULL; \
+                                s->rootsLength = 0; \
+                              } while(0)
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

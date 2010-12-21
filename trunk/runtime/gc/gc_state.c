@@ -107,7 +107,7 @@ void setGCStateCurrentLocalHeap (GC_state s,
   s->heap->nursery = nursery;
   s->frontier = nursery;
   s->start = nursery;
-  h->frontier = s->frontier;
+  h->frontier = s->limitPlusSlop;
   assert (nurseryBytesRequested <= (size_t)(s->limitPlusSlop - s->frontier));
   assert (isFrontierAligned (s, s->heap->nursery));
   assert (hasHeapBytesFree (s, s->heap, oldGenBytesRequested, nurseryBytesRequested));

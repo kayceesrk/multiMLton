@@ -3,6 +3,7 @@
 extern C_Pthread_Key_t gcstate_key;
 
 static void handler (int signum) {
+    //XXX This might be wrong as signals that are sent to other threads are ignored
     if (Parallel_processorNumber () != 0) return;
     GC_state gcState = pthread_getspecific(gcstate_key);
     GC_handler(gcState,signum);

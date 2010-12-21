@@ -43,3 +43,34 @@ void leave (GC_state s) {
   if (DEBUG_ENTER_LEAVE)
     fprintf (stderr, "leave unlocked [%d]\n", Proc_processorNumber (s));
 }
+
+
+//Local enter and leave
+void enter_local (GC_state s) {
+  if (DEBUG_ENTER_LEAVE)
+    fprintf (stderr, "enter_local [%d]\n", Proc_processorNumber (s));
+  /* used needs to be set because the mutator has changed s->stackTop. */
+  getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
+  getThreadCurrent(s)->exnStack = s->exnStack;
+  beginAtomic (s);
+  //Proc_beginCriticalSection(s);
+  if (DEBUG_ENTER_LEAVE)
+    displayGCState (s, stderr);
+  assert (invariantForGC (s));
+  if (DEBUG_ENTER_LEAVE)
+    fprintf (stderr, "enter_local ok [%d]\n", Proc_processorNumber (s));
+}
+
+void leave_local (GC_state s) {
+  if (DEBUG_ENTER_LEAVE)
+    fprintf (stderr, "leave_local [%d] \n", Proc_processorNumber (s));
+  /* The mutator frontier invariant may not hold
+   * for functions that don't ensureBytesFree.
+   */
+  assert (invariantForMutator (s, FALSE, TRUE));
+  s->syncReason = SYNC_NONE;
+  if (DEBUG_ENTER_LEAVE)
+    fprintf (stderr, "leave_local ok [%d]\n", Proc_processorNumber (s));
+  //Proc_endCriticalSection(s);
+  endAtomic (s);
+}

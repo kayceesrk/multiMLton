@@ -24,7 +24,7 @@ bool isPointerInNursery (GC_state s, GC_heap h, pointer p) {
   return (not (isPointer (p))
           or (h->kind==SHARED_HEAP ?
              (s->sharedHeap->nursery <= p and p < s->sharedHeap->frontier) :
-             (s->heap->nursery <= p and p < s->frontier)));
+             (s->heap->nursery <= p and p < s->heap->frontier)));
 }
 
 bool isPointerInFromSpace (GC_state s, GC_heap h, pointer p) {
