@@ -147,6 +147,10 @@ void performGC (GC_state s,
     + stackBytesRequested;
   getThreadCurrent(s)->bytesNeeded = nurseryBytesRequested;
 
+  if (nurseryBytesRequested == 0)
+      nurseryBytesRequested = GC_HEAP_LIMIT_SLOP;
+  totalBytesRequested += nurseryBytesRequested;
+
   if (forceMajor
       or totalBytesRequested > s->heap->availableSize - s->heap->oldGenSize)
     majorGC (s, totalBytesRequested, mayResize);

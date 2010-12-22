@@ -23,7 +23,6 @@
 #define FALSE 0
 #endif
 
-#define DEBUG_MEMORY
 
 #ifndef DEBUG_CCODEGEN
 #define DEBUG_CCODEGEN FALSE

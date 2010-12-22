@@ -100,7 +100,7 @@ void setGCStateCurrentLocalHeap (GC_state s,
     clearCardMap (s);
   } else {
     unless (nurseryBytesRequested <= nurserySize)
-      die ("Out of memory.  Insufficient space in nursery.");
+      die ("Out of memory.  Insufficient space in local nursery.");
     s->canMinor = FALSE;
   }
   assert (nurseryBytesRequested <= nurserySize);
