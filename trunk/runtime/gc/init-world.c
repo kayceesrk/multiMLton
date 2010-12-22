@@ -193,7 +193,7 @@ void duplicateWorld (GC_state d, GC_state s) {
   setGCStateCurrentLocalHeap (d, 0, 0);
   setCardMapAndCrossMap (d);
 
-  //set up shared local heap
+  //set up secondary local heap
   d->secondaryLocalHeap = (GC_heap) malloc (sizeof (struct GC_heap));
   initHeap (d, d->secondaryLocalHeap, LOCAL_HEAP);
 
@@ -204,9 +204,8 @@ void duplicateWorld (GC_state d, GC_state s) {
 
   /* Now copy stats, heap data from original */
   d->cumulativeStatistics->maxHeapSize = s->cumulativeStatistics->maxHeapSize;
-  d->secondaryLocalHeap = s->secondaryLocalHeap;
   d->sharedHeap = s->sharedHeap;
-  d->generationalMaps = s->generationalMaps;
+  d->secondarySharedHeap = s->secondarySharedHeap;
 
   /* Allocation handled in setGCStateCurrentSharedHeap when called from initWorld */
 

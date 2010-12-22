@@ -181,6 +181,7 @@ void GC_move (GC_state s, pointer p) {
 
   /* Force a garbage collection. Essential to fix the forwarding pointers from
    * the previous step.
+   * NOTE: Major GC needs to be forced only if moving objects from the major heap.
    * ENTER0 (s) -- atomicState is atomic */
   if (not s->canMinor || TRUE /* Force Major */)
     performGC (s, 0, 0, TRUE, TRUE, TRUE);
