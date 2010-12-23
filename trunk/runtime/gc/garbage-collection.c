@@ -91,12 +91,56 @@ void leaveGC (GC_state s) {
   s->amInGC = FALSE;
 }
 
+void fixForwardingPointers (GC_state s, bool mayResize) {
+  uintmax_t gcTime;
+  struct timeval tv_start;
+
+  if (DEBUG)
+      fprintf (stderr, "Starting fixForwardingPointers\n");
+
+  enterGC (s);
+  s->cumulativeStatistics->numGCs++;
+  if (needGCTime (s))
+    startWallTiming (&tv_start);
+  size_t nurseryBytesRequested = GC_HEAP_LIMIT_SLOP;
+  size_t totalBytesRequested = nurseryBytesRequested;
+
+  majorGC (s, totalBytesRequested, mayResize);
+  setGCStateCurrentLocalHeap (s, 0, nurseryBytesRequested);
+  assert (hasHeapBytesFree (s, s->heap, 0, nurseryBytesRequested));
+  setGCStateCurrentThreadAndStack (s);
+
+  if (needGCTime (s)) {
+    gcTime = stopWallTiming (&tv_start, &s->cumulativeStatistics->ru_gc);
+    s->cumulativeStatistics->maxPauseTime =
+      max (s->cumulativeStatistics->maxPauseTime, gcTime);
+  } else
+    gcTime = 0;  /* Assign gcTime to quell gcc warning. */
+
+  /* Send a GC signal. */
+  if (s->signalsInfo.gcSignalHandled
+      and s->signalHandlerThread != BOGUS_OBJPTR) {
+    if (DEBUG_SIGNALS)
+      fprintf (stderr, "GC Signal pending.\n");
+    s->signalsInfo.gcSignalPending = TRUE;
+    unless (s->signalsInfo.amInSignalHandler)
+      s->signalsInfo.signalIsPending = TRUE;
+  }
+  if (DEBUG)
+    displayGCState (s, stderr);
+  assert (hasHeapBytesFree (s, s->heap, 0, nurseryBytesRequested));
+  assert (invariantForGC (s));
+  leaveGC (s);
+  if (DEBUG)
+      fprintf (stderr, "Finished fixForwardingPointers\n");
+}
+
+
 void performGC (GC_state s,
                 size_t oldGenBytesRequested,
                 size_t nurseryBytesRequested,
                 bool forceMajor,
-                bool mayResize,
-                bool isAfterLifting) {
+                bool mayResize) {
   uintmax_t gcTime;
   bool stackTopOk;
   size_t stackBytesRequested;
@@ -131,12 +175,10 @@ void performGC (GC_state s,
              100.0 * ((double)(nurseryUsed) / (double)(s->heap->size)),
              100.0 * ((double)(nurseryUsed) / (double)(nurserySize)));
   }
-  /* GC invariants do not hold if performing GC for resolving forwarding pointers */
-  if (not isAfterLifting)
-      assert (invariantForGC (s));
+  assert (invariantForGC (s));
   if (needGCTime (s))
     startWallTiming (&tv_start);
-  minorCheneyCopyGC (s, isAfterLifting);
+  minorCheneyCopyGC (s, false);
   stackTopOk = invariantForMutatorStack (s);
   stackBytesRequested =
     stackTopOk
@@ -145,6 +187,7 @@ void performGC (GC_state s,
   totalBytesRequested =
     oldGenBytesRequested
     + stackBytesRequested;
+
   getThreadCurrent(s)->bytesNeeded = nurseryBytesRequested;
 
   if (nurseryBytesRequested == 0)
@@ -277,8 +320,10 @@ static void allocChunkInSharedHeap (GC_state s,
     /* See if the mutator frontier invariant is already true */
     assert (s->sharedLimitPlusSlop >= s->sharedFrontier);
     if (nurseryBytesRequested <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier)) {
+      s->sharedFrontier += nurseryBytesRequested;
       if (DEBUG)
-        fprintf (stderr, "[GC: shared alloc: satisfied.]\n");
+        fprintf (stderr, "[GC: shared alloc: satisfied. New s->sharedFrontier at "FMTPTR"]\n",
+                 (uintptr_t)s->sharedFrontier);
       return;
     }
     /* Perhaps there is not enough space in the nursery to satify this
@@ -493,7 +538,7 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
     if ((ensureStack and not invariantForMutatorStack (s))
         or not hasHeapBytesFree (s, s->heap, oldGenBytesRequested, nurseryBytesRequested)
         or forceGC) {
-      performGC (s, oldGenBytesRequested, nurseryBytesRequested, forceGC, TRUE, FALSE);
+      performGC (s, oldGenBytesRequested, nurseryBytesRequested, forceGC, TRUE);
     }
     else
       if (DEBUG or s->controls->messages)

@@ -56,7 +56,7 @@ pointer GC_arrayAllocate (GC_state s,
     s->syncReason = SYNC_OLD_GEN_ARRAY;
     ENTER0 (s);
     if (not hasHeapBytesFree (s, s->heap, arraySizeAligned, ensureBytesFree)) {
-      performGC (s, arraySizeAligned, ensureBytesFree, FALSE, TRUE, FALSE);
+      performGC (s, arraySizeAligned, ensureBytesFree, FALSE, TRUE);
     }
     assert (hasHeapBytesFree (s, s->heap, arraySizeAligned, ensureBytesFree));
     frontier = s->heap->start + s->heap->oldGenSize;

@@ -26,6 +26,7 @@ static inline bool isObjptrInToSpace (GC_state s, objptr op);
 static inline void forwardObjptr (GC_state s, objptr *opp);
 static inline void forwardObjptrToSharedHeap (GC_state s, objptr *opp);
 static inline void forwardObjptrIfInNursery (GC_state s, objptr *opp);
+static inline void forwardObjptrIfInFromSpace (GC_state s, objptr *opp);
 static inline void forwardInterGenerationalObjptrs (GC_state s);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

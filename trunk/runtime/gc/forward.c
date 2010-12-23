@@ -123,13 +123,14 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
     *((GC_header*)(p - GC_HEADER_SIZE)) = GC_FORWARDED;
     *((objptr*)p) = pointerToObjptr (s->forwardState.back + headerBytes,
                                      s->forwardState.toStart);
-    if (DEBUG_DETAILED)
+    if (DEBUG_DETAILED) {
         fprintf (stderr, "Setting headerp ="FMTPTR" to "FMTHDR"\n",
                  (uintptr_t)(p - GC_HEADER_SIZE), *((GC_header*)(p - GC_HEADER_SIZE)));
+        fprintf (stderr, "Setting p="FMTPTR" to "FMTOBJPTR"\n",
+                 (uintptr_t)p, *(objptr*)p);
+    }
     /* Update the back of the queue. */
     s->forwardState.back += size + skip;
-    /* Update frontier to reflect the object copy */
-    s->sharedFrontier = s->forwardState.back;
     assert (isAligned ((size_t)s->forwardState.back + GC_NORMAL_HEADER_SIZE,
                        s->alignment));
   }
@@ -241,9 +242,12 @@ void forwardObjptr (GC_state s, objptr *opp) {
     *((GC_header*)(p - GC_HEADER_SIZE)) = GC_FORWARDED;
     *((objptr*)p) = pointerToObjptr (s->forwardState.back + headerBytes,
                                      s->forwardState.toStart);
-    if (DEBUG_DETAILED)
+    if (DEBUG_DETAILED) {
         fprintf (stderr, "Setting headerp ="FMTPTR" to "FMTHDR"\n",
                  (uintptr_t)(p - GC_HEADER_SIZE), *((GC_header*)(p - GC_HEADER_SIZE)));
+        fprintf (stderr, "Setting p="FMTPTR" to "FMTOBJPTR"\n",
+                 (uintptr_t)p, *(objptr*)p);
+    }
     /* Update the back of the queue. */
     s->forwardState.back += size + skip;
     assert (isAligned ((size_t)s->forwardState.back + GC_NORMAL_HEADER_SIZE,
@@ -254,7 +258,7 @@ void forwardObjptr (GC_state s, objptr *opp) {
     fprintf (stderr,
              "forwardObjptr --> *opp = "FMTPTR"\n",
              (uintptr_t)*opp);
-  assert (isObjptrInToSpace (s, *opp) || isObjptrInHeap (s, s->heap, *opp));
+  assert (isObjptrInToSpace (s, *opp) || isObjptrInHeap (s, s->sharedHeap, *opp));
 }
 
 void forwardObjptrIfInNursery (GC_state s, objptr *opp) {
@@ -272,6 +276,23 @@ void forwardObjptrIfInNursery (GC_state s, objptr *opp) {
   assert (s->heap->nursery <= p and p < s->limitPlusSlop);
   forwardObjptr (s, opp);
 }
+
+void forwardObjptrIfInFromSpace (GC_state s, objptr *opp) {
+  objptr op;
+  pointer p;
+
+  op = *opp;
+  p = objptrToPointer (op, s->heap->start);
+  if (!isPointerInFromSpace (s, s->heap, p))
+    return;
+  if (DEBUG_GENERATIONAL)
+    fprintf (stderr,
+             "forwardObjptrIfInFromSpace  opp = "FMTPTR"  op = "FMTOBJPTR"  p = "FMTPTR"\n",
+             (uintptr_t)opp, op, (uintptr_t)p);
+  assert (isPointerInFromSpace (s, s->heap, p));
+  forwardObjptr (s, opp);
+}
+
 
 /* Walk through all the cards and forward all intergenerational pointers. */
 void forwardInterGenerationalObjptrs (GC_state s) {

@@ -17,8 +17,7 @@ static void performGC (GC_state s,
                        size_t oldGenBytesRequested,
                        size_t nurseryBytesRequested,
                        bool forceMajor,
-                       bool mayResize,
-                       bool isAfterLifting);
+                       bool mayResize);
 static size_t fillGap (GC_state s, pointer start, pointer end);
 static void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s,
                                                             bool forceGC,
@@ -30,6 +29,9 @@ static void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s,
                                                             bool forceStackGrowth);
 static void allocChunkInSharedHeap (GC_state s,
                                     size_t nurseryBytesRequested);
+static void fixForwardingPointers (GC_state s, bool mayResize);
+
+
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */
 
 #if (defined (MLTON_GC_INTERNAL_BASIS))

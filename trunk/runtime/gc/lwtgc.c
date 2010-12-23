@@ -19,7 +19,7 @@ static inline void liftObjptr (GC_state s, objptr *opp) {
         }
     }
     /* If pointer has already been forwarded, skip setting lift bit */
-    if (isObjptrInHeap (s, s->heap, *opp)) {
+    if (isObjptrInHeap (s, s->sharedHeap, *opp)) {
         if (DEBUG_LWTGC) {
             fprintf (stderr, "\t object in shared heap\n");
         }
@@ -133,8 +133,7 @@ void liftAllObjectsDuringInit (GC_state s) {
   }
 
   /* Force a major GC to clean up the local heap. */
-
-  performGC (s, 0, 0, TRUE, TRUE, TRUE);
+  fixForwardingPointers (s, TRUE);
   endAtomic (s);
   if (DEBUG_LWTGC)
     fprintf (stderr, "liftAllObjectsDuringInit: Exiting\n");
@@ -142,6 +141,11 @@ void liftAllObjectsDuringInit (GC_state s) {
 }
 
 void GC_move (GC_state s, pointer p) {
+  if (!(s->heap->start <= p and p < s->heap->start + s->heap->size)) {
+      if (DEBUG_LWTGC)
+          fprintf (stderr, "GC_move: pointer "FMTPTR" not in heap\n", (uintptr_t)p);
+      return;
+  }
 
   /* ENTER (0) */
   s->syncReason = SYNC_FORCE;
@@ -184,9 +188,9 @@ void GC_move (GC_state s, pointer p) {
    * NOTE: Major GC needs to be forced only if moving objects from the major heap.
    * ENTER0 (s) -- atomicState is atomic */
   if (not s->canMinor || TRUE /* Force Major */)
-    performGC (s, 0, 0, TRUE, TRUE, TRUE);
+    fixForwardingPointers (s, TRUE);
   else
-    performGC (s, 0, 0, FALSE, TRUE, TRUE);
+    fixForwardingPointers (s, TRUE);
 
   /* LEAVE0 (s) */
   endAtomic (s);

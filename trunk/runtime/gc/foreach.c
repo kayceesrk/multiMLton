@@ -24,12 +24,49 @@ void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f) {
   }
   if (DEBUG_DETAILED)
     fprintf (stderr, "foreachGlobal threads\n");
+  if (s->procStates) {
+    for (int proc = 0; proc < s->numberOfProcs; proc++) {
+      callIfIsObjptr (s, f, &s->procStates[proc].callFromCHandlerThread);
+      callIfIsObjptr (s, f, &s->procStates[proc].currentThread);
+      callIfIsObjptr (s, f, &s->procStates[proc].savedThread);
+      callIfIsObjptr (s, f, &s->procStates[proc].signalHandlerThread);
+
+      if (s->procStates[proc].roots) {
+        for (uint32_t i = 0; i < s->procStates[proc].rootsLength; i++) {
+          callIfIsObjptr (s, f, &s->procStates[proc].roots[i]);
+        }
+      }
+    }
+  }
+  else {
+    callIfIsObjptr (s, f, &s->callFromCHandlerThread);
+    callIfIsObjptr (s, f, &s->currentThread);
+    callIfIsObjptr (s, f, &s->savedThread);
+    callIfIsObjptr (s, f, &s->signalHandlerThread);
+  }
+}
+
+/* foreachGlobalObjptrInScope (s, f)
+ *
+ * Apply f to each global object pointer into the current local or shared heap.
+ */
+void foreachGlobalObjptrInScope (GC_state s, GC_foreachObjptrFun f) {
+  for (unsigned int i = 0; i < s->globalsLength; ++i) {
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "foreachGlobal %u\n", i);
+    callIfIsObjptr (s, f, &s->globals [i]);
+  }
+  if (DEBUG_DETAILED)
+    fprintf (stderr, "foreachGlobal threads\n");
   callIfIsObjptr (s, f, &s->callFromCHandlerThread);
   callIfIsObjptr (s, f, &s->currentThread);
   callIfIsObjptr (s, f, &s->savedThread);
   callIfIsObjptr (s, f, &s->signalHandlerThread);
+  if (s->procStates and s->roots) {
+    for (uint32_t i = 0; i < s->rootsLength; i++)
+      callIfIsObjptr (s, f, &s->roots[i]);
+  }
 }
-
 
 /* foreachObjptrInObject (s, p, f, skipWeaks)
  *

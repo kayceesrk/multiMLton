@@ -83,7 +83,7 @@ bool invariantForGC (GC_state s) {
   assert (s->secondaryLocalHeap->start == NULL
           or s->heap->size == s->secondaryLocalHeap->size);
   /* Check that all pointers are into from space. */
-  foreachGlobalObjptr (s, assertIsObjptrInFromSpaceOrLifted);
+  foreachGlobalObjptrInScope (s, assertIsObjptrInFromSpaceOrLifted);
   pointer back = s->heap->start + s->heap->oldGenSize;
   if (DEBUG_DETAILED)
     fprintf (stderr, "Checking old generation.\n");
