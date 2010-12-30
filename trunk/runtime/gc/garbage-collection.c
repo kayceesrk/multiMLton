@@ -105,6 +105,7 @@ void fixForwardingPointers (GC_state s, bool mayResize) {
   size_t nurseryBytesRequested = GC_HEAP_LIMIT_SLOP;
   size_t totalBytesRequested = nurseryBytesRequested;
 
+  minorCheneyCopyGC (s, true);
   majorGC (s, totalBytesRequested, mayResize);
   setGCStateCurrentLocalHeap (s, 0, nurseryBytesRequested);
   assert (hasHeapBytesFree (s, s->heap, 0, nurseryBytesRequested));
@@ -569,13 +570,13 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
   assert (not ensureStack or invariantForMutatorStack(s));
 
 
-  /* if (DEBUG_LWTGC and s->sharedHeap and s->sharedHeap->size > 0) {
+  if (DEBUG_LWTGC and s->sharedHeap and s->sharedHeap->size > 0 and FALSE) {
     fprintf (stderr, "GC_collect: check\n");
     s->forwardState.toStart = s->sharedHeap->start;
     s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
-    s->forwardState.back = s->sharedHeap->start + s->sharedHeap->oldGenSize;
+    s->forwardState.back = s->sharedFrontier;
     foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, assertLiftedObjptr, TRUE);
-  } */
+  }
 }
 
 void GC_collect (GC_state s, size_t bytesRequested, bool force,

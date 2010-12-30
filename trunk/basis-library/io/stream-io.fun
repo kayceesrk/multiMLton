@@ -5,25 +5,25 @@
  * See the file MLton-LICENSE for details.
  *)
 
-signature STREAM_IO_EXTRA_ARG = 
+signature STREAM_IO_EXTRA_ARG =
    sig
       structure Array: MONO_ARRAY
       structure ArraySlice: MONO_ARRAY_SLICE
       structure PrimIO: PRIM_IO
       structure Vector: MONO_VECTOR
       structure VectorSlice: MONO_VECTOR_SLICE
-      sharing type PrimIO.elem 
+      sharing type PrimIO.elem
          = Vector.elem = VectorSlice.elem
-         = Array.elem = ArraySlice.elem 
-      sharing type PrimIO.vector 
+         = Array.elem = ArraySlice.elem
+      sharing type PrimIO.vector
          = Vector.vector = VectorSlice.vector
-         = Array.vector = ArraySlice.vector 
-      sharing type PrimIO.vector_slice 
+         = Array.vector = ArraySlice.vector
+      sharing type PrimIO.vector_slice
          = VectorSlice.slice
          = ArraySlice.vector_slice
-      sharing type PrimIO.array 
-         = Array.array = ArraySlice.array 
-      sharing type PrimIO.array_slice 
+      sharing type PrimIO.array
+         = Array.array = ArraySlice.array
+      sharing type PrimIO.array_slice
          = ArraySlice.slice
 
       val line: {isLine: PrimIO.elem -> bool,
@@ -68,10 +68,10 @@ functor StreamIOExtra (S: STREAM_IO_EXTRA_ARG): STREAM_IO_EXTRA =
                            | LINE_BUF of buf
                            | BLOCK_BUF of buf
       fun newLineBuf bufSize =
-        LINE_BUF (Buf {size = ref 0, 
+        LINE_BUF (Buf {size = ref 0,
                        array = A.array (bufSize, someElem)})
       fun newBlockBuf bufSize =
-        BLOCK_BUF (Buf {size = ref 0, 
+        BLOCK_BUF (Buf {size = ref 0,
                         array = A.array (bufSize, someElem)})
 
       datatype state = Active | Terminated | Closed
@@ -105,7 +105,7 @@ functor StreamIOExtra (S: STREAM_IO_EXTRA_ARG): STREAM_IO_EXTRA =
                      then ()
                      else let
                              val j = write (slice (b, i, SOME (max - i)))
-                          in 
+                          in
                              if j = 0
                                 then raise (Fail "partial write")
                                 else loop (i + j)
@@ -127,8 +127,8 @@ functor StreamIOExtra (S: STREAM_IO_EXTRA_ARG): STREAM_IO_EXTRA =
 
       fun flushBuf' (writer, size, array) =
          let
-            val size' = !size 
-         in 
+            val size' = !size
+         in
             size := 0
             ; flushArr (writer, AS.slice (array, 0, SOME size'))
          end
@@ -136,7 +136,7 @@ functor StreamIOExtra (S: STREAM_IO_EXTRA_ARG): STREAM_IO_EXTRA =
       fun flushBuf (writer, Buf {size, array}) = flushBuf' (writer, size, array)
 
       fun output (os as Out {augmented_writer,
-                             state, 
+                             state,
                              bufferMode, ...}, v) =
          if terminated (!state)
             then liftExn (outstreamName os) "output" IO.ClosedStream
@@ -156,7 +156,7 @@ functor StreamIOExtra (S: STREAM_IO_EXTRA_ARG): STREAM_IO_EXTRA =
                     case !bufferMode of
                        NO_BUF => put ()
                      | LINE_BUF buf => doit (buf, fn () => (case line of
-                                                               NONE => false 
+                                                               NONE => false
                                                              | SOME {isLine, ...} => V.exists isLine v))
                      | BLOCK_BUF buf => doit (buf, fn () => false)
                  end
@@ -205,7 +205,7 @@ functor StreamIOExtra (S: STREAM_IO_EXTRA_ARG): STREAM_IO_EXTRA =
              | LINE_BUF (Buf {array, size}) =>
                   let
                      val n = !size
-                     val _ = 
+                     val _ =
                         (* Use the bounds check for the update to make sure there
                          * is space to put the character in the array.
                          *)
@@ -237,7 +237,7 @@ functor StreamIOExtra (S: STREAM_IO_EXTRA_ARG): STREAM_IO_EXTRA =
       end
 
       fun outputSlice (os as Out {augmented_writer,
-                                  state, 
+                                  state,
                                   bufferMode, ...}, v) =
          if terminated (!state)
             then liftExn (outstreamName os) "output" IO.ClosedStream
@@ -257,14 +257,14 @@ functor StreamIOExtra (S: STREAM_IO_EXTRA_ARG): STREAM_IO_EXTRA =
                     case !bufferMode of
                        NO_BUF => put ()
                      | LINE_BUF buf => doit (buf, fn () => (case line of
-                                                               NONE => false 
+                                                               NONE => false
                                                              | SOME {isLine, ...} => VS.exists isLine v))
                      | BLOCK_BUF buf => doit (buf, fn () => false)
                  end
                  handle exn => liftExn (outstreamName os) "output" exn
 
-      fun flushOut (os as Out {augmented_writer, 
-                               state, 
+      fun flushOut (os as Out {augmented_writer,
+                               state,
                                bufferMode, ...}) =
         if terminated (!state)
           then ()
@@ -306,8 +306,8 @@ functor StreamIOExtra (S: STREAM_IO_EXTRA_ARG): STREAM_IO_EXTRA =
           IO.NO_BUF => (flushOut os;
                         bufferMode := NO_BUF)
         | IO.LINE_BUF => let
-                           fun doit () = 
-                             bufferMode := 
+                           fun doit () =
+                             bufferMode :=
                              newLineBuf (writerSel (outstreamWriter os, #chunkSize))
                          in
                            case !bufferMode of
@@ -316,8 +316,8 @@ functor StreamIOExtra (S: STREAM_IO_EXTRA_ARG): STREAM_IO_EXTRA =
                            | BLOCK_BUF _ => doit ()
                          end
         | IO.BLOCK_BUF => let
-                            fun doit () = 
-                              bufferMode := 
+                            fun doit () =
+                              bufferMode :=
                               newBlockBuf (writerSel (outstreamWriter os, #chunkSize))
                           in
                             case !bufferMode of
@@ -394,8 +394,8 @@ functor StreamIOExtra (S: STREAM_IO_EXTRA_ARG): STREAM_IO_EXTRA =
        *   pos = V.length inp, !next = s
        *)
 
-      fun equalsIn (In {common = {tail = tail1, ...}, ...}, 
-                    In {common = {tail = tail2, ...}, ...}) = 
+      fun equalsIn (In {common = {tail = tail1, ...}, ...},
+                    In {common = {tail = tail2, ...}, ...}) =
         tail1 = tail2
 
       fun update (In {common, ...}, pos, buf) =
@@ -450,15 +450,15 @@ functor StreamIOExtra (S: STREAM_IO_EXTRA_ARG): STREAM_IO_EXTRA =
                   | SOME inp => link (base, inp)
                 end
             in
-              if blocking 
+              if blocking
                 then case readerSel (augmented_reader, #readVec) of
-                       NONE => liftExn (instreamName is) 
-                                       function 
+                       NONE => liftExn (instreamName is)
+                                       function
                                        IO.BlockingNotSupported
                      | SOME readVec => doit (SOME o readVec)
                 else case readerSel (augmented_reader, #readVecNB) of
-                       NONE => liftExn (instreamName is) 
-                                       function 
+                       NONE => liftExn (instreamName is)
+                                       function
                                        IO.NonblockingNotSupported
                      | SOME readVecNB => doit readVecNB
             end
@@ -469,7 +469,7 @@ functor StreamIOExtra (S: STREAM_IO_EXTRA_ARG): STREAM_IO_EXTRA =
 
       fun input (is as In {pos, buf as Buf {inp, next, ...}, ...}) =
         if pos < V.length inp
-          then (V.extract(inp, pos, NONE), 
+          then (V.extract(inp, pos, NONE),
                 updateBufEnd (is, buf))
           else let
                  fun doit next =
@@ -511,7 +511,7 @@ functor StreamIOExtra (S: STREAM_IO_EXTRA_ARG): STREAM_IO_EXTRA =
                                     finish (inps, update (is, n, buf))
                                   end
                              else loop (buf, (VS.full inp)::inps, n - V.length inp)
-                       | Eos {buf} => 
+                       | Eos {buf} =>
                            finish (inps, if n > 0
                                            then updateBufBeg (is, buf)
                                            else updateBufEnd (is, buf'))
@@ -582,7 +582,7 @@ functor StreamIOExtra (S: STREAM_IO_EXTRA_ARG): STREAM_IO_EXTRA =
                         fun loop i =
                            case SOME (V.sub (v, i)) handle Subscript => NONE of
                               NONE => NONE
-                            | SOME c => 
+                            | SOME c =>
                                  if isLine c
                                     then SOME (i + 1)
                                  else loop (i + 1)
@@ -603,7 +603,7 @@ functor StreamIOExtra (S: STREAM_IO_EXTRA_ARG): STREAM_IO_EXTRA =
                                             loop (buf, [inp'])
                                          end
                                     else let
-                                            fun doit next = 
+                                            fun doit next =
                                                case next of
                                                   Link {buf} => first (updateBufBeg (is, buf))
                                                 | Eos _ => NONE
@@ -612,7 +612,7 @@ functor StreamIOExtra (S: STREAM_IO_EXTRA_ARG): STREAM_IO_EXTRA =
                                          in
                                             doit (!next)
                                          end)
-                  and loop (buf' as Buf {next, ...}, inps) = 
+                  and loop (buf' as Buf {next, ...}, inps) =
                      (* List.length inps > 0 *)
                      let
                         fun doit next =
@@ -651,7 +651,7 @@ functor StreamIOExtra (S: STREAM_IO_EXTRA_ARG): STREAM_IO_EXTRA =
         else if n = 0
           then SOME 0
         else let
-               fun start inp = 
+               fun start inp =
                  add ([], inp, 0)
                and add (inps, inp, k) =
                  let
@@ -679,7 +679,7 @@ functor StreamIOExtra (S: STREAM_IO_EXTRA_ARG): STREAM_IO_EXTRA =
                if pos < V.length inp
                  then SOME (Int.min (V.length inp - pos, n))
                  else case !next of
-                        End => 
+                        End =>
                           (case extendNB "canInput" is of
                              NONE => NONE
                            | SOME (Link {buf = Buf {inp, base, ...}}) =>
@@ -732,12 +732,12 @@ functor StreamIOExtra (S: STREAM_IO_EXTRA_ARG): STREAM_IO_EXTRA =
             case readerSel (reader, #getPos) of
               NONE => NONE
             | SOME getPos => SOME (getPos ())
-          val buf = 
+          val buf =
             case bufferContents of
               NONE => Buf {inp = empty,
                            base = base,
                            next = next}
-            | SOME (lastRead, v) => 
+            | SOME (lastRead, v) =>
                 if V.length v = 0
                   then Buf {inp = empty,
                             base = base,
@@ -769,7 +769,7 @@ functor StreamIOExtra (S: STREAM_IO_EXTRA_ARG): STREAM_IO_EXTRA =
         mkInstream' {bufferContents = if 0 = V.length bufferContents
                                          then NONE
                                          else SOME (false, bufferContents),
-                     closed = false, 
+                     closed = false,
                      reader = reader}
 
       fun getReader (is as In {common = {reader, tail, ...}, ...}) =
@@ -785,12 +785,12 @@ functor StreamIOExtra (S: STREAM_IO_EXTRA_ARG): STREAM_IO_EXTRA =
                                buf = Buf {base, ...}, ...}) =
         case base of
            SOME b => (case xlatePos of
-                         SOME {fromInt, toInt, ...} => 
+                         SOME {fromInt, toInt, ...} =>
                             (fromInt (Position.+ (Position.fromInt pos, toInt b)))
                        | NONE => (case (readerSel (augmented_reader, #readVec),
                                         readerSel (augmented_reader, #getPos),
                                         readerSel (augmented_reader, #setPos)) of
-                                     (SOME readVec, SOME getPos, SOME setPos) => 
+                                     (SOME readVec, SOME getPos, SOME setPos) =>
                                         let
                                            val curPos = getPos ()
                                         in
@@ -798,25 +798,25 @@ functor StreamIOExtra (S: STREAM_IO_EXTRA_ARG): STREAM_IO_EXTRA =
                                            ; ignore (readVec pos)
                                            ; getPos () before setPos curPos
                                         end
-                                   | _ => 
+                                   | _ =>
                                         liftExn (instreamName is) "filePosIn" IO.RandomAccessNotSupported))
          | NONE => liftExn (instreamName is) "filePosIn" IO.RandomAccessNotSupported
    end
 
-signature STREAM_IO_ARG = 
-   sig 
+signature STREAM_IO_ARG =
+   sig
       structure Array: MONO_ARRAY
       structure ArraySlice: MONO_ARRAY_SLICE
-      structure PrimIO: PRIM_IO  
+      structure PrimIO: PRIM_IO
       structure Vector: MONO_VECTOR
       structure VectorSlice: MONO_VECTOR_SLICE
       sharing type PrimIO.elem = Vector.elem = VectorSlice.elem = Array.elem
-         = ArraySlice.elem 
+         = ArraySlice.elem
       sharing type PrimIO.vector = Vector.vector = VectorSlice.vector
-         = Array.vector = ArraySlice.vector 
+         = Array.vector = ArraySlice.vector
       sharing type PrimIO.vector_slice = VectorSlice.slice
          = ArraySlice.vector_slice
-      sharing type PrimIO.array = Array.array = ArraySlice.array 
+      sharing type PrimIO.array = Array.array = ArraySlice.array
       sharing type PrimIO.array_slice = ArraySlice.slice
 
       val someElem: PrimIO.elem
@@ -858,7 +858,7 @@ functor StreamIOExtraFile (S: STREAM_IO_EXTRA_FILE_ARG): STREAM_IO_EXTRA_FILE =
       val openOutstreams : (outstream * {close: bool}) list ref = ref []
 
       val mkOutstream'' =
-         let    
+         let
             val _ = Cleaner.addNew
                (Cleaner.atExit, fn () =>
                 List.app (fn (os, {close}) =>
@@ -884,7 +884,7 @@ functor StreamIOExtraFile (S: STREAM_IO_EXTRA_FILE_ARG): STREAM_IO_EXTRA_FILE =
       fun mkOutstream' {bufferMode, closed, writer} =
          mkOutstream'' {bufferMode = bufferMode,
                         closeAtExit = true,
-                        closed = closed, 
+                        closed = closed,
                         writer = writer}
 
       fun mkOutstream (writer, bufferMode) =
@@ -894,8 +894,8 @@ functor StreamIOExtraFile (S: STREAM_IO_EXTRA_FILE_ARG): STREAM_IO_EXTRA_FILE =
 
       val closeOut = fn os =>
         let
-          val _ = openOutstreams := List.filter (fn (os', _) => 
-                                                 not (equalsOut (os, os'))) 
+          val _ = openOutstreams := List.filter (fn (os', _) =>
+                                                 not (equalsOut (os, os')))
                                                 (!openOutstreams)
         in
           closeOut os
@@ -939,7 +939,7 @@ functor StreamIOExtraFile (S: STREAM_IO_EXTRA_FILE_ARG): STREAM_IO_EXTRA_FILE =
       fun mkInstream' {bufferContents, closed, reader} =
         mkInstream'' {bufferContents = bufferContents,
                       closeAtExit = true,
-                      closed = closed, 
+                      closed = closed,
                       reader = reader}
 
 

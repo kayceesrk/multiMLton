@@ -177,6 +177,7 @@ struct
     val thrd = H_THRD (tid, PT.new thrdFun)
     val rhost = PT.getRunnableHost (PT.prep (thrd))
     val () = S.readyForSpawn (rhost)
+    val () = debug' "Thread(1)"
 
     (* If this thread was spawned on an IO processor, then decrement the
     * numLiveThreads as the IO worker threads never die *)

@@ -77,8 +77,8 @@ void majorCheneyCopyGC (GC_state s) {
   assert (s->secondaryLocalHeap->size >= s->heap->oldGenSize);
   toStart = alignFrontier (s, s->secondaryLocalHeap->start);
   s->forwardState.back = toStart;
-  foreachGlobalObjptr (s, forwardObjptrIfInFromSpace);
-  foreachObjptrInRange (s, toStart, &s->forwardState.back, forwardObjptrIfInFromSpace, TRUE);
+  foreachGlobalObjptr (s, forwardObjptrIfInLocalHeap);
+  foreachObjptrInRange (s, toStart, &s->forwardState.back, forwardObjptrIfInLocalHeap, TRUE);
   updateWeaksForCheneyCopy (s);
   s->secondaryLocalHeap->oldGenSize = s->forwardState.back - s->secondaryLocalHeap->start;
   bytesCopied = s->secondaryLocalHeap->oldGenSize;

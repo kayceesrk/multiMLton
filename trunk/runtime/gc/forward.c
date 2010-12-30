@@ -94,9 +94,15 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
     size = headerBytes + objectBytes;
     assert (s->forwardState.back + size + skip <= s->forwardState.toLimit);
     /* Allocate chunk in the shared heap for the copy */
-    allocChunkInSharedHeap (s, size);
+    allocChunkInSharedHeap (s, size + skip);
     /* Copy the object. */
     GC_memcpy (p - headerBytes, s->forwardState.back, size);
+    if (DEBUG_DETAILED) {
+        fprintf (stderr, "Zeroing out %s bytes starting at "FMTPTR"\n",
+                         uintmaxToCommaString (objectBytes),
+                         (uintptr_t)p);
+        memset (p, 0, objectBytes);
+    }
     /* If the object has a valid weak pointer, link it into the weaks
      * for update after the copying GC is done.
      */
@@ -133,6 +139,12 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
     s->forwardState.back += size + skip;
     assert (isAligned ((size_t)s->forwardState.back + GC_NORMAL_HEADER_SIZE,
                        s->alignment));
+    assert (s->forwardState.back == s->sharedFrontier);
+    //LWTGC
+    /* Since the shared heap can be allocated in parallel, s->forwardState.back
+     * should be set to s->sharedFrontier at this point. The previous assertion
+     * would fail if there are multiple mutators */
+    s->forwardState.back = s->sharedFrontier;
   }
   *opp = *((objptr*)p);
   if (DEBUG_DETAILED)
@@ -216,6 +228,12 @@ void forwardObjptr (GC_state s, objptr *opp) {
     assert (s->forwardState.back + size + skip <= s->forwardState.toLimit);
     /* Copy the object. */
     GC_memcpy (p - headerBytes, s->forwardState.back, size);
+    if (DEBUG_DETAILED) {
+        fprintf (stderr, "Zeroing out %s bytes starting at "FMTPTR"\n",
+                         uintmaxToCommaString (objectBytes),
+                         (uintptr_t)p);
+        memset (p, 0, objectBytes);
+    }
     /* If the object has a valid weak pointer, link it into the weaks
      * for update after the copying GC is done.
      */
@@ -277,19 +295,19 @@ void forwardObjptrIfInNursery (GC_state s, objptr *opp) {
   forwardObjptr (s, opp);
 }
 
-void forwardObjptrIfInFromSpace (GC_state s, objptr *opp) {
+void forwardObjptrIfInLocalHeap (GC_state s, objptr *opp) {
   objptr op;
   pointer p;
 
   op = *opp;
   p = objptrToPointer (op, s->heap->start);
-  if (!isPointerInFromSpace (s, s->heap, p))
+  if (!isPointerInHeap (s, s->heap, p))
     return;
   if (DEBUG_GENERATIONAL)
     fprintf (stderr,
-             "forwardObjptrIfInFromSpace  opp = "FMTPTR"  op = "FMTOBJPTR"  p = "FMTPTR"\n",
+             "forwardObjptrIfInLocalHeap  opp = "FMTPTR"  op = "FMTOBJPTR"  p = "FMTPTR"\n",
              (uintptr_t)opp, op, (uintptr_t)p);
-  assert (isPointerInFromSpace (s, s->heap, p));
+  assert (isPointerInHeap (s, s->heap, p));
   forwardObjptr (s, opp);
 }
 

@@ -129,11 +129,18 @@ struct
           val () = debug' (concat ["numComputeProcessors = ", Int.toString (PacmlFFI.numComputeProcessors)])
           val () = debug' (concat ["numIOProcessors = ", Int.toString (PacmlFFI.numIOProcessors)])
           val () = reset true
+          val () = debug' "Main(-2)"
+          val () = debug' "Main(-1.5)"
           val () = SH.shutdownHook := PT.prepend (thrd, fn arg => (atomicBegin (); arg))
+          val () = debug' "Main(-1)"
           val () = SH.pauseHook := pauseHook
+          val () = debug' "Main(0)"
           val () = ignore (Thread.spawnHost (fn ()=> (lateInit ();initialProc ())))
+          val () = debug' "Main(1)"
           val handler = MLtonSignal.Handler.handler (S.unwrap alrmHandler Thread.reifyHostFromParasite)
+          val () = debug' "Main(2)"
           val () = installAlrmHandler handler
+          val () = debug' "Main(3)"
         in
             ()
         end)

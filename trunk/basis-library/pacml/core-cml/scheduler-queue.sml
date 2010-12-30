@@ -116,6 +116,7 @@ struct
   end
 
 
-  fun clean () = Array.app (fn (x,y) => (Q.reset x;Q.reset y)) threadQs
+  fun clean () =
+    Array.app (fn (x,y) => (Q.reset x;Q.reset y)) threadQs
 
 end
