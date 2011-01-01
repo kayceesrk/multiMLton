@@ -61,7 +61,7 @@ pointer GC_weakNew (GC_state s, GC_header header, pointer p) {
 
   res = newObject (s, header,
                    sizeofWeak (s),
-                   FALSE);
+                   FALSE, FALSE);
   weak = (GC_weak)(res + offsetofWeak (s));
   weak->objptr = pointerToObjptr(p, s->heap->start);
   if (DEBUG_WEAK)

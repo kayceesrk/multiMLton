@@ -14,10 +14,12 @@
 pointer newObject (GC_state s,
                    GC_header header,
                    size_t bytesRequested,
-                   bool allocInOldGen) {
+                   bool allocInOldGen,
+                   bool allocInSharedHeap) {
   pointer frontier;
   pointer result;
 
+  assert (!(allocInOldGen & allocInSharedHeap));
   assert (isAligned (bytesRequested, s->alignment));
   assert (allocInOldGen
           ? hasHeapBytesFree (s, s->heap, bytesRequested, 0)
@@ -26,7 +28,8 @@ pointer newObject (GC_state s,
     frontier = s->heap->start + s->heap->oldGenSize;
     s->heap->oldGenSize += bytesRequested;
     s->cumulativeStatistics->bytesAllocated += bytesRequested;
-  } else {
+  }
+  else {
     if (DEBUG_DETAILED)
       fprintf (stderr, "frontier changed from "FMTPTR" to "FMTPTR"\n",
                (uintptr_t)s->frontier,
@@ -49,8 +52,11 @@ pointer newObject (GC_state s,
 
 GC_stack newStack (GC_state s,
                    size_t reserved,
-                   bool allocInOldGen) {
+                   bool allocInOldGen,
+                   bool allocInSharedHeap) {
   GC_stack stack;
+
+  assert (!(allocInOldGen & allocInSharedHeap));
 
   assert (isStackReservedAligned (s, reserved));
   /* XXX unsafe concurrent access */
@@ -58,7 +64,7 @@ GC_stack newStack (GC_state s,
     s->cumulativeStatistics->maxStackSize = reserved;
   stack = (GC_stack)(newObject (s, GC_STACK_HEADER,
                                 sizeofStackWithHeader (s, reserved),
-                                allocInOldGen));
+                                allocInOldGen, allocInSharedHeap));
   stack->reserved = reserved;
   stack->used = 0;
   if (DEBUG_STACKS)
@@ -75,10 +81,10 @@ GC_thread newThread (GC_state s, size_t reserved) {
 
   assert (isStackReservedAligned (s, reserved));
   ensureHasHeapBytesFreeAndOrInvariantForMutator (s, FALSE, FALSE, FALSE, 0, sizeofStackWithHeader (s, alignStackReserved (s, reserved)) + sizeofThread (s), FALSE, FALSE);
-  stack = newStack (s, reserved, FALSE);
+  stack = newStack (s, reserved, FALSE, FALSE);
   res = newObject (s, GC_THREAD_HEADER,
                    sizeofThread (s),
-                   FALSE);
+                   FALSE, FALSE);
   thread = (GC_thread)(res + offsetofThread (s));
   thread->bytesNeeded = 0;
   thread->exnStack = BOGUS_EXN_STACK;

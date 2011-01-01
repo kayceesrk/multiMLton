@@ -63,7 +63,7 @@ void growStackCurrent (GC_state s, bool allocInOldGen) {
   assert (allocInOldGen ?
           hasHeapBytesFree (s, s->heap, sizeofStackWithHeader (s, reserved), 0) :
           hasHeapBytesFree (s, s->heap, 0, sizeofStackWithHeader (s, reserved)));
-  stack = newStack (s, reserved, allocInOldGen);
+  stack = newStack (s, reserved, allocInOldGen, FALSE);
   copyStack (s, getStackCurrent(s), stack);
   getThreadCurrent(s)->stack = pointerToObjptr ((pointer)stack, s->heap->start);
   markCard (s, objptrToPointer (getThreadCurrentObjptr(s), s->heap->start));
@@ -110,6 +110,10 @@ void fixForwardingPointers (GC_state s, bool mayResize) {
   setGCStateCurrentLocalHeap (s, 0, nurseryBytesRequested);
   assert (hasHeapBytesFree (s, s->heap, 0, nurseryBytesRequested));
   setGCStateCurrentThreadAndStack (s);
+
+  if (isPointerInNursery (s, s->heap, getStackCurrent(s))) {
+      assert (s->frontier > getStackCurrent(s));
+  }
 
   if (needGCTime (s)) {
     gcTime = stopWallTiming (&tv_start, &s->cumulativeStatistics->ru_gc);
@@ -321,10 +325,8 @@ static void allocChunkInSharedHeap (GC_state s,
     /* See if the mutator frontier invariant is already true */
     assert (s->sharedLimitPlusSlop >= s->sharedFrontier);
     if (nurseryBytesRequested <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier)) {
-      s->sharedFrontier += nurseryBytesRequested;
       if (DEBUG)
-        fprintf (stderr, "[GC: shared alloc: satisfied. New s->sharedFrontier at "FMTPTR"]\n",
-                 (uintptr_t)s->sharedFrontier);
+        fprintf (stderr, "[GC: aborting shared alloc: satisfied.]\n");
       return;
     }
     /* Perhaps there is not enough space in the nursery to satify this

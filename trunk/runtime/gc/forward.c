@@ -139,12 +139,7 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
     s->forwardState.back += size + skip;
     assert (isAligned ((size_t)s->forwardState.back + GC_NORMAL_HEADER_SIZE,
                        s->alignment));
-    assert (s->forwardState.back == s->sharedFrontier);
-    //LWTGC
-    /* Since the shared heap can be allocated in parallel, s->forwardState.back
-     * should be set to s->sharedFrontier at this point. The previous assertion
-     * would fail if there are multiple mutators */
-    s->forwardState.back = s->sharedFrontier;
+    s->sharedFrontier = s->forwardState.back;
   }
   *opp = *((objptr*)p);
   if (DEBUG_DETAILED)

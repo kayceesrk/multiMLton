@@ -106,7 +106,12 @@ bool invariantForGC (GC_state s) {
                           assertIsObjptrInFromSpaceOrLifted, FALSE);
   }
   else {
-    foreachObjptrInRange (s, s->start, &s->frontier,
+    foreachObjptrInRange (s, s->heap->nursery, &s->frontier,
+                          assertIsObjptrInFromSpaceOrLifted, FALSE);
+    //XXX LWTGC -- needs to be removed -- does not work with multiple threads
+    //assertIfObjptrInFromSpaceOrLifted is a weaker assertion since one cannot have
+    //pointers from shared heap to local heap, except for threads->stacks links.
+    foreachObjptrInRange (s, alignFrontier (s, s->sharedHeap->start), &s->sharedFrontier,
                           assertIsObjptrInFromSpaceOrLifted, FALSE);
   }
  /* Current thread. */
