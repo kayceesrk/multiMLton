@@ -296,16 +296,15 @@ structure CFunction =
             target = Direct "GC_share",
             writesStackTop = true}
 
-      (* CHECK; share with objptr *)
       fun move t =
-         T {args = Vector.new2 (Type.gcState (), t),
+         T {args = Vector.new3 (Type.gcState (), t, t),
             bytesNeeded = NONE,
             convention = Cdecl,
             ensuresBytesFree = false,
             mayGC = true,
             maySwitchThreads = false,
             modifiesFrontier = true,
-            prototype = (Vector.new2 (CType.gcState, CType.cpointer), NONE),
+            prototype = (Vector.new3 (CType.gcState, CType.cpointer, CType.cpointer), NONE),
             readsStackTop = true,
             return = Type.unit,
             symbolScope = Private,
@@ -1033,7 +1032,8 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                         S.Statement.Profile e => add (Statement.Profile e)
                       | S.Statement.Update {base, offset, value} =>
                           let
-                            fun updateCard (lhsAddr: Operand.t, rhsAddr: Operand.t, continue: Label.t): (Statement.t list * Transfer.t) =
+                            fun updateCard (lhsAddr: Operand.t, rhsAddr: Operand.t, continue: Label.t, bind: Statement.t list):
+                                           (Statement.t list * Transfer.t) =
                               let
                                   val index = Var.newNoname ()
                                   (* CHECK; WordSize.objptr or WordSize.cpointer? *)
@@ -1111,7 +1111,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                    statements = Vector.new0 (),
                                    transfer =
                                     Transfer.CCall
-                                    {args = Vector.new2 (GCState, rhsAddr),
+                                    {args = Vector.new3 (GCState, rhsAddr, lhsAddr),
                                     func = CFunction.move indexTy,
                                     return = SOME returnFromHandler}}
 
@@ -1138,7 +1138,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                       falsee = cardMarkBlock})}
 
                               in
-                                (stmts1,
+                                (bind @ stmts1,
                                  Transfer.ifBool
                                  (Operand.Var {var = cond1, ty = indexTy},
                                   {truee = maybeMoveBlock,
@@ -1160,8 +1160,8 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                   in
                                     if (Type.isObjptr ty)
                                         then
-                                          split (Vector.new0 (), Kind.Jump, ss' @ ss,
-                                                 fn l => updateCard (Base.object baseOp, valueOp, l))
+                                          split (Vector.new0 (), Kind.Jump, ss,
+                                                 fn l => updateCard (Base.object baseOp, valueOp, l, ss'))
                                     else
                                       adds ss'
                                   end)
@@ -1412,8 +1412,11 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                            if not (Type.isObjptr t)
                                               then none ()
                                            else
-                                              simpleCCallWithGCState
-                                              (CFunction.move (Operand.ty (a 0))))
+                                             ccall {args = Vector.concat
+                                                            [Vector.new1 GCState,
+                                                             vos args,
+                                                             Vector.new1 Operand.null],
+                                                    func = CFunction.move (Operand.ty (a 0))})
                                | MLton_size =>
                                     simpleCCallWithGCState
                                     (CFunction.size (Operand.ty (a 0)))
