@@ -28,6 +28,8 @@
 #define DEBUG_CCODEGEN FALSE
 #endif
 
+#define DEBUG_MEMORY
+
 #define ExnStack *(size_t*)(GCState + ExnStackOffset)
 #define FrontierMem *(Pointer*)(GCState + FrontierOffset)
 #define Frontier frontier

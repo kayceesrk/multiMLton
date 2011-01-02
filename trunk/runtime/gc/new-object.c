@@ -29,6 +29,15 @@ pointer newObject (GC_state s,
     s->heap->oldGenSize += bytesRequested;
     s->cumulativeStatistics->bytesAllocated += bytesRequested;
   }
+  else if (allocInSharedHeap) {
+    allocChunkInSharedHeap (s, bytesRequested);
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "sharedFrontier changed from "FMTPTR" to "FMTPTR"\n",
+               (uintptr_t)s->sharedFrontier,
+               (uintptr_t)(s->sharedFrontier + bytesRequested));
+    frontier = s->sharedFrontier;
+    s->sharedFrontier += bytesRequested;
+  }
   else {
     if (DEBUG_DETAILED)
       fprintf (stderr, "frontier changed from "FMTPTR" to "FMTPTR"\n",

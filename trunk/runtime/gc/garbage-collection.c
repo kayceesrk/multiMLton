@@ -49,21 +49,26 @@ void majorGC (GC_state s, size_t bytesRequested, bool mayResize) {
   assert (s->heap->oldGenSize + bytesRequested <= s->heap->size);
 }
 
-void growStackCurrent (GC_state s, bool allocInOldGen) {
+void growStackCurrent (GC_state s, bool allocInOldGen, bool allocInSharedHeap) {
   size_t reserved;
   GC_stack stack;
 
+  assert (!(allocInOldGen & allocInSharedHeap));
   reserved = sizeofStackGrowReserved (s, getStackCurrent(s));
-  if (DEBUG_STACKS or s->controls->messages)
+  if (DEBUG_STACKS or s->controls->messages) {
     fprintf (stderr,
              "[GC: Growing stack of size %s bytes to size %s bytes, using %s bytes.]\n",
              uintmaxToCommaString(getStackCurrent(s)->reserved),
              uintmaxToCommaString(reserved),
              uintmaxToCommaString(getStackCurrent(s)->used));
+    if (allocInSharedHeap)
+      fprintf (stderr,
+               "[GC: Allocating new stack on shared heap]\n");
+  }
   assert (allocInOldGen ?
           hasHeapBytesFree (s, s->heap, sizeofStackWithHeader (s, reserved), 0) :
-          hasHeapBytesFree (s, s->heap, 0, sizeofStackWithHeader (s, reserved)));
-  stack = newStack (s, reserved, allocInOldGen, FALSE);
+          (allocInSharedHeap ? TRUE : hasHeapBytesFree (s, s->heap, 0, sizeofStackWithHeader (s, reserved))));
+  stack = newStack (s, reserved, allocInOldGen, allocInSharedHeap);
   copyStack (s, getStackCurrent(s), stack);
   getThreadCurrent(s)->stack = pointerToObjptr ((pointer)stack, s->heap->start);
   markCard (s, objptrToPointer (getThreadCurrentObjptr(s), s->heap->start));
@@ -111,7 +116,7 @@ void fixForwardingPointers (GC_state s, bool mayResize) {
   assert (hasHeapBytesFree (s, s->heap, 0, nurseryBytesRequested));
   setGCStateCurrentThreadAndStack (s);
 
-  if (isPointerInNursery (s, s->heap, getStackCurrent(s))) {
+  if (isPointerInNursery (s, s->heap, (pointer)getStackCurrent(s))) {
       assert (s->frontier > getStackCurrent(s));
   }
 
@@ -151,6 +156,7 @@ void performGC (GC_state s,
   size_t stackBytesRequested;
   struct timeval tv_start;
   size_t totalBytesRequested;
+  bool growStackInSharedHeap = FALSE;
 
   enterGC (s);
   s->cumulativeStatistics->numGCs++;
@@ -189,6 +195,14 @@ void performGC (GC_state s,
     stackTopOk
     ? 0
     : sizeofStackWithHeader (s, sizeofStackGrowReserved (s, getStackCurrent (s)));
+
+  //XXX LWTGC EXPERIMENTAL -- adding this in so as to force allocation of new
+  //stack on the shared heap, if its already on shared heap.
+  if (!stackTopOk && isPointerInHeap (s, s->sharedHeap, (pointer)getStackCurrent(s))) {
+      stackBytesRequested = 0;
+      growStackInSharedHeap = TRUE;
+  }
+
   totalBytesRequested =
     oldGenBytesRequested
     + stackBytesRequested;
@@ -206,8 +220,12 @@ void performGC (GC_state s,
                               nurseryBytesRequested);
   assert (hasHeapBytesFree (s, s->heap, oldGenBytesRequested + stackBytesRequested,
                             nurseryBytesRequested));
-  unless (stackTopOk)
-    growStackCurrent (s, TRUE);
+  unless (stackTopOk) {
+    if (growStackInSharedHeap)
+        growStackCurrent (s, FALSE, TRUE);
+    else
+        growStackCurrent (s, TRUE, FALSE);
+  }
   setGCStateCurrentThreadAndStack (s);
   if (needGCTime (s)) {
     gcTime = stopWallTiming (&tv_start, &s->cumulativeStatistics->ru_gc);
@@ -474,6 +492,7 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
                                                      bool forceStackGrowth) {
   bool stackTopOk;
   size_t stackBytesRequested;
+  bool growStackInSharedHeap = FALSE;
 
   assert ((int)nurseryBytesRequested >=0 );
   /* To ensure the mutator frontier invariant, set the requested bytes
@@ -490,6 +509,13 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
     ? 0
     : sizeofStackWithHeader (s, sizeofStackGrowReserved (s, getStackCurrent (s)));
 
+  //XXX LWTGC EXPERIMENTAL -- adding this in so as to force allocation of new
+  //stack on the shared heap, if its already on shared heap.
+  if (!stackTopOk && isPointerInHeap (s, s->sharedHeap, getStackCurrent(s))) {
+      stackBytesRequested = 0;
+      growStackInSharedHeap = TRUE;
+  }
+
   if (forceStackGrowth && DEBUG_SPLICE)
       fprintf (stderr, "stackBytesRequested = %ld\n", stackBytesRequested);
 
@@ -501,7 +527,10 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
     if (DEBUG or s->controls->messages)
       fprintf (stderr, "GC: growing stack locally... [%d]\n",
                s->procStates ? Proc_processorNumber (s) : -1);
-    growStackCurrent (s, FALSE);
+    if (growStackInSharedHeap)
+        growStackCurrent (s, FALSE, TRUE);
+    else
+        growStackCurrent (s, FALSE, FALSE);
     setGCStateCurrentThreadAndStack (s);
   }
 

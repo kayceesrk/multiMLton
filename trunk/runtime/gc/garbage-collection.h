@@ -10,7 +10,7 @@
 
 static void minorGC (GC_state s);
 static void majorGC (GC_state s, size_t bytesRequested, bool mayResize);
-static inline void growStackCurrent (GC_state s, bool allocInOldGen);
+static inline void growStackCurrent (GC_state s, bool allocInOldGen, bool allocInSharedHeap);
 static inline void enterGC (GC_state s);
 static inline void leaveGC (GC_state s);
 static void performGC (GC_state s,
