@@ -140,14 +140,13 @@ void liftAllObjectsDuringInit (GC_state s) {
 
 }
 
-void GC_move (GC_state s, pointer p, pointer ref) {
+pointer GC_move (GC_state s, pointer p) {
   if (!(s->heap->start <= p and p < s->heap->start + s->heap->size)) {
       if (DEBUG_LWTGC)
           fprintf (stderr, "GC_move: pointer "FMTPTR" not in heap\n", (uintptr_t)p);
-      return;
+      return p;
   }
 
-  assert (*(pointer*)ref == p);
   /* ENTER (0) */
   s->syncReason = SYNC_FORCE;
   getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
@@ -162,7 +161,7 @@ void GC_move (GC_state s, pointer p, pointer ref) {
     /* LEAVE (0) */
     s->syncReason = SYNC_NONE;
     endAtomic (s);
-    return;
+    return p;
   }
 
   //Set up the forwarding state
@@ -175,12 +174,6 @@ void GC_move (GC_state s, pointer p, pointer ref) {
   objptr op = pointerToObjptr (p, s->heap->start);
   objptr* pOp = &op;
   liftObjptr (s, pOp);
-
-  //Fix the reference
-  if (ref) {
-    *(pointer*)ref = objptrToPointer (*pOp, s->sharedHeap->start);
-  }
-
   foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, liftObjptr, TRUE);
   s->forwardState.amInMinorGC = FALSE;
 
@@ -206,7 +199,7 @@ void GC_move (GC_state s, pointer p, pointer ref) {
   if (DEBUG_LWTGC)
     fprintf (stderr, "GC_move: Exiting\n");
 
-  return;
+  return objptrToPointer (*pOp, s->sharedHeap->start);
 }
 
 

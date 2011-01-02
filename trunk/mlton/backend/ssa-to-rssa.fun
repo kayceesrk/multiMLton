@@ -297,16 +297,16 @@ structure CFunction =
             writesStackTop = true}
 
       fun move t =
-         T {args = Vector.new3 (Type.gcState (), t, t),
+         T {args = Vector.new2 (Type.gcState (), t),
             bytesNeeded = NONE,
             convention = Cdecl,
             ensuresBytesFree = false,
             mayGC = true,
             maySwitchThreads = false,
             modifiesFrontier = true,
-            prototype = (Vector.new3 (CType.gcState, CType.cpointer, CType.cpointer), NONE),
+            prototype = (Vector.new2 (CType.gcState, CType.cpointer), SOME CType.cpointer),
             readsStackTop = true,
-            return = Type.unit,
+            return = t,
             symbolScope = Private,
             target = Direct "GC_move",
             writesStackTop = true}
@@ -1032,7 +1032,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                         S.Statement.Profile e => add (Statement.Profile e)
                       | S.Statement.Update {base, offset, value} =>
                           let
-                            fun updateCard (lhsAddr: Operand.t, rhsAddr: Operand.t, continue: Label.t, bind: Statement.t list):
+                            fun updateCard (lhsAddr: Operand.t, rhsAddr: Operand.t, continue: Label.t, returnTy):
                                            (Statement.t list * Transfer.t) =
                               let
                                   val index = Var.newNoname ()
@@ -1054,14 +1054,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                                   scale = Scale.One,
                                                   ty = Type.word cardElemSize}),
                                           src = Operand.word (WordX.one cardElemSize)}]
-                                val cardMarkBlock =
-                                  newBlock
-                                  {args = Vector.new0 (),
-                                  kind = Kind.Jump,
-                                  statements = Vector.fromList cardMarkStmts,
-                                  transfer =
-                                  Goto {args = Vector.new0 (),
-                                        dst = continue}}
+
 
                                 fun addressInSharedHeap (addr) =
                                 let
@@ -1096,13 +1089,26 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                 val (stmts2, cond2) = addressInSharedHeap (rhsAddr)
                                 val (stmts3, cond3) = addressInSharedHeap (rhsAddr)
 
-                                val returnFromHandler =
+                                val cReturnVar = Var.newNoname ()
+                                val _ = print ("cReturnVar : "^(Var.toString (cReturnVar))^"\n")
+                                val cReturnOp = Operand.Var {var = cReturnVar, ty = returnTy}
+
+                                val origContinue =
                                   newBlock
                                   {args = Vector.new0 (),
+                                   kind = Kind.Jump,
+                                   statements = Vector.new0 (),
+                                   transfer =
+                                   Goto {args = Vector.new1 (rhsAddr),
+                                         dst = continue}}
+
+                                val returnFromHandler =
+                                  newBlock
+                                  {args = Vector.new1 (cReturnVar, indexTy),
                                    kind = Kind.CReturn {func = CFunction.move indexTy},
                                    statements = Vector.new0 (),
                                    transfer =
-                                   Goto {args = Vector.new0 (),
+                                   Goto {args = Vector.new1 (cReturnOp),
                                          dst = continue}}
                                 val moveBlock =
                                   newBlock
@@ -1111,7 +1117,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                    statements = Vector.new0 (),
                                    transfer =
                                     Transfer.CCall
-                                    {args = Vector.new3 (GCState, rhsAddr, lhsAddr),
+                                    {args = Vector.new2 (GCState, rhsAddr),
                                     func = CFunction.move indexTy,
                                     return = SOME returnFromHandler}}
 
@@ -1123,9 +1129,17 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                    transfer =
                                     Transfer.ifBool
                                     (Operand.Var {var = cond2, ty = indexTy},
-                                     {truee = continue,
+                                     {truee = origContinue,
                                       falsee = moveBlock})}
 
+                                val cardMarkBlock =
+                                  newBlock
+                                  {args = Vector.new0 (),
+                                  kind = Kind.Jump,
+                                  statements = Vector.fromList cardMarkStmts,
+                                  transfer =
+                                  Goto {args = Vector.new0 (),
+                                        dst = origContinue}}
                                 val maybeCardMarkBlock =
                                   newBlock
                                   {args = Vector.new0 (),
@@ -1134,15 +1148,15 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                    transfer =
                                     Transfer.ifBool
                                     (Operand.Var {var = cond3, ty = indexTy},
-                                     {truee = continue,
+                                     {truee = origContinue,
                                       falsee = cardMarkBlock})}
 
                               in
-                                (bind @ stmts1,
+                                (stmts1,
                                  Transfer.ifBool
                                  (Operand.Var {var = cond1, ty = indexTy},
                                   {truee = maybeMoveBlock,
-                                   falsee = if (!Control.markCards) then maybeCardMarkBlock else continue}))
+                                   falsee = if (!Control.markCards) then maybeCardMarkBlock else origContinue}))
                               end
                           in
                            (case toRtype (varType value) of
@@ -1151,19 +1165,27 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                   let
                                      val baseOp = Base.map (base, varOp)
                                      val valueOp = varOp value
+                                     val newValueVar = Var.newNoname ()
+                                     val _ = print ("newValueVar : "^(Var.toString (newValueVar))^"\n")
+                                     val newValueOp = Operand.Var {var = newValueVar, ty = ty}
                                      val ss' =
                                         update
                                         {base = baseOp,
                                          baseTy = varType (Base.object base),
                                          offset = offset,
-                                         value = varOp value}
+                                         value = newValueOp}
+                                    val ss'' =
+                                        update
+                                        {base = baseOp,
+                                         baseTy = varType (Base.object base),
+                                         offset = offset,
+                                         value = valueOp}
                                   in
-                                    if (Type.isObjptr ty)
-                                        then
-                                          split (Vector.new0 (), Kind.Jump, ss,
-                                                 fn l => updateCard (Base.object baseOp, valueOp, l, ss'))
+                                    if (Type.isObjptr ty) then
+                                      split (Vector.new1 (newValueVar, ty), Kind.Jump, ss' @ ss,
+                                              fn l => updateCard (Base.object baseOp, valueOp, l, ty))
                                     else
-                                      adds ss'
+                                      adds ss''
                                   end)
                           end
                       | S.Statement.Bind {exp, ty, var} =>
@@ -1414,8 +1436,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                            else
                                              ccall {args = Vector.concat
                                                             [Vector.new1 GCState,
-                                                             vos args,
-                                                             Vector.new1 Operand.null],
+                                                             vos args],
                                                     func = CFunction.move (Operand.ty (a 0))})
                                | MLton_size =>
                                     simpleCCallWithGCState
