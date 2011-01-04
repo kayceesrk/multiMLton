@@ -70,6 +70,14 @@ void growStackCurrent (GC_state s, bool allocInOldGen, bool allocInSharedHeap) {
           (allocInSharedHeap ? TRUE : hasHeapBytesFree (s, s->heap, 0, sizeofStackWithHeader (s, reserved))));
   stack = newStack (s, reserved, allocInOldGen, allocInSharedHeap);
   copyStack (s, getStackCurrent(s), stack);
+  if (allocInSharedHeap && FALSE) {
+      pointer start = pointerToObjptr (getStackCurrentObjptr (s), s->sharedHeap->start) - GC_HEADER_SIZE;
+      pointer end = start + GC_HEADER_SIZE + sizeof(struct GC_stack) + getStackCurrent(s)->reserved;
+      if (DEBUG_STACKS)
+          fprintf (stderr, "[GC: Filling in old stack in shared heap from "FMTPTR" to "FMTPTR"\n",
+                   start, end);
+      fillGap (s, start, end);
+  }
   getThreadCurrent(s)->stack = pointerToObjptr ((pointer)stack, s->heap->start);
   markCard (s, objptrToPointer (getThreadCurrentObjptr(s), s->heap->start));
 }

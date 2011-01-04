@@ -1090,7 +1090,6 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                 val (stmts3, cond3) = addressInSharedHeap (rhsAddr)
 
                                 val cReturnVar = Var.newNoname ()
-                                val _ = print ("cReturnVar : "^(Var.toString (cReturnVar))^"\n")
                                 val cReturnOp = Operand.Var {var = cReturnVar, ty = returnTy}
 
                                 val origContinue =
@@ -1166,7 +1165,6 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                      val baseOp = Base.map (base, varOp)
                                      val valueOp = varOp value
                                      val newValueVar = Var.newNoname ()
-                                     val _ = print ("newValueVar : "^(Var.toString (newValueVar))^"\n")
                                      val newValueOp = Operand.Var {var = newValueVar, ty = ty}
                                      val ss' =
                                         update

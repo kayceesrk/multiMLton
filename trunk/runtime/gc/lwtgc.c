@@ -179,8 +179,9 @@ pointer GC_move (GC_state s, pointer p) {
 
   //Check
   if (DEBUG_LWTGC) {
-    fprintf (stderr, "GC_move: check\n");
+    fprintf (stderr, "GC_move: check(1)\n");
     foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, assertLiftedObjptr, TRUE);
+    fprintf (stderr, "GC_move: check(2)\n");
   }
 
 
