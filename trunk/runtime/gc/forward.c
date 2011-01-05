@@ -148,6 +148,7 @@ void forwardObjptr (GC_state s, objptr *opp) {
   objptr op;
   pointer p;
   GC_header header;
+  GC_objectTypeTag tag;
 
   op = *opp;
   p = objptrToPointer (op, s->heap->start);
@@ -169,7 +170,6 @@ void forwardObjptr (GC_state s, objptr *opp) {
     size_t size, skip;
 
     size_t headerBytes, objectBytes;
-    GC_objectTypeTag tag;
     uint16_t bytesNonObjptrs, numObjptrs;
 
     splitHeader(s, header, &tag, NULL, &bytesNonObjptrs, &numObjptrs);
@@ -214,6 +214,10 @@ void forwardObjptr (GC_state s, objptr *opp) {
       if (getHeader(thrd) == GC_FORWARDED) {
         stack->thread = *(objptr*)thrd;
       }
+      else {
+        assert (isPointerInHeap (s, s->sharedHeap, thrd));
+      }
+
       if (DEBUG_DETAILED)
           fprintf (stderr, "[GC: Forwarding stack. stack->thread is "FMTOBJPTR"\n", stack->thread);
     }
@@ -265,6 +269,21 @@ void forwardObjptr (GC_state s, objptr *opp) {
                        s->alignment));
   }
   *opp = *((objptr*)p);
+
+  /* For dangling stack, fix the pointer in the thread to point to the new location */
+  if (tag == STACK_TAG) {
+      GC_stack stk = (GC_stack)objptrToPointer (*opp, s->forwardState.toStart);
+      GC_thread thrd;
+      if (isObjptrInHeap (s, s->sharedHeap, stk->thread))
+        thrd = (GC_thread) objptrToPointer (stk->thread, s->sharedHeap->start);
+      else
+        thrd = (GC_thread) objptrToPointer (stk->thread, s->forwardState.toStart);
+      thrd->stack = *opp;
+      if (DEBUG_DETAILED)
+        fprintf (stderr, "DanglingStack: Fixing thread->stack pointer for thread "FMTPTR". thread->stack is "FMTPTR".\n",
+                 (uintptr_t)thrd, (uintptr_t)stk);
+  }
+
   if (DEBUG_DETAILED)
     fprintf (stderr,
              "forwardObjptr --> *opp = "FMTPTR"\n",

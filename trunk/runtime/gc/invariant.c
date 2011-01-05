@@ -6,17 +6,6 @@
  * See the file MLton-LICENSE for details.
  */
 
-void assertIsObjptrInSharedHeap (GC_state s, objptr *opp);
-
-void assertIsObjptrInSharedHeap (GC_state s, objptr *opp) {
-  assert (isObjptrInHeap (s, s->sharedHeap, *opp));
-  unless (isObjptrInHeap (s, s->sharedHeap, *opp))
-    die ("gc.c: assertIsObjptrInSharedHeap "
-         "opp = "FMTPTR"  "
-         "*opp = "FMTOBJPTR"\n",
-         (uintptr_t)opp, *opp);
-}
-
 void assertIsObjptrInFromSpaceOrLifted (GC_state s, objptr *opp) {
   assert (isObjptrInFromSpace (s, s->heap, *opp) || isObjptrInHeap (s, s->sharedHeap, *opp));
   unless (isObjptrInFromSpace (s, s->heap, *opp) || isObjptrInHeap (s, s->sharedHeap, *opp))
@@ -121,7 +110,7 @@ bool invariantForGC (GC_state s) {
                           assertIsObjptrInFromSpaceOrLifted, FALSE);
     //XXX LWTGC -- needs to be removed -- does not work with multiple threads
     foreachObjptrInRange (s, alignFrontier (s, s->sharedHeap->start), &s->sharedFrontier,
-                          assertIsObjptrInSharedHeap, FALSE);
+                          assertLiftedObjptr, FALSE);
   }
  /* Current thread. */
   GC_stack stack = getStackCurrent(s);

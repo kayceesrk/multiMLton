@@ -32,18 +32,29 @@ static inline void liftObjptr (GC_state s, objptr *opp) {
     GC_header new_header = getHeader(new_p);
     GC_header* new_headerp = getHeaderp (new_p);
 
-    /* Set lift mask */
-    if (DEBUG_LWTGC)
-        fprintf (stderr, "\t pointer "FMTPTR" headerp "FMTPTR" : setting header "FMTHDR" to "FMTHDR"\n",
-                 (uintptr_t)new_p, (uintptr_t)new_headerp, new_header, new_header | LIFT_MASK);
-    *new_headerp = new_header | LIFT_MASK;
+    if (isPointerInHeap (s, s->sharedHeap, new_p)) {
+        /* Set lift mask */
+        if (DEBUG_LWTGC)
+            fprintf (stderr, "\t pointer "FMTPTR" headerp "FMTPTR" : setting header "FMTHDR" to "FMTHDR"\n",
+                    (uintptr_t)new_p, (uintptr_t)new_headerp, new_header, new_header | LIFT_MASK);
+        *new_headerp = new_header | LIFT_MASK;
+    }
+    else if (DEBUG_LWTGC) {
+            fprintf (stderr, "\t pointer "FMTPTR" was not lifted\n", (uintptr_t)new_p);
+    }
 }
 
 
 static inline void assertLiftedObjptr (GC_state s, objptr *opp) {
     objptr op = *opp;
     bool res = isObjptrInHeap (s, s->sharedHeap, op);
-    assert (res);
+    GC_header h = getHeader(objptrToPointer (op, s->heap->start));
+    GC_objectTypeTag tag;
+    splitHeader (s, h, &tag, NULL, NULL, NULL);
+    bool stackType = (tag == STACK_TAG);
+    res = !(!res);
+    stackType = !(!stackType);
+    assert (res || stackType);
 }
 
 
@@ -128,8 +139,9 @@ void liftAllObjectsDuringInit (GC_state s) {
 
   //Check
   if (DEBUG_LWTGC) {
-    fprintf (stderr, "liftAllObjectsDuringInit: check\n");
+    fprintf (stderr, "liftAllObjectsDuringInit: check(1)\n");
     foreachObjptrInRange (s, toStart, &s->forwardState.back, assertLiftedObjptr, TRUE);
+    fprintf (stderr, "liftAllObjectsDuringInit: check(2)\n");
   }
 
   /* Force a major GC to clean up the local heap. */
