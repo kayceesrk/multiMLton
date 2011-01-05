@@ -76,6 +76,7 @@ GC_stack newStack (GC_state s,
                                 allocInOldGen, allocInSharedHeap));
   stack->reserved = reserved;
   stack->used = 0;
+  stack->thread = BOGUS_OBJPTR;
   if (DEBUG_STACKS)
     fprintf (stderr, FMTPTR " = newStack (%"PRIuMAX")\n",
              (uintptr_t)stack,
@@ -98,6 +99,7 @@ GC_thread newThread (GC_state s, size_t reserved) {
   thread->bytesNeeded = 0;
   thread->exnStack = BOGUS_EXN_STACK;
   thread->stack = pointerToObjptr((pointer)stack, s->heap->start);
+  stack->thread = pointerToObjptr ((pointer)thread, s->heap->start);
   if (DEBUG_THREADS)
     fprintf (stderr, FMTPTR" = newThreadOfSize (%"PRIuMAX")\n",
              (uintptr_t)thread, (uintmax_t)reserved);;

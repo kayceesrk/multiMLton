@@ -34,6 +34,7 @@ struct GC_state {
   struct GC_controls *controls;
   struct GC_cumulativeStatistics *cumulativeStatistics;
   objptr currentThread; /* Currently executing thread (in heap). */
+  DanglingStack* danglingStackList;
   struct GC_forwardState forwardState;
   pointer ffiOpArgsResPtr;
   GC_frameLayout frameLayouts; /* Array of frame layouts. */

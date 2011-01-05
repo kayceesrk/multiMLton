@@ -6,6 +6,8 @@
  * See the file MLton-LICENSE for details.
  */
 
+void assertIsObjptrInSharedHeap (GC_state s, objptr *opp);
+
 void assertIsObjptrInSharedHeap (GC_state s, objptr *opp) {
   assert (isObjptrInHeap (s, s->sharedHeap, *opp));
   unless (isObjptrInHeap (s, s->sharedHeap, *opp))

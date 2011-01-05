@@ -387,6 +387,7 @@ int GC_init (GC_state s, int argc, char **argv) {
   rusageZero (&s->cumulativeStatistics->ru_thread);
   timevalZero (&s->cumulativeStatistics->tv_rt);
   s->currentThread = BOGUS_OBJPTR;
+  s->danglingStackList = NULL;
   s->hashConsDuringGC = FALSE;
   s->heap = (GC_heap) malloc (sizeof (struct GC_heap));
   initHeap (s, s->heap, LOCAL_HEAP);

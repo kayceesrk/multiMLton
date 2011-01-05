@@ -36,6 +36,14 @@ void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f) {
           callIfIsObjptr (s, f, &s->procStates[proc].roots[i]);
         }
       }
+
+      DanglingStack* danglingStack = s->procStates[proc].danglingStackList;
+      while (danglingStack) {
+        if (DEBUG_DETAILED)
+          fprintf (stderr, "foreachDanglingStack "FMTOBJPTR"\n", danglingStack->stack);
+        callIfIsObjptr (s, f, &danglingStack->stack);
+        danglingStack = danglingStack->next;
+      }
     }
   }
   else {
@@ -43,6 +51,14 @@ void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f) {
     callIfIsObjptr (s, f, &s->currentThread);
     callIfIsObjptr (s, f, &s->savedThread);
     callIfIsObjptr (s, f, &s->signalHandlerThread);
+
+    DanglingStack* danglingStack = s->danglingStackList;
+    while (danglingStack) {
+        if (DEBUG_DETAILED)
+          fprintf (stderr, "foreachDanglingStack "FMTOBJPTR"\n", danglingStack->stack);
+        callIfIsObjptr (s, f, &danglingStack->stack);
+        danglingStack = danglingStack->next;
+    }
   }
 }
 
@@ -62,9 +78,18 @@ void foreachGlobalObjptrInScope (GC_state s, GC_foreachObjptrFun f) {
   callIfIsObjptr (s, f, &s->currentThread);
   callIfIsObjptr (s, f, &s->savedThread);
   callIfIsObjptr (s, f, &s->signalHandlerThread);
+
   if (s->procStates and s->roots) {
     for (uint32_t i = 0; i < s->rootsLength; i++)
       callIfIsObjptr (s, f, &s->roots[i]);
+  }
+
+  DanglingStack* danglingStack = s->danglingStackList;
+  while (danglingStack) {
+      if (DEBUG_DETAILED)
+        fprintf (stderr, "foreachDanglingStack "FMTOBJPTR"\n", danglingStack->stack);
+      callIfIsObjptr (s, f, &danglingStack->stack);
+      danglingStack = danglingStack->next;
   }
 }
 

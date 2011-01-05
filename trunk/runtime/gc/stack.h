@@ -16,13 +16,15 @@
  * markIndex (word32) ::
  * reserved ::
  * used ::
+ * thread ::
  * ... reserved bytes ...
  *
- * The markTop and markIndex are used by the mark-compact GC.  The
- * reserved size gives the number of bytes for the stack (before the
- * next ML object).  The used size gives the number of bytes currently
- * used by the stack.  The sequence of reserved bytes correspond to ML
- * stack frames, which will be discussed in more detail in "frame.h".
+ * The markTop and markIndex are used by the mark-compact GC.  The reserved
+ * size gives the number of bytes for the stack (before the next ML object).
+ * The used size gives the number of bytes currently used by the stack.
+ * backPointer points to the stack pointer in the corresponding thread. The
+ * sequence of reserved bytes correspond to ML stack frames, which will be
+ * discussed in more detail in "frame.h".
 */
 typedef struct GC_stack {
   /* markTop and markIndex are only used during marking.  They record
@@ -46,7 +48,22 @@ typedef struct GC_stack {
   /* The next address is the bottom of the stack, and the following
    * reserved bytes hold space for the stack.
    */
+  objptr thread;
 } *GC_stack;
+
+/* DanglingStack is used to represent stacks whose corresponding thread object
+ * has been moved to the shared heap. A linked list of DanglingStacks are used
+ * during local heaps to trace the stacks. During shared heap collection, this
+ * list is cleared and recreated as pointers are traced from thread objects on
+ * the shared heap to the stacks on the local heaps.
+ */
+
+typedef struct _DanglingStack DanglingStack;
+
+struct _DanglingStack {
+    objptr stack;
+    DanglingStack* next;
+};
 
 #define GC_STACK_HEADER_SIZE GC_HEADER_SIZE
 
@@ -63,6 +80,8 @@ static inline bool isStackReservedAligned (GC_state s, size_t reserved);
 
 static inline size_t sizeofStackSlop (GC_state s);
 
+static inline DanglingStack* newDanglingStack (GC_state s);
+static inline void clearDanglingStackList (GC_state s);
 static inline pointer getStackBottom (GC_state s, GC_stack stack);
 static inline pointer getStackTop (GC_state s, GC_stack stack);
 static inline pointer getStackLimitPlusSlop (GC_state s, GC_stack stack);

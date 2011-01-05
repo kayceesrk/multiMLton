@@ -243,3 +243,24 @@ void copyStack (GC_state s, GC_stack from, GC_stack to) {
              (uintmax_t)from->used);
   GC_memcpy (fromBottom, toBottom, from->used);
 }
+
+DanglingStack* newDanglingStack (GC_state s) {
+    DanglingStack* danglingStack = (DanglingStack*) malloc (sizeof (DanglingStack));
+    assert (danglingStack);
+    danglingStack->next = NULL;
+    danglingStack->stack = BOGUS_OBJPTR;
+
+    if (s->danglingStackList == NULL) {
+        s->danglingStackList = danglingStack;
+    }
+    else {
+        DanglingStack* prev = s->danglingStackList;
+        s->danglingStackList = danglingStack;
+        danglingStack->next = prev;
+    }
+    return danglingStack;
+}
+
+void clearDanglingStackList (GC_state s) {
+    assert (0);
+}

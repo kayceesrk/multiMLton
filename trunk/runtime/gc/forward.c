@@ -66,30 +66,21 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
                                          bytesNonObjptrs, numObjptrs);
       skip = 0;
     } else { /* Stack. */
-      size_t reservedNew;
-      GC_stack stack;
-      /* XXX KC : Make sure this correct */
-      bool isCurrentStack = false;
+      GC_stack stack = (GC_stack)p;
+      skip = headerBytes = objectBytes = 0;
+      DanglingStack* danglingStack = newDanglingStack (s);
+      danglingStack->stack = pointerToObjptr ((pointer)stack, s->heap->start);
 
-      assert (STACK_TAG == tag);
-      headerBytes = GC_STACK_HEADER_SIZE;
-      stack = (GC_stack)p;
-
-      /* Check if the pointer is the current stack of current processor. */
-      isCurrentStack = (getStackCurrent(s) == stack && not isStackEmpty(stack));
-
-      reservedNew = sizeofStackShrinkReserved (s, stack, isCurrentStack);
-      if (reservedNew < stack->reserved) {
-        if (DEBUG_STACKS or s->controls->messages)
-          fprintf (stderr,
-                   "[GC: Shrinking stack of size %s bytes to size %s bytes, using %s bytes.]\n",
-                   uintmaxToCommaString(stack->reserved),
-                   uintmaxToCommaString(reservedNew),
-                   uintmaxToCommaString(stack->used));
-        stack->reserved = reservedNew;
-      }
-      objectBytes = sizeof (struct GC_stack) + stack->used;
-      skip = stack->reserved - stack->used;
+      /* By this time the thread corresponding to this stack would have been
+       * forwarded.
+       */
+      pointer thrd = objptrToPointer (stack->thread, s->heap->start);
+      assert (getHeader (thrd) == GC_FORWARDED);
+      stack->thread = *(objptr*)thrd;
+      thrd = objptrToPointer (stack->thread, s->sharedHeap->start);
+      if (DEBUG_DETAILED)
+          fprintf (stderr, "Not lifting GC_stack. stack->thread is "FMTPTR"\n", (uintptr_t)thrd);
+      return;
     }
     size = headerBytes + objectBytes;
     assert (s->forwardState.back + size + skip <= s->forwardState.toLimit);
@@ -218,6 +209,13 @@ void forwardObjptr (GC_state s, objptr *opp) {
       }
       objectBytes = sizeof (struct GC_stack) + stack->used;
       skip = stack->reserved - stack->used;
+
+      pointer thrd = objptrToPointer (stack->thread, s->heap->start);
+      if (getHeader(thrd) == GC_FORWARDED) {
+        stack->thread = *(objptr*)thrd;
+      }
+      if (DEBUG_DETAILED)
+          fprintf (stderr, "[GC: Forwarding stack. stack->thread is "FMTOBJPTR"\n", stack->thread);
     }
     size = headerBytes + objectBytes;
     assert (s->forwardState.back + size + skip <= s->forwardState.toLimit);
