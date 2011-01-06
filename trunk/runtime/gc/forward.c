@@ -34,8 +34,8 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
   p = objptrToPointer (op, s->heap->start);
   if (DEBUG_DETAILED)
     fprintf (stderr,
-             "forwardObjptr  opp = "FMTPTR"  op = "FMTOBJPTR"  p = "FMTPTR"\n",
-             (uintptr_t)opp, op, (uintptr_t)p);
+             "forwardObjptrToSharedHeap  opp = "FMTPTR"  op = "FMTOBJPTR"  p = "FMTPTR" [%d]\n",
+             (uintptr_t)opp, op, (uintptr_t)p, s->procId);
   header = getHeader (p);
 
   if (isObjectLifted (header)) {
@@ -44,7 +44,13 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
       return;
   }
 
-  assert (isObjptrInFromSpace (s, s->heap, *opp));
+  if (!isObjptrInFromSpace (s, s->heap, *opp)) {
+      fprintf (stderr,
+               "forwardObjptrToSharedHeap op="FMTOBJPTR" could be dangling stack. Ignoring.[%d]\n",
+               op, s->procId);
+      //XXX KC Should assert if the object containing this pointer is a GC_thread
+  }
+  //assert (isObjptrInFromSpace (s, s->heap, *opp));
 
   if (header != GC_FORWARDED) { /* forward the object */
     size_t size, skip;

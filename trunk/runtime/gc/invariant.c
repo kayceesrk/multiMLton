@@ -108,8 +108,7 @@ bool invariantForGC (GC_state s) {
   else {
     foreachObjptrInRange (s, s->heap->nursery, &s->frontier,
                           assertIsObjptrInFromSpaceOrLifted, FALSE);
-    //XXX LWTGC -- needs to be removed -- does not work with multiple threads
-    foreachObjptrInRange (s, alignFrontier (s, s->sharedHeap->start), &s->sharedFrontier,
+    foreachObjptrInRange (s, alignFrontier (s, s->sharedStart), &s->sharedFrontier,
                           assertLiftedObjptr, FALSE);
   }
  /* Current thread. */

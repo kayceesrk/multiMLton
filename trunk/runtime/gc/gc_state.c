@@ -251,44 +251,43 @@ void setGCStateCurrentSharedHeap (GC_state s,
     for (int proc = 0; proc < s->numberOfProcs; proc++) {
       s->procStates[proc].canMinor = s->canMinor;
       assert (isFrontierAligned (s, frontier));
-      s->procStates[proc].start = s->procStates[proc].frontier = frontier;
-      s->procStates[proc].limitPlusSlop = s->procStates[proc].start +
+      s->procStates[proc].sharedStart = s->procStates[proc].sharedFrontier = frontier;
+      s->procStates[proc].sharedLimitPlusSlop = s->procStates[proc].sharedStart +
         getThreadCurrent(&s->procStates[proc])->bytesNeeded;
-      s->procStates[proc].limit = s->procStates[proc].limitPlusSlop - GC_HEAP_LIMIT_SLOP;
-      assert (s->procStates[proc].frontier <= s->procStates[proc].limitPlusSlop);
+      s->procStates[proc].sharedLimit = s->procStates[proc].sharedLimitPlusSlop - GC_HEAP_LIMIT_SLOP;
+      assert (s->procStates[proc].sharedFrontier <= s->procStates[proc].sharedLimitPlusSlop);
       /* XXX clearCardMap (?) */
 
       if (DEBUG)
         for (size_t i = 0; i < GC_BONUS_SLOP; i++)
-          *(s->procStates[proc].limitPlusSlop + i) = 0xBF;
+          *(s->procStates[proc].sharedLimitPlusSlop + i) = 0xBF;
 
-      frontier = s->procStates[proc].limitPlusSlop + GC_BONUS_SLOP;
+      frontier = s->procStates[proc].sharedLimitPlusSlop + GC_BONUS_SLOP;
     }
   }
   else {
     assert (Proc_processorNumber (s) == 0);
     /* XXX this is a lot of copy-paste */
-    for (int proc = 1; proc < s->numberOfProcs; proc++) {
+    for (int proc = 0; proc < s->numberOfProcs; proc++) {
       s->procStates[proc].canMinor = s->canMinor;
       assert (isFrontierAligned (s, frontier));
-      s->procStates[proc].start = s->procStates[proc].frontier = frontier;
-      s->procStates[proc].limitPlusSlop = s->procStates[proc].start +
+      s->procStates[proc].sharedStart = s->procStates[proc].sharedFrontier = frontier;
+      s->procStates[proc].sharedLimitPlusSlop = s->procStates[proc].sharedStart +
         GC_HEAP_LIMIT_SLOP;
-      s->procStates[proc].limit = s->procStates[proc].limitPlusSlop - GC_HEAP_LIMIT_SLOP;
-      assert (s->procStates[proc].frontier <= s->procStates[proc].limitPlusSlop);
+      s->procStates[proc].sharedLimit = s->procStates[proc].sharedLimitPlusSlop - GC_HEAP_LIMIT_SLOP;
+      assert (s->procStates[proc].sharedFrontier <= s->procStates[proc].sharedLimitPlusSlop);
       /* XXX clearCardMap (?) */
 
-      if ( DEBUG)
+      if (DEBUG)
         for (size_t i = 0; i < GC_BONUS_SLOP; i++)
-          *(s->procStates[proc].limitPlusSlop + i) = 0xBF;
+          *(s->procStates[proc].sharedLimitPlusSlop + i) = 0xBF;
 
-      frontier = s->procStates[proc].limitPlusSlop + GC_BONUS_SLOP;
+      frontier = s->procStates[proc].sharedLimitPlusSlop + GC_BONUS_SLOP;
     }
 
-    s->sharedStart = s->sharedFrontier = frontier;
+    /* s->sharedStart = s->sharedFrontier = frontier;
     s->sharedLimitPlusSlop = limit;
-    s->sharedLimit = s->sharedLimitPlusSlop - GC_HEAP_LIMIT_SLOP;
-    /* XXX clearCardMap (?) */
+    s->sharedLimit = s->sharedLimitPlusSlop - GC_HEAP_LIMIT_SLOP; */
 
     if (DEBUG)
       for (size_t i = 0; i < GC_BONUS_SLOP; i++)

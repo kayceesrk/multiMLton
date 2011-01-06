@@ -93,7 +93,7 @@ void liftAllObjectsDuringInit (GC_state s) {
   //Set up the forwarding state
   pointer toStart = alignFrontier (s, s->sharedFrontier);
   s->forwardState.toStart = s->sharedFrontier;
-  s->forwardState.toLimit = s->sharedLimit;
+  s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
   s->forwardState.back = toStart;
 
   //Forward
@@ -178,7 +178,7 @@ pointer GC_move (GC_state s, pointer p) {
 
   //Set up the forwarding state
   s->forwardState.toStart = s->sharedFrontier;
-  s->forwardState.toLimit = s->sharedLimit;
+  s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
   s->forwardState.back = s->forwardState.toStart;
   s->forwardState.amInMinorGC = TRUE;
 
