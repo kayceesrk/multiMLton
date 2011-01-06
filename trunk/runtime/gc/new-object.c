@@ -19,7 +19,7 @@ pointer newObject (GC_state s,
   pointer frontier;
   pointer result;
 
-  assert (!(allocInOldGen & allocInSharedHeap));
+  assert (!allocInSharedHeap);
   assert (isAligned (bytesRequested, s->alignment));
   assert (allocInOldGen
           ? hasHeapBytesFree (s, s->heap, bytesRequested, 0)

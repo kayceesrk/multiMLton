@@ -42,6 +42,9 @@ void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f) {
         if (DEBUG_DETAILED)
           fprintf (stderr, "foreachDanglingStack "FMTOBJPTR"\n", danglingStack->stack);
         callIfIsObjptr (s, f, &danglingStack->stack);
+        GC_stack stk = (GC_stack) objptrToPointer (danglingStack->stack, s->procStates[proc].heap->start);
+        GC_thread thrd = (GC_thread) objptrToPointer (stk->thread, s->procStates[proc].sharedHeap->start);
+        callIfIsObjptr (s, f, &thrd->stack);
         danglingStack = danglingStack->next;
       }
     }
@@ -57,6 +60,9 @@ void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f) {
         if (DEBUG_DETAILED)
           fprintf (stderr, "foreachDanglingStack "FMTOBJPTR"\n", danglingStack->stack);
         callIfIsObjptr (s, f, &danglingStack->stack);
+        GC_stack stk = (GC_stack) objptrToPointer (danglingStack->stack, s->heap->start);
+        GC_thread thrd = (GC_thread) objptrToPointer (stk->thread, s->sharedHeap->start);
+        callIfIsObjptr (s, f, &thrd->stack);
         danglingStack = danglingStack->next;
     }
   }
@@ -89,6 +95,9 @@ void foreachGlobalObjptrInScope (GC_state s, GC_foreachObjptrFun f) {
       if (DEBUG_DETAILED)
         fprintf (stderr, "foreachDanglingStack "FMTOBJPTR"\n", danglingStack->stack);
       callIfIsObjptr (s, f, &danglingStack->stack);
+      GC_stack stk = (GC_stack) objptrToPointer (danglingStack->stack, s->heap->start);
+      GC_thread thrd = (GC_thread) objptrToPointer (stk->thread, s->sharedHeap->start);
+      callIfIsObjptr (s, f, &thrd->stack);
       danglingStack = danglingStack->next;
   }
 }
