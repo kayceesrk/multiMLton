@@ -197,7 +197,6 @@ void duplicateWorld (GC_state d, GC_state s) {
   d->secondaryLocalHeap = (GC_heap) malloc (sizeof (struct GC_heap));
   initHeap (d, d->secondaryLocalHeap, LOCAL_HEAP);
 
-
   /* Use the original to allocate */
   //XXX KC SPH does this violate GC invariants
   thread = newThread (d, sizeofStackInitialReserved (d));

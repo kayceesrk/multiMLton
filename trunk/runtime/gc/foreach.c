@@ -19,11 +19,11 @@ void callIfIsObjptr (GC_state s, GC_foreachObjptrFun f, objptr *opp) {
 void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f) {
   for (unsigned int i = 0; i < s->globalsLength; ++i) {
     if (DEBUG_DETAILED)
-      fprintf (stderr, "foreachGlobal %u\n", i);
+      fprintf (stderr, "foreachGlobal %u [%d]\n", i, s->procId);
     callIfIsObjptr (s, f, &s->globals [i]);
   }
   if (DEBUG_DETAILED)
-    fprintf (stderr, "foreachGlobal threads\n");
+    fprintf (stderr, "foreachGlobal threads [%d]\n", s->procId);
   if (s->procStates) {
     for (int proc = 0; proc < s->numberOfProcs; proc++) {
       callIfIsObjptr (s, f, &s->procStates[proc].callFromCHandlerThread);
@@ -40,7 +40,8 @@ void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f) {
       DanglingStack* danglingStack = s->procStates[proc].danglingStackList;
       while (danglingStack) {
         if (DEBUG_DETAILED)
-          fprintf (stderr, "foreachDanglingStack "FMTOBJPTR"\n", danglingStack->stack);
+          fprintf (stderr, "foreachDanglingStack "FMTOBJPTR" [%d]\n",
+                   danglingStack->stack, s->procId);
         callIfIsObjptr (s, f, &danglingStack->stack);
         GC_stack stk = (GC_stack) objptrToPointer (danglingStack->stack, s->procStates[proc].heap->start);
         GC_thread thrd = (GC_thread) objptrToPointer (stk->thread, s->procStates[proc].sharedHeap->start);
@@ -58,7 +59,8 @@ void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f) {
     DanglingStack* danglingStack = s->danglingStackList;
     while (danglingStack) {
         if (DEBUG_DETAILED)
-          fprintf (stderr, "foreachDanglingStack "FMTOBJPTR"\n", danglingStack->stack);
+          fprintf (stderr, "foreachDanglingStack "FMTOBJPTR" [%d]\n",
+                   danglingStack->stack, s->procId);
         callIfIsObjptr (s, f, &danglingStack->stack);
         GC_stack stk = (GC_stack) objptrToPointer (danglingStack->stack, s->heap->start);
         GC_thread thrd = (GC_thread) objptrToPointer (stk->thread, s->sharedHeap->start);

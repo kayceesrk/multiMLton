@@ -190,11 +190,11 @@ pointer GC_move (GC_state s, pointer p) {
   s->forwardState.amInMinorGC = FALSE;
 
   //Check
-  if (DEBUG_LWTGC) {
+  /* if (DEBUG_LWTGC) {
     fprintf (stderr, "GC_move: check(1)\n");
     foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, assertLiftedObjptr, TRUE);
     fprintf (stderr, "GC_move: check(2)\n");
-  }
+  } */
 
 
   /* Force a garbage collection. Essential to fix the forwarding pointers from
