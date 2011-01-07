@@ -284,17 +284,6 @@ void setGCStateCurrentSharedHeap (GC_state s,
 
       frontier = s->procStates[proc].sharedLimitPlusSlop + GC_BONUS_SLOP;
     }
-
-    /* s->sharedStart = s->sharedFrontier = frontier;
-    s->sharedLimitPlusSlop = limit;
-    s->sharedLimit = s->sharedLimitPlusSlop - GC_HEAP_LIMIT_SLOP; */
-
-    if (DEBUG)
-      for (size_t i = 0; i < GC_BONUS_SLOP; i++)
-        *(s->sharedLimitPlusSlop + i) = 0xBF;
-
-    fprintf (stderr, "Frontier : %p h->frontier %p\n", (void*)frontier, (void*)h->frontier);
-    frontier = s->sharedLimitPlusSlop + GC_BONUS_SLOP;
   }
   fprintf (stderr, "Frontier : %p h->frontier %p\n", (void*)frontier, (void*)h->frontier);
   h->frontier = frontier;

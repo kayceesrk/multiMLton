@@ -87,7 +87,7 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
     /* Allocate chunk in the shared heap for the copy */
     allocChunkInSharedHeap (s, size + skip);
     /* Copy the object. */
-    GC_memcpy (p - headerBytes, s->forwardState.back, size);
+    GC_memcpy (p - headerBytes, s->sharedFrontier, size);
     if (DEBUG_DETAILED) {
         fprintf (stderr, "Zeroing out %s bytes starting at "FMTPTR"\n",
                          uintmaxToCommaString (objectBytes),
@@ -127,10 +127,10 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
                  (uintptr_t)p, *(objptr*)p);
     }
     /* Update the back of the queue. */
-    s->forwardState.back += size + skip;
+    s->sharedFrontier += size + skip;
     assert (isAligned ((size_t)s->forwardState.back + GC_NORMAL_HEADER_SIZE,
                        s->alignment));
-    s->sharedFrontier = s->forwardState.back;
+    s->forwardState.back = s->sharedFrontier;
   }
   *opp = *((objptr*)p);
   if (DEBUG_DETAILED)
