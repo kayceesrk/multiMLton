@@ -8,7 +8,8 @@
 
 #if (defined (MLTON_GC_INTERNAL_FUNCS))
 
-static inline GC_thread copyThread (GC_state s, GC_thread from, size_t size);
+static inline GC_thread copyThread (GC_state s, GC_state target, GC_thread from, size_t size);
+static inline pointer copyThreadTo (GC_state s, GC_state target, pointer p);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */
 

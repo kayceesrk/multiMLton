@@ -168,8 +168,13 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
       last = p + dataBytes;
       if (0 == bytesNonObjptrs)
         /* Array with only pointers. */
-        for ( ; p < last; p += OBJPTR_SIZE)
+        for ( ; p < last; p += OBJPTR_SIZE) {
+          if (DEBUG_DETAILED)
+            fprintf (stderr,
+                     "  p = "FMTPTR"  *p = "FMTOBJPTR"\n",
+                     (uintptr_t)p, *(objptr*)p);
           callIfIsObjptr (s, f, (objptr*)p);
+        }
       else {
         /* Array with a mix of pointers and non-pointers. */
         size_t bytesObjptrs;
@@ -184,8 +189,13 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
           p += bytesNonObjptrs;
           next = p + bytesObjptrs;
           /* For each internal pointer. */
-          for ( ; p < next; p += OBJPTR_SIZE)
+          for ( ; p < next; p += OBJPTR_SIZE) {
+            if (DEBUG_DETAILED)
+              fprintf (stderr,
+                       "  p = "FMTPTR"  *p = "FMTOBJPTR"\n",
+                       (uintptr_t)p, *(objptr*)p);
             callIfIsObjptr (s, f, (objptr*)p);
+          }
         }
       }
       assert (p == last);

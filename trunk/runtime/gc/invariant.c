@@ -108,8 +108,13 @@ bool invariantForGC (GC_state s) {
   else {
     foreachObjptrInRange (s, s->heap->nursery, &s->frontier,
                           assertIsObjptrInFromSpaceOrLifted, FALSE);
-    foreachObjptrInRange (s, alignFrontier (s, s->sharedStart), &s->sharedFrontier,
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "Checking sharedHeap(1). sharedStart = "FMTPTR" sharedFrontier = "FMTPTR"\n",
+               s->sharedStart, s->sharedFrontier);
+    foreachObjptrInRange (s, s->sharedStart, &s->sharedFrontier,
                           assertLiftedObjptr, FALSE);
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "Checking sharedHeap(2).\n");
   }
  /* Current thread. */
   GC_stack stack = getStackCurrent(s);

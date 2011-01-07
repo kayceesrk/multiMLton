@@ -342,13 +342,13 @@ static void allocChunkInSharedHeap (GC_state s,
     assert (s->sharedLimitPlusSlop >= s->sharedFrontier);
     if (nurseryBytesRequested <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier)) {
       if (DEBUG)
-        fprintf (stderr, "[GC: aborting shared alloc: satisfied.]\n");
+        fprintf (stderr, "[GC: aborting shared alloc: satisfied.] [%d]\n", s->procId);
       return;
     }
     /* Perhaps there is not enough space in the nursery to satify this
        request; if that's true then we need to do a full collection */
     if (nurseryBytesRequested + GC_BONUS_SLOP > availableBytes) {
-      fprintf (stderr, "[GC: aborting shared alloc: no space.]\n");
+      fprintf (stderr, "[GC: aborting shared alloc: no space.] [%d]\n", s->procId);
       assert (0);
       return;
     }
@@ -381,8 +381,8 @@ static void allocChunkInSharedHeap (GC_state s,
     if (__sync_bool_compare_and_swap (&s->sharedHeap->frontier,
                                       oldFrontier, newHeapFrontier)) {
       if (DEBUG)
-        fprintf (stderr, "[GC: Shared alloction of chunk @ "FMTPTR".]\n",
-                 (uintptr_t)newProcFrontier);
+        fprintf (stderr, "[GC: Shared alloction of chunk @ "FMTPTR".] [%d]\n",
+                 (uintptr_t)newProcFrontier, s->procId);
 
       s->sharedStart = newStart;
       s->sharedFrontier = newProcFrontier;
@@ -394,8 +394,8 @@ static void allocChunkInSharedHeap (GC_state s,
     }
     else {
       if (DEBUG)
-        fprintf (stderr, "[GC: Contention for shared alloction (frontier is "FMTPTR").]\n",
-                 (uintptr_t)s->sharedHeap->frontier);
+        fprintf (stderr, "[GC: Contention for shared alloction (frontier is "FMTPTR").] [%d]\n",
+                 (uintptr_t)s->sharedHeap->frontier, s->procId);
     }
   }
 }
@@ -586,15 +586,6 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
   }
   assert (not ensureFrontier or invariantForMutatorFrontier(s));
   assert (not ensureStack or invariantForMutatorStack(s));
-
-
-  if (DEBUG_LWTGC and s->sharedHeap and s->sharedHeap->size > 0 and FALSE) {
-    fprintf (stderr, "GC_collect: check\n");
-    s->forwardState.toStart = s->sharedHeap->start;
-    s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
-    s->forwardState.back = s->sharedFrontier;
-    foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, assertLiftedObjptr, TRUE);
-  }
 }
 
 void GC_collect (GC_state s, size_t bytesRequested, bool force,

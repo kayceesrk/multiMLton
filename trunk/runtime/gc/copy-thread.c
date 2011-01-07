@@ -6,7 +6,7 @@
  * See the file MLton-LICENSE for details.
  */
 
-GC_thread copyThread (GC_state s, GC_thread from, size_t used) {
+GC_thread copyThread (GC_state s, GC_state target, GC_thread from, size_t used) {
   GC_thread to;
 
   if (DEBUG_THREADS or s->controls->messages)
@@ -16,7 +16,7 @@ GC_thread copyThread (GC_state s, GC_thread from, size_t used) {
    */
   assert (s->savedThread == BOGUS_OBJPTR);
   s->savedThread = pointerToObjptr((pointer)from - offsetofThread (s), s->heap->start);
-  to = newThread (s, alignStackReserved(s, used));
+  to = newThread (target, alignStackReserved(s, used));
   from = (GC_thread)(objptrToPointer(s->savedThread, s->heap->start) + offsetofThread (s));
   s->savedThread = BOGUS_OBJPTR;
   if (DEBUG_THREADS) {
@@ -25,7 +25,7 @@ GC_thread copyThread (GC_state s, GC_thread from, size_t used) {
   }
   copyStack (s,
              (GC_stack)(objptrToPointer(from->stack, s->heap->start)),
-             (GC_stack)(objptrToPointer(to->stack, s->heap->start)));
+             (GC_stack)(objptrToPointer(to->stack, target->heap->start)));
   to->bytesNeeded = from->bytesNeeded;
   to->exnStack = from->exnStack;
   return to;
@@ -51,7 +51,7 @@ void GC_copyCurrentThread (GC_state s) {
   fromThread = (GC_thread)(objptrToPointer(s->currentThread, s->heap->start)
                            + offsetofThread (s));
   fromStack = (GC_stack)(objptrToPointer(fromThread->stack, s->heap->start));
-  toThread = copyThread (s, fromThread, fromStack->reserved);
+  toThread = copyThread (s, s, fromThread, fromStack->reserved);
 
   /* Look up these again since a GC may have occurred and moved them */
   fromThread = (GC_thread)(objptrToPointer(s->currentThread, s->heap->start)
@@ -99,7 +99,7 @@ pointer GC_copyThread (GC_state s, pointer p) {
    */
   /* assert (fromStack->reserved == fromStack->used); */
   assert (fromStack->reserved >= fromStack->used);
-  toThread = copyThread (s, fromThread, fromStack->reserved);
+  toThread = copyThread (s, s, fromThread, fromStack->reserved);
   /* The following assert is no longer true, since alignment
    * restrictions can force the reserved to be slightly larger than
    * the used.
@@ -113,6 +113,30 @@ pointer GC_copyThread (GC_state s, pointer p) {
 
   if (DEBUG_THREADS)
     fprintf (stderr, FMTPTR" = GC_copyThread ("FMTPTR") [%d]\n",
+             (uintptr_t)toThread, (uintptr_t)fromThread,
+             Proc_processorNumber (s));
+  return ((pointer)toThread - offsetofThread (s));
+}
+
+pointer copyThreadTo (GC_state s, GC_state target, pointer p) {
+  GC_thread fromThread;
+  GC_stack fromStack;
+  GC_thread toThread;
+
+  if (DEBUG_THREADS)
+    fprintf (stderr, "copyThreadTo ("FMTPTR") [%d]\n", (uintptr_t)p,
+             Proc_processorNumber (s));
+
+  getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
+  getThreadCurrent(s)->exnStack = s->exnStack;
+
+  fromThread = (GC_thread)(p + offsetofThread (s));
+  fromStack = (GC_stack)(objptrToPointer(fromThread->stack, s->heap->start));
+  assert (fromStack->reserved >= fromStack->used);
+  toThread = copyThread (s, target, fromThread, fromStack->reserved);
+
+  if (DEBUG_THREADS)
+    fprintf (stderr, FMTPTR" = copyThreadTo ("FMTPTR") [%d]\n",
              (uintptr_t)toThread, (uintptr_t)fromThread,
              Proc_processorNumber (s));
   return ((pointer)toThread - offsetofThread (s));

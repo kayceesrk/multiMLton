@@ -9,6 +9,7 @@
 #if (defined (MLTON_GC_INTERNAL_BASIS))
 
 PRIVATE pointer GC_move (GC_state s, pointer object);
+void moveEachObjptrInObject (GC_state s, pointer object);
 void liftAllObjectsDuringInit (GC_state s);
 static inline void assertLiftedObjptr (GC_state s, objptr *opp);
 

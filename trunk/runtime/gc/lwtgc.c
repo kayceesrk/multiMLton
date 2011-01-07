@@ -215,5 +215,48 @@ pointer GC_move (GC_state s, pointer p) {
   return objptrToPointer (*pOp, s->sharedHeap->start);
 }
 
+void moveEachObjptrInObject (GC_state s, pointer p) {
+  assert (p != BOGUS_POINTER);
 
+  /* ENTER (0) */
+  s->syncReason = SYNC_FORCE;
+  getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
+  getThreadCurrent(s)->exnStack = s->exnStack;
+  beginAtomic (s);
+
+  if (DEBUG_LWTGC)
+    fprintf (stderr, "moveEachObjptrInObject: \n");
+
+  /* If objct has already been lifted, return */
+  if (isObjectLifted (getHeader (p))) {
+    /* LEAVE (0) */
+    s->syncReason = SYNC_NONE;
+    endAtomic (s);
+    return;
+  }
+
+  //Set up the forwarding state
+  s->forwardState.toStart = s->sharedFrontier;
+  s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
+  s->forwardState.back = s->forwardState.toStart;
+  s->forwardState.amInMinorGC = TRUE;
+
+  /* Forward objptrs in the given object to sharedHeap */
+  foreachObjptrInObject (s, p, liftObjptr, TRUE);
+  foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, liftObjptr, TRUE);
+  s->forwardState.amInMinorGC = FALSE;
+
+  if (not s->canMinor || TRUE /* Force Major */)
+    fixForwardingPointers (s, TRUE);
+  else
+    fixForwardingPointers (s, TRUE);
+
+  /* LEAVE0 (s) */
+  endAtomic (s);
+
+  if (DEBUG_LWTGC)
+    fprintf (stderr, "moveEachObjptrInObject: Exiting\n");
+
+  return;
+}
 

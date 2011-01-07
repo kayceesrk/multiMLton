@@ -421,13 +421,23 @@ void GC_setSignalHandlerThread (__attribute__ ((unused)) GC_state *gs, pointer p
   GC_state s = pthread_getspecific (gcstate_key);
   objptr op = pointerToObjptr (p, s->heap->start);
   s->signalHandlerThread = op;
-  /* KC : Copy the mlton signal handler thread to all gcStates */
+
+  /* Move the object pointers in call-from-c-handler stack to the shared heap in
+   * preparation for copying this stack to each processor */
+  {
+    GC_thread thrd = (GC_thread) objptrToPointer (s->signalHandlerThread, s->heap->start);
+    pointer stk = objptrToPointer (thrd->stack, s->heap->start);
+    moveEachObjptrInObject (s, stk);
+  }
+
+  /* Copy the mlton signal handler thread to all gcStates */
   for (int proc = 0; proc < s->numberOfProcs; proc++) {
-      s->procStates[proc].signalHandlerThread = pointerToObjptr(
-        GC_copyThread (s, objptrToPointer(s->signalHandlerThread,
-                                          s->heap->start)),
-        s->heap->start);
-    }
+    s->procStates[proc].signalHandlerThread =
+      pointerToObjptr( copyThreadTo (s, &s->procStates[proc],
+                                     objptrToPointer(s->signalHandlerThread,
+                                                     s->heap->start)),
+                       s->heap->start);
+  }
 }
 
 sigset_t* GC_getSignalsHandledAddr (__attribute__ ((unused)) GC_state *gs) {

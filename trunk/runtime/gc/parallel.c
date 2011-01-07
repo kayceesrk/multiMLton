@@ -18,15 +18,28 @@ void Parallel_init (void) {
     waitCondVar = (pthread_cond_t*) malloc (s->numberOfProcs * sizeof (pthread_cond_t));
     dataInMutatorQ = (bool*) malloc (s->numberOfProcs * sizeof(bool));
 
+    /* Lift all objects from local heap of processor 0 to the shared heap. This
+     * must come before waking up the processors */
+    liftAllObjectsDuringInit (s);
+
+    /* Move the object pointers in call-from-c-handler stack to the shared heap in
+     * preparation for copying this stack to each processor */
+    {
+      GC_thread thrd = (GC_thread) objptrToPointer (s->callFromCHandlerThread, s->heap->start);
+      pointer stk = objptrToPointer (thrd->stack, s->heap->start);
+      moveEachObjptrInObject (s, stk);
+    }
+
 
     /* Set up call-back state in each worker thread */
     /* XXX hack copy the call-from-c-handler into the worker threads
        assumes this is called by the primary thread */
     for (int proc = 0; proc < s->numberOfProcs; proc++) {
-      s->procStates[proc].callFromCHandlerThread = pointerToObjptr(
-        GC_copyThread (s, objptrToPointer(s->callFromCHandlerThread,
-                                          s->heap->start)),
-        s->heap->start);
+      s->procStates[proc].callFromCHandlerThread =
+        pointerToObjptr (copyThreadTo (s, &s->procStates[proc],
+                                       objptrToPointer(s->callFromCHandlerThread,
+                                                       s->heap->start)),
+                         s->heap->start);
 
       Parallel_mutexes[proc] = -1;
       pthread_mutex_init (&waitMutex[proc], NULL);
@@ -35,10 +48,6 @@ void Parallel_init (void) {
        * on the first iteration if it is a false positive */
       dataInMutatorQ[proc] = TRUE;
     }
-
-    /* Lift all objects from local heap of processor 0 to the shared heap. This
-     * must come before waking up the processors */
-    liftAllObjectsDuringInit (s);
 
     /* Now wake them up! */
     Proc_signalInitialization (s);
