@@ -278,6 +278,15 @@ pointer foreachObjptrInRange (GC_state s, pointer front, pointer *back,
   assert (front <= b);
   while (front < b) {
     while (front < b) {
+      if (s->forwardState.rangeListFirst &&
+          s->forwardState.rangeListFirst->start == front) {
+        front = s->forwardState.rangeListFirst->end;
+        SkipRange* curr = s->forwardState.rangeListFirst;
+        s->forwardState.rangeListFirst = curr->next;
+        free (curr);
+        if (s->forwardState.rangeListFirst == NULL)
+          s->forwardState.rangeListLast = NULL;
+      }
       assert (isAligned ((size_t)front, GC_MODEL_MINALIGN));
       if (DEBUG_DETAILED)
         fprintf (stderr,

@@ -95,6 +95,7 @@ void liftAllObjectsDuringInit (GC_state s) {
   s->forwardState.toStart = s->sharedFrontier;
   s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
   s->forwardState.back = toStart;
+  s->forwardState.rangeListFirst = s->forwardState.rangeListLast = NULL;
 
   //Forward
   //Foreach global
@@ -130,6 +131,9 @@ void liftAllObjectsDuringInit (GC_state s) {
   if (DEBUG_LWTGC)
     fprintf (stderr, "liftAllObjectsDuringInit: foreachObjptrInRange\n");
   foreachObjptrInRange (s, toStart, &s->forwardState.back, liftObjptr, TRUE);
+  assert (!s->forwardState.rangeListFirst);
+  assert (!s->forwardState.rangeListLast);
+
   if (DEBUG_LWTGC)
     fprintf (stderr, "liftAllObjectsDuringInit: updateWeaksForCheneyCopy\n");
   //updateWeaksForCheneyCopy (s);
@@ -180,6 +184,7 @@ pointer GC_move (GC_state s, pointer p) {
   s->forwardState.toStart = s->sharedFrontier;
   s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
   s->forwardState.back = s->forwardState.toStart;
+  s->forwardState.rangeListFirst = s->forwardState.rangeListLast = NULL;
   s->forwardState.amInMinorGC = TRUE;
 
   /* Forward the given object to sharedHeap */
@@ -188,14 +193,8 @@ pointer GC_move (GC_state s, pointer p) {
   liftObjptr (s, pOp);
   foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, liftObjptr, TRUE);
   s->forwardState.amInMinorGC = FALSE;
-
-  //Check
-  /* if (DEBUG_LWTGC) {
-    fprintf (stderr, "GC_move: check(1)\n");
-    foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, assertLiftedObjptr, TRUE);
-    fprintf (stderr, "GC_move: check(2)\n");
-  } */
-
+  assert (!s->forwardState.rangeListFirst);
+  assert (!s->forwardState.rangeListLast);
 
   /* Force a garbage collection. Essential to fix the forwarding pointers from
    * the previous step.
@@ -239,12 +238,15 @@ void moveEachObjptrInObject (GC_state s, pointer p) {
   s->forwardState.toStart = s->sharedFrontier;
   s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
   s->forwardState.back = s->forwardState.toStart;
+  s->forwardState.rangeListFirst = s->forwardState.rangeListLast = NULL;
   s->forwardState.amInMinorGC = TRUE;
 
   /* Forward objptrs in the given object to sharedHeap */
   foreachObjptrInObject (s, p, liftObjptr, TRUE);
   foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, liftObjptr, TRUE);
   s->forwardState.amInMinorGC = FALSE;
+  assert (!s->forwardState.rangeListFirst);
+  assert (!s->forwardState.rangeListLast);
 
   if (not s->canMinor || TRUE /* Force Major */)
     fixForwardingPointers (s, TRUE);

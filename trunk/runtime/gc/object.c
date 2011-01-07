@@ -62,7 +62,7 @@ void splitHeader(GC_state s, GC_header header,
   header &= ~(LIFT_MASK);
 
   if (DEBUG_DETAILED)
-      fprintf (stderr, "splitHeader ("FMTHDR")\n", header);
+      fprintf (stderr, "splitHeader ("FMTHDR") [%d]\n", header, s->procId);
   assert (1 == (header & GC_VALID_HEADER_MASK));
   objectTypeIndex = (header & TYPE_INDEX_MASK) >> TYPE_INDEX_SHIFT;
   if (objectTypeIndex > s->objectTypesLength)

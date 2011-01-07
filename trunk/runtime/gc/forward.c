@@ -86,6 +86,22 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
     assert (s->forwardState.back + size + skip <= s->forwardState.toLimit);
     /* Allocate chunk in the shared heap for the copy */
     allocChunkInSharedHeap (s, size + skip);
+
+    if (s->sharedFrontier != s->forwardState.back) {
+      SkipRange* sr = (SkipRange*) malloc (sizeof (SkipRange));
+      sr->start = s->forwardState.back;
+      sr->end = s->sharedFrontier;
+      sr->next = NULL;
+      if (s->forwardState.rangeListLast == NULL) {
+          assert (!s->forwardState.rangeListFirst);
+          s->forwardState.rangeListFirst = s->forwardState.rangeListLast = sr;
+      }
+      else {
+          s->forwardState.rangeListLast->next = sr;
+          s->forwardState.rangeListLast = sr;
+      }
+    }
+
     /* Copy the object. */
     GC_memcpy (p - headerBytes, s->sharedFrontier, size);
     if (DEBUG_DETAILED) {

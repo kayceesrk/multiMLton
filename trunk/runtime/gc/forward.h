@@ -8,11 +8,24 @@
 
 #if (defined (MLTON_GC_INTERNAL_TYPES))
 
+typedef struct __SkipRange SkipRange;
+
+struct __SkipRange {
+  pointer start;
+  pointer end;
+  SkipRange* next;
+};
+
 struct GC_forwardState {
   bool amInMinorGC;
   pointer back;
   pointer toStart;
   pointer toLimit;
+  /* Used when moving objects to shared heap to represent the parts
+   * of the sharedHeap allocated to other mutators.
+   */
+  SkipRange* rangeListFirst;
+  SkipRange* rangeListLast;
 };
 
 #define GC_FORWARDED ~((GC_header)0)
