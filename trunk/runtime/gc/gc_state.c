@@ -47,6 +47,7 @@ void setGCStateCurrentThreadAndStack (GC_state s) {
   thread = getThreadCurrent (s);
   s->exnStack = thread->exnStack;
   stack = getStackCurrent (s);
+  assert (isPointerInHeap (s, s->heap, (pointer)stack));
   s->stackBottom = getStackBottom (s, stack);
   s->stackTop = getStackTop (s, stack);
   s->stackLimit = getStackLimit (s, stack);
@@ -307,7 +308,7 @@ void setGCStateCurrentSharedHeap (GC_state s,
   assert (isFrontierAligned (s, s->sharedFrontier));
 }
 
-bool GC_getIsPCML (__attribute__ ((unused)) GC_state *gs) {
+bool GC_getIsPCML (void) {
   GC_state s = pthread_getspecific (gcstate_key);
   return s->enableTimer;
 }

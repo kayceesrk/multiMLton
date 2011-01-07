@@ -518,6 +518,7 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->sharedHeapEnd = s->sharedHeapEnd;
   d->roots = NULL;
   d->rootsLength = 0;
+  d->danglingStackList = NULL;
   d->savedThread = BOGUS_OBJPTR;
   d->signalHandlerThread = BOGUS_OBJPTR;
   d->signalsInfo.amInSignalHandler = FALSE;

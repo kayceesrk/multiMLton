@@ -125,7 +125,7 @@ static void setGCStateCurrentLocalHeap (GC_state s,
 
 PRIVATE bool GC_getAmOriginal (GC_state *gs);
 PRIVATE void GC_setAmOriginal (GC_state *gs, bool b);
-PRIVATE bool GC_getIsPCML (GC_state *gs);
+PRIVATE bool GC_getIsPCML (void);
 PRIVATE void GC_setControlsMessages (GC_state *gs, bool b);
 PRIVATE void GC_setControlsSummary (GC_state *gs, bool b);
 PRIVATE void GC_setControlsRusageMeasureGC (GC_state *gs, bool b);

@@ -15,7 +15,6 @@ structure PrimWorld = Primitive.MLton.World
 structure Error = PosixError
 structure SysCall = Error.SysCall
 val restart = SysCall.restartFlag
-val gcState = Primitive.MLton.GCState.gcState
 
 type t = signal
 
@@ -163,7 +162,7 @@ val (getHandler, setHandler, handlers) =
        fn (s: t, h) => if Primitive.MLton.Profile.isOn andalso s = prof
                           then raiseInval ()
                        else
-                         if (PrimWorld.getIsPCML gcState) andalso (s = alrm) andalso
+                         if (PrimWorld.getIsPCML ()) andalso (s = alrm) andalso
                          (case h of
                             Handler _ => true
                           | _ => false)
@@ -261,27 +260,27 @@ val setHandler = fn (s, h) =>
           * we have installed a separate signal handler therad.
           * XXX KC : pthread_sigmask is set in c-main.h. So Is this redundant??
           *)
-         ; if (PrimWorld.getIsPCML gcState) andalso s = alrm then
+         ; if (PrimWorld.getIsPCML ()) andalso s = alrm then
                 ()
            else
                 SysCall.simpleRestart (fn () => Prim.default (toRep s)))
     (* XXX KC modified because the request may be for another processor*)
     | (Handler _, Handler _) =>
          (setHandler (s, h)
-          ; if (PrimWorld.getIsPCML gcState) andalso s = alrm then
+          ; if (PrimWorld.getIsPCML ()) andalso s = alrm then
                 ()
            else
                 SysCall.simpleRestart (fn () => Prim.handlee (toRep s)))
     | (_, Handler _) =>
          (setHandler (s, h)
-          ; if (PrimWorld.getIsPCML gcState) andalso s = alrm then
+          ; if (PrimWorld.getIsPCML ()) andalso s = alrm then
                 ()
            else
                SysCall.simpleRestart (fn () => Prim.handlee (toRep s)))
     | (Ignore, Ignore) => ()
     | (_, Ignore) =>
          (setHandler (s, Ignore)
-          ;if (PrimWorld.getIsPCML gcState) andalso s = alrm then
+          ;if (PrimWorld.getIsPCML ()) andalso s = alrm then
                 ()
            else
                 SysCall.simpleRestart (fn () => Prim.ignore (toRep s)))

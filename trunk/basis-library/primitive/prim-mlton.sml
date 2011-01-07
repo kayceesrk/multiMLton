@@ -373,7 +373,7 @@ structure World =
       val getAmOriginal = _import "GC_getAmOriginal" private: GCState.t -> bool;
       val setAmOriginal = _import "GC_setAmOriginal" private: GCState.t * bool -> unit;
       val getSaveStatus = _import "GC_getSaveWorldStatus" private: GCState.t -> bool C_Errno.t;
-      val getIsPCML = _import "GC_getIsPCML" private: GCState.t -> bool;
+      val getIsPCML = _import "GC_getIsPCML" private: unit -> bool;
       (* save's result status is accesible via getSaveStatus ().
        * It is not possible to have the type of save as
        * NullString8.t -> bool C_Errno.t, because there are two

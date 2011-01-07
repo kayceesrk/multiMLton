@@ -79,7 +79,8 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
       stack->thread = *(objptr*)thrd;
       thrd = objptrToPointer (stack->thread, s->sharedHeap->start);
       if (DEBUG_DETAILED)
-          fprintf (stderr, "Not lifting GC_stack. stack->thread is "FMTPTR"\n", (uintptr_t)thrd);
+          fprintf (stderr, "Not lifting GC_stack "FMTPTR". stack->thread is "FMTPTR"\n",
+                   (uintptr_t)p, (uintptr_t)thrd);
       return;
     }
     size = headerBytes + objectBytes;

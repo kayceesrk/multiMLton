@@ -31,7 +31,7 @@ void translateObjptr (GC_state s, objptr *opp) {
   }
 
   if (DEBUG)
-      fprintf (stderr, "translateObjptr: Remappting pointer "FMTPTR" to "FMTPTR"\n",
+      fprintf (stderr, "translateObjptr: Remapping pointer "FMTPTR" to "FMTPTR"\n",
                (uintptr_t)p, (uintptr_t)((p - translateState.from) + translateState.to));
   p = (p - translateState.from) + translateState.to;
   *opp = pointerToObjptr (p, translateState.to);
