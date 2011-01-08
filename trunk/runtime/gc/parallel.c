@@ -18,9 +18,6 @@ void Parallel_init (void) {
     waitCondVar = (pthread_cond_t*) malloc (s->numberOfProcs * sizeof (pthread_cond_t));
     dataInMutatorQ = (bool*) malloc (s->numberOfProcs * sizeof(bool));
 
-    /* Lift all objects from local heap of processor 0 to the shared heap. This
-     * must come before waking up the processors */
-    liftAllObjectsDuringInit (s);
 
     /* Move the object pointers in call-from-c-handler stack to the shared heap in
      * preparation for copying this stack to each processor */
@@ -48,6 +45,10 @@ void Parallel_init (void) {
        * on the first iteration if it is a false positive */
       dataInMutatorQ[proc] = TRUE;
     }
+
+    /* Lift all objects from local heap of processor 0 to the shared heap. This
+     * must come before waking up the processors */
+    liftAllObjectsDuringInit (s);
 
     /* Now wake them up! */
     Proc_signalInitialization (s);

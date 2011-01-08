@@ -35,6 +35,16 @@ void translateObjptr (GC_state s, objptr *opp) {
                (uintptr_t)p, (uintptr_t)((p - translateState.from) + translateState.to));
   p = (p - translateState.from) + translateState.to;
   *opp = pointerToObjptr (p, translateState.to);
+
+  GC_objectTypeTag tag;
+  GC_header header = getHeader (p);
+  splitHeader (s, header, &tag, NULL, NULL, NULL);
+  if (tag == STACK_TAG) {
+      GC_stack stack = (GC_stack)p;
+      if (DEBUG)
+          fprintf (stderr, "translateObjptr: Remappting stack->thread objptr\n");
+      translateObjptr (s, &stack->thread);
+  }
 }
 
 /* translateHeap (s, from, to, size)
@@ -54,7 +64,7 @@ void translateHeap (GC_state s, pointer from, pointer to, size_t size) {
   translateState.from = from;
   translateState.to = to;
   /* Translate globals and heap. */
-  foreachGlobalObjptr (s, translateObjptr);
+  foreachGlobalObjptrInScope (s, translateObjptr);
   limit = to + size;
   foreachObjptrInRange (s, alignFrontier (s, to), &limit, translateObjptr, FALSE);
 }

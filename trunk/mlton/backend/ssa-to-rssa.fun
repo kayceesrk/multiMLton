@@ -1064,23 +1064,26 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                   val c4 = Var.newNoname ()
                                   val cond = Var.newNoname ()
                                   val stmts =
-                                    [PrimApp {args = Vector.new2 (Operand.cast (Runtime GCField.SharedHeapStart, indexTy), addr),
-                                              dst = SOME (c1, indexTy),
+                                    [PrimApp {args = Vector.new2 (Operand.cast (Runtime GCField.SharedHeapStart, indexTy),
+                                                                  Operand.cast (addr, indexTy)),
+                                              dst = SOME (c1, Type.bool),
                                               prim = Prim.wordLt (sz, {signed = false})},
-                                    PrimApp {args = Vector.new2 (addr, Operand.cast (Runtime GCField.SharedHeapEnd, indexTy)),
-                                              dst = SOME (c2, indexTy),
+                                    PrimApp {args = Vector.new2 (Operand.cast (addr, indexTy),
+                                                                 Operand.cast (Runtime GCField.SharedHeapEnd, indexTy)),
+                                              dst = SOME (c2, Type.bool),
                                               prim = Prim.wordLt (sz, {signed = false})},
-                                    PrimApp {args = Vector.new2 (addr, Operand.cast (Runtime GCField.SharedHeapStart, indexTy)),
-                                              dst = SOME (c3, indexTy),
+                                    PrimApp {args = Vector.new2 (Operand.cast (addr, indexTy),
+                                                                 Operand.cast (Runtime GCField.SharedHeapStart, indexTy)),
+                                              dst = SOME (c3, Type.bool),
                                               prim = Prim.wordEqual sz},
-                                    PrimApp {args = Vector.new2 (Operand.Var {var = c1, ty = indexTy},
-                                                                  Operand.Var {var = c2, ty = indexTy}),
-                                              dst = SOME (c4, indexTy),
-                                              prim = Prim.wordAndb sz},
-                                    PrimApp {args = Vector.new2 (Operand.Var {var = c3, ty = indexTy},
-                                                                  Operand.Var {var = c4, ty = indexTy}),
-                                              dst = SOME (cond, indexTy),
-                                              prim = Prim.wordOrb sz}]
+                                    PrimApp {args = Vector.new2 (Operand.Var {var = c1, ty = Type.bool},
+                                                                  Operand.Var {var = c2, ty = Type.bool}),
+                                              dst = SOME (c4, Type.bool),
+                                              prim = Prim.wordAndb (WordSize.bool)},
+                                    PrimApp {args = Vector.new2 (Operand.Var {var = c3, ty = Type.bool},
+                                                                  Operand.Var {var = c4, ty = Type.bool}),
+                                              dst = SOME (cond, Type.bool),
+                                              prim = Prim.wordOrb (WordSize.bool)}]
                                 in
                                   (stmts, cond)
                                 end
@@ -1103,8 +1106,8 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
 
                                 val returnFromHandler =
                                   newBlock
-                                  {args = Vector.new1 (cReturnVar, indexTy),
-                                   kind = Kind.CReturn {func = CFunction.move indexTy},
+                                  {args = Vector.new1 (cReturnVar, returnTy),
+                                   kind = Kind.CReturn {func = CFunction.move returnTy},
                                    statements = Vector.new0 (),
                                    transfer =
                                    Goto {args = Vector.new1 (cReturnOp),
@@ -1117,7 +1120,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                    transfer =
                                     Transfer.CCall
                                     {args = Vector.new2 (GCState, rhsAddr),
-                                    func = CFunction.move indexTy,
+                                    func = CFunction.move returnTy,
                                     return = SOME returnFromHandler}}
 
                                 val maybeMoveBlock =
@@ -1127,7 +1130,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                    statements = Vector.fromList stmts2,
                                    transfer =
                                     Transfer.ifBool
-                                    (Operand.Var {var = cond2, ty = indexTy},
+                                    (Operand.Var {var = cond2, ty = Type.bool},
                                      {truee = origContinue,
                                       falsee = moveBlock})}
 
@@ -1146,14 +1149,14 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                    statements = Vector.fromList stmts3,
                                    transfer =
                                     Transfer.ifBool
-                                    (Operand.Var {var = cond3, ty = indexTy},
+                                    (Operand.Var {var = cond3, ty = Type.bool},
                                      {truee = origContinue,
                                       falsee = cardMarkBlock})}
 
                               in
                                 (stmts1,
                                  Transfer.ifBool
-                                 (Operand.Var {var = cond1, ty = indexTy},
+                                 (Operand.Var {var = cond1, ty = Type.bool},
                                   {truee = maybeMoveBlock,
                                    falsee = if (!Control.markCards) then maybeCardMarkBlock else origContinue}))
                               end

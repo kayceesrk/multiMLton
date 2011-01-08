@@ -67,6 +67,12 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
       skip = 0;
     } else { /* Stack. */
       GC_stack stack = (GC_stack)p;
+      if (isObjptrInHeap (s, s->sharedHeap, stack->thread)) {
+        if (DEBUG_DETAILED)
+          fprintf (stderr, "Not lifting GC_stack "FMTPTR". stack->thread already in sharedHeap at "FMTOBJPTR"\n",
+                   (uintptr_t)p, stack->thread);
+        return;
+      }
       skip = headerBytes = objectBytes = 0;
       DanglingStack* danglingStack = newDanglingStack (s);
       danglingStack->stack = pointerToObjptr ((pointer)stack, s->heap->start);
@@ -101,6 +107,7 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
           s->forwardState.rangeListLast->next = sr;
           s->forwardState.rangeListLast = sr;
       }
+      s->forwardState.back = s->sharedFrontier;
     }
 
     /* Copy the object. */

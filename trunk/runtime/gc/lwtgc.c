@@ -50,6 +50,8 @@ static inline void assertLiftedObjptr (GC_state s, objptr *opp) {
     bool res = isObjptrInHeap (s, s->sharedHeap, op);
     GC_header h = getHeader(objptrToPointer (op, s->heap->start));
     GC_objectTypeTag tag;
+    if (DEBUG_DETAILED)
+        fprintf (stderr, "assertLiftedObjptr ("FMTOBJPTR")\n", *opp);
     splitHeader (s, h, &tag, NULL, NULL, NULL);
     bool stackType = (tag == STACK_TAG);
     res = !(!res);
@@ -98,35 +100,14 @@ void liftAllObjectsDuringInit (GC_state s) {
   s->forwardState.rangeListFirst = s->forwardState.rangeListLast = NULL;
 
   //Forward
-  //Foreach global
+  if (DEBUG_LWTGC)
+      fprintf (stderr, "liftAllObjectsDuringInit: foreachGlobalObjptr\n");
   for (unsigned int i = 0; i < s->globalsLength; ++i) {
-    if (DEBUG_LWTGC)
-      fprintf (stderr, "liftAllObjectsDuringInit: foreachGlobal %u\n", i);
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "foreachGlobal %u [%d]\n", i, s->procId);
     callIfIsObjptr (s, liftObjptr, &s->globals [i]);
   }
-  //Foreach thread
-  if (DEBUG_LWTGC)
-    fprintf (stderr, "liftAllObjectsDuringInit: foreachGlobal threads\n");
-  if (s->procStates) {
-    for (int proc = 0; proc < s->numberOfProcs; proc++) {
-      liftThreadDuringInit (s, s->procStates[proc].callFromCHandlerThread);
-      liftThreadDuringInit (s, s->procStates[proc].currentThread);
-      liftThreadDuringInit (s, s->procStates[proc].savedThread);
-      liftThreadDuringInit (s, s->procStates[proc].signalHandlerThread);
 
-      if (s->procStates[proc].roots) {
-        for (uint32_t i = 0; i < s->procStates[proc].rootsLength; i++) {
-          callIfIsObjptr (s, liftObjptr, &s->procStates[proc].roots[i]);
-        }
-      }
-    }
-  }
-  else {
-    liftThreadDuringInit (s, s->callFromCHandlerThread);
-    liftThreadDuringInit (s, s->currentThread);
-    liftThreadDuringInit (s, s->savedThread);
-    liftThreadDuringInit (s, s->signalHandlerThread);
-  }
 
   if (DEBUG_LWTGC)
     fprintf (stderr, "liftAllObjectsDuringInit: foreachObjptrInRange\n");

@@ -86,11 +86,11 @@ bool invariantForGC (GC_state s) {
   foreachGlobalObjptrInScope (s, assertIsObjptrInFromSpaceOrLifted);
   pointer back = s->heap->start + s->heap->oldGenSize;
   if (DEBUG_DETAILED)
-    fprintf (stderr, "Checking old generation.\n");
+    fprintf (stderr, "Checking old generation. [%d]\n", s->procId);
   foreachObjptrInRange (s, alignFrontier (s, s->heap->start), &back,
                         assertIsObjptrInFromSpaceOrLifted, FALSE);
   if (DEBUG_DETAILED)
-    fprintf (stderr, "Checking nursery.\n");
+    fprintf (stderr, "Checking nursery. [%d]\n", s->procId);
   if (s->procStates && FALSE) { //XXX SPH GCSH -- do not read the global info here as we only do local gc
     pointer firstStart = s->heap->frontier;
     for (proc = 0; proc < s->numberOfProcs; proc++) {
@@ -109,11 +109,11 @@ bool invariantForGC (GC_state s) {
     foreachObjptrInRange (s, s->heap->nursery, &s->frontier,
                           assertIsObjptrInFromSpaceOrLifted, FALSE);
     if (DEBUG_DETAILED)
-      fprintf (stderr, "Checking sharedHeap(1). sharedStart = "FMTPTR" sharedFrontier = "FMTPTR"\n",
-               s->sharedStart, s->sharedFrontier);
+      fprintf (stderr, "Checking sharedHeap(1). sharedStart = "FMTPTR" sharedFrontier = "FMTPTR" [%d]\n",
+               s->sharedStart, s->sharedFrontier, s->procId);
     foreachObjptrInRange (s, s->sharedStart, &s->sharedFrontier, assertLiftedObjptr, FALSE);
     if (DEBUG_DETAILED)
-      fprintf (stderr, "Checking sharedHeap(2).\n");
+      fprintf (stderr, "Checking sharedHeap(2). [%d]\n", s->procId);
   }
  /* Current thread. */
   GC_stack stack = getStackCurrent(s);
