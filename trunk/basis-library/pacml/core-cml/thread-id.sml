@@ -55,14 +55,14 @@ struct
       fun reset () = tidCounter := 0
   end
 
-  fun bogus s =
+  fun bogus s procId=
       let
         val n = CharVector.foldr (fn (c, n) => 2 * n - Char.ord c) 0 s
       in
-        new' (n, ~1)
+        new' (n, procId)
       end
 
-  val dummyTid = bogus "dummy"
+  fun dummyTid n = bogus "dummy" n
 
   fun mark (TID{done_comm, ...}) =
       (Assert.assertAtomic' ("ThreadID.mark", NONE)
@@ -80,7 +80,7 @@ struct
     else p1 = p2
 
 
-  val curTid : thread_id array = Array.tabulate(PacmlFFI.numberOfProcessors, fn _ => dummyTid)
+  val curTid : thread_id array = Array.tabulate(PacmlFFI.numberOfProcessors, fn i => dummyTid i)
 
   fun getCurThreadId () =
     let

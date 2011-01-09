@@ -28,7 +28,7 @@ sig
 
   val new : unit -> thread_id
   val newOnProc : int -> thread_id
-  val bogus : string -> thread_id
+  val bogus : string -> int -> thread_id
 
   val mark     : thread_id -> unit
   val unmark   : thread_id -> unit

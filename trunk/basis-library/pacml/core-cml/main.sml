@@ -130,7 +130,6 @@ struct
           val () = debug' (concat ["numIOProcessors = ", Int.toString (PacmlFFI.numIOProcessors)])
           val () = reset true
           val () = debug' "Main(-2)"
-          val () = debug' "Main(-1.5)"
           val () = SH.shutdownHook := PT.prepend (thrd, fn arg => (atomicBegin (); arg))
           val () = debug' "Main(-1)"
           val () = SH.pauseHook := pauseHook

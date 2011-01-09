@@ -18,7 +18,7 @@ struct
   val pauseHook = ref pauseHookDefault
 
   val shutdownHookDefault : (OS.Process.status) thread =
-    H_THRD (ThreadID.bogus "shutdownHook", MLtonThread.new (fn _ =>
+    H_THRD (ThreadID.bogus "shutdownHook" 0, MLtonThread.new (fn _ =>
           raise Fail "SchedulerHooks.shutdownHook"))
   val shutdownHook = ref shutdownHookDefault
 

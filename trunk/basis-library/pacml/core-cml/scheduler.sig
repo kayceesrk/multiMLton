@@ -19,6 +19,7 @@ sig
   val switch : ('a thread -> runnable_host) -> 'a
   val ready : rdy_thread -> unit
   val atomicReady : rdy_thread -> unit
+  val atomicReadyHost : runnable_host -> unit
   val readyForSpawn : runnable_host -> unit (* Increments live threads by 1 *)
   val atomicSwitchToNext : ('a thread -> unit) -> 'a
   val switchToNext : ('a thread -> unit) -> 'a
