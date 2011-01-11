@@ -1474,7 +1474,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                                     func = CFunction.move (Operand.ty (a 0))})
                                | MLton_isObjptrAndInLocal =>
                                     (case toRtype (varType (arg 0)) of
-                                        NONE => none ()
+                                        NONE => move (Operand.bool (false))
                                       | SOME t =>
                                            if not (Type.isObjptr t)
                                               then move (Operand.bool (false))
