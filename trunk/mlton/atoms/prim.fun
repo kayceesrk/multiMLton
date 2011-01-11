@@ -111,6 +111,7 @@ datatype 'a t =
  | MLton_serialize (* unused *)
  | MLton_share
  | MLton_move
+ | MLton_isObjptrAndInLocal
  | MLton_size (* ssa to rssa *)
  | MLton_touch (* backend *)
  | Real_Math_acos of RealSize.t (* codegen *)
@@ -285,6 +286,7 @@ fun toString (n: 'a t): string =
        | MLton_serialize => "MLton_serialize"
        | MLton_share => "MLton_share"
        | MLton_move => "MLton_move"
+       | MLton_isObjptrAndInLocal => "MLton_isObjptrAndInLocal"
        | MLton_size => "MLton_size"
        | MLton_touch => "MLton_touch"
        | Real_Math_acos s => real (s, "Math_acos")
@@ -431,6 +433,7 @@ val equals: 'a t * 'a t -> bool =
     | (MLton_serialize, MLton_serialize) => true
     | (MLton_share, MLton_share) => true
     | (MLton_move, MLton_move) => true
+    | (MLton_isObjptrAndInLocal, MLton_isObjptrAndInLocal) => true
     | (MLton_size, MLton_size) => true
     | (MLton_touch, MLton_touch) => true
     | (Real_Math_acos s, Real_Math_acos s') => RealSize.equals (s, s')
@@ -600,6 +603,7 @@ val map: 'a t * ('a -> 'b) -> 'b t =
     | MLton_serialize => MLton_serialize
     | MLton_share => MLton_share
     | MLton_move => MLton_move
+    | MLton_isObjptrAndInLocal => MLton_isObjptrAndInLocal
     | MLton_size => MLton_size
     | MLton_touch => MLton_touch
     | Real_Math_acos z => Real_Math_acos z
@@ -854,6 +858,7 @@ val kind: 'a t -> Kind.t =
        | MLton_serialize => DependsOnState
        | MLton_share => SideEffect
        | MLton_move=> SideEffect
+       | MLton_isObjptrAndInLocal=> SideEffect
        | MLton_size => DependsOnState
        | MLton_touch => SideEffect
        | Real_Math_acos _ => DependsOnState (* depends on rounding mode *)
@@ -1059,6 +1064,7 @@ in
        MLton_serialize,
        MLton_share,
        MLton_move,
+       MLton_isObjptrAndInLocal,
        MLton_size,
        MLton_touch,
        Ref_assign,
@@ -1324,6 +1330,7 @@ fun 'a checkApp (prim: 'a t,
        | MLton_serialize => oneTarg (fn t => (oneArg t, word8Vector))
        | MLton_share => oneTarg (fn t => (oneArg t, unit))
        | MLton_move => oneTarg (fn t => (oneArg t, unit))
+       | MLton_isObjptrAndInLocal => oneTarg (fn t => (oneArg t, bool))
        | MLton_size => oneTarg (fn t => (oneArg t, csize))
        | MLton_touch => oneTarg (fn t => (oneArg t, unit))
        | Real_Math_acos s => realUnary s
@@ -1458,6 +1465,7 @@ fun ('a, 'b) extractTargs (prim: 'b t,
        | MLton_serialize => one (arg 0)
        | MLton_share => one (arg 0)
        | MLton_move => one (arg 0)
+       | MLton_isObjptrAndInLocal => one (arg 0)
        | MLton_size => one (arg 0)
        | MLton_touch => one (arg 0)
        | Ref_assign => one (deRef (arg 0))

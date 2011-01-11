@@ -101,6 +101,7 @@ signature PRIM =
              | MLton_serialize (* unused *)
              | MLton_share
              | MLton_move
+             | MLton_isObjptrAndInLocal
              | MLton_size (* ssa to rssa *)
              | MLton_touch (* backend *)
              | Real_Math_acos of RealSize.t (* codegen *)
@@ -303,6 +304,7 @@ signature PRIM =
       val wordLt: WordSize.t * {signed: bool} -> 'a t
       val wordMul: WordSize.t * {signed: bool} -> 'a t
       val wordNeg: WordSize.t -> 'a t
+      val wordNotb: WordSize.t -> 'a t
       val wordOrb: WordSize.t -> 'a t
       val wordQuot: WordSize.t * {signed: bool} -> 'a t
       val wordRshift: WordSize.t * {signed: bool} -> 'a t

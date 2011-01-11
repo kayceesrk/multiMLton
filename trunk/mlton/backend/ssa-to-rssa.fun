@@ -1027,6 +1027,58 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                         in
                            loop (i - 1, ss, t)
                         end
+                    fun addressInSharedHeap (addr) =
+                    let
+                      val sz = WordSize.objptr ()
+                      val indexTy = Type.word sz
+                      val c1 = Var.newNoname ()
+                      val _ = print ("c1: "^(Var.toString c1)^"\n")
+                      val c2 = Var.newNoname ()
+                      val _ = print ("c2: "^(Var.toString c2)^"\n")
+                      val c3 = Var.newNoname ()
+                      val _ = print ("c3: "^(Var.toString c3)^"\n")
+                      val c4 = Var.newNoname ()
+                      val _ = print ("c4: "^(Var.toString c4)^"\n")
+                      val cond = Var.newNoname ()
+                      val _ = print ("cond: "^(Var.toString cond)^"\n")
+                      val stmts =
+                        [PrimApp {args = Vector.new2 (Operand.cast (Runtime GCField.SharedHeapStart, indexTy),
+                                                      Operand.cast (addr, indexTy)),
+                                  dst = SOME (c1, Type.bool),
+                                  prim = Prim.wordLt (sz, {signed = false})},
+                        PrimApp {args = Vector.new2 (Operand.cast (addr, indexTy),
+                                                      Operand.cast (Runtime GCField.SharedHeapEnd, indexTy)),
+                                  dst = SOME (c2, Type.bool),
+                                  prim = Prim.wordLt (sz, {signed = false})},
+                        PrimApp {args = Vector.new2 (Operand.cast (addr, indexTy),
+                                                      Operand.cast (Runtime GCField.SharedHeapStart, indexTy)),
+                                  dst = SOME (c3, Type.bool),
+                                  prim = Prim.wordEqual sz},
+                        PrimApp {args = Vector.new2 (Operand.Var {var = c1, ty = Type.bool},
+                                                      Operand.Var {var = c2, ty = Type.bool}),
+                                  dst = SOME (c4, Type.bool),
+                                  prim = Prim.wordAndb (WordSize.bool)},
+                        PrimApp {args = Vector.new2 (Operand.Var {var = c3, ty = Type.bool},
+                                                      Operand.Var {var = c4, ty = Type.bool}),
+                                  dst = SOME (cond, Type.bool),
+                                  prim = Prim.wordOrb (WordSize.bool)}]
+                    in
+                      (stmts, cond)
+                    end
+
+                    fun addressInLocalHeap (addr) =
+                    let
+                      val (stmts1, cond1) = addressInSharedHeap (addr)
+                      val cond2 = Var.newNoname ()
+                      val _ = print ("addressInLocalHeap : "^(Var.toString cond2)^"\n")
+                      val stmts2 = stmts1 @
+                                   [PrimApp {args = Vector.new1 (Operand.Var {var = cond1, ty = Type.bool}),
+                                             dst = SOME (cond2, Type.bool),
+                                             prim = Prim.wordNotb (WordSize.bool)}]
+                    in
+                      (stmts2, cond2)
+                    end
+
                   in
                      case s of
                         S.Statement.Profile e => add (Statement.Profile e)
@@ -1054,39 +1106,6 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                                   scale = Scale.One,
                                                   ty = Type.word cardElemSize}),
                                           src = Operand.word (WordX.one cardElemSize)}]
-
-
-                                fun addressInSharedHeap (addr) =
-                                let
-                                  val c1 = Var.newNoname ()
-                                  val c2 = Var.newNoname ()
-                                  val c3 = Var.newNoname ()
-                                  val c4 = Var.newNoname ()
-                                  val cond = Var.newNoname ()
-                                  val stmts =
-                                    [PrimApp {args = Vector.new2 (Operand.cast (Runtime GCField.SharedHeapStart, indexTy),
-                                                                  Operand.cast (addr, indexTy)),
-                                              dst = SOME (c1, Type.bool),
-                                              prim = Prim.wordLt (sz, {signed = false})},
-                                    PrimApp {args = Vector.new2 (Operand.cast (addr, indexTy),
-                                                                 Operand.cast (Runtime GCField.SharedHeapEnd, indexTy)),
-                                              dst = SOME (c2, Type.bool),
-                                              prim = Prim.wordLt (sz, {signed = false})},
-                                    PrimApp {args = Vector.new2 (Operand.cast (addr, indexTy),
-                                                                 Operand.cast (Runtime GCField.SharedHeapStart, indexTy)),
-                                              dst = SOME (c3, Type.bool),
-                                              prim = Prim.wordEqual sz},
-                                    PrimApp {args = Vector.new2 (Operand.Var {var = c1, ty = Type.bool},
-                                                                  Operand.Var {var = c2, ty = Type.bool}),
-                                              dst = SOME (c4, Type.bool),
-                                              prim = Prim.wordAndb (WordSize.bool)},
-                                    PrimApp {args = Vector.new2 (Operand.Var {var = c3, ty = Type.bool},
-                                                                  Operand.Var {var = c4, ty = Type.bool}),
-                                              dst = SOME (cond, Type.bool),
-                                              prim = Prim.wordOrb (WordSize.bool)}]
-                                in
-                                  (stmts, cond)
-                                end
 
                                 val (stmts1, cond1) = addressInSharedHeap (lhsAddr)
                                 val (stmts2, cond2) = addressInSharedHeap (rhsAddr)
@@ -1199,6 +1218,20 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                          isMutable = false,
                                          src = f ty})
                      fun move (src: Operand.t) = maybeMove (fn _ => src)
+                     fun maybeBindStmt (stmts, oper) =
+                        case toRtype ty of
+                           NONE => none ()
+                         | SOME ty => adds (stmts @
+                                             [Bind {dst = (valOf var, ty),
+                                                    isMutable = false,
+                                                    src = oper}])
+                     fun isObjptrInLocalHeap (addr) =
+                      let
+                        val (stmts, cond) = addressInLocalHeap (addr)
+                        val _ = print ("isObjptrInLocalHeap : "^(Var.toString cond)^"\n")
+                      in
+                        maybeBindStmt (stmts, Operand.Var {var = cond, ty = Type.bool})
+                      end
                   in
                      case exp of
                         S.Exp.Const c => move (Const (convertConst c))
@@ -1439,6 +1472,13 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                                             [Vector.new1 GCState,
                                                              vos args],
                                                     func = CFunction.move (Operand.ty (a 0))})
+                               | MLton_isObjptrAndInLocal =>
+                                    (case toRtype (varType (arg 0)) of
+                                        NONE => none ()
+                                      | SOME t =>
+                                           if not (Type.isObjptr t)
+                                              then move (Operand.bool (false))
+                                           else isObjptrInLocalHeap (varOp (arg 0)))
                                | MLton_size =>
                                     simpleCCallWithGCState
                                     (CFunction.size (Operand.ty (a 0)))

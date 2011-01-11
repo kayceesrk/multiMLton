@@ -706,6 +706,7 @@ fun flatten (program as Program.T {datatypes, functions, globals, main}) =
              | MLton_size => dontFlatten ()
              | MLton_share => dontFlatten ()
              | MLton_move => dontFlatten ()
+             | MLton_isObjptrAndInLocal => dontFlatten ()
              | Weak_get => deWeak (arg 0)
              | Weak_new =>
                   let val a = arg 0

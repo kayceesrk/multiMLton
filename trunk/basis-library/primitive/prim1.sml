@@ -70,9 +70,28 @@ structure Option =
 structure Ref =
    struct
       open Ref
+      open Option
+
+      exception RefOption
+
+      val preemptFn = ref NONE
       val deref = _prim "Ref_deref": 'a ref -> 'a;
-      val assign = _prim "Ref_assign": 'a ref * 'a -> unit;
+
+      fun assign (r, v) =
+      let
+        val preemptFn = case (deref preemptFn) of
+                             NONE => (fn () => ())
+                           | SOME f => f
+        val isObjptrAndInLocal = _prim "MLton_isObjptrAndInLocal" : 'a -> bool;
+        val _ = if (isObjptrAndInLocal (v) andalso (Bool.not (isObjptrAndInLocal (r)))) then
+                  preemptFn ()
+                else ()
+        val refAssign = _prim "Ref_assign": 'a ref * 'a -> unit;
+      in
+        refAssign (r, v)
+      end
    end
+
 
 structure TopLevel =
    struct
