@@ -1072,9 +1072,10 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                       val cond2 = Var.newNoname ()
                       val _ = print ("addressInLocalHeap : "^(Var.toString cond2)^"\n")
                       val stmts2 = stmts1 @
-                                   [PrimApp {args = Vector.new1 (Operand.Var {var = cond1, ty = Type.bool}),
+                                   [PrimApp {args = Vector.new2 (Operand.Var {var = cond1, ty = Type.bool},
+                                                                 Operand.word (WordX.one WordSize.bool)),
                                              dst = SOME (cond2, Type.bool),
-                                             prim = Prim.wordNotb (WordSize.bool)}]
+                                             prim = Prim.wordXorb (WordSize.bool)}]
                     in
                       (stmts2, cond2)
                     end

@@ -144,6 +144,8 @@ pointer GC_move (GC_state s, pointer p) {
       return p;
   }
 
+  printf ("GC_move\n");
+
   /* ENTER (0) */
   s->syncReason = SYNC_FORCE;
   getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);

@@ -5,6 +5,7 @@ struct
   val disablePreemption = _import "Parallel_disablePreemption": unit -> unit;
   val enablePreemption = _import "Parallel_enablePreemption": unit -> unit;
   val fetchAndAdd = _import "Parallel_fetchAndAdd": Int32.int ref * Int32.int -> Int32.int;
+  val ffiPrint = _import "GC_print": unit -> unit;
   val maybeWaitForGC = _import "Parallel_maybeWaitForGC": unit -> unit;
   val noop = _import "GC_noop": unit -> unit;
   val numberOfProcessors = Int32.toInt ((_import "Parallel_numberOfProcessors": unit -> Int32.int;) ())

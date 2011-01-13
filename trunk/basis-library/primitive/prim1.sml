@@ -74,14 +74,12 @@ structure Ref =
 
       exception RefOption
 
-      val preemptFn = ref NONE
+      val preemptFn = ref (fn () => ())
       val deref = _prim "Ref_deref": 'a ref -> 'a;
 
       fun assign (r, v) =
       let
-        val preemptFn = case (deref preemptFn) of
-                             NONE => (fn () => ())
-                           | SOME f => f
+        val preemptFn = deref preemptFn
         val isObjptrAndInLocal = _prim "MLton_isObjptrAndInLocal" : 'a -> bool;
         val _ = if (isObjptrAndInLocal (v) andalso (Bool.not (isObjptrAndInLocal (r)))) then
                   preemptFn ()

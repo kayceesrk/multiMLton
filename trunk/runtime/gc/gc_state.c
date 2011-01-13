@@ -460,4 +460,6 @@ void GC_setGCSignalPending (__attribute__ ((unused)) GC_state *gs, bool b) {
   s->signalsInfo.gcSignalPending = b;
 }
 
-
+void GC_print (void) {
+    printf ("GC_print\n");
+}

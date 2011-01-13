@@ -21,14 +21,26 @@ structure Array =
       (* There is no maximum length on arrays, so maxLen' = SeqIndex.maxInt'. *)
       (* val maxLen': SeqIndex.int = SeqIndex.maxInt' *)
       val subUnsafe = _prim "Array_sub": 'a array * SeqIndex.int -> 'a;
-      val updateUnsafe = _prim "Array_update": 'a array * SeqIndex.int * 'a -> unit;
+      val arrayUpdate = _prim "Array_update": 'a array * SeqIndex.int * 'a -> unit;
+
+      fun updateUnsafe (a, i, v) =
+      let
+        val preemptFn = Ref.deref Ref.preemptFn
+        val isObjptrAndInLocal = _prim "MLton_isObjptrAndInLocal" : 'a -> bool;
+        val _ = if (isObjptrAndInLocal (v) andalso (Bool.not (isObjptrAndInLocal (a)))) then
+                  preemptFn ()
+                else ()
+      in
+        arrayUpdate (a, i, v)
+      end
+
    end
 
 structure Vector =
    struct
-      open Vector 
-      (* Don't mutate the array after you apply fromArray, because vectors 
-       * are supposed to be immutable and the optimizer depends on this.  
+      open Vector
+      (* Don't mutate the array after you apply fromArray, because vectors
+       * are supposed to be immutable and the optimizer depends on this.
        *)
       val fromArrayUnsafe = _prim "Array_toVector": 'a array -> 'a vector;
       val length = _prim "Vector_length": 'a vector -> SeqIndex.int;
