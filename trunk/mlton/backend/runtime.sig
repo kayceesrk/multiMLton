@@ -30,6 +30,7 @@ signature RUNTIME =
              | GlobalObjptrNonRoot
              | Limit (* frontier + heapSize - LIMIT_SLOP *)
              | LimitPlusSlop (* frontier + heapSize *)
+             | LocalHeapStart
              | MaxFrameSize
              | ProcId
              | ReturnToC
@@ -52,6 +53,7 @@ signature RUNTIME =
                              globalObjptrNonRoot: Bytes.t,
                              limit: Bytes.t,
                              limitPlusSlop: Bytes.t,
+                             localHeapStart: Bytes.t,
                              maxFrameSize: Bytes.t,
                              procId: Bytes.t,
                              returnToC: Bytes.t,
@@ -71,6 +73,7 @@ signature RUNTIME =
                            globalObjptrNonRoot: Bytes.t,
                            limit: Bytes.t,
                            limitPlusSlop: Bytes.t,
+                           localHeapStart: Bytes.t,
                            maxFrameSize: Bytes.t,
                            procId: Bytes.t,
                            returnToC: Bytes.t,

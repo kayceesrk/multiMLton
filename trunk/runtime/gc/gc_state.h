@@ -17,6 +17,10 @@ struct GC_state {
   pointer limit; /* limit = heap->start + heap->size */
   pointer stackTop; /* Top of stack in current thread. */
   pointer stackLimit; /* stackBottom + stackSize - maxFrameSize */
+  pointer localHeapStart;
+  pointer sharedHeapStart;
+  pointer sharedHeapEnd;
+
   pointer sharedFrontier;
   pointer sharedLimit;
   size_t exnStack;
@@ -87,8 +91,6 @@ struct GC_state {
   struct GC_heap *sharedHeap; /* Used as a uncollected shared heap for testing lwtgc */
   struct GC_heap *secondarySharedHeap; /* Used for major copying collection on shared heap */
   objptr signalHandlerThread; /* Handler for signals (in heap). */
-  pointer sharedHeapStart;
-  pointer sharedHeapEnd;
   struct GC_signalsInfo signalsInfo;
   struct GC_sourceMaps sourceMaps;
   pointer stackBottom; /* Bottom of stack in current thread. */

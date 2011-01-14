@@ -529,6 +529,7 @@ fun ofGCField (f: GCField.t): t =
        | GlobalObjptrNonRoot => cpointer ()
        | Limit => cpointer ()
        | LimitPlusSlop => cpointer ()
+       | LocalHeapStart => cpointer ()
        | MaxFrameSize => word32
        | ProcId => word32
        | ReturnToC => word32

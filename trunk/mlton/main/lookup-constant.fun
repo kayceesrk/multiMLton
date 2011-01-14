@@ -60,6 +60,7 @@ val gcFields =
     "globalObjptrNonRoot",
     "limit",
     "limitPlusSlop",
+    "localHeapStart",
     "maxFrameSize",
     "procId",
     "returnToC",

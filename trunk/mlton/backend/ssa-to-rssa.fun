@@ -1063,15 +1063,36 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
 
                     fun addressInLocalHeap (addr) =
                     let
-                      val (stmts1, cond1) = addressInSharedHeap (addr)
-                      val cond2 = Var.newNoname ()
-                      val stmts2 = stmts1 @
-                                   [PrimApp {args = Vector.new2 (Operand.Var {var = cond1, ty = Type.bool},
-                                                                 Operand.word (WordX.one WordSize.bool)),
-                                             dst = SOME (cond2, Type.bool),
-                                             prim = Prim.wordXorb (WordSize.bool)}]
+                      val sz = WordSize.objptr ()
+                      val indexTy = Type.word sz
+                      val c1 = Var.newNoname ()
+                      val c2 = Var.newNoname ()
+                      val c3 = Var.newNoname ()
+                      val c4 = Var.newNoname ()
+                      val cond = Var.newNoname ()
+                      val stmts =
+                        [PrimApp {args = Vector.new2 (Operand.cast (Runtime GCField.LocalHeapStart, indexTy),
+                                                      Operand.cast (addr, indexTy)),
+                                  dst = SOME (c1, Type.bool),
+                                  prim = Prim.wordLt (sz, {signed = false})},
+                        PrimApp {args = Vector.new2 (Operand.cast (addr, indexTy),
+                                                      Operand.cast (Runtime GCField.LimitPlusSlop, indexTy)),
+                                  dst = SOME (c2, Type.bool),
+                                  prim = Prim.wordLt (sz, {signed = false})},
+                        PrimApp {args = Vector.new2 (Operand.cast (addr, indexTy),
+                                                      Operand.cast (Runtime GCField.LocalHeapStart, indexTy)),
+                                  dst = SOME (c3, Type.bool),
+                                  prim = Prim.wordEqual sz},
+                        PrimApp {args = Vector.new2 (Operand.Var {var = c1, ty = Type.bool},
+                                                      Operand.Var {var = c2, ty = Type.bool}),
+                                  dst = SOME (c4, Type.bool),
+                                  prim = Prim.wordAndb (WordSize.bool)},
+                        PrimApp {args = Vector.new2 (Operand.Var {var = c3, ty = Type.bool},
+                                                      Operand.Var {var = c4, ty = Type.bool}),
+                                  dst = SOME (cond, Type.bool),
+                                  prim = Prim.wordOrb (WordSize.bool)}]
                     in
-                      (stmts2, cond2)
+                      (stmts, cond)
                     end
 
                   in

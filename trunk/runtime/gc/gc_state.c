@@ -69,6 +69,7 @@ void setGCStateCurrentLocalHeap (GC_state s,
              uintmaxToCommaString(nurseryBytesRequested));
   h = s->heap;
   assert (isFrontierAligned (s, h->start + h->oldGenSize + oldGenBytesRequested));
+  s->localHeapStart = h->start;
   s->limitPlusSlop = h->start + h->size;
   h->availableSize = h->size;
   s->limit = s->limitPlusSlop - GC_HEAP_LIMIT_SLOP;

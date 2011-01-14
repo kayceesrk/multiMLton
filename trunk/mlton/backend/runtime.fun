@@ -23,6 +23,7 @@ structure GCField =
        | GlobalObjptrNonRoot
        | Limit
        | LimitPlusSlop
+       | LocalHeapStart
        | MaxFrameSize
        | ProcId
        | ReturnToC
@@ -43,6 +44,7 @@ structure GCField =
       val globalObjptrNonRootOffset: Bytes.t ref = ref Bytes.zero
       val limitOffset: Bytes.t ref = ref Bytes.zero
       val limitPlusSlopOffset: Bytes.t ref = ref Bytes.zero
+      val localHeapStartOffset: Bytes.t ref = ref Bytes.zero
       val maxFrameSizeOffset: Bytes.t ref = ref Bytes.zero
       val procIdOffset: Bytes.t ref = ref Bytes.zero
       val returnToCOffset: Bytes.t ref = ref Bytes.zero
@@ -55,8 +57,9 @@ structure GCField =
 
       fun setOffsets {atomicState, cardMapAbsolute, currentThread, curSourceSeqsIndex,
                       exnStack, ffiOpArgsResPtr, frontier, globalObjptrNonRoot, limit,
-                      limitPlusSlop, maxFrameSize, procId, returnToC, sharedHeapStart,
-                      sharedHeapEnd, signalIsPending, stackBottom, stackLimit, stackTop} =
+                      limitPlusSlop, localHeapStart, maxFrameSize, procId, returnToC,
+                      sharedHeapStart, sharedHeapEnd, signalIsPending, stackBottom,
+                      stackLimit, stackTop} =
          (atomicStateOffset := atomicState
           ; cardMapAbsoluteOffset := cardMapAbsolute
           ; currentThreadOffset := currentThread
@@ -67,6 +70,7 @@ structure GCField =
           ; globalObjptrNonRootOffset := globalObjptrNonRoot
           ; limitOffset := limit
           ; limitPlusSlopOffset := limitPlusSlop
+          ; localHeapStartOffset := localHeapStart
           ; maxFrameSizeOffset := maxFrameSize
           ; procIdOffset := procId
           ; returnToCOffset := returnToC
@@ -88,6 +92,7 @@ structure GCField =
           | GlobalObjptrNonRoot => !globalObjptrNonRootOffset
           | Limit => !limitOffset
           | LimitPlusSlop => !limitPlusSlopOffset
+          | LocalHeapStart => !localHeapStartOffset
           | MaxFrameSize => !maxFrameSizeOffset
           | ProcId => !procIdOffset
           | ReturnToC => !returnToCOffset
@@ -108,6 +113,7 @@ structure GCField =
       val globalObjptrNonRootSize: Bytes.t ref = ref Bytes.zero
       val limitSize: Bytes.t ref = ref Bytes.zero
       val limitPlusSlopSize: Bytes.t ref = ref Bytes.zero
+      val localHeapStartSize: Bytes.t ref = ref Bytes.zero
       val maxFrameSizeSize: Bytes.t ref = ref Bytes.zero
       val procIdSize: Bytes.t ref = ref Bytes.zero
       val returnToCSize: Bytes.t ref = ref Bytes.zero
@@ -120,8 +126,9 @@ structure GCField =
 
       fun setSizes {atomicState, cardMapAbsolute, currentThread, curSourceSeqsIndex,
                     exnStack, ffiOpArgsResPtr, frontier, globalObjptrNonRoot, limit,
-                    limitPlusSlop, maxFrameSize,  procId, returnToC, sharedHeapStart,
-                    sharedHeapEnd, signalIsPending, stackBottom, stackLimit, stackTop} =
+                    limitPlusSlop, localHeapStart, maxFrameSize,  procId, returnToC,
+                    sharedHeapStart, sharedHeapEnd, signalIsPending, stackBottom,
+                    stackLimit, stackTop} =
          (atomicStateSize := atomicState
           ; cardMapAbsoluteSize := cardMapAbsolute
           ; currentThreadSize := currentThread
@@ -132,6 +139,7 @@ structure GCField =
           ; globalObjptrNonRootSize := globalObjptrNonRoot
           ; limitSize := limit
           ; limitPlusSlopSize := limitPlusSlop
+          ; localHeapStartSize := localHeapStart
           ; maxFrameSizeSize := maxFrameSize
           ; procIdSize := procId
           ; returnToCSize := returnToC
@@ -153,6 +161,7 @@ structure GCField =
           | GlobalObjptrNonRoot => !globalObjptrNonRootSize
           | Limit => !limitSize
           | LimitPlusSlop => !limitPlusSlopSize
+          | LocalHeapStart => !localHeapStartSize
           | MaxFrameSize => !maxFrameSizeSize
           | ProcId => !procIdSize
           | ReturnToC => !returnToCSize
@@ -174,6 +183,7 @@ structure GCField =
           | GlobalObjptrNonRoot => "GlobalObjptrNonRoot"
           | Limit => "Limit"
           | LimitPlusSlop => "LimitPlusSlop"
+          | LocalHeapStart => "LocalHeapStart"
           | MaxFrameSize => "MaxFrameSize"
           | ProcId => "ProcIdSize"
           | ReturnToC => "ReturnToC"
