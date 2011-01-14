@@ -8,12 +8,12 @@
 
 type int = Int.t
 
-signature SSA_TREE2_STRUCTS = 
+signature SSA_TREE2_STRUCTS =
    sig
       include ATOMS
    end
 
-signature SSA_TREE2 = 
+signature SSA_TREE2 =
    sig
       include SSA_TREE2_STRUCTS
 
@@ -88,6 +88,7 @@ signature SSA_TREE2 =
             val weak: t -> t
             val word: WordSize.t -> t
             val unit: t
+            val maybeObjptr: t -> bool
          end
 
       structure Base:
@@ -123,6 +124,8 @@ signature SSA_TREE2 =
             val layout: t -> Layout.t
             val maySideEffect: t -> bool
             val replaceVar: t * (Var.t -> Var.t) -> t
+            val truee: t
+            val falsee: t
             val unit: t
          end
 
@@ -182,7 +185,7 @@ signature SSA_TREE2 =
                         test: Var.t}
              | Goto of {args: Var.t vector,
                         dst: Label.t}
-             (* Raise implicitly raises to the caller.  
+             (* Raise implicitly raises to the caller.
               * I.E. the local handler stack must be empty.
               *)
              | Raise of Var.t vector
@@ -196,7 +199,7 @@ signature SSA_TREE2 =
             val foreachLabel: t * (Label.t -> unit) -> unit
             val foreachLabelVar: t * (Label.t -> unit) * (Var.t -> unit) -> unit
             val foreachVar: t * (Var.t -> unit) -> unit
-            val hash: t -> Word.t 
+            val hash: t -> Word.t
             val layout: t -> Layout.t
             val replaceLabelVar: t * (Label.t -> Label.t) * (Var.t -> Var.t) -> t
             val replaceLabel: t * (Label.t -> Label.t) -> t

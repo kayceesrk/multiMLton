@@ -1032,15 +1032,10 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                       val sz = WordSize.objptr ()
                       val indexTy = Type.word sz
                       val c1 = Var.newNoname ()
-                      val _ = print ("c1: "^(Var.toString c1)^"\n")
                       val c2 = Var.newNoname ()
-                      val _ = print ("c2: "^(Var.toString c2)^"\n")
                       val c3 = Var.newNoname ()
-                      val _ = print ("c3: "^(Var.toString c3)^"\n")
                       val c4 = Var.newNoname ()
-                      val _ = print ("c4: "^(Var.toString c4)^"\n")
                       val cond = Var.newNoname ()
-                      val _ = print ("cond: "^(Var.toString cond)^"\n")
                       val stmts =
                         [PrimApp {args = Vector.new2 (Operand.cast (Runtime GCField.SharedHeapStart, indexTy),
                                                       Operand.cast (addr, indexTy)),
@@ -1070,7 +1065,6 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                     let
                       val (stmts1, cond1) = addressInSharedHeap (addr)
                       val cond2 = Var.newNoname ()
-                      val _ = print ("addressInLocalHeap : "^(Var.toString cond2)^"\n")
                       val stmts2 = stmts1 @
                                    [PrimApp {args = Vector.new2 (Operand.Var {var = cond1, ty = Type.bool},
                                                                  Operand.word (WordX.one WordSize.bool)),
@@ -1229,7 +1223,12 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                      fun isObjptrInLocalHeap (addr) =
                       let
                         val (stmts, cond) = addressInLocalHeap (addr)
-                        val _ = print ("isObjptrInLocalHeap : "^(Var.toString cond)^"\n")
+                      in
+                        maybeBindStmt (stmts, Operand.Var {var = cond, ty = Type.bool})
+                      end
+                     fun isObjptrInSharedHeap (addr) =
+                      let
+                        val (stmts, cond) = addressInSharedHeap (addr)
                       in
                         maybeBindStmt (stmts, Operand.Var {var = cond, ty = Type.bool})
                       end
@@ -1473,13 +1472,27 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                                             [Vector.new1 GCState,
                                                              vos args],
                                                     func = CFunction.move (Operand.ty (a 0))})
-                               | MLton_isObjptrAndInLocal =>
+                               | MLton_isObjptrInLocalHeap =>
                                     (case toRtype (varType (arg 0)) of
-                                        NONE => move (Operand.bool (false))
+                                        NONE => move (Operand.bool false)
                                       | SOME t =>
-                                           if not (Type.isObjptr t)
-                                              then move (Operand.bool (false))
+                                           if not (Type.isObjptr t) then
+                                             move (Operand.bool false)
                                            else isObjptrInLocalHeap (varOp (arg 0)))
+                               | MLton_isObjptrInSharedHeap =>
+                                    (case toRtype (varType (arg 0)) of
+                                        NONE => move (Operand.bool false)
+                                      | SOME t =>
+                                           if not (Type.isObjptr t) then
+                                             move (Operand.bool false)
+                                           else isObjptrInSharedHeap (varOp (arg 0)))
+                               | MLton_isObjptr =>
+                                    (case toRtype (varType (arg 0)) of
+                                        NONE => move (Operand.bool false)
+                                      | SOME t =>
+                                           if not (Type.isObjptr t) then
+                                             move (Operand.bool false)
+                                           else move (Operand.bool true))
                                | MLton_size =>
                                     simpleCCallWithGCState
                                     (CFunction.size (Operand.ty (a 0)))

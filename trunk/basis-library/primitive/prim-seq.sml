@@ -26,8 +26,11 @@ structure Array =
       fun updateUnsafe (a, i, v) =
       let
         val preemptFn = Ref.deref Ref.preemptFn
-        val isObjptrAndInLocal = _prim "MLton_isObjptrAndInLocal" : 'a -> bool;
-        val _ = if (isObjptrAndInLocal (v) andalso (Bool.not (isObjptrAndInLocal (a)))) then
+        val isObjptr = _prim "MLton_isObjptr" : 'a -> bool;
+        val isObjptrInLocalHeap = _prim "MLton_isObjptrInLocalHeap": 'a -> bool;
+        val isObjptrInSharedHeap = _prim "MLton_isObjptrInSharedHeap": 'a -> bool;
+
+        val _ = if ((isObjptr v) andalso (isObjptrInLocalHeap v) andalso (isObjptrInSharedHeap a)) then
                   preemptFn ()
                 else ()
       in

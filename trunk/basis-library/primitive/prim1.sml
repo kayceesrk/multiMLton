@@ -70,21 +70,21 @@ structure Option =
 structure Ref =
    struct
       open Ref
-      open Option
-
-      exception RefOption
 
       val preemptFn = ref (fn () => ())
       val deref = _prim "Ref_deref": 'a ref -> 'a;
+      val refAssign = _prim "Ref_assign": 'a ref * 'a -> unit;
+      val isObjptrInLocalHeap = _prim "MLton_isObjptrInLocalHeap": 'a -> bool;
+      val isObjptrInSharedHeap = _prim "MLton_isObjptrInSharedHeap": 'a -> bool;
+      val isObjptr = _prim "MLton_isObjptr": 'a -> bool;
 
       fun assign (r, v) =
       let
         val preemptFn = deref preemptFn
-        val isObjptrAndInLocal = _prim "MLton_isObjptrAndInLocal" : 'a -> bool;
-        val _ = if (isObjptrAndInLocal (v) andalso (Bool.not (isObjptrAndInLocal (r)))) then
+
+        val _ = if ((isObjptr v) andalso (isObjptrInLocalHeap v) andalso (isObjptrInSharedHeap r)) then
                   preemptFn ()
                 else ()
-        val refAssign = _prim "Ref_assign": 'a ref * 'a -> unit;
       in
         refAssign (r, v)
       end

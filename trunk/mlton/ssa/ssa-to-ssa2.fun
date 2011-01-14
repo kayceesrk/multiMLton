@@ -5,7 +5,7 @@
  * See the file MLton-LICENSE for details.
  *)
 
-functor SsaToSsa2 (S: SSA_TO_SSA2_STRUCTS): SSA_TO_SSA2 = 
+functor SsaToSsa2 (S: SSA_TO_SSA2_STRUCTS): SSA_TO_SSA2 =
 struct
 
 open S
@@ -90,6 +90,26 @@ fun convert (S.Program.T {datatypes, functions, globals, main}) =
                                          ty = ty,
                                          exp = S2.Exp.unit},
                       stmt)
+            fun makeFalsee (var, ty) =
+              let
+                  val args = Vector.new0 ()
+                  val con = Con.fromBool (false)
+                  val sum =
+                    case S2.Type.dest ty of
+                        S2.Type.Datatype tycon => tycon
+                      | _ => Error.bug "SsaToSsa2.convertStatement: strange ConApp"
+                  val variant = Var.newNoname ()
+              in
+                  Vector.new2
+                  (S2.Statement.Bind {exp = S2.Exp.Object {args = args,
+                                                          con = SOME con},
+                                      ty = conType con,
+                                      var = SOME variant},
+                  S2.Statement.Bind {exp = S2.Exp.Inject {variant = variant,
+                                                          sum = sum},
+                                      ty = ty,
+                                      var = var})
+              end
          in
             case exp of
                S.Exp.ConApp {args, con} =>
@@ -111,7 +131,7 @@ fun convert (S.Program.T {datatypes, functions, globals, main}) =
                                          var = var})
                   end
              | S.Exp.Const c => simple (S2.Exp.Const c)
-             | S.Exp.PrimApp {args, prim, ...} =>
+             | S.Exp.PrimApp {args, prim, targs} =>
                   let
                      fun arg i = Vector.sub (args, i)
                      fun sub () =
@@ -155,6 +175,27 @@ fun convert (S.Program.T {datatypes, functions, globals, main}) =
                              {base = Base.Object (arg 0),
                               offset = 0,
                               value = arg 1})
+                       | MLton_isObjptr =>
+                           let
+                             val mty = Vector.sub (targs, 0)
+                             val mty = convertType mty
+                             val s1 = Var.toString (arg 0)
+                             val s2 = Layout.toString (S2.Type.layout mty)
+                           in
+                            if (S2.Type.maybeObjptr mty) then
+                              let
+                                val _ = print ("Retained: "^s1^" : "^s2^"\n")
+                              in
+                                simple (S2.Exp.PrimApp {args = args,
+                                                        prim = convertPrim prim})
+                              end
+                            else
+                              let
+                                val _ = print ("Removed: "^s1^" : "^s2^"\n")
+                              in
+                                makeFalsee (var, ty)
+                              end
+                           end
                        | Ref_deref =>
                             simple (S2.Exp.Select {base = Base.Object (arg 0),
                                                    offset = 0})
@@ -295,7 +336,7 @@ fun convert (S.Program.T {datatypes, functions, globals, main}) =
                               start = start}
           end)
       val globals = convertStatements globals
-      val program = 
+      val program =
          S2.Program.T {datatypes = datatypes,
                        functions = functions,
                        globals = globals,

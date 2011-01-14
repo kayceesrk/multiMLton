@@ -104,6 +104,9 @@ structure Monomorphise = Monomorphise (structure Xml = Xml
                                        structure Sxml = Sxml)
 structure ClosureConvert = ClosureConvert (structure Ssa = Ssa
                                            structure Sxml = Sxml)
+
+(* structure PackedRepresentation = PackedRepresentation (structure Rssa = Rssa
+                                                       structure Ssa = Ssa) *)
 structure SsaToSsa2 = SsaToSsa2 (structure Ssa = Ssa
                                  structure Ssa2 = Ssa2)
 structure Backend = Backend (structure Ssa = Ssa2
@@ -647,6 +650,10 @@ fun preCodegen {input: MLBString.t}: Machine.Program.t =
           suffix = "ssa",
           thunk = fn () => ClosureConvert.closureConvert sxml,
           typeCheck = Ssa.typeCheck}
+
+      (* val {diagnostic, genCase, object, objectTypes, select, toRtype, update} =
+         PackedRepresentation.compute ssa *)
+
       val ssa =
          Control.passTypeCheck
          {display = Control.Layouts Ssa.Program.layouts,
