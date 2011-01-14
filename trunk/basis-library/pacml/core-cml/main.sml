@@ -31,8 +31,6 @@ struct
   * thread, which corresponds to this handler *)
 
   val h = MLtonSignal.Handler.handler (fn t => t)
-  (* Install handler for processor 0*)
-  val _ = MLtonSignal.setHandler (Posix.Signal.usr2, h)
 
   fun thread_main () =
   let
@@ -160,6 +158,8 @@ struct
     val () = PacmlPrim.initRefUpdate ()
     (* init MUST come after waitForWorkLoop has been exported *)
     val () = Primitive.MLton.parallelInit ()
+    (* Install handler for processor 0*)
+    val _ = MLtonSignal.setHandler (Posix.Signal.usr2, h)
     val () = print "Afer init\n"
   in
     ()
