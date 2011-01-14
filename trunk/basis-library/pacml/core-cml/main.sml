@@ -160,7 +160,6 @@ struct
     val () = Primitive.MLton.parallelInit ()
     (* Install handler for processor 0*)
     val _ = MLtonSignal.setHandler (Posix.Signal.usr2, h)
-    val () = print "Afer init\n"
   in
     ()
   end

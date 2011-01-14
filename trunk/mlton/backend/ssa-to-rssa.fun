@@ -1124,7 +1124,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                           src = Operand.word (WordX.one cardElemSize)}]
 
                                 val (stmts1, cond1) = addressInSharedHeap (lhsAddr)
-                                val (stmts2, cond2) = addressInSharedHeap (rhsAddr)
+                                val (stmts2, cond2) = addressInLocalHeap (rhsAddr)
                                 val (stmts3, cond3) = addressInSharedHeap (rhsAddr)
 
                                 val cReturnVar = Var.newNoname ()
@@ -1166,8 +1166,8 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                    transfer =
                                     Transfer.ifBool
                                     (Operand.Var {var = cond2, ty = Type.bool},
-                                     {truee = origContinue,
-                                      falsee = moveBlock})}
+                                     {truee = moveBlock,
+                                      falsee = origContinue})}
 
                                 val cardMarkBlock =
                                   newBlock

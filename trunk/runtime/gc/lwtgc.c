@@ -144,7 +144,7 @@ pointer GC_move (GC_state s, pointer p) {
       return p;
   }
 
-  printf ("GC_move\n");
+  printf ("GC_move [%d]\n",s->procId);
 
   /* ENTER (0) */
   s->syncReason = SYNC_FORCE;
