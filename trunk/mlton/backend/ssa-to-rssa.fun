@@ -1331,6 +1331,14 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                      {dst = atomicState,
                                       src = Var {ty = resTy, var = res}}]
                                  end
+                              fun setAtomicState n =
+                              let
+                                val atomicState = Runtime GCField.AtomicState
+                              in
+                                add (Statement.Move
+                                      {dst = atomicState,
+                                      src = n})
+                              end
                               fun ccall {args: Operand.t vector,
                                          func: CFunction.t} =
                                  let
@@ -1637,8 +1645,10 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                             Transfer.Goto {args = Vector.new0 (),
                                                            dst = continue})
                                      end)
-                               | Thread_atomicState =>
+                               | Thread_getAtomicState =>
                                     move (Runtime GCField.AtomicState)
+                               | Thread_setAtomicState =>
+                                   setAtomicState (varOp (arg 0))
                                | Thread_copy =>
                                     simpleCCallWithGCState
                                     (CFunction.copyThread ())

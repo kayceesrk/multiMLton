@@ -30,12 +30,12 @@ structure Assert: ASSERT =
       datatype z = datatype MLtonThread.AtomicState.t
       fun assertAtomic (msg: unit -> string, n: int option): unit =
          assert ([C.atomicMsg], msg, fn () =>
-                 case MLtonThread.atomicState () of
+                 case MLtonThread.getAtomicState () of
                     Atomic m => (case n of NONE => true | SOME n => n = m)
                   | NonAtomic => false)
       fun assertNonAtomic (msg: unit -> string): unit =
          assert ([C.atomicMsg], msg, fn () =>
-                 case MLtonThread.atomicState () of
+                 case MLtonThread.getAtomicState () of
                     Atomic _ => false
                   | NonAtomic => true)
       fun assertAtomic' (msg, n) = assertAtomic (fn () => msg, n)

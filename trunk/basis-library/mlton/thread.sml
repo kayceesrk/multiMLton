@@ -31,10 +31,12 @@ in
 
    val atomicBegin = atomicBegin
    val atomicEnd = atomicEnd
-   val atomicState = fn () =>
-      case atomicState () of
+   val getAtomicState = fn () =>
+      case getAtomicState () of
          0wx0 => AtomicState.NonAtomic
        | w => AtomicState.Atomic (Word32.toInt w)
+   val setAtomicState =
+     fn n => setAtomicState (Word32.fromInt n)
 end
 
 fun atomically f =

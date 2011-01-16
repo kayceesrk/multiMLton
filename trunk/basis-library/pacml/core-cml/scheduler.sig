@@ -26,5 +26,6 @@ sig
 
   (* scheduler control *)
   val deque : unit -> runnable_host option
+  val preemptOnWriteBarrier : unit -> unit
 
 end

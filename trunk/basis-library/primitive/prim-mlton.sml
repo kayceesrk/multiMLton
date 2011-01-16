@@ -324,10 +324,14 @@ structure Thread =
       type preThread = PreThread.t
       type thread = Thread.t
 
-      val atomicState = _prim "Thread_atomicState": unit -> Word32.word;
+      val getAtomicState = _prim "Thread_getAtomicState": unit -> Word32.word;
+      fun setAtomicState w =
+        if Word32.< (w, 0w0) then
+          raise Primitive.Exn.Fail8 "Thread.setAtomicState"
+          else (_prim "Thread_setAtomicState": Word32.word -> unit; w)
       val atomicBegin = _prim "Thread_atomicBegin": unit -> unit;
       fun atomicEnd () =
-         if atomicState () = 0w0
+         if getAtomicState () = 0w0
             then raise Primitive.Exn.Fail8 "Thread.atomicEnd"
             else _prim "Thread_atomicEnd": unit -> unit; ()
       val copy = _prim "Thread_copy": preThread -> thread;

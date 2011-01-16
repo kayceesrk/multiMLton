@@ -16,7 +16,8 @@ signature MLTON_THREAD =
       val atomically: (unit -> 'a) -> 'a
       val atomicBegin: unit -> unit
       val atomicEnd: unit -> unit
-      val atomicState: unit -> AtomicState.t
+      val getAtomicState: unit -> AtomicState.t
+      val setAtomicState: int -> unit
 
       structure Runnable :
          sig

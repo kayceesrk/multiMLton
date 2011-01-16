@@ -3,14 +3,16 @@
  *  Ported to MLton threads.
  *)
 
-signature CRITICAL =
-   sig
-      val atomicBegin : unit -> unit
-      val atomicEnd : unit -> unit
-      val atomicMsg : unit -> string
-      val doAtomic : (unit -> unit) -> unit
+ signature CRITICAL =
+ sig
+   val atomicBegin : unit -> unit
+   val atomicEnd : unit -> unit
+   val atomicMsg : unit -> string
+   val doAtomic : (unit -> unit) -> unit
+   val getAtomicState : (unit -> int)
+   val setAtomicState : (int -> unit)
 
-      val maskBegin : unit -> unit
-      val maskEnd : unit -> unit
-      val doMasked : (unit -> unit) -> unit
-   end
+   val maskBegin : unit -> unit
+   val maskEnd : unit -> unit
+   val doMasked : (unit -> unit) -> unit
+ end

@@ -118,7 +118,7 @@ void fixForwardingPointers (GC_state s, bool mayResize) {
   setGCStateCurrentThreadAndStack (s);
 
   if (isPointerInNursery (s, s->heap, (pointer)getStackCurrent(s))) {
-      assert (s->frontier > getStackCurrent(s));
+      assert (s->frontier > (pointer)getStackCurrent(s));
   }
 
   if (needGCTime (s)) {

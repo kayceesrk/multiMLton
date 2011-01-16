@@ -233,4 +233,11 @@ struct
 
   fun switchToNext (f : 'a thread -> unit) = (atomicBegin (); atomicSwitchToNext (f))
 
+  fun preemptOnWriteBarrier (v) =
+  let
+    val () = debug' "preemptOnWriteBarrier"
+    val atomicState = getAtomicState ()
+  in
+    PacmlFFI.ffiPrint ()
+  end
 end

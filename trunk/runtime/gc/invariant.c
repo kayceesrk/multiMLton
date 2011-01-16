@@ -110,7 +110,7 @@ bool invariantForGC (GC_state s) {
                           assertIsObjptrInFromSpaceOrLifted, FALSE);
     if (DEBUG_DETAILED)
       fprintf (stderr, "Checking sharedHeap(1). sharedStart = "FMTPTR" sharedFrontier = "FMTPTR" [%d]\n",
-               s->sharedStart, s->sharedFrontier, s->procId);
+               (uintptr_t)s->sharedStart, (uintptr_t)s->sharedFrontier, s->procId);
     foreachObjptrInRange (s, s->sharedStart, &s->sharedFrontier, assertLiftedObjptr, FALSE);
     if (DEBUG_DETAILED)
       fprintf (stderr, "Checking sharedHeap(2). [%d]\n", s->procId);

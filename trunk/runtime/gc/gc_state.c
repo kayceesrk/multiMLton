@@ -247,7 +247,6 @@ void setGCStateCurrentSharedHeap (GC_state s,
   assert (nurseryBytesRequested <= nurserySize);
   s->sharedHeap->nursery = nursery;
   frontier = nursery;
-  fprintf (stderr, "Frontier : %p h->frontier %p\n", (void*)frontier, (void*)h->frontier);
 
   if (not duringInit) {
     for (int proc = 0; proc < s->numberOfProcs; proc++) {
@@ -287,9 +286,9 @@ void setGCStateCurrentSharedHeap (GC_state s,
       frontier = s->procStates[proc].sharedLimitPlusSlop + GC_BONUS_SLOP;
     }
   }
-  fprintf (stderr, "Frontier : %p h->frontier %p\n", (void*)frontier, (void*)h->frontier);
   h->frontier = frontier;
-  fprintf (stderr, "Frontier : %p h->frontier %p\n", (void*)frontier, (void*)h->frontier);
+  if (DEBUG)
+    fprintf (stderr, "Frontier : %p h->frontier %p\n", (void*)frontier, (void*)h->frontier);
   assert (h->frontier <= h->start + h->availableSize);
 
   //Set sharedHeap limits in gcState

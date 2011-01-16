@@ -262,5 +262,6 @@ DanglingStack* newDanglingStack (GC_state s) {
 }
 
 void clearDanglingStackList (GC_state s) {
+    s=s;
     assert (0);
 }

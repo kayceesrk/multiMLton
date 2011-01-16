@@ -155,7 +155,7 @@ struct
 
   fun runtimeInit () =
   let
-    val () = PacmlPrim.initRefUpdate ()
+    val () = PacmlPrim.initRefUpdate (S.preemptOnWriteBarrier)
     (* init MUST come after waitForWorkLoop has been exported *)
     val () = Primitive.MLton.parallelInit ()
     (* Install handler for processor 0*)

@@ -150,7 +150,8 @@ datatype 'a t =
  | String_toWord8Vector (* defunctorize *)
  | Thread_atomicBegin (* backend *)
  | Thread_atomicEnd (* backend *)
- | Thread_atomicState (* backend *)
+ | Thread_getAtomicState (* backend *)
+ | Thread_setAtomicState (* backend *)
  | Thread_copy (* ssa to rssa *)
  | Thread_copyCurrent (* ssa to rssa *)
  | Thread_returnToC (* codegen *)
@@ -327,7 +328,8 @@ fun toString (n: 'a t): string =
        | String_toWord8Vector => "String_toWord8Vector"
        | Thread_atomicBegin => "Thread_atomicBegin"
        | Thread_atomicEnd => "Thread_atomicEnd"
-       | Thread_atomicState => "Thread_atomicState"
+       | Thread_getAtomicState => "Thread_getAtomicState"
+       | Thread_setAtomicState => "Thread_setAtomicState"
        | Thread_copy => "Thread_copy"
        | Thread_copyCurrent => "Thread_copyCurrent"
        | Thread_returnToC => "Thread_returnToC"
@@ -482,7 +484,8 @@ val equals: 'a t * 'a t -> bool =
     | (String_toWord8Vector, String_toWord8Vector) => true
     | (Thread_atomicBegin, Thread_atomicBegin) => true
     | (Thread_atomicEnd, Thread_atomicEnd) => true
-    | (Thread_atomicState, Thread_atomicState) => true
+    | (Thread_getAtomicState, Thread_getAtomicState) => true
+    | (Thread_setAtomicState, Thread_setAtomicState) => true
     | (Thread_copy, Thread_copy) => true
     | (Thread_copyCurrent, Thread_copyCurrent) => true
     | (Thread_returnToC, Thread_returnToC) => true
@@ -648,7 +651,8 @@ val map: 'a t * ('a -> 'b) -> 'b t =
     | String_toWord8Vector => String_toWord8Vector
     | Thread_atomicBegin => Thread_atomicBegin
     | Thread_atomicEnd => Thread_atomicEnd
-    | Thread_atomicState => Thread_atomicState
+    | Thread_getAtomicState => Thread_getAtomicState
+    | Thread_setAtomicState => Thread_setAtomicState
     | Thread_copy => Thread_copy
     | Thread_copyCurrent => Thread_copyCurrent
     | Thread_returnToC => Thread_returnToC
@@ -866,9 +870,9 @@ val kind: 'a t -> Kind.t =
        | MLton_serialize => DependsOnState
        | MLton_share => SideEffect
        | MLton_move=> SideEffect
-       | MLton_isObjptr => Functional
-       | MLton_isObjptrInLocalHeap => Functional
-       | MLton_isObjptrInSharedHeap => Functional
+       | MLton_isObjptr => DependsOnState
+       | MLton_isObjptrInLocalHeap => DependsOnState
+       | MLton_isObjptrInSharedHeap => DependsOnState
        | MLton_size => DependsOnState
        | MLton_touch => SideEffect
        | Real_Math_acos _ => DependsOnState (* depends on rounding mode *)
@@ -905,7 +909,8 @@ val kind: 'a t -> Kind.t =
        | String_toWord8Vector => Functional
        | Thread_atomicBegin => SideEffect
        | Thread_atomicEnd => SideEffect
-       | Thread_atomicState => DependsOnState
+       | Thread_getAtomicState => DependsOnState
+       | Thread_setAtomicState => SideEffect
        | Thread_copy => Moveable
        | Thread_copyCurrent => SideEffect
        | Thread_returnToC => SideEffect
@@ -1085,7 +1090,8 @@ in
        String_toWord8Vector,
        Thread_atomicBegin,
        Thread_atomicEnd,
-       Thread_atomicState,
+       Thread_getAtomicState,
+       Thread_setAtomicState,
        Thread_copy,
        Thread_copyCurrent,
        Thread_returnToC,
@@ -1383,7 +1389,8 @@ fun 'a checkApp (prim: 'a t,
        | Ref_ref => oneTarg (fn t => (oneArg t, reff t))
        | Thread_atomicBegin => noTargs (fn () => (noArgs, unit))
        | Thread_atomicEnd => noTargs (fn () => (noArgs, unit))
-       | Thread_atomicState => noTargs (fn () => (noArgs, word32))
+       | Thread_getAtomicState => noTargs (fn () => (noArgs, word32))
+       | Thread_setAtomicState => noTargs (fn () => (oneArg word32, unit))
        | Thread_copy => noTargs (fn () => (oneArg thread, thread))
        | Thread_copyCurrent => noTargs (fn () => (noArgs, unit))
        | Thread_returnToC => noTargs (fn () => (noArgs, unit))
