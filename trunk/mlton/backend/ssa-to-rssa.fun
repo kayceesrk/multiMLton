@@ -296,6 +296,36 @@ structure CFunction =
             target = Direct "GC_share",
             writesStackTop = true}
 
+      fun addToMoveOnWBA t =
+         T {args = Vector.new2 (Type.gcState (), t),
+            bytesNeeded = NONE,
+            convention = Cdecl,
+            ensuresBytesFree = false,
+            mayGC = false,
+            maySwitchThreads = false,
+            modifiesFrontier = false,
+            prototype = (Vector.new2 (CType.gcState, CType.cpointer), NONE),
+            readsStackTop = false,
+            return = Type.unit,
+            symbolScope = Private,
+            target = Direct "GC_addToMoveOnWBA",
+            writesStackTop = false}
+
+      fun addToPreemptOnWBA t =
+         T {args = Vector.new2 (Type.gcState (), t),
+            bytesNeeded = NONE,
+            convention = Cdecl,
+            ensuresBytesFree = false,
+            mayGC = false,
+            maySwitchThreads = false,
+            modifiesFrontier = false,
+            prototype = (Vector.new2 (CType.gcState, CType.cpointer), NONE),
+            readsStackTop = false,
+            return = Type.unit,
+            symbolScope = Private,
+            target = Direct "GC_addToMoveOnWBA",
+            writesStackTop = false}
+
       fun move t =
          T {args = Vector.new2 (Type.gcState (), t),
             bytesNeeded = NONE,
@@ -1501,21 +1531,39 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                                             [Vector.new1 GCState,
                                                              vos args],
                                                     func = CFunction.move (Operand.ty (a 0))})
-                               | MLton_isObjptrInLocalHeap =>
+                               | Lwtgc_addToMoveOnWBA =>
+                                    (case toRtype (varType (arg 0)) of
+                                        NONE => none ()
+                                      | SOME t =>
+                                           if not (Type.isObjptr t)
+                                              then none ()
+                                           else
+                                              simpleCCallWithGCState
+                                              (CFunction.addToMoveOnWBA (Operand.ty (a 0))))
+                               | Lwtgc_addToPreemptOnWBA =>
+                                    (case toRtype (varType (arg 0)) of
+                                        NONE => Error.bug "Lwtgc_addToPreemptOnWBA saw unit"
+                                      | SOME t =>
+                                           if not (Type.isObjptr t)
+                                              then Error.bug "Lwtgc_addToPreemptOnWBA saw non-objptr"
+                                           else
+                                              simpleCCallWithGCState
+                                              (CFunction.addToPreemptOnWBA (Operand.ty (a 0))))
+                               | Lwtgc_isObjptrInLocalHeap =>
                                     (case toRtype (varType (arg 0)) of
                                         NONE => move (Operand.bool false)
                                       | SOME t =>
                                            if not (Type.isObjptr t) then
                                              move (Operand.bool false)
                                            else isObjptrInLocalHeap (varOp (arg 0)))
-                               | MLton_isObjptrInSharedHeap =>
+                               | Lwtgc_isObjptrInSharedHeap =>
                                     (case toRtype (varType (arg 0)) of
                                         NONE => move (Operand.bool false)
                                       | SOME t =>
                                            if not (Type.isObjptr t) then
                                              move (Operand.bool false)
                                            else isObjptrInSharedHeap (varOp (arg 0)))
-                               | MLton_isObjptr =>
+                               | Lwtgc_isObjptr =>
                                     (case toRtype (varType (arg 0)) of
                                         NONE => move (Operand.bool false)
                                       | SOME t =>

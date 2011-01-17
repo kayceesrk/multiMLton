@@ -375,6 +375,8 @@ structure Type =
       fun maybeObjptr (t) : bool =
         if (isUnit t) then
           false
+        (* else if (equals (t, bool)) then
+          false *)
         else
           (case (dest t) of
                 CPointer => false

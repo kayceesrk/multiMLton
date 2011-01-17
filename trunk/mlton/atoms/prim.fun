@@ -83,6 +83,11 @@ datatype 'a t =
  | IntInf_toVector (* ssa to rssa *)
  | IntInf_toWord (* ssa to rssa *)
  | IntInf_xorb (* ssa to rssa *)
+ | Lwtgc_addToMoveOnWBA
+ | Lwtgc_addToPreemptOnWBA
+ | Lwtgc_isObjptr
+ | Lwtgc_isObjptrInLocalHeap
+ | Lwtgc_isObjptrInSharedHeap
  | MLton_bogus (* ssa to rssa *)
  (* of type unit -> 'a.
   * Makes a bogus value of any type.
@@ -111,9 +116,6 @@ datatype 'a t =
  | MLton_serialize (* unused *)
  | MLton_share
  | MLton_move
- | MLton_isObjptr
- | MLton_isObjptrInLocalHeap
- | MLton_isObjptrInSharedHeap
  | MLton_size (* ssa to rssa *)
  | MLton_touch (* backend *)
  | Real_Math_acos of RealSize.t (* codegen *)
@@ -276,6 +278,11 @@ fun toString (n: 'a t): string =
        | IntInf_toVector => "IntInf_toVector"
        | IntInf_toWord => "IntInf_toWord"
        | IntInf_xorb => "IntInf_xorb"
+       | Lwtgc_addToMoveOnWBA => "Lwtgc_addToMoveOnWBA"
+       | Lwtgc_addToPreemptOnWBA => "Lwtgc_addToPreemptOnWBA"
+       | Lwtgc_isObjptr => "Lwtgc_isObjptr"
+       | Lwtgc_isObjptrInLocalHeap => "Lwtgc_isObjptrInLocalHeap"
+       | Lwtgc_isObjptrInSharedHeap => "Lwtgc_isObjptrInSharedHeap"
        | MLton_bogus => "MLton_bogus"
        | MLton_bug => "MLton_bug"
        | MLton_deserialize => "MLton_deserialize"
@@ -289,9 +296,6 @@ fun toString (n: 'a t): string =
        | MLton_serialize => "MLton_serialize"
        | MLton_share => "MLton_share"
        | MLton_move => "MLton_move"
-       | MLton_isObjptr => "MLton_isObjptr"
-       | MLton_isObjptrInLocalHeap => "MLton_isObjptrInLocalHeap"
-       | MLton_isObjptrInSharedHeap => "MLton_isObjptrInSharedHeap"
        | MLton_size => "MLton_size"
        | MLton_touch => "MLton_touch"
        | Real_Math_acos s => real (s, "Math_acos")
@@ -426,6 +430,10 @@ val equals: 'a t * 'a t -> bool =
     | (IntInf_toVector, IntInf_toVector) => true
     | (IntInf_toWord, IntInf_toWord) => true
     | (IntInf_xorb, IntInf_xorb) => true
+    | (Lwtgc_addToMoveOnWBA, Lwtgc_addToMoveOnWBA) => true
+    | (Lwtgc_addToPreemptOnWBA, Lwtgc_addToPreemptOnWBA) => true
+    | (Lwtgc_isObjptrInLocalHeap, Lwtgc_isObjptrInLocalHeap) => true
+    | (Lwtgc_isObjptrInSharedHeap, Lwtgc_isObjptrInSharedHeap) => true
     | (MLton_bogus, MLton_bogus) => true
     | (MLton_bug, MLton_bug) => true
     | (MLton_deserialize, MLton_deserialize) => true
@@ -439,9 +447,6 @@ val equals: 'a t * 'a t -> bool =
     | (MLton_serialize, MLton_serialize) => true
     | (MLton_share, MLton_share) => true
     | (MLton_move, MLton_move) => true
-    | (MLton_isObjptr, MLton_isObjptr) => true
-    | (MLton_isObjptrInLocalHeap, MLton_isObjptrInLocalHeap) => true
-    | (MLton_isObjptrInSharedHeap, MLton_isObjptrInSharedHeap) => true
     | (MLton_size, MLton_size) => true
     | (MLton_touch, MLton_touch) => true
     | (Real_Math_acos s, Real_Math_acos s') => RealSize.equals (s, s')
@@ -599,6 +604,11 @@ val map: 'a t * ('a -> 'b) -> 'b t =
     | IntInf_toVector => IntInf_toVector
     | IntInf_toWord => IntInf_toWord
     | IntInf_xorb => IntInf_xorb
+    | Lwtgc_addToMoveOnWBA => Lwtgc_addToMoveOnWBA
+    | Lwtgc_addToPreemptOnWBA => Lwtgc_addToPreemptOnWBA
+    | Lwtgc_isObjptr => Lwtgc_isObjptr
+    | Lwtgc_isObjptrInLocalHeap => Lwtgc_isObjptrInLocalHeap
+    | Lwtgc_isObjptrInSharedHeap => Lwtgc_isObjptrInSharedHeap
     | MLton_bogus => MLton_bogus
     | MLton_bug => MLton_bug
     | MLton_deserialize => MLton_deserialize
@@ -612,9 +622,6 @@ val map: 'a t * ('a -> 'b) -> 'b t =
     | MLton_serialize => MLton_serialize
     | MLton_share => MLton_share
     | MLton_move => MLton_move
-    | MLton_isObjptr => MLton_isObjptr
-    | MLton_isObjptrInLocalHeap => MLton_isObjptrInLocalHeap
-    | MLton_isObjptrInSharedHeap => MLton_isObjptrInSharedHeap
     | MLton_size => MLton_size
     | MLton_touch => MLton_touch
     | Real_Math_acos z => Real_Math_acos z
@@ -857,6 +864,11 @@ val kind: 'a t -> Kind.t =
        | IntInf_toVector => Functional
        | IntInf_toWord => Functional
        | IntInf_xorb => Functional
+       | Lwtgc_addToMoveOnWBA => SideEffect
+       | Lwtgc_addToPreemptOnWBA => SideEffect
+       | Lwtgc_isObjptr => DependsOnState
+       | Lwtgc_isObjptrInLocalHeap => DependsOnState
+       | Lwtgc_isObjptrInSharedHeap => DependsOnState
        | MLton_bogus => Functional
        | MLton_bug => SideEffect
        | MLton_deserialize => Moveable
@@ -870,9 +882,6 @@ val kind: 'a t -> Kind.t =
        | MLton_serialize => DependsOnState
        | MLton_share => SideEffect
        | MLton_move=> SideEffect
-       | MLton_isObjptr => DependsOnState
-       | MLton_isObjptrInLocalHeap => DependsOnState
-       | MLton_isObjptrInSharedHeap => DependsOnState
        | MLton_size => DependsOnState
        | MLton_touch => SideEffect
        | Real_Math_acos _ => DependsOnState (* depends on rounding mode *)
@@ -1066,6 +1075,11 @@ in
        IntInf_toVector,
        IntInf_toWord,
        IntInf_xorb,
+       Lwtgc_addToMoveOnWBA,
+       Lwtgc_addToPreemptOnWBA,
+       Lwtgc_isObjptr,
+       Lwtgc_isObjptrInLocalHeap,
+       Lwtgc_isObjptrInSharedHeap,
        MLton_bogus,
        MLton_bug,
        MLton_deserialize,
@@ -1079,9 +1093,6 @@ in
        MLton_serialize,
        MLton_share,
        MLton_move,
-       MLton_isObjptr,
-       MLton_isObjptrInLocalHeap,
-       MLton_isObjptrInSharedHeap,
        MLton_size,
        MLton_touch,
        Ref_assign,
@@ -1335,6 +1346,11 @@ fun 'a checkApp (prim: 'a t,
             noTargs (fn () => (oneArg intInf, vector bigIntInfWord))
        | IntInf_toWord => noTargs (fn () => (oneArg intInf, smallIntInfWord))
        | IntInf_xorb => intInfBinary ()
+       | Lwtgc_addToMoveOnWBA => oneTarg (fn t => (oneArg t, unit))
+       | Lwtgc_addToPreemptOnWBA => oneTarg (fn t => (oneArg t, unit))
+       | Lwtgc_isObjptr => oneTarg (fn t => (oneArg t, bool))
+       | Lwtgc_isObjptrInLocalHeap => oneTarg (fn t => (oneArg t, bool))
+       | Lwtgc_isObjptrInSharedHeap => oneTarg (fn t => (oneArg t, bool))
        | MLton_bogus => oneTarg (fn t => (noArgs, t))
        | MLton_bug => noTargs (fn () => (oneArg string, unit))
        | MLton_deserialize => oneTarg (fn t => (oneArg word8Vector, t))
@@ -1348,9 +1364,6 @@ fun 'a checkApp (prim: 'a t,
        | MLton_serialize => oneTarg (fn t => (oneArg t, word8Vector))
        | MLton_share => oneTarg (fn t => (oneArg t, unit))
        | MLton_move => oneTarg (fn t => (oneArg t, unit))
-       | MLton_isObjptr => oneTarg (fn t => (oneArg t, bool))
-       | MLton_isObjptrInLocalHeap => oneTarg (fn t => (oneArg t, bool))
-       | MLton_isObjptrInSharedHeap => oneTarg (fn t => (oneArg t, bool))
        | MLton_size => oneTarg (fn t => (oneArg t, csize))
        | MLton_touch => oneTarg (fn t => (oneArg t, unit))
        | Real_Math_acos s => realUnary s
@@ -1478,6 +1491,11 @@ fun ('a, 'b) extractTargs (prim: 'b t,
        | CPointer_setObjptr => one (arg 2)
        | Exn_extra => one result
        | Exn_setExtendExtra => one (#2 (deArrow (arg 0)))
+       | Lwtgc_addToMoveOnWBA => one (arg 0)
+       | Lwtgc_addToPreemptOnWBA => one (arg 0)
+       | Lwtgc_isObjptr => one (arg 0)
+       | Lwtgc_isObjptrInLocalHeap => one (arg 0)
+       | Lwtgc_isObjptrInSharedHeap => one (arg 0)
        | MLton_bogus => one result
        | MLton_deserialize => one result
        | MLton_eq => one (arg 0)
@@ -1486,9 +1504,6 @@ fun ('a, 'b) extractTargs (prim: 'b t,
        | MLton_serialize => one (arg 0)
        | MLton_share => one (arg 0)
        | MLton_move => one (arg 0)
-       | MLton_isObjptr => one (arg 0)
-       | MLton_isObjptrInLocalHeap => one (arg 0)
-       | MLton_isObjptrInSharedHeap => one (arg 0)
        | MLton_size => one (arg 0)
        | MLton_touch => one (arg 0)
        | Ref_assign => one (deRef (arg 0))

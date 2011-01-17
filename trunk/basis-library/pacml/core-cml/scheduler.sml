@@ -158,6 +158,7 @@ struct
 
   fun atomicSwitchAux msg (f : 'a thread -> runnable_host) : 'a =
     (Assert.assertAtomic (fn () => "Scheduler."^msg, NONE);
+    debug' ("Scheduler."^msg);
     case PT.getThreadType () of
          HOST =>
            MT.atomicSwitch (fn t =>
@@ -234,10 +235,15 @@ struct
   fun switchToNext (f : 'a thread -> unit) = (atomicBegin (); atomicSwitchToNext (f))
 
   fun preemptOnWriteBarrier (v) =
-  let
-    val () = debug' "preemptOnWriteBarrier"
-    val atomicState = getAtomicState ()
-  in
-    PacmlFFI.ffiPrint ()
-  end
+    if (MT.amSwitching (PacmlFFI.processorNumber ())) then
+      ()
+    else
+      let
+        val atomicState = getAtomicState ()
+        val () = setAtomicState (1)
+        val () = atomicSwitchToNext (fn t => PacmlPrim.addToPreemptOnWBA (t))
+        val () = setAtomicState (atomicState)
+      in
+        ()
+      end
 end

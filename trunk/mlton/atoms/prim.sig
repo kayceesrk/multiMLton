@@ -73,6 +73,11 @@ signature PRIM =
              | IntInf_toVector (* ssa to rssa *)
              | IntInf_toWord (* ssa to rssa *)
              | IntInf_xorb (* ssa to rssa *)
+             | Lwtgc_addToMoveOnWBA (* backed *)
+             | Lwtgc_addToPreemptOnWBA (* backed *)
+             | Lwtgc_isObjptr (* backend *)
+             | Lwtgc_isObjptrInLocalHeap (* backend *)
+             | Lwtgc_isObjptrInSharedHeap (* backend *)
              | MLton_bogus (* ssa to rssa *)
              (* of type unit -> 'a.
               * Makes a bogus value of any type.
@@ -101,9 +106,6 @@ signature PRIM =
              | MLton_serialize (* unused *)
              | MLton_share
              | MLton_move
-             | MLton_isObjptr (* backend *)
-             | MLton_isObjptrInLocalHeap (* backend *)
-             | MLton_isObjptrInSharedHeap (* backend *)
              | MLton_size (* ssa to rssa *)
              | MLton_touch (* backend *)
              | Real_Math_acos of RealSize.t (* codegen *)

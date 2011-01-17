@@ -13,50 +13,50 @@ static inline void liftObjptr (GC_state s, objptr *opp);
 /* Move an object from local heap to the shared heap */
 static inline void liftObjptr (GC_state s, objptr *opp) {
 
-    if (not isObjptrInNursery (s, s->heap, *opp)) {
-        if (DEBUG_LWTGC) {
-            fprintf (stderr, "\t is not in nursery\n");
-        }
+  if (not isObjptrInNursery (s, s->heap, *opp)) {
+    if (DEBUG_LWTGC) {
+      fprintf (stderr, "\t is not in nursery\n");
     }
-    /* If pointer has already been forwarded, skip setting lift bit */
-    if (isObjptrInHeap (s, s->sharedHeap, *opp)) {
-        if (DEBUG_LWTGC) {
-            fprintf (stderr, "\t object in shared heap\n");
-        }
-        return;
+  }
+  /* If pointer has already been forwarded, skip setting lift bit */
+  if (isObjptrInHeap (s, s->sharedHeap, *opp)) {
+    if (DEBUG_LWTGC) {
+      fprintf (stderr, "\t object in shared heap\n");
     }
-    forwardObjptrToSharedHeap (s, opp);
+    return;
+  }
+  forwardObjptrToSharedHeap (s, opp);
 
-    objptr new_op = *opp;
-    pointer new_p = objptrToPointer (new_op, s->heap->start);
-    GC_header new_header = getHeader(new_p);
-    GC_header* new_headerp = getHeaderp (new_p);
+  objptr new_op = *opp;
+  pointer new_p = objptrToPointer (new_op, s->heap->start);
+  GC_header new_header = getHeader(new_p);
+  GC_header* new_headerp = getHeaderp (new_p);
 
-    if (isPointerInHeap (s, s->sharedHeap, new_p)) {
-        /* Set lift mask */
-        if (DEBUG_LWTGC)
-            fprintf (stderr, "\t pointer "FMTPTR" headerp "FMTPTR" : setting header "FMTHDR" to "FMTHDR"\n",
-                    (uintptr_t)new_p, (uintptr_t)new_headerp, new_header, new_header | LIFT_MASK);
-        *new_headerp = new_header | LIFT_MASK;
-    }
-    else if (DEBUG_LWTGC) {
-            fprintf (stderr, "\t pointer "FMTPTR" was not lifted\n", (uintptr_t)new_p);
-    }
+  if (isPointerInHeap (s, s->sharedHeap, new_p)) {
+    /* Set lift mask */
+    if (DEBUG_LWTGC)
+      fprintf (stderr, "\t pointer "FMTPTR" headerp "FMTPTR" : setting header "FMTHDR" to "FMTHDR"\n",
+               (uintptr_t)new_p, (uintptr_t)new_headerp, new_header, new_header | LIFT_MASK);
+    *new_headerp = new_header | LIFT_MASK;
+  }
+  else if (DEBUG_LWTGC) {
+    fprintf (stderr, "\t pointer "FMTPTR" was not lifted\n", (uintptr_t)new_p);
+  }
 }
 
 
 static inline void assertLiftedObjptr (GC_state s, objptr *opp) {
-    objptr op = *opp;
-    bool res = isObjptrInHeap (s, s->sharedHeap, op);
-    GC_header h = getHeader(objptrToPointer (op, s->heap->start));
-    GC_objectTypeTag tag;
-    if (DEBUG_DETAILED)
-        fprintf (stderr, "assertLiftedObjptr ("FMTOBJPTR")\n", *opp);
-    splitHeader (s, h, &tag, NULL, NULL, NULL);
-    bool stackType = (tag == STACK_TAG);
-    res = !(!res);
-    stackType = !(!stackType);
-    assert (res || stackType);
+  objptr op = *opp;
+  bool res = isObjptrInHeap (s, s->sharedHeap, op);
+  GC_header h = getHeader(objptrToPointer (op, s->heap->start));
+  GC_objectTypeTag tag;
+  if (DEBUG_DETAILED)
+    fprintf (stderr, "assertLiftedObjptr ("FMTOBJPTR")\n", *opp);
+  splitHeader (s, h, &tag, NULL, NULL, NULL);
+  bool stackType = (tag == STACK_TAG);
+  res = !(!res);
+  stackType = !(!stackType);
+  assert (res || stackType);
 }
 
 
@@ -101,7 +101,7 @@ void liftAllObjectsDuringInit (GC_state s) {
 
   //Forward
   if (DEBUG_LWTGC)
-      fprintf (stderr, "liftAllObjectsDuringInit: foreachGlobalObjptr\n");
+    fprintf (stderr, "liftAllObjectsDuringInit: foreachGlobalObjptr\n");
   for (unsigned int i = 0; i < s->globalsLength; ++i) {
     if (DEBUG_DETAILED)
       fprintf (stderr, "foreachGlobal %u [%d]\n", i, s->procId);
@@ -139,9 +139,9 @@ void liftAllObjectsDuringInit (GC_state s) {
 
 pointer GC_move (GC_state s, pointer p) {
   if (!(s->heap->start <= p and p < s->heap->start + s->heap->size)) {
-      if (DEBUG_LWTGC)
-          fprintf (stderr, "GC_move: pointer "FMTPTR" not in heap\n", (uintptr_t)p);
-      return p;
+    if (DEBUG_LWTGC)
+      fprintf (stderr, "GC_move: pointer "FMTPTR" not in heap\n", (uintptr_t)p);
+    return p;
   }
 
   printf ("GC_move [%d]\n",s->procId);
@@ -245,3 +245,45 @@ void moveEachObjptrInObject (GC_state s, pointer p) {
   return;
 }
 
+//XXX KC -- if only a minor GC is performed, then how can you fix up all
+// forwarding pointers. So, I guess this can only be done at the end of
+// a major GC, which will be triggered if the scheduler queue is empty
+// and the preemptOnWB queue is not empty
+void liftAllObjptrsInWriteBarrierArray (GC_state s) {
+  for (int32_t i=0; i < s->moveOnWBASize; i++) {
+    pointer p = s->moveOnWBA[i];
+    assert (isPointerInHeap (s, s->heap, p));
+
+    //Set up the forwarding state
+    s->forwardState.toStart = s->sharedFrontier;
+    s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
+    s->forwardState.back = s->forwardState.toStart;
+    s->forwardState.rangeListFirst = s->forwardState.rangeListLast = NULL;
+    s->forwardState.amInMinorGC = TRUE;
+
+    /* Forward the given object to sharedHeap */
+    objptr op = pointerToObjptr (p, s->heap->start);
+    objptr* pOp = &op;
+    liftObjptr (s, pOp);
+    foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, liftObjptr, TRUE);
+    s->forwardState.amInMinorGC = FALSE;
+    assert (!s->forwardState.rangeListFirst);
+    assert (!s->forwardState.rangeListLast);
+  }
+  s->moveOnWBASize = 0;
+}
+
+void GC_addToMoveOnWBA (GC_state s, pointer p) {
+  ++(s->moveOnWBASize);
+  if (s->moveOnWBASize > SIZE_WBA)
+    die ("moveOnWBA overflow");
+  s->moveOnWBA[s->moveOnWBASize - 1] = p;
+}
+
+void GC_addToPreemptOnWBA (GC_state s, pointer p) {
+  objptr op = pointerToObjptr (p, s->heap->start);
+  ++(s->preemptOnWBASize);
+  if (s->preemptOnWBASize > SIZE_WBA)
+    die ("preemptOnWBA overflow");
+  s->preemptOnWBA[s->preemptOnWBASize - 1] = op;
+}

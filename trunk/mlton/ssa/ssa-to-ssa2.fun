@@ -175,7 +175,7 @@ fun convert (S.Program.T {datatypes, functions, globals, main}) =
                              {base = Base.Object (arg 0),
                               offset = 0,
                               value = arg 1})
-                       | MLton_isObjptr =>
+                       | Lwtgc_isObjptr =>
                            let
                              val mty = Vector.sub (targs, 0)
                              val mty = convertType mty

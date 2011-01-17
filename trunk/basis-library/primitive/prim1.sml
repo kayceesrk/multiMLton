@@ -74,17 +74,26 @@ structure Ref =
       val preemptFn = ref (fn () => ())
       val deref = _prim "Ref_deref": 'a ref -> 'a;
       val refAssign = _prim "Ref_assign": 'a ref * 'a -> unit;
-      val isObjptrInLocalHeap = _prim "MLton_isObjptrInLocalHeap": 'a -> bool;
-      val isObjptrInSharedHeap = _prim "MLton_isObjptrInSharedHeap": 'a -> bool;
-      val isObjptr = _prim "MLton_isObjptr": 'a -> bool;
+      val addToPreemptOnWBA = _prim "Lwtgc_addToPreemptOnWBA": 'a -> unit;
+
+      fun writeBarrier (r, v) =
+      let
+        val preemptFn = deref preemptFn
+        val isObjptrInLocalHeap = _prim "Lwtgc_isObjptrInLocalHeap": 'a -> bool;
+        val isObjptrInSharedHeap = _prim "Lwtgc_isObjptrInSharedHeap": 'a -> bool;
+        val isObjptr = _prim "Lwtgc_isObjptr": 'a -> bool;
+        val addToMoveOnWBA = _prim "Lwtgc_addToMoveOnWBA": 'a -> unit;
+        val _ = if ((isObjptr v) andalso (isObjptrInLocalHeap v) andalso (isObjptrInSharedHeap r)) then
+                  (addToMoveOnWBA (v);
+                   preemptFn ())
+                else ()
+      in
+        ()
+      end
 
       fun assign (r, v) =
       let
-        val preemptFn = deref preemptFn
-
-        val _ = if ((isObjptr v) andalso (isObjptrInLocalHeap v) andalso (isObjptrInSharedHeap r)) then
-                  preemptFn ()
-                else ()
+        val _ = writeBarrier (r,v)
       in
         refAssign (r, v)
       end

@@ -1045,7 +1045,7 @@ fun closureConvert
                                               v1 (coerce (convertVarInfo y,
                                                           VarInfo.value y, v)))
                                   end
-                             | MLton_isObjptr =>
+                             | Lwtgc_isObjptr =>
                                  let
                                    val v = varExpInfo (arg 0)
                                    val ty = valueType (VarInfo.value v)
