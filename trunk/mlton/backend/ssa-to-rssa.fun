@@ -341,6 +341,118 @@ structure CFunction =
             target = Direct "GC_move",
             writesStackTop = true}
 
+      fun sqAcquireLock () =
+         T {args = Vector.new2 (Type.gcState (), Type.cint ()),
+            bytesNeeded = NONE,
+            convention = Cdecl,
+            ensuresBytesFree = false,
+            mayGC = false,
+            maySwitchThreads = false,
+            modifiesFrontier = false,
+            prototype = (Vector.new2 (CType.gcState, CType.cint ()), NONE),
+            readsStackTop = false,
+            return = Type.unit,
+            symbolScope = Private,
+            target = Direct "GC_sqAcquireLock",
+            writesStackTop = false}
+
+      fun sqReleaseLock () =
+         T {args = Vector.new2 (Type.gcState (), Type.cint ()),
+            bytesNeeded = NONE,
+            convention = Cdecl,
+            ensuresBytesFree = false,
+            mayGC = false,
+            maySwitchThreads = false,
+            modifiesFrontier = false,
+            prototype = (Vector.new2 (CType.gcState, CType.cint ()), NONE),
+            readsStackTop = false,
+            return = Type.unit,
+            symbolScope = Private,
+            target = Direct "GC_sqReleaseLock",
+            writesStackTop = false}
+
+      fun sqCreateQueues () =
+         T {args = Vector.new1 (Type.gcState ()),
+            bytesNeeded = NONE,
+            convention = Cdecl,
+            ensuresBytesFree = false,
+            mayGC = false,
+            maySwitchThreads = false,
+            modifiesFrontier = false,
+            prototype = (Vector.new1 (CType.gcState), NONE),
+            readsStackTop = false,
+            return = Type.unit,
+            symbolScope = Private,
+            target = Direct "GC_sqCreateQueues",
+            writesStackTop = false}
+
+      fun sqClean () =
+         T {args = Vector.new1 (Type.gcState ()),
+            bytesNeeded = NONE,
+            convention = Cdecl,
+            ensuresBytesFree = false,
+            mayGC = false,
+            maySwitchThreads = false,
+            modifiesFrontier = false,
+            prototype = (Vector.new1 (CType.gcState), NONE),
+            readsStackTop = false,
+            return = Type.unit,
+            symbolScope = Private,
+            target = Direct "GC_sqClean",
+            writesStackTop = false}
+
+      fun sqIsEmpty () =
+         T {args = Vector.new1 (Type.gcState ()),
+            bytesNeeded = NONE,
+            convention = Cdecl,
+            ensuresBytesFree = false,
+            mayGC = true,
+            maySwitchThreads = false,
+            modifiesFrontier = true,
+            prototype = (Vector.new1 (CType.gcState),
+                         SOME CType.bool),
+            readsStackTop = true,
+            return = Type.bool,
+            symbolScope = Private,
+            target = Direct "GC_sqIsEmpty",
+            writesStackTop = true}
+
+
+      fun sqEnque t =
+         T {args = Vector.new4 (Type.gcState (), t, Type.cint (), Type.cint ()),
+            bytesNeeded = NONE,
+            convention = Cdecl,
+            ensuresBytesFree = false,
+            mayGC = false,
+            maySwitchThreads = false,
+            modifiesFrontier = false,
+            prototype = (Vector.new4 (CType.gcState,
+                                      CType.cpointer,
+                                      CType.cint (),
+                                      CType.cint ()),
+                         NONE),
+            readsStackTop = false,
+            return = Type.unit,
+            symbolScope = Private,
+            target = Direct "GC_sqEnque",
+            writesStackTop = false}
+
+      fun sqDeque () =
+         T {args = Vector.new2 (Type.gcState (), Type.cint ()),
+            bytesNeeded = NONE,
+            convention = Cdecl,
+            ensuresBytesFree = false,
+            mayGC = false,
+            maySwitchThreads = false,
+            modifiesFrontier = false,
+            prototype = (Vector.new2 (CType.gcState, CType.cint ()),
+                         SOME CType.cpointer),
+            readsStackTop = false,
+            return = Type.cpointer (),
+            symbolScope = Private,
+            target = Direct "GC_sqDeque",
+            writesStackTop = false}
+
       fun parallelInit t =
          T {args = Vector.new0 (),
             bytesNeeded = NONE,
@@ -1511,6 +1623,27 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                | MLton_installSignalHandler => none ()
                                | MLton_parInit =>
                                    simpleCCall (CFunction.parallelInit ())
+                               | SQ_acquireLock =>
+                                   simpleCCallWithGCState (CFunction.sqAcquireLock ())
+                               | SQ_releaseLock =>
+                                   simpleCCallWithGCState (CFunction.sqReleaseLock ())
+                               | SQ_createQueues =>
+                                   simpleCCallWithGCState (CFunction.sqCreateQueues ())
+                               | SQ_clean =>
+                                   simpleCCallWithGCState (CFunction.sqClean ())
+                               | SQ_isEmpty =>
+                                   simpleCCallWithGCState (CFunction.sqIsEmpty ())
+                               | SQ_enque =>
+                                  (case toRtype (varType (arg 0)) of
+                                      NONE => Error.bug "SQ_enque saw unit"
+                                    | SOME t =>
+                                          if not (Type.isObjptr t)
+                                            then Error.bug "SQ_enque saw non-objptr"
+                                          else
+                                            simpleCCallWithGCState
+                                            (CFunction.sqEnque (Operand.ty (a 0))))
+                               | SQ_deque =>
+                                   simpleCCallWithGCState (CFunction.sqDeque ())
                                | MLton_share =>
                                     (case toRtype (varType (arg 0)) of
                                         NONE => none ()

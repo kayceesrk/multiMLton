@@ -318,6 +318,28 @@ struct
   val prefixAndSwitchTo = _prim "Threadlet_prefixAndSwitchTo" : parasite -> unit;
 end
 
+structure SchedulerQueue =
+struct
+  (* PRI - 0; SEC - 1 *)
+  val acquireLock = _prim "SQ_acquireLock": C_Int.t -> unit;
+  val releaseLock = _prim "SQ_releaseLock": C_Int.t -> unit;
+  val createQueues = _prim "SQ_createQueues": unit -> unit;
+  val enque = _prim "SQ_enque": ('a * C_Int.t * C_Int.t) -> unit;
+  val isEmpty = _prim "SQ_isEmpty": unit -> bool;
+  val clean = _prim "SQ_clean": unit -> unit;
+
+  fun deque (i) =
+  let
+    val p = _prim "SQ_deque": C_Int.t -> Pointer.t; (i)
+  in
+    if (Pointer.isNull p) then
+      NONE
+    else
+      SOME (Pointer.getObjptr (p, 0))
+  end
+
+
+end
 
 structure Thread =
    struct

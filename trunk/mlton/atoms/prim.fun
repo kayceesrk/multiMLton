@@ -149,6 +149,13 @@ datatype 'a t =
  | Ref_assign (* backend *)
  | Ref_deref (* backend *)
  | Ref_ref (* backend *)
+ | SQ_acquireLock (* backend *)
+ | SQ_releaseLock (* backend *)
+ | SQ_createQueues (* backend *)
+ | SQ_enque (* backend *)
+ | SQ_deque (* backend *)
+ | SQ_isEmpty (* backend *)
+ | SQ_clean (* backend *)
  | String_toWord8Vector (* defunctorize *)
  | Thread_atomicBegin (* backend *)
  | Thread_atomicEnd (* backend *)
@@ -329,6 +336,13 @@ fun toString (n: 'a t): string =
        | Ref_assign => "Ref_assign"
        | Ref_deref => "Ref_deref"
        | Ref_ref => "Ref_ref"
+       | SQ_acquireLock => "SQ_acquireLock"
+       | SQ_releaseLock => "SQ_releaseLock"
+       | SQ_createQueues => "SQ_createQueues"
+       | SQ_enque => "SQ_enque"
+       | SQ_deque => "SQ_deque"
+       | SQ_isEmpty => "SQ_isEmpty"
+       | SQ_clean => "SQ_clean"
        | String_toWord8Vector => "String_toWord8Vector"
        | Thread_atomicBegin => "Thread_atomicBegin"
        | Thread_atomicEnd => "Thread_atomicEnd"
@@ -486,6 +500,13 @@ val equals: 'a t * 'a t -> bool =
     | (Ref_assign, Ref_assign) => true
     | (Ref_deref, Ref_deref) => true
     | (Ref_ref, Ref_ref) => true
+    | (SQ_acquireLock, SQ_acquireLock) => true
+    | (SQ_releaseLock, SQ_releaseLock) => true
+    | (SQ_createQueues, SQ_createQueues) => true
+    | (SQ_enque, SQ_enque) => true
+    | (SQ_deque, SQ_deque) => true
+    | (SQ_isEmpty, SQ_isEmpty) => true
+    | (SQ_clean, SQ_clean) => true
     | (String_toWord8Vector, String_toWord8Vector) => true
     | (Thread_atomicBegin, Thread_atomicBegin) => true
     | (Thread_atomicEnd, Thread_atomicEnd) => true
@@ -655,6 +676,13 @@ val map: 'a t * ('a -> 'b) -> 'b t =
     | Ref_assign => Ref_assign
     | Ref_deref => Ref_deref
     | Ref_ref => Ref_ref
+    | SQ_acquireLock => SQ_acquireLock
+    | SQ_releaseLock => SQ_releaseLock
+    | SQ_createQueues => SQ_createQueues
+    | SQ_enque => SQ_enque
+    | SQ_deque => SQ_deque
+    | SQ_isEmpty => SQ_isEmpty
+    | SQ_clean => SQ_clean
     | String_toWord8Vector => String_toWord8Vector
     | Thread_atomicBegin => Thread_atomicBegin
     | Thread_atomicEnd => Thread_atomicEnd
@@ -915,6 +943,13 @@ val kind: 'a t -> Kind.t =
        | Ref_assign => SideEffect
        | Ref_deref => DependsOnState
        | Ref_ref => Moveable
+       | SQ_acquireLock => SideEffect
+       | SQ_releaseLock => SideEffect
+       | SQ_createQueues => SideEffect
+       | SQ_enque => SideEffect
+       | SQ_deque => SideEffect
+       | SQ_isEmpty => SideEffect
+       | SQ_clean => SideEffect
        | String_toWord8Vector => Functional
        | Thread_atomicBegin => SideEffect
        | Thread_atomicEnd => SideEffect
@@ -1098,6 +1133,13 @@ in
        Ref_assign,
        Ref_deref,
        Ref_ref,
+       SQ_acquireLock,
+       SQ_releaseLock,
+       SQ_createQueues,
+       SQ_enque,
+       SQ_deque,
+       SQ_isEmpty,
+       SQ_clean,
        String_toWord8Vector,
        Thread_atomicBegin,
        Thread_atomicEnd,
@@ -1416,6 +1458,13 @@ fun 'a checkApp (prim: 'a t,
             noTargs (fn () => (oneArg (arrow (exn, unit)), unit))
        | TopLevel_setSuffix =>
             noTargs (fn () => (oneArg (arrow (unit, unit)), unit))
+       | SQ_acquireLock => noTargs (fn () => (oneArg cint, unit))
+       | SQ_releaseLock => noTargs (fn () => (oneArg cint, unit))
+       | SQ_createQueues => noTargs (fn () => (noArgs, unit))
+       | SQ_enque => oneTarg (fn t => (threeArgs (t, cint, cint), unit))
+       | SQ_deque => noTargs (fn () => (oneArg (cint), cpointer))
+       | SQ_isEmpty => noTargs (fn () => (noArgs, bool))
+       | SQ_clean => noTargs (fn () => (noArgs, unit))
        | String_toWord8Vector =>
             noTargs (fn () => (oneArg string, word8Vector))
        | Vector_length => oneTarg (fn t => (oneArg (vector t), seqIndex))

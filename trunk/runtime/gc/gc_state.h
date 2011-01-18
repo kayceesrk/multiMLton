@@ -21,9 +21,18 @@ struct GC_state {
   pointer sharedHeapStart;
   pointer sharedHeapEnd;
 
+  /* ML arrays and queues */
+  SchedulerQueue* schedulerQueue;
+  Lock* schedulerLocks;
+  objptr* moveOnWBA;
+  int32_t moveOnWBASize;
+  objptr* preemptOnWBA;
+  int32_t preemptOnWBASize;
+
   pointer sharedFrontier;
   pointer sharedLimit;
   size_t exnStack;
+
   /* Alphabetized fields follow. */
   size_t alignment; /* */
   bool amInGC;
@@ -102,10 +111,7 @@ struct GC_state {
   uint32_t vectorInitsLength;
   GC_weak weaks; /* Linked list of (live) weak pointers */
   char *worldFile;
-  pointer* moveOnWBA;
-  int32_t moveOnWBASize;
-  objptr* preemptOnWBA;
-  int32_t preemptOnWBASize;
+
 };
 
 #endif /* (defined (MLTON_GC_INTERNAL_TYPES)) */

@@ -249,10 +249,10 @@ void moveEachObjptrInObject (GC_state s, pointer p) {
 // forwarding pointers. So, I guess this can only be done at the end of
 // a major GC, which will be triggered if the scheduler queue is empty
 // and the preemptOnWB queue is not empty
-void liftAllObjptrsInWriteBarrierArray (GC_state s) {
+void liftAllObjptrsInMoveOnWBA (GC_state s) {
   for (int32_t i=0; i < s->moveOnWBASize; i++) {
-    pointer p = s->moveOnWBA[i];
-    assert (isPointerInHeap (s, s->heap, p));
+    objptr op = s->moveOnWBA[i];
+    assert (isObjptrInHeap(s, s->heap, op));
 
     //Set up the forwarding state
     s->forwardState.toStart = s->sharedFrontier;
@@ -262,7 +262,6 @@ void liftAllObjptrsInWriteBarrierArray (GC_state s) {
     s->forwardState.amInMinorGC = TRUE;
 
     /* Forward the given object to sharedHeap */
-    objptr op = pointerToObjptr (p, s->heap->start);
     objptr* pOp = &op;
     liftObjptr (s, pOp);
     foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, liftObjptr, TRUE);
@@ -271,13 +270,21 @@ void liftAllObjptrsInWriteBarrierArray (GC_state s) {
     assert (!s->forwardState.rangeListLast);
   }
   s->moveOnWBASize = 0;
+
+  /* move the threads from preemptOnWBA to scheduler queue */
+  GC_sqAcquireLock (s, s->procId);
+  for (int i=0; i < s->preemptOnWBASize; i++) {
+      GC_sqEnque (s, objptrToPointer (s->preemptOnWBA[i], s->heap->start), s->procId, 0);
+  }
+  GC_sqReleaseLock (s, s->procId);
+  s->preemptOnWBASize = 0;
 }
 
 void GC_addToMoveOnWBA (GC_state s, pointer p) {
   ++(s->moveOnWBASize);
   if (s->moveOnWBASize > SIZE_WBA)
     die ("moveOnWBA overflow");
-  s->moveOnWBA[s->moveOnWBASize - 1] = p;
+  s->moveOnWBA[s->moveOnWBASize - 1] = pointerToObjptr (p, s->heap->start);
 }
 
 void GC_addToPreemptOnWBA (GC_state s, pointer p) {
@@ -286,4 +293,11 @@ void GC_addToPreemptOnWBA (GC_state s, pointer p) {
   if (s->preemptOnWBASize > SIZE_WBA)
     die ("preemptOnWBA overflow");
   s->preemptOnWBA[s->preemptOnWBASize - 1] = op;
+}
+
+static inline void foreachObjptrInWBAs (GC_state s, GC_state fromState, GC_foreachObjptrFun f) {
+  for (int i=0; i < fromState->moveOnWBASize; i++)
+    callIfIsObjptr (s, f, &(fromState->moveOnWBA [i]));
+  for (int i=0; i < fromState->preemptOnWBASize; i++)
+    callIfIsObjptr (s, f, &(fromState->preemptOnWBA [i]));
 }

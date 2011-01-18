@@ -407,6 +407,8 @@ in
 		../pacml/core-cml/scheduler-hooks.sig
 		../pacml/core-cml/scheduler-hooks.sml
 		../pacml/core-cml/scheduler-queue.sig
+		../pacml/core-cml/ml-scheduler-queue.sml
+		../pacml/core-cml/c-scheduler-queue.sml
 		../pacml/core-cml/scheduler-queue.sml
 		../pacml/core-cml/scheduler.sig
 		../pacml/core-cml/scheduler.sml

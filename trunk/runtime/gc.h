@@ -43,6 +43,7 @@ typedef GC_state GCState_t;
 #include "gc/current.h"
 #include "gc/foreach.h"
 #include "gc/translate.h"
+#include "gc/scheduler-queue.h"
 #include "gc/sysvals.h"
 #include "gc/controls.h"
 #include "gc/major.h"

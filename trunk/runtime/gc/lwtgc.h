@@ -11,9 +11,12 @@
 PRIVATE pointer GC_move (GC_state s, pointer object);
 PRIVATE void GC_addToMoveOnWBA (GC_state s, pointer p);
 PRIVATE void GC_addToPreemptOnWBA (GC_state s, pointer p);
+
 void moveEachObjptrInObject (GC_state s, pointer object);
 void liftAllObjectsDuringInit (GC_state s);
-void liftAllObjptrsInWriteBarrierArray (GC_state s);
+void liftAllObjptrsInMoveOnWBA (GC_state s);
 static inline void assertLiftedObjptr (GC_state s, objptr *opp);
+static inline void foreachObjptrInWBAs (GC_state s, GC_state fromState,
+                                        GC_foreachObjptrFun f);
 
 #endif /* (defined (MLTON_GC_INTERNAL_BASIS)) */

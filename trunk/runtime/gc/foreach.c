@@ -48,6 +48,8 @@ void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f) {
         callIfIsObjptr (s, f, &thrd->stack);
         danglingStack = danglingStack->next;
       }
+      foreachObjptrInWBAs (s, &s->procStates[proc], f);
+      foreachObjptrInSQ (s, s->procStates[proc].schedulerQueue, f);
     }
   }
   else {
@@ -67,6 +69,8 @@ void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f) {
         callIfIsObjptr (s, f, &thrd->stack);
         danglingStack = danglingStack->next;
     }
+    foreachObjptrInWBAs (s, s, f);
+    foreachObjptrInSQ (s, s->schedulerQueue, f);
   }
 }
 
@@ -102,6 +106,8 @@ void foreachGlobalObjptrInScope (GC_state s, GC_foreachObjptrFun f) {
       callIfIsObjptr (s, f, &thrd->stack);
       danglingStack = danglingStack->next;
   }
+  foreachObjptrInWBAs (s, s, f);
+  foreachObjptrInSQ (s, s->schedulerQueue, f);
 }
 
 /* foreachObjptrInObject (s, p, f, skipWeaks)
