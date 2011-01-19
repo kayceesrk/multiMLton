@@ -132,6 +132,7 @@ struct
     else
       (let
         val () = Assert.assertAtomic' ("Scheduler.nextWithCounter", NONE)
+        val () = debug' "Scheduler.nextWithCounter"
         val thrd =
             case deque1 () of
               NONE => nextWithCounter (iter, to)

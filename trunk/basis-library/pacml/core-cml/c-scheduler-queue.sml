@@ -16,7 +16,8 @@ struct
   type thread_id = RepTypes.thread_id
 
   fun debug msg = Debug.sayDebug ([], (msg))
-  fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
+  fun debug' msg = debug (fn () => msg^"."^(ProtoThread.getThreadTypeString())
+                                   ^" : "^Int.toString(PacmlFFI.processorNumber()))
 
   val pri = 0
   val sec = 1
@@ -26,6 +27,7 @@ struct
   fun enque (rthrd as RHOST (tid, t), prio) =
   let
     val _ = atomicBegin ()
+    val _ = debug' ("sqEnque: "^(MLtonThread.threadStatus t))
     val targetProc = ThreadID.getProcId (tid)
     val _ = PrimSQ.acquireLock targetProc
     val q = case prio of
@@ -50,6 +52,10 @@ struct
                    | R.ANY => case PrimSQ.deque (pri) of
                                    SOME t => SOME t
                                  | NONE => PrimSQ.deque (sec)
+    val _ = case rthrd of
+                 NONE => ()
+               | SOME (RHOST (_, t)) =>
+                   debug' ("sqDeque: "^(MLtonThread.threadStatus t))
     val _ = PrimSQ.releaseLock proc
     val _ = atomicEnd ()
   in

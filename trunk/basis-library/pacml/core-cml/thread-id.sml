@@ -1,6 +1,9 @@
 structure ThreadID : THREAD_ID_EXTRA =
 struct
   structure Assert = LocalAssert(val assert = true)
+  structure Debug = LocalDebug(val debug = true)
+
+  open Critical
   structure R = RepTypes
   structure L = Lock
 
@@ -10,6 +13,7 @@ struct
   datatype parasite_state = datatype R.parasite_state
 
   type procNum = int
+
 
   fun sameTid (TID{id=a, ...}, TID{id=b, ...}) = a = b
   fun compareTid (TID{id=a, ...}, TID{id=b, ...}) = Int.compare (a, b)
@@ -91,8 +95,15 @@ struct
 
   fun tidMsg () = tidToString (getCurThreadId ())
 
+  fun debug msg = Debug.sayDebug ([atomicMsg, tidMsg], msg)
+  fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
+
   fun setCurThreadId (tid as TID {processorId, ...}) =
+  let
+    val procNum = PacmlFFI.processorNumber ()
+  in
     Array.update (curTid, PacmlFFI.processorNumber (), tid)
+  end
 
   fun tidNum () = tidToInt (getCurThreadId ())
 

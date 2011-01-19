@@ -146,6 +146,7 @@ signature PRIM =
              | SQ_deque (* backend *)
              | SQ_isEmpty (* backend *)
              | SQ_clean (* backend *)
+             | SQ_makeObject (* backend *)
              | String_toWord8Vector (* defunctorize *)
              | Thread_atomicBegin (* backend *)
              | Thread_atomicEnd (* backend *)

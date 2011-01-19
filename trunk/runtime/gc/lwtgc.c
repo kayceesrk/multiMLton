@@ -250,6 +250,9 @@ void moveEachObjptrInObject (GC_state s, pointer p) {
 // a major GC, which will be triggered if the scheduler queue is empty
 // and the preemptOnWB queue is not empty
 void liftAllObjptrsInMoveOnWBA (GC_state s) {
+  if (DEBUG_LWTGC)
+    fprintf (stderr, "liftAllObjptrsInMoveOnWBA: moveOnWBASize = %d [%d]\n",
+             s->moveOnWBASize, s->procId);
   for (int32_t i=0; i < s->moveOnWBASize; i++) {
     objptr op = s->moveOnWBA[i];
     assert (isObjptrInHeap(s, s->heap, op));
@@ -272,12 +275,17 @@ void liftAllObjptrsInMoveOnWBA (GC_state s) {
   s->moveOnWBASize = 0;
 
   /* move the threads from preemptOnWBA to scheduler queue */
-  GC_sqAcquireLock (s, s->procId);
-  for (int i=0; i < s->preemptOnWBASize; i++) {
+  if (DEBUG_LWTGC)
+    fprintf (stderr, "liftAllObjptrsInMoveOnWBA: preemptOnWBASize = %d [%d]\n",
+             s->preemptOnWBASize, s->procId);
+  if (s->preemptOnWBASize > 0) {
+    GC_sqAcquireLock (s, s->procId);
+    for (int i=0; i < s->preemptOnWBASize; i++) {
       GC_sqEnque (s, objptrToPointer (s->preemptOnWBA[i], s->heap->start), s->procId, 0);
+    }
+    s->preemptOnWBASize = 0;
+    GC_sqReleaseLock (s, s->procId);
   }
-  GC_sqReleaseLock (s, s->procId);
-  s->preemptOnWBASize = 0;
 }
 
 void GC_addToMoveOnWBA (GC_state s, pointer p) {

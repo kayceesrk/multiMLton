@@ -437,7 +437,7 @@ structure CFunction =
             target = Direct "GC_sqEnque",
             writesStackTop = false}
 
-      fun sqDeque () =
+      fun sqDeque t =
          T {args = Vector.new2 (Type.gcState (), Type.cint ()),
             bytesNeeded = NONE,
             convention = Cdecl,
@@ -448,7 +448,7 @@ structure CFunction =
             prototype = (Vector.new2 (CType.gcState, CType.cint ()),
                          SOME CType.cpointer),
             readsStackTop = false,
-            return = Type.cpointer (),
+            return = t,
             symbolScope = Private,
             target = Direct "GC_sqDeque",
             writesStackTop = false}
@@ -1643,7 +1643,8 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                             simpleCCallWithGCState
                                             (CFunction.sqEnque (Operand.ty (a 0))))
                                | SQ_deque =>
-                                   simpleCCallWithGCState (CFunction.sqDeque ())
+                                   simpleCCallWithGCState (CFunction.sqDeque (valOf (toRtype ty)))
+                               | SQ_makeObject => cast ()
                                | MLton_share =>
                                     (case toRtype (varType (arg 0)) of
                                         NONE => none ()

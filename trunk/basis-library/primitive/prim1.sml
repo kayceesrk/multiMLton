@@ -83,7 +83,7 @@ structure Ref =
         val isObjptrInSharedHeap = _prim "Lwtgc_isObjptrInSharedHeap": 'a -> bool;
         val isObjptr = _prim "Lwtgc_isObjptr": 'a -> bool;
         val addToMoveOnWBA = _prim "Lwtgc_addToMoveOnWBA": 'a -> unit;
-        val _ = if ((isObjptr v) andalso (isObjptrInLocalHeap v) andalso (isObjptrInSharedHeap r)) then
+        val _ = if ((isObjptr v) andalso (isObjptrInLocalHeap v) andalso (isObjptrInSharedHeap r)) andalso false then
                   (addToMoveOnWBA (v);
                    preemptFn ())
                 else ()

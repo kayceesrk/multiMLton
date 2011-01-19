@@ -156,6 +156,7 @@ datatype 'a t =
  | SQ_deque (* backend *)
  | SQ_isEmpty (* backend *)
  | SQ_clean (* backend *)
+ | SQ_makeObject (* backend *)
  | String_toWord8Vector (* defunctorize *)
  | Thread_atomicBegin (* backend *)
  | Thread_atomicEnd (* backend *)
@@ -343,6 +344,7 @@ fun toString (n: 'a t): string =
        | SQ_deque => "SQ_deque"
        | SQ_isEmpty => "SQ_isEmpty"
        | SQ_clean => "SQ_clean"
+       | SQ_makeObject => "SQ_makeObject"
        | String_toWord8Vector => "String_toWord8Vector"
        | Thread_atomicBegin => "Thread_atomicBegin"
        | Thread_atomicEnd => "Thread_atomicEnd"
@@ -507,6 +509,7 @@ val equals: 'a t * 'a t -> bool =
     | (SQ_deque, SQ_deque) => true
     | (SQ_isEmpty, SQ_isEmpty) => true
     | (SQ_clean, SQ_clean) => true
+    | (SQ_makeObject, SQ_makeObject) => true
     | (String_toWord8Vector, String_toWord8Vector) => true
     | (Thread_atomicBegin, Thread_atomicBegin) => true
     | (Thread_atomicEnd, Thread_atomicEnd) => true
@@ -683,6 +686,7 @@ val map: 'a t * ('a -> 'b) -> 'b t =
     | SQ_deque => SQ_deque
     | SQ_isEmpty => SQ_isEmpty
     | SQ_clean => SQ_clean
+    | SQ_makeObject => SQ_makeObject
     | String_toWord8Vector => String_toWord8Vector
     | Thread_atomicBegin => Thread_atomicBegin
     | Thread_atomicEnd => Thread_atomicEnd
@@ -950,6 +954,7 @@ val kind: 'a t -> Kind.t =
        | SQ_deque => SideEffect
        | SQ_isEmpty => SideEffect
        | SQ_clean => SideEffect
+       | SQ_makeObject => DependsOnState
        | String_toWord8Vector => Functional
        | Thread_atomicBegin => SideEffect
        | Thread_atomicEnd => SideEffect
@@ -1140,6 +1145,7 @@ in
        SQ_deque,
        SQ_isEmpty,
        SQ_clean,
+       SQ_makeObject,
        String_toWord8Vector,
        Thread_atomicBegin,
        Thread_atomicEnd,
@@ -1462,9 +1468,10 @@ fun 'a checkApp (prim: 'a t,
        | SQ_releaseLock => noTargs (fn () => (oneArg cint, unit))
        | SQ_createQueues => noTargs (fn () => (noArgs, unit))
        | SQ_enque => oneTarg (fn t => (threeArgs (t, cint, cint), unit))
-       | SQ_deque => noTargs (fn () => (oneArg (cint), cpointer))
+       | SQ_deque => oneTarg (fn t => (oneArg (cint), t))
        | SQ_isEmpty => noTargs (fn () => (noArgs, bool))
        | SQ_clean => noTargs (fn () => (noArgs, unit))
+       | SQ_makeObject => oneTarg (fn t => (oneArg cpointer, t))
        | String_toWord8Vector =>
             noTargs (fn () => (oneArg string, word8Vector))
        | Vector_length => oneTarg (fn t => (oneArg (vector t), seqIndex))
@@ -1558,6 +1565,9 @@ fun ('a, 'b) extractTargs (prim: 'b t,
        | Ref_assign => one (deRef (arg 0))
        | Ref_deref => one (deRef (arg 0))
        | Ref_ref => one (deRef result)
+       | SQ_enque => one (arg 0)
+       | SQ_deque => one result
+       | SQ_makeObject => one result
        | Vector_length => one (deVector (arg 0))
        | Vector_sub => one (deVector (arg 0))
        | Weak_canGet => one (deWeak (arg 0))

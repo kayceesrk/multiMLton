@@ -429,6 +429,8 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->saveWorldStatus = true;
   s->profiling.isProfilingTimeOn = false;
 
+  s->schedulerQueue = NULL;
+  s->schedulerLocks = NULL;
   s->moveOnWBA = (objptr*) malloc (sizeof (pointer) * SIZE_WBA);
   s->moveOnWBASize = 0;
 
@@ -541,6 +543,8 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->copiedSize = s->copiedSize;
   d->saveWorldStatus = s->saveWorldStatus;
 
+  d->schedulerLocks = NULL;
+  d->schedulerQueue = NULL;
   d->moveOnWBA = (objptr*) malloc (sizeof (pointer) * SIZE_WBA);
   d->moveOnWBASize = 0;
 

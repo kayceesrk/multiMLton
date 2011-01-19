@@ -23,8 +23,8 @@ structure Critical : CRITICAL =
          val setAtomicState = Thread.setAtomicState
       end
 
-      fun atomicBegin () = ((*print ("\n"^atomicMsg()); *)Thread.atomicBegin ())
-      fun atomicEnd () = ((*print ("\n"^atomicMsg()); *)Thread.atomicEnd ())
+      fun atomicBegin () = Thread.atomicBegin ()
+      fun atomicEnd () = Thread.atomicEnd ()
       fun doAtomic (f: unit -> unit) = (atomicBegin (); f (); atomicEnd ())
 
       val mask = Signal.Mask.some [Itimer.signal Itimer.Real]

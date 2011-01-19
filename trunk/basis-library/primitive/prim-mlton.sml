@@ -324,18 +324,26 @@ struct
   val acquireLock = _prim "SQ_acquireLock": C_Int.t -> unit;
   val releaseLock = _prim "SQ_releaseLock": C_Int.t -> unit;
   val createQueues = _prim "SQ_createQueues": unit -> unit;
-  val enque = _prim "SQ_enque": ('a * C_Int.t * C_Int.t) -> unit;
   val isEmpty = _prim "SQ_isEmpty": unit -> bool;
+  val isEmptyPrio = _import "GC_sqIsEmptyPrio": C_Int.t -> bool;
   val clean = _prim "SQ_clean": unit -> unit;
+
+  fun enque (t, proc, prio) =
+  let
+    val prim_enque = _prim "SQ_enque": ('a * C_Int.t * C_Int.t) -> unit;
+  in
+    prim_enque (t, proc, prio)
+  end
+
 
   fun deque (i) =
   let
-    val p = _prim "SQ_deque": C_Int.t -> Pointer.t; (i)
+    val prim_deque = _prim "SQ_deque": C_Int.t -> 'a;
   in
-    if (Pointer.isNull p) then
+    if (isEmptyPrio i) then
       NONE
     else
-      SOME (Pointer.getObjptr (p, 0))
+      SOME (prim_deque i)
   end
 
 
