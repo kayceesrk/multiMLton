@@ -27,7 +27,7 @@ struct
   fun enque (rthrd as RHOST (tid, t), prio) =
   let
     val _ = atomicBegin ()
-    val _ = debug' ("sqEnque: "^(MLtonThread.threadStatus t))
+    val _ = (MLtonThread.threadStatus t)
     val targetProc = ThreadID.getProcId (tid)
     val _ = PrimSQ.acquireLock targetProc
     val q = case prio of
@@ -53,9 +53,9 @@ struct
                                    SOME t => SOME t
                                  | NONE => PrimSQ.deque (sec)
     val _ = case rthrd of
-                 NONE => ()
+                 NONE => "NONE"
                | SOME (RHOST (_, t)) =>
-                   debug' ("sqDeque: "^(MLtonThread.threadStatus t))
+                   MLtonThread.threadStatus t
     val _ = PrimSQ.releaseLock proc
     val _ = atomicEnd ()
   in
