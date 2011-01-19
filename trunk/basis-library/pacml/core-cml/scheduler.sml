@@ -235,14 +235,26 @@ struct
 
   fun switchToNext (f : 'a thread -> unit) = (atomicBegin (); atomicSwitchToNext (f))
 
-  fun preemptOnWriteBarrier (v) =
+  fun preemptOnWriteBarrier () =
     if (MT.amSwitching (PacmlFFI.processorNumber ())) then
-      ()
+      (debug' "preemptOnWriteBarrier: preemption skipped")
     else
       let
+        val () = debug' "preemptOnWriteBarrier(1)"
         val atomicState = getAtomicState ()
         val () = setAtomicState (1)
-        val () = atomicSwitchToNext (fn t => PacmlPrim.addToPreemptOnWBA (t))
+        val () = atomicSwitchToNext (fn t =>
+                                      let
+                                        val rt = PT.prep t
+                                        val rhost =
+                                          case rt of
+                                               H_RTHRD (rhost) => rhost
+                                             | _ => raise Fail "P_RTHRD not implemented"
+                                        val RHOST (tid, rdyThrd) = rhost
+                                        val _ = MT.threadStatus rdyThrd
+                                      in
+                                        PacmlPrim.addToPreemptOnWBA (rhost)
+                                      end)
         val () = setAtomicState (atomicState)
       in
         ()

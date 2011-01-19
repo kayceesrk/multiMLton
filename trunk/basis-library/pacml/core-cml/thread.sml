@@ -181,6 +181,18 @@ struct
                      generalExit (SOME tid, false))
     val thrd = H_THRD (tid, PT.new thrdFun)
     val rhost = PT.getRunnableHost (PT.prep (thrd))
+
+    (* If the newly spawned thread is going to another processor, then
+     * move it to the shared heap *)
+    val () = if (TID.tidToInt (tid) = PacmlFFI.processorNumber ()) then
+              ()
+             else
+              (debug' "spawnHostHelper.lift(1)";
+               Primitive.Ref.addToMoveOnWBA (rhost);
+               S.preemptOnWriteBarrier ();
+               debug' "spawnHostHelper.lift(2)")
+
+
     val () = S.readyForSpawn (rhost)
 
     (* If this thread was spawned on an IO processor, then decrement the

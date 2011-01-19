@@ -35,8 +35,6 @@
 #define StackTopMem *(Pointer*)(GCState + StackTopOffset)
 #define StackTop stackTop
 
-#define DEBUG_MEMORY
-
 /* ------------------------------------------------- */
 /*                      Memory                       */
 /* ------------------------------------------------- */

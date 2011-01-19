@@ -132,7 +132,7 @@ struct
           val () = debug' "Main(-1)"
           val () = SH.pauseHook := pauseHook
           val () = debug' "Main(0)"
-          val () = ignore (Thread.spawnHost (fn ()=> (lateInit ();initialProc ())))
+          val () = ignore (Thread.spawnHost (fn ()=> (lateInit (); initialProc ())))
           val () = debug' "Main(1)"
           val handler = MLtonSignal.Handler.handler (S.unwrap alrmHandler Thread.reifyHostFromParasite)
           val () = debug' "Main(2)"

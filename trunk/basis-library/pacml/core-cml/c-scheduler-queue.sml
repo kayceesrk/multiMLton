@@ -6,7 +6,7 @@ struct
   structure A = Array
   structure R = RepTypes
   structure L = Lock
-  structure PrimSQ = Primitive.MLton.SchedulerQueue
+  structure PrimSQ = PacmlPrim.SchedulerQueue
 
   structure Assert = LocalAssert(val assert = true)
   structure Debug = LocalDebug(val debug = true)
@@ -27,7 +27,7 @@ struct
   fun enque (rthrd as RHOST (tid, t), prio) =
   let
     val _ = atomicBegin ()
-    val _ = (MLtonThread.threadStatus t)
+    val _ = (MLtonThread.threadStatus t) (* DO NOT REMOVE *)
     val targetProc = ThreadID.getProcId (tid)
     val _ = PrimSQ.acquireLock targetProc
     val q = case prio of
@@ -55,7 +55,7 @@ struct
     val _ = case rthrd of
                  NONE => "NONE"
                | SOME (RHOST (_, t)) =>
-                   MLtonThread.threadStatus t
+                   MLtonThread.threadStatus t (* DO NOT REMOVE *)
     val _ = PrimSQ.releaseLock proc
     val _ = atomicEnd ()
   in

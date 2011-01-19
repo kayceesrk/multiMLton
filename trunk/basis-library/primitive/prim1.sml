@@ -75,6 +75,7 @@ structure Ref =
       val deref = _prim "Ref_deref": 'a ref -> 'a;
       val refAssign = _prim "Ref_assign": 'a ref * 'a -> unit;
       val addToPreemptOnWBA = _prim "Lwtgc_addToPreemptOnWBA": 'a -> unit;
+      val addToMoveOnWBA = _prim "Lwtgc_addToMoveOnWBA": 'a -> unit;
 
       fun writeBarrier (r, v) =
       let
@@ -82,8 +83,7 @@ structure Ref =
         val isObjptrInLocalHeap = _prim "Lwtgc_isObjptrInLocalHeap": 'a -> bool;
         val isObjptrInSharedHeap = _prim "Lwtgc_isObjptrInSharedHeap": 'a -> bool;
         val isObjptr = _prim "Lwtgc_isObjptr": 'a -> bool;
-        val addToMoveOnWBA = _prim "Lwtgc_addToMoveOnWBA": 'a -> unit;
-        val _ = if ((isObjptr v) andalso (isObjptrInLocalHeap v) andalso (isObjptrInSharedHeap r)) andalso false then
+        val _ = if ((isObjptr v) andalso (isObjptrInLocalHeap v) andalso (isObjptrInSharedHeap r)) then
                   (addToMoveOnWBA (v);
                    preemptFn ())
                 else ()

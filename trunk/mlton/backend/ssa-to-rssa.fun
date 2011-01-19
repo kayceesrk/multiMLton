@@ -323,7 +323,7 @@ structure CFunction =
             readsStackTop = false,
             return = Type.unit,
             symbolScope = Private,
-            target = Direct "GC_addToMoveOnWBA",
+            target = Direct "GC_addToPreemptOnWBA",
             writesStackTop = false}
 
       fun move t =

@@ -77,6 +77,8 @@ void GC_sqEnque (GC_state s, pointer p, int proc, int i) {
   if (DEBUG_SQ)
     fprintf (stderr, "GC_sqEnque p="FMTPTR" proc=%d q=%d [%d]\n",
              (uintptr_t)p, proc, i, s->procId);
+
+  assert (p && (isPointerInHeap (s, s->procStates[proc].heap, p) || isPointerInHeap (s, s->sharedHeap, p)));
   GC_state fromProc = &s->procStates[proc];
   CircularBuffer* cq = getSubQ (fromProc->schedulerQueue, i);
   assert (!CircularBufferIsFull(cq));
@@ -121,7 +123,7 @@ bool GC_sqIsEmpty (GC_state s) {
     fixForwardingPointers (s, TRUE);
     s->syncReason = SYNC_NONE;
     endAtomic (s);
-    res = TRUE;
+    res = FALSE;
   }
   return res;
 }

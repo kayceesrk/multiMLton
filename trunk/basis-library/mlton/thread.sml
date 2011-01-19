@@ -135,16 +135,13 @@ in
                           ; atomicEnd ()
                           ; raise e)
             val (T t': Runnable.t) = f (T t) handle e => fail e
-            val () = print "Thread(1)\n"
             val primThread =
                case !t' before t' := Dead of
                   Dead => fail (Fail "switch to a Dead thread")
                 | Interrupted t => t
                 | New g => (atomicBegin (); newThread g)
-                | Paused (f, t) => (print "Thread(1.5)\n";
-                                    f (fn () => ()); t)
+                | Paused (f, t) => (f (fn () => ()); t)
 
-           val () = print "Thread(2)\n"
            val _ = if not (Array.unsafeSub (switching, proc))
                     then raise Fail "switching switched?"
                     else ()
