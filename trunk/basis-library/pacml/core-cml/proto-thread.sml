@@ -221,9 +221,6 @@ struct
 
   fun new f =
   let
-    val () = debug' "PT(1)"
-    (* val () = PacmlPrim.move (f) *)
-    val () = debug' "PT(2)"
     val nt = MLtonThread.new f
   in
     nt

@@ -137,6 +137,23 @@ void liftAllObjectsDuringInit (GC_state s) {
 
 }
 
+/* This lifts the transitive closure to the shared heap */
+inline void moveTransitiveClosure (GC_state s, objptr* opp) {
+  //Set up the forwarding state
+  s->forwardState.toStart = s->sharedFrontier;
+  s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
+  s->forwardState.back = s->forwardState.toStart;
+  s->forwardState.rangeListFirst = s->forwardState.rangeListLast = NULL;
+  s->forwardState.amInMinorGC = TRUE;
+
+  /* Forward the given object to sharedHeap */
+  liftObjptr (s, opp);
+  foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, liftObjptr, TRUE);
+  s->forwardState.amInMinorGC = FALSE;
+  assert (!s->forwardState.rangeListFirst);
+  assert (!s->forwardState.rangeListLast);
+}
+
 pointer GC_move (GC_state s, pointer p) {
   if (!(s->heap->start <= p and p < s->heap->start + s->heap->size)) {
     if (DEBUG_LWTGC)
@@ -163,21 +180,9 @@ pointer GC_move (GC_state s, pointer p) {
     return p;
   }
 
-  //Set up the forwarding state
-  s->forwardState.toStart = s->sharedFrontier;
-  s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
-  s->forwardState.back = s->forwardState.toStart;
-  s->forwardState.rangeListFirst = s->forwardState.rangeListLast = NULL;
-  s->forwardState.amInMinorGC = TRUE;
-
-  /* Forward the given object to sharedHeap */
   objptr op = pointerToObjptr (p, s->heap->start);
   objptr* pOp = &op;
-  liftObjptr (s, pOp);
-  foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, liftObjptr, TRUE);
-  s->forwardState.amInMinorGC = FALSE;
-  assert (!s->forwardState.rangeListFirst);
-  assert (!s->forwardState.rangeListLast);
+  moveTransitiveClosure (s, pOp);
 
   /* Force a garbage collection. Essential to fix the forwarding pointers from
    * the previous step.
@@ -256,21 +261,7 @@ void liftAllObjptrsInMoveOnWBA (GC_state s) {
   for (int32_t i=0; i < s->moveOnWBASize; i++) {
     objptr op = s->moveOnWBA[i];
     assert (isObjptrInHeap(s, s->heap, op));
-
-    //Set up the forwarding state
-    s->forwardState.toStart = s->sharedFrontier;
-    s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
-    s->forwardState.back = s->forwardState.toStart;
-    s->forwardState.rangeListFirst = s->forwardState.rangeListLast = NULL;
-    s->forwardState.amInMinorGC = TRUE;
-
-    /* Forward the given object to sharedHeap */
-    objptr* pOp = &op;
-    liftObjptr (s, pOp);
-    foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, liftObjptr, TRUE);
-    s->forwardState.amInMinorGC = FALSE;
-    assert (!s->forwardState.rangeListFirst);
-    assert (!s->forwardState.rangeListLast);
+    moveTransitiveClosure (s, &op);
   }
   s->moveOnWBASize = 0;
 

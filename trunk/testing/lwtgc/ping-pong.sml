@@ -23,7 +23,9 @@ struct
     run
     (fn () =>
     let
+      val _ = print "spawning pong\n"
       val _ = spawnHost (fn () => pong ch n)
+      val _ = print "spawning ping\n"
       val _ = spawnHost (fn () => ping ch n)
     in
       ()
