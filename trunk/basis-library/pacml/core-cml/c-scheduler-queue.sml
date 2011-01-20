@@ -8,8 +8,8 @@ struct
   structure L = Lock
   structure PrimSQ = PacmlPrim.SchedulerQueue
 
-  structure Assert = LocalAssert(val assert = true)
-  structure Debug = LocalDebug(val debug = true)
+  structure Assert = LocalAssert(val assert = false)
+  structure Debug = LocalDebug(val debug = false)
 
   datatype runnable_host = datatype RepTypes.runnable_host
   type queue_prio = RepTypes.queue_prio
