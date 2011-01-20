@@ -78,7 +78,7 @@ void majorCheneyCopyGC (GC_state s) {
   assert (s->secondaryLocalHeap->size >= s->heap->oldGenSize);
   toStart = alignFrontier (s, s->secondaryLocalHeap->start);
   s->forwardState.back = toStart;
-  foreachGlobalObjptr (s, forwardObjptrIfInLocalHeap);
+  foreachGlobalObjptrInScope (s, forwardObjptrIfInLocalHeap);
   foreachObjptrInRange (s, toStart, &s->forwardState.back, forwardObjptrIfInLocalHeap, TRUE);
   updateWeaksForCheneyCopy (s);
   s->secondaryLocalHeap->oldGenSize = s->forwardState.back - s->secondaryLocalHeap->start;
@@ -165,7 +165,7 @@ void minorCheneyCopyGC (GC_state s, bool isAfterLifting) {
     /* Forward all globals.  Would like to avoid doing this once all
      * the globals have been assigned.
      */
-    foreachGlobalObjptr (s, forwardObjptrIfInNursery);
+    foreachGlobalObjptrInScope (s, forwardObjptrIfInNursery);
     forwardInterGenerationalObjptrs (s);
     foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back,
                           forwardObjptrIfInNursery, TRUE);

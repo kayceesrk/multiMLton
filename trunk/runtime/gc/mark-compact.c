@@ -382,13 +382,13 @@ void majorMarkCompactGC (GC_state s) {
     s->lastMajorStatistics->bytesHashConsed = 0;
     s->cumulativeStatistics->numHashConsGCs++;
     s->objectHashTable = allocHashTable (s);
-    foreachGlobalObjptr (s, dfsMarkWithHashConsWithLinkWeaks);
+    foreachGlobalObjptrInScope (s, dfsMarkWithHashConsWithLinkWeaks);
     freeHashTable (s->objectHashTable);
   } else {
-    foreachGlobalObjptr (s, dfsMarkWithoutHashConsWithLinkWeaks);
+    foreachGlobalObjptrInScope (s, dfsMarkWithoutHashConsWithLinkWeaks);
   }
   updateWeaksForMarkCompact (s);
-  foreachGlobalObjptr (s, threadInternalObjptr);
+  foreachGlobalObjptrInScope (s, threadInternalObjptr);
   updateForwardPointersForMarkCompact (s, currentStack);
   updateBackwardPointersAndSlideForMarkCompact (s, currentStack);
   bytesHashConsed = s->lastMajorStatistics->bytesHashConsed;
@@ -403,7 +403,7 @@ void majorMarkCompactGC (GC_state s) {
              "[GC: Finished major mark-compact; mark compacted %s bytes.]\n",
              uintmaxToCommaString(bytesMarkCompacted));
     if (s->hashConsDuringGC)
-      printBytesHashConsedMessage(bytesHashConsed, 
+      printBytesHashConsedMessage(bytesHashConsed,
                                   bytesHashConsed + bytesMarkCompacted);
   }
 }
