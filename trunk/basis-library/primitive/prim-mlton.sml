@@ -22,7 +22,7 @@ val halt = _prim "MLton_halt": C_Status.t -> unit;
 val hash = _prim "MLton_hash": SeqIndex.int * 'a -> Word32.word;
 (* val serialize = _prim "MLton_serialize": 'a ref -> Word8Vector.vector; *)
 val share = _prim "MLton_share": 'a -> unit;
-val move = _prim "MLton_move": 'a -> unit;
+val move = _prim "MLton_move": 'a * bool -> unit;
 val size = _prim "MLton_size": 'a ref -> C_Size.t;
 
 val parallelInit = _prim "MLton_parInit": unit -> unit;

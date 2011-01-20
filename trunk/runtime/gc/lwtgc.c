@@ -98,6 +98,7 @@ void liftAllObjectsDuringInit (GC_state s) {
   s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
   s->forwardState.back = toStart;
   s->forwardState.rangeListFirst = s->forwardState.rangeListLast = NULL;
+  s->forwardState.forceStackForwarding = FALSE;
 
   //Forward
   if (DEBUG_LWTGC)
@@ -138,23 +139,26 @@ void liftAllObjectsDuringInit (GC_state s) {
 }
 
 /* This lifts the transitive closure to the shared heap */
-inline void moveTransitiveClosure (GC_state s, objptr* opp) {
+inline void moveTransitiveClosure (GC_state s, objptr* opp,
+                                   bool forceStackForwarding) {
   //Set up the forwarding state
   s->forwardState.toStart = s->sharedFrontier;
   s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
   s->forwardState.back = s->forwardState.toStart;
   s->forwardState.rangeListFirst = s->forwardState.rangeListLast = NULL;
   s->forwardState.amInMinorGC = TRUE;
+  s->forwardState.forceStackForwarding = forceStackForwarding;
 
   /* Forward the given object to sharedHeap */
   liftObjptr (s, opp);
   foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, liftObjptr, TRUE);
   s->forwardState.amInMinorGC = FALSE;
+  s->forwardState.forceStackForwarding = FALSE;
   assert (!s->forwardState.rangeListFirst);
   assert (!s->forwardState.rangeListLast);
 }
 
-pointer GC_move (GC_state s, pointer p) {
+pointer GC_move (GC_state s, pointer p, bool forceStackForwarding) {
   if (!(s->heap->start <= p and p < s->heap->start + s->heap->size)) {
     if (DEBUG_LWTGC)
       fprintf (stderr, "GC_move: pointer "FMTPTR" not in heap\n", (uintptr_t)p);
@@ -182,7 +186,7 @@ pointer GC_move (GC_state s, pointer p) {
 
   objptr op = pointerToObjptr (p, s->heap->start);
   objptr* pOp = &op;
-  moveTransitiveClosure (s, pOp);
+  moveTransitiveClosure (s, pOp, forceStackForwarding);
 
   /* Force a garbage collection. Essential to fix the forwarding pointers from
    * the previous step.
@@ -228,6 +232,7 @@ void moveEachObjptrInObject (GC_state s, pointer p) {
   s->forwardState.back = s->forwardState.toStart;
   s->forwardState.rangeListFirst = s->forwardState.rangeListLast = NULL;
   s->forwardState.amInMinorGC = TRUE;
+  s->forwardState.forceStackForwarding = FALSE;
 
   /* Forward objptrs in the given object to sharedHeap */
   foreachObjptrInObject (s, p, liftObjptr, TRUE);
@@ -261,7 +266,7 @@ void liftAllObjptrsInMoveOnWBA (GC_state s) {
   for (int32_t i=0; i < s->moveOnWBASize; i++) {
     objptr op = s->moveOnWBA[i];
     assert (isObjptrInHeap(s, s->heap, op));
-    moveTransitiveClosure (s, &op);
+    moveTransitiveClosure (s, &op, FALSE);
   }
   s->moveOnWBASize = 0;
 

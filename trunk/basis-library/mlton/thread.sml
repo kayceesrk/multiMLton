@@ -100,6 +100,8 @@ local
                      ; die "Thread didn't exit properly.\n"
                   end
          end
+
+      val () = Primitive.MLton.move (base, true)
    in
       fun newThread (f: unit -> unit) : Prim.thread =
          let

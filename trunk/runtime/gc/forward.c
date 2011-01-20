@@ -39,9 +39,9 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
   header = getHeader (p);
 
   if (isObjectLifted (header)) {
-      if (DEBUG_LWTGC)
-          fprintf (stderr, " already LIFTED\n");
-      return;
+    if (DEBUG_LWTGC)
+      fprintf (stderr, " already LIFTED\n");
+    return;
   }
 
   assert (isObjptrInFromSpace (s, s->heap, *opp));
@@ -67,27 +67,64 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
       skip = 0;
     } else { /* Stack. */
       GC_stack stack = (GC_stack)p;
-      if (isObjptrInHeap (s, s->sharedHeap, stack->thread)) {
-        if (DEBUG_DETAILED)
-          fprintf (stderr, "Not lifting GC_stack "FMTPTR". stack->thread already in sharedHeap at "FMTOBJPTR"\n",
-                   (uintptr_t)p, stack->thread);
-        return;
-      }
-      skip = headerBytes = objectBytes = 0;
-      DanglingStack* danglingStack = newDanglingStack (s);
-      danglingStack->stack = pointerToObjptr ((pointer)stack, s->heap->start);
 
-      /* By this time the thread corresponding to this stack would have been
-       * forwarded.
-       */
-      pointer thrd = objptrToPointer (stack->thread, s->heap->start);
-      assert (getHeader (thrd) == GC_FORWARDED);
-      stack->thread = *(objptr*)thrd;
-      thrd = objptrToPointer (stack->thread, s->sharedHeap->start);
-      if (DEBUG_DETAILED)
+      if (!s->forwardState.forceStackForwarding) { /* stack need not be forwarded */
+        if (isObjptrInHeap (s, s->sharedHeap, stack->thread)) {
+          if (DEBUG_DETAILED)
+            fprintf (stderr, "Not lifting GC_stack "FMTPTR". stack->thread already in sharedHeap at "FMTOBJPTR"\n",
+                     (uintptr_t)p, stack->thread);
+          return;
+        }
+        skip = headerBytes = objectBytes = 0;
+        DanglingStack* danglingStack = newDanglingStack (s);
+        danglingStack->stack = pointerToObjptr ((pointer)stack, s->heap->start);
+
+        /* By this time the thread corresponding to this stack would have been
+         * forwarded.
+         */
+        pointer thrd = objptrToPointer (stack->thread, s->heap->start);
+        assert (getHeader (thrd) == GC_FORWARDED);
+        stack->thread = *(objptr*)thrd;
+        thrd = objptrToPointer (stack->thread, s->sharedHeap->start);
+        if (DEBUG_DETAILED)
           fprintf (stderr, "Not lifting GC_stack "FMTPTR". stack->thread is "FMTPTR"\n",
                    (uintptr_t)p, (uintptr_t)thrd);
-      return;
+        return;
+      }
+      else {
+        if (DEBUG_DETAILED)
+          fprintf (stderr, "[GC: Forwarding stack. forwardState.forceStackForwarding is TRUE]\n");
+        size_t reservedNew;
+        bool isCurrentStack = false;
+
+        assert (STACK_TAG == tag);
+        headerBytes = GC_STACK_HEADER_SIZE;
+        stack = (GC_stack)p;
+
+        /* Check if the pointer is the current stack of current processor. */
+        isCurrentStack |= (getStackCurrent(s) == stack && not isStackEmpty(stack));
+
+        reservedNew = sizeofStackShrinkReserved (s, stack, isCurrentStack);
+        if (reservedNew < stack->reserved) {
+          if (DEBUG_STACKS or s->controls->messages)
+            fprintf (stderr,
+                     "[GC: Shrinking stack of size %s bytes to size %s bytes, using %s bytes.]\n",
+                     uintmaxToCommaString(stack->reserved),
+                     uintmaxToCommaString(reservedNew),
+                     uintmaxToCommaString(stack->used));
+          stack->reserved = reservedNew;
+        }
+        objectBytes = sizeof (struct GC_stack) + stack->used;
+        skip = stack->reserved - stack->used;
+
+        pointer thrd = objptrToPointer (stack->thread, s->heap->start);
+        if (getHeader(thrd) == GC_FORWARDED) {
+          stack->thread = *(objptr*)thrd;
+        }
+        else {
+          assert (isPointerInHeap (s, s->sharedHeap, thrd));
+        }
+      }
     }
     size = headerBytes + objectBytes;
     assert (s->forwardState.back + size + skip <= s->forwardState.toLimit);
@@ -100,12 +137,12 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
       sr->end = s->sharedFrontier;
       sr->next = NULL;
       if (s->forwardState.rangeListLast == NULL) {
-          assert (!s->forwardState.rangeListFirst);
-          s->forwardState.rangeListFirst = s->forwardState.rangeListLast = sr;
+        assert (!s->forwardState.rangeListFirst);
+        s->forwardState.rangeListFirst = s->forwardState.rangeListLast = sr;
       }
       else {
-          s->forwardState.rangeListLast->next = sr;
-          s->forwardState.rangeListLast = sr;
+        s->forwardState.rangeListLast->next = sr;
+        s->forwardState.rangeListLast = sr;
       }
       s->forwardState.back = s->sharedFrontier;
     }
@@ -113,10 +150,10 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
     /* Copy the object. */
     GC_memcpy (p - headerBytes, s->sharedFrontier, size);
     if (DEBUG_DETAILED) {
-        fprintf (stderr, "Zeroing out %s bytes starting at "FMTPTR"\n",
-                         uintmaxToCommaString (objectBytes),
-                         (uintptr_t)p);
-        memset (p, 0, objectBytes);
+      fprintf (stderr, "Zeroing out %s bytes starting at "FMTPTR"\n",
+               uintmaxToCommaString (objectBytes),
+               (uintptr_t)p);
+      memset (p, 0, objectBytes);
     }
     /* If the object has a valid weak pointer, link it into the weaks
      * for update after the copying GC is done.
@@ -145,10 +182,10 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
     *((objptr*)p) = pointerToObjptr (s->forwardState.back + headerBytes,
                                      s->forwardState.toStart);
     if (DEBUG_DETAILED) {
-        fprintf (stderr, "Setting headerp ="FMTPTR" to "FMTHDR"\n",
-                 (uintptr_t)(p - GC_HEADER_SIZE), *((GC_header*)(p - GC_HEADER_SIZE)));
-        fprintf (stderr, "Setting p="FMTPTR" to "FMTOBJPTR"\n",
-                 (uintptr_t)p, *(objptr*)p);
+      fprintf (stderr, "Setting headerp ="FMTPTR" to "FMTHDR"\n",
+               (uintptr_t)(p - GC_HEADER_SIZE), *((GC_header*)(p - GC_HEADER_SIZE)));
+      fprintf (stderr, "Setting p="FMTPTR" to "FMTOBJPTR"\n",
+               (uintptr_t)p, *(objptr*)p);
     }
     /* Update the back of the queue. */
     s->sharedFrontier += size + skip;
@@ -183,9 +220,9 @@ void forwardObjptr (GC_state s, objptr *opp) {
   header = getHeader (p);
 
   if (isObjectLifted (header)) {
-      if (DEBUG_LWTGC)
-          fprintf (stderr, " already LIFTED\n");
-      return;
+    if (DEBUG_LWTGC)
+      fprintf (stderr, " already LIFTED\n");
+    return;
   }
 
   assert (isObjptrInFromSpace (s, s->heap, *opp));
@@ -243,17 +280,17 @@ void forwardObjptr (GC_state s, objptr *opp) {
       }
 
       if (DEBUG_DETAILED)
-          fprintf (stderr, "[GC: Forwarding stack. stack->thread is "FMTOBJPTR"\n", stack->thread);
+        fprintf (stderr, "[GC: Forwarding stack. stack->thread is "FMTOBJPTR"\n", stack->thread);
     }
     size = headerBytes + objectBytes;
     assert (s->forwardState.back + size + skip <= s->forwardState.toLimit);
     /* Copy the object. */
     GC_memcpy (p - headerBytes, s->forwardState.back, size);
     if (DEBUG_DETAILED) {
-        fprintf (stderr, "Zeroing out %s bytes starting at "FMTPTR"\n",
-                         uintmaxToCommaString (objectBytes),
-                         (uintptr_t)p);
-        memset (p, 0, objectBytes);
+      fprintf (stderr, "Zeroing out %s bytes starting at "FMTPTR"\n",
+               uintmaxToCommaString (objectBytes),
+               (uintptr_t)p);
+      memset (p, 0, objectBytes);
     }
     /* If the object has a valid weak pointer, link it into the weaks
      * for update after the copying GC is done.
@@ -282,10 +319,10 @@ void forwardObjptr (GC_state s, objptr *opp) {
     *((objptr*)p) = pointerToObjptr (s->forwardState.back + headerBytes,
                                      s->forwardState.toStart);
     if (DEBUG_DETAILED) {
-        fprintf (stderr, "Setting headerp ="FMTPTR" to "FMTHDR"\n",
-                 (uintptr_t)(p - GC_HEADER_SIZE), *((GC_header*)(p - GC_HEADER_SIZE)));
-        fprintf (stderr, "Setting p="FMTPTR" to "FMTOBJPTR"\n",
-                 (uintptr_t)p, *(objptr*)p);
+      fprintf (stderr, "Setting headerp ="FMTPTR" to "FMTHDR"\n",
+               (uintptr_t)(p - GC_HEADER_SIZE), *((GC_header*)(p - GC_HEADER_SIZE)));
+      fprintf (stderr, "Setting p="FMTPTR" to "FMTOBJPTR"\n",
+               (uintptr_t)p, *(objptr*)p);
     }
     /* Update the back of the queue. */
     s->forwardState.back += size + skip;

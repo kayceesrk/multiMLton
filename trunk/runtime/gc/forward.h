@@ -26,6 +26,13 @@ struct GC_forwardState {
    */
   SkipRange* rangeListFirst;
   SkipRange* rangeListLast;
+
+  /* Stacks are usually not moved to the shared heap and stack pointers are
+   * added to danglingLists (remembered sets) for local collection. But at
+   * certain instances, stack lifting is infact required (preThread in
+   * basis-library/mlton/thread). The following boolean forces stack lifting
+   */
+  bool forceStackForwarding;
 };
 
 #define GC_FORWARDED ~((GC_header)0)

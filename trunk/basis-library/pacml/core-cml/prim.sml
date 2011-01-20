@@ -2,7 +2,7 @@ structure PacmlPrim =
 struct
   type runnable_host = RepTypes.runnable_host
 
-  fun move x = Primitive.MLton.move (ref x)
+  fun move (x, force) = Primitive.MLton.move (ref x, force)
   fun initRefUpdate f = Primitive.Ref.preemptFn := f
   fun addToPreemptOnWBA (t : runnable_host) =
     Primitive.Ref.addToPreemptOnWBA (t)

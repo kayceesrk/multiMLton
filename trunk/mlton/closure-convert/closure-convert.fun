@@ -1054,14 +1054,12 @@ fun closureConvert
                                   if (Type.maybeObjptr ty) then
                                     let
                                       val s2 = Layout.toString (Type.layout ty)
-                                      val _ = print ("Retained: "^s1^" : "^s2^"\n")
                                     in
                                       defaultVal ()
                                     end
                                   else
                                     let
                                       val s2 = Layout.toString (Type.layout ty)
-                                      val _ = print ("Removed: "^s1^" : "^s2^"\n")
                                     in
                                       Dexp.falsee
                                     end

@@ -19,7 +19,7 @@ val isMLton = true
  *)
 
 val share = Primitive.MLton.share
-fun move x = Primitive.MLton.move (ref x)
+fun move x = Primitive.MLton.move (ref x, false)
 
 structure GC = MLtonGC
 

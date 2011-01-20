@@ -8,11 +8,11 @@
 
 #if (defined (MLTON_GC_INTERNAL_BASIS))
 
-PRIVATE pointer GC_move (GC_state s, pointer object);
+PRIVATE pointer GC_move (GC_state s, pointer object, bool forceStackForwarding);
 PRIVATE void GC_addToMoveOnWBA (GC_state s, pointer p);
 PRIVATE void GC_addToPreemptOnWBA (GC_state s, pointer p);
 
-void moveTransitiveClosure (GC_state s, objptr *opp);
+void moveTransitiveClosure (GC_state s, objptr *opp, bool forceStackForwarding);
 void moveEachObjptrInObject (GC_state s, pointer object);
 void liftAllObjectsDuringInit (GC_state s);
 void liftAllObjptrsInMoveOnWBA (GC_state s);

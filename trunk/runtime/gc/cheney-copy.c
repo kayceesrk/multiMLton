@@ -68,6 +68,7 @@ void majorCheneyCopyGC (GC_state s) {
   }
   s->forwardState.toStart = s->secondaryLocalHeap->start;
   s->forwardState.toLimit = s->secondaryLocalHeap->start + s->secondaryLocalHeap->size;
+  s->forwardState.forceStackForwarding = FALSE;
   assert (s->secondaryLocalHeap->start != (pointer)NULL);
   /* The next assert ensures there is enough space for the copy to
    * succeed.  It does not assert
@@ -154,6 +155,7 @@ void minorCheneyCopyGC (GC_state s, bool isAfterLifting) {
     s->forwardState.toStart = s->heap->start + s->heap->oldGenSize;
     assert (isFrontierAligned (s, s->forwardState.toStart));
     s->forwardState.toLimit = s->forwardState.toStart + bytesAllocated;
+    s->forwardState.forceStackForwarding = FALSE;
 
     /* Invariants do not hold, skip.. */
     if (not isAfterLifting)

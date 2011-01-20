@@ -1411,7 +1411,7 @@ fun 'a checkApp (prim: 'a t,
        | MLton_parInit => noTargs (fn () => (noArgs, unit))
        | MLton_serialize => oneTarg (fn t => (oneArg t, word8Vector))
        | MLton_share => oneTarg (fn t => (oneArg t, unit))
-       | MLton_move => oneTarg (fn t => (oneArg t, unit))
+       | MLton_move => oneTarg (fn t => (twoArgs (t, bool), unit))
        | MLton_size => oneTarg (fn t => (oneArg t, csize))
        | MLton_touch => oneTarg (fn t => (oneArg t, unit))
        | Real_Math_acos s => realUnary s

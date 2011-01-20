@@ -183,18 +183,10 @@ fun convert (S.Program.T {datatypes, functions, globals, main}) =
                              val s2 = Layout.toString (S2.Type.layout mty)
                            in
                             if (S2.Type.maybeObjptr mty) then
-                              let
-                                val _ = print ("Retained: "^s1^" : "^s2^"\n")
-                              in
                                 simple (S2.Exp.PrimApp {args = args,
                                                         prim = convertPrim prim})
-                              end
                             else
-                              let
-                                val _ = print ("Removed: "^s1^" : "^s2^"\n")
-                              in
                                 makeFalsee (var, ty)
-                              end
                            end
                        | Ref_deref =>
                             simple (S2.Exp.Select {base = Base.Object (arg 0),

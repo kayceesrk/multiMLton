@@ -1,7 +1,7 @@
 structure Channel : CHANNEL_EXTRA =
 struct
-  structure Assert = LocalAssert(val assert = false)
-  structure Debug = LocalDebug(val debug = false)
+  structure Assert = LocalAssert(val assert = true)
+  structure Debug = LocalDebug(val debug = true)
 
   open Critical
 
@@ -89,6 +89,7 @@ struct
                           val _ = prio := 1
                           val () = L.releaseCmlLock lock (TID.tidNum())
                           val rthrd = PT.prepVal (rt, msg)
+                          (* rthrd should not be used after atomicReady *)
                         in
                           S.atomicReady (rthrd) (* Implicit atomic end *)
                         end)
@@ -141,6 +142,7 @@ struct
                               val _ = prio := 1
                               val () = L.releaseCmlLock lock (TID.tidNum())
                               val rthrd = PT.prepVal (rt, msg)
+                              (* rthrd should not be used after atomicReady *)
                             in
                               S.atomicReady (rthrd) (* Implicit atomic end *)
                             end)
@@ -419,6 +421,7 @@ struct
                         val _ = prio := 1
                         val _ = L.releaseCmlLock lock (TID.tidNum())
                         val rthrd = PT.prep (st)
+                        (* rthrd should not be used after atomic ready *)
                         val _ = S.atomicReady (rthrd)
                       in
                         msg
@@ -460,6 +463,7 @@ struct
                         val _ = prio := 1
                         val _ = L.releaseCmlLock lock (TID.tidNum())
                         val rthrd = PT.prep (st)
+                        (* rthrd should not be used after atomicReady *)
                         val _ = S.atomicReady (rthrd)
                       in
                         SOME msg
