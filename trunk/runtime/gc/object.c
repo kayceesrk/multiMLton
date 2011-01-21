@@ -125,8 +125,10 @@ pointer advanceToObjectData (__attribute__ ((unused)) GC_state s, pointer p) {
 size_t objectSizeFromPointer (GC_state s, pointer p) {
 
     GC_header h = getHeader (p);
+    if (DEBUG)
+      fprintf (stderr, "objectSizeFromPointer="FMTPTR" [%d]\n",
+               (uintptr_t)p, s->procId);
     assert (h != GC_FORWARDED);
-    size_t size;
 
     size_t objectBytes;
     GC_objectTypeTag tag;

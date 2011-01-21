@@ -275,9 +275,6 @@ void forwardObjptr (GC_state s, objptr *opp) {
       if (getHeader(thrd) == GC_FORWARDED) {
         stack->thread = *(objptr*)thrd;
       }
-      else {
-        assert (isPointerInHeap (s, s->sharedHeap, thrd));
-      }
 
       if (DEBUG_DETAILED)
         fprintf (stderr, "[GC: Forwarding stack. stack->thread is "FMTOBJPTR"\n", stack->thread);

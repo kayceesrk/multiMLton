@@ -24,13 +24,13 @@ void translateObjptr (GC_state s, objptr *opp) {
   /* Do not translate pointers that does not belong to your heap */
   //XXX GCSH -- this needs to change
   if (isPointerInHeap (s, s->sharedHeap, p)) {
-      if (DEBUG)
+      if (DEBUG_DETAILED)
           fprintf (stderr, "translateObjptr: shared heap pointer "FMTPTR" translation skipped.\n",
                    (uintptr_t)p);
       return;
   }
 
-  if (DEBUG)
+  if (DEBUG_DETAILED)
       fprintf (stderr, "translateObjptr: Remapping pointer "FMTPTR" to "FMTPTR"\n",
                (uintptr_t)p, (uintptr_t)((p - translateState.from) + translateState.to));
   p = (p - translateState.from) + translateState.to;
@@ -38,10 +38,12 @@ void translateObjptr (GC_state s, objptr *opp) {
 
   GC_objectTypeTag tag;
   GC_header header = getHeader (p);
+  if (header == GC_FORWARDED)
+      return;
   splitHeader (s, header, &tag, NULL, NULL, NULL);
   if (tag == STACK_TAG) {
       GC_stack stack = (GC_stack)p;
-      if (DEBUG)
+      if (DEBUG_TRANSLATE)
           fprintf (stderr, "translateObjptr: Remappting stack->thread objptr\n");
       translateObjptr (s, &stack->thread);
   }
@@ -57,14 +59,16 @@ void translateHeap (GC_state s, pointer from, pointer to, size_t size) {
 
   if (DEBUG or s->controls->messages)
     fprintf (stderr,
-             "[GC: Translating heap at "FMTPTR" of size %s bytes from "FMTPTR".]\n",
+             "[GC: Translating heap at "FMTPTR" of size %s bytes from "FMTPTR".] [%d]\n",
              (uintptr_t)to,
              uintmaxToCommaString(size),
-             (uintptr_t)from);
+             (uintptr_t)from, s->procId);
   translateState.from = from;
   translateState.to = to;
   /* Translate globals and heap. */
   foreachGlobalObjptrInScope (s, translateObjptr);
   limit = to + size;
   foreachObjptrInRange (s, alignFrontier (s, to), &limit, translateObjptr, FALSE);
+  if (DEBUG)
+    fprintf (stderr, "[GC: Translating heap done.] [%d]\n", s->procId);
 }

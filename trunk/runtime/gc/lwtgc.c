@@ -280,7 +280,6 @@ void liftAllObjptrsInMoveOnWBA (GC_state s) {
              s->moveOnWBASize, s->procId);
   for (int32_t i=0; i < s->moveOnWBASize; i++) {
     objptr op = s->moveOnWBA[i];
-    assert (isObjptrInHeap(s, s->heap, op));
     moveTransitiveClosure (s, &op, FALSE);
   }
   s->moveOnWBASize = 0;

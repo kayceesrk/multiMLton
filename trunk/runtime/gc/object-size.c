@@ -35,6 +35,13 @@ size_t sizeofObject (GC_state s, pointer p) {
   uint16_t bytesNonObjptrs, numObjptrs;
 
   header = getHeader (p);
+  if (header == GC_FORWARDED) {
+     objptr op = *((objptr*)p);
+     p = objptrToPointer (op, s->sharedHeap->start);
+     assert (isPointerInHeap (s, s->sharedHeap, p));
+     header = getHeader (p);
+     assert (header != GC_FORWARDED);
+  }
   splitHeader (s, header, &tag, NULL, &bytesNonObjptrs, &numObjptrs);
   if ((NORMAL_TAG == tag) or (WEAK_TAG == tag)) {
     headerBytes = GC_NORMAL_HEADER_SIZE;

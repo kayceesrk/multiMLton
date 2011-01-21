@@ -56,15 +56,15 @@ void majorCheneyCopyGC (GC_state s) {
   s->forwardState.amInMinorGC = FALSE;
   if (DEBUG or s->controls->messages) {
     fprintf (stderr,
-             "[GC: Starting major Cheney-copy;]\n");
+             "[GC: Starting major Cheney-copy] [%d]\n", s->procId);
     fprintf (stderr,
-             "[GC:\tfrom heap at "FMTPTR" of size %s bytes,]\n",
+             "[GC:\tfrom heap at "FMTPTR" of size %s bytes,] [%d]\n",
              (uintptr_t)(s->heap->start),
-             uintmaxToCommaString(s->heap->size));
+             uintmaxToCommaString(s->heap->size), s->procId);
     fprintf (stderr,
-             "[GC:\tto heap at "FMTPTR" of size %s bytes.]\n",
+             "[GC:\tto heap at "FMTPTR" of size %s bytes.] [%d]\n",
              (uintptr_t)(s->secondaryLocalHeap->start),
-             uintmaxToCommaString(s->secondaryLocalHeap->size));
+             uintmaxToCommaString(s->secondaryLocalHeap->size), s->procId);
   }
   s->forwardState.toStart = s->secondaryLocalHeap->start;
   s->forwardState.toLimit = s->secondaryLocalHeap->start + s->secondaryLocalHeap->size;
@@ -90,8 +90,8 @@ void majorCheneyCopyGC (GC_state s) {
     stopTiming (&ru_start, &s->cumulativeStatistics->ru_gcCopying);
   if (DEBUG or s->controls->messages)
     fprintf (stderr,
-             "[GC: Finished major Cheney-copy; copied %s bytes.]\n",
-             uintmaxToCommaString(bytesCopied));
+             "[GC: Finished major Cheney-copy; copied %s bytes.] [%d]\n",
+             uintmaxToCommaString(bytesCopied), s->procId);
 }
 
 /* ---------------------------------------------------------------- */
