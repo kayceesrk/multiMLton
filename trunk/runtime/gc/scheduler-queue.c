@@ -127,13 +127,7 @@ bool GC_sqIsEmpty (GC_state s) {
   if (res && (s->preemptOnWBASize != 0)) {
     /* Force a GC if we find that the scheduler queue is empty and
      * preemptOnWBA is not */
-    s->syncReason = SYNC_FORCE;
-    getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
-    getThreadCurrent(s)->exnStack = s->exnStack;
-    beginAtomic (s);
-    fixForwardingPointers (s, TRUE);
-    s->syncReason = SYNC_NONE;
-    endAtomic (s);
+    forceLocalGC (s);
     res = FALSE;
   }
   return res;
@@ -165,7 +159,7 @@ void foreachObjptrInSQ (GC_state s, SchedulerQueue* sq, GC_foreachObjptrFun f) {
     uint32_t rp = cq->readPointer;
     uint32_t wp = cq->writePointer;
 
-    if (DEBUG_SQ)
+    if (DEBUG_DETAILED)
       fprintf (stderr, "foreachObjptrInSQ sq="FMTPTR" q=%d rp=%d wp=%d [%d]\n",
                 (uintptr_t)sq, i, rp, wp, s->procId);
     while (rp != wp) {

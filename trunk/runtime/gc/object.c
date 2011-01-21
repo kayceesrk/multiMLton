@@ -122,4 +122,30 @@ pointer advanceToObjectData (__attribute__ ((unused)) GC_state s, pointer p) {
   return res;
 }
 
+size_t objectSizeFromPointer (GC_state s, pointer p) {
 
+    GC_header h = getHeader (p);
+    assert (h != GC_FORWARDED);
+    size_t size;
+
+    size_t objectBytes;
+    GC_objectTypeTag tag;
+    uint16_t bytesNonObjptrs, numObjptrs;
+
+    splitHeader(s, h, &tag, NULL, &bytesNonObjptrs, &numObjptrs);
+    objectBytes = 0;
+
+    /* Compute the space taken by the header and object body. */
+    if ((NORMAL_TAG == tag) or (WEAK_TAG == tag)) { /* Fixed size object. */
+      objectBytes = bytesNonObjptrs + (numObjptrs * OBJPTR_SIZE);
+    } else if (ARRAY_TAG == tag) {
+      objectBytes = sizeofArrayNoHeader (s, getArrayLength (p),
+                                         bytesNonObjptrs, numObjptrs);
+    } else if (STACK_TAG == tag) { /* Stack. */
+      GC_stack stack = (GC_stack)p;
+      objectBytes = sizeof (struct GC_stack) + stack->reserved;
+    } else {
+      assert (0);
+    }
+    return objectBytes;
+}

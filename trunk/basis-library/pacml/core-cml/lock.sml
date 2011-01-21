@@ -1,6 +1,8 @@
 structure Lock :> LOCK =
 struct
 
+  open Critical
+
     val pN = PacmlFFI.processorNumber
     val cas = PacmlFFI.compareAndSwap
 
@@ -14,7 +16,17 @@ struct
       end
 
     fun maybePreempt () = if not (MLtonThread.amSwitching (pN ())) then
-                           (Critical.atomicEnd (); Critical.atomicBegin ())
+                            (let
+                              val atomicState = getAtomicState ()
+                              (* The following 2 step process is required to
+                               * trigger the signal checks implemented in
+                               * atomicEnd.
+                               *)
+                              val () = setAtomicState (1)
+                              val () = atomicEnd ()
+                            in
+                              setAtomicState (atomicState)
+                            end)
                           else ()
 
     fun getCmlLock (l, count) ftid =

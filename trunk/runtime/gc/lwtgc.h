@@ -12,6 +12,7 @@ PRIVATE pointer GC_move (GC_state s, pointer object, bool forceStackForwarding);
 PRIVATE void GC_addToMoveOnWBA (GC_state s, pointer p);
 PRIVATE void GC_addToPreemptOnWBA (GC_state s, pointer p);
 
+void forceLocalGC (GC_state s);
 void moveTransitiveClosure (GC_state s, objptr *opp, bool forceStackForwarding);
 void moveEachObjptrInObject (GC_state s, pointer object);
 void liftAllObjectsDuringInit (GC_state s);

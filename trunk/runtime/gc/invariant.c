@@ -41,7 +41,8 @@ void assertIsObjptrInFromSpace (GC_state s, objptr *opp) {
 bool invariantForGC (GC_state s) {
   int proc;
   if (DEBUG)
-    fprintf (stderr, "invariantForGC\n");
+    fprintf (stderr, "invariantForGC [%d]\n",
+             s->procId);
   /* Frame layouts */
   for (unsigned int i = 0; i < s->frameLayoutsLength; ++i) {
     GC_frameLayout layout;
@@ -85,12 +86,10 @@ bool invariantForGC (GC_state s) {
   /* Check that all pointers are into from space. */
   foreachGlobalObjptrInScope (s, assertIsObjptrInFromSpaceOrLifted);
   pointer back = s->heap->start + s->heap->oldGenSize;
-  if (DEBUG_DETAILED)
+  if (DEBUG)
     fprintf (stderr, "Checking old generation. [%d]\n", s->procId);
   foreachObjptrInRange (s, alignFrontier (s, s->heap->start), &back,
                         assertIsObjptrInFromSpaceOrLifted, FALSE);
-  if (DEBUG_DETAILED)
-    fprintf (stderr, "Checking nursery. [%d]\n", s->procId);
   if (s->procStates && FALSE) { //XXX SPH GCSH -- do not read the global info here as we only do local gc
     pointer firstStart = s->heap->frontier;
     for (proc = 0; proc < s->numberOfProcs; proc++) {
@@ -106,13 +105,18 @@ bool invariantForGC (GC_state s) {
                           assertIsObjptrInFromSpaceOrLifted, FALSE);
   }
   else {
+    if (DEBUG)
+        fprintf (stderr, "Checking nursery(1). nursery="FMTPTR" frontier="FMTPTR" [%d]\n",
+                 (uintptr_t)s->heap->nursery, (uintptr_t)s->frontier, s->procId);
     foreachObjptrInRange (s, s->heap->nursery, &s->frontier,
                           assertIsObjptrInFromSpaceOrLifted, FALSE);
-    if (DEBUG_DETAILED)
+    if (DEBUG)
+        fprintf (stderr, "Checking nursery(2). [%d]\n", s->procId);
+    if (DEBUG)
       fprintf (stderr, "Checking sharedHeap(1). sharedStart = "FMTPTR" sharedFrontier = "FMTPTR" [%d]\n",
                (uintptr_t)s->sharedStart, (uintptr_t)s->sharedFrontier, s->procId);
     foreachObjptrInRange (s, s->sharedStart, &s->sharedFrontier, assertLiftedObjptr, FALSE);
-    if (DEBUG_DETAILED)
+    if (DEBUG)
       fprintf (stderr, "Checking sharedHeap(2). [%d]\n", s->procId);
   }
  /* Current thread. */
@@ -125,7 +129,8 @@ bool invariantForGC (GC_state s) {
   assert (stack->used == sizeofGCStateCurrentStackUsed (s));
   assert (stack->used <= stack->reserved);
   if (DEBUG)
-    fprintf (stderr, "invariantForGC passed\n");
+    fprintf (stderr, "invariantForGC passed [%d]\n",
+             s->procId);
   return TRUE;
 }
 #endif

@@ -44,7 +44,6 @@ static inline void liftObjptr (GC_state s, objptr *opp) {
   }
 }
 
-
 static inline void assertLiftedObjptr (GC_state s, objptr *opp) {
   objptr op = *opp;
   bool res = isObjptrInHeap (s, s->sharedHeap, op);
@@ -204,6 +203,22 @@ pointer GC_move (GC_state s, pointer p, bool forceStackForwarding) {
     fprintf (stderr, "GC_move: Exiting\n");
 
   return objptrToPointer (*pOp, s->sharedHeap->start);
+}
+
+void forceLocalGC (GC_state s) {
+  if (DEBUG_LWTGC)
+    fprintf (stderr, "forceLocalGC [%d]\n", s->procId);
+
+  /* ENTER (0) */
+  s->syncReason = SYNC_FORCE;
+  getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
+  getThreadCurrent(s)->exnStack = s->exnStack;
+  beginAtomic (s);
+
+  fixForwardingPointers (s, TRUE);
+
+  /* LEAVE (0) */
+  endAtomic (s);
 }
 
 void moveEachObjptrInObject (GC_state s, pointer p) {

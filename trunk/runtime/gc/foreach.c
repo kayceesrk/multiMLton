@@ -125,6 +125,14 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
   GC_objectTypeTag tag;
 
   header = getHeader (p);
+  if (header == GC_FORWARDED) {
+     objptr op = *((objptr*)p);
+     pointer realP = objptrToPointer (op, s->sharedHeap->start);
+     assert (isPointerInHeap (s, s->sharedHeap, realP));
+     header = getHeader (realP);
+     p += objectSizeFromPointer (s, realP);
+     return p;
+  }
   splitHeader(s, header, &tag, NULL, &bytesNonObjptrs, &numObjptrs);
   if (DEBUG_DETAILED)
     fprintf (stderr,
@@ -219,7 +227,7 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
     stack = (GC_stack)p;
     bottom = getStackBottom (s, stack);
     top = getStackTop (s, stack);
-    if (DEBUG) {
+    if (DEBUG_DETAILED) {
       fprintf (stderr, "  bottom = "FMTPTR"  top = "FMTPTR"\n",
                (uintptr_t)bottom, (uintptr_t)top);
     }
@@ -227,7 +235,7 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
     while (top > bottom) {
       /* Invariant: top points just past a "return address". */
       returnAddress = *((GC_returnAddress*)(top - GC_RETURNADDRESS_SIZE));
-      if (DEBUG) {
+      if (DEBUG_DETAILED) {
         fprintf (stderr, "  top = "FMTPTR"  return address = "FMTRA"\n",
                  (uintptr_t)top, returnAddress);
       }
@@ -235,7 +243,7 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
       frameOffsets = frameLayout->offsets;
       top -= frameLayout->size;
       for (i = 0 ; i < frameOffsets[0] ; ++i) {
-        if (DEBUG)
+        if (DEBUG_DETAILED)
           fprintf(stderr, "  offset %"PRIx16"  address "FMTOBJPTR"\n",
                   frameOffsets[i + 1], *(objptr*)(top + frameOffsets[i + 1]));
         callIfIsObjptr (s, f, (objptr*)(top + frameOffsets[i + 1]));
@@ -278,8 +286,8 @@ pointer foreachObjptrInRange (GC_state s, pointer front, pointer *back,
   assert (isFrontierAligned (s, front));
   if (DEBUG_DETAILED)
     fprintf (stderr,
-             "foreachObjptrInRange  front = "FMTPTR"  *back = "FMTPTR"\n",
-             (uintptr_t)front, (uintptr_t)(*back));
+             "foreachObjptrInRange  front = "FMTPTR"  *back = "FMTPTR" [%d]\n",
+             (uintptr_t)front, (uintptr_t)(*back), s->procId);
   b = *back;
   assert (front <= b);
   while (front < b) {
@@ -296,8 +304,8 @@ pointer foreachObjptrInRange (GC_state s, pointer front, pointer *back,
       assert (isAligned ((size_t)front, GC_MODEL_MINALIGN));
       if (DEBUG_DETAILED)
         fprintf (stderr,
-                 "  front = "FMTPTR"  *back = "FMTPTR"\n",
-                 (uintptr_t)front, (uintptr_t)(*back));
+                 "  front = "FMTPTR"  *back = "FMTPTR" [%d]\n",
+                 (uintptr_t)front, (uintptr_t)(*back), s->procId);
       pointer p = advanceToObjectData (s, front);
       assert (isAligned ((size_t)p, s->alignment));
       front = foreachObjptrInObject (s, p, f, skipWeaks);

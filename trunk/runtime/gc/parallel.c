@@ -90,6 +90,9 @@ void Parallel_maybeWaitForGC (void) {
     ENTER0 (s);
     LEAVE0 (s);
   }
+  else if (s->preemptOnWBASize > 0) {
+    forceLocalGC (s);
+  }
 }
 
 //struct rusage ru_lock;

@@ -7,7 +7,7 @@
  */
 
 #ifndef DEBUG
-#define DEBUG FALSE
+#define DEBUG TRUE
 #endif
 
 
@@ -32,7 +32,7 @@ enum {
   DEBUG_SIZE = FALSE,
   DEBUG_SOURCES = FALSE,
   DEBUG_SPLICE = FALSE,
-  DEBUG_SQ = TRUE,
+  DEBUG_SQ = FALSE,
   DEBUG_STACKS = FALSE,
   DEBUG_THREADS = FALSE,
   DEBUG_WEAK = FALSE,

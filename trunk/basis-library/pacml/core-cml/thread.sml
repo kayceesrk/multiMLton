@@ -186,10 +186,10 @@ struct
      * move it to the shared heap *)
     val () = if (TID.tidToInt (tid) = PacmlFFI.processorNumber ()) then ()
              else
-               (debug' "spawnHostHelper.lift(1)";
+               (debug' ("spawnHostHelper.lift(1): tid="^(TID.tidToString tid));
                Primitive.Ref.addToMoveOnWBA (rhost);
                S.preemptOnWriteBarrier ();
-               debug' "spawnHostHelper.lift(2)")
+               debug' ("spawnHostHelper.lift(2): tid="^(TID.tidToString tid)))
 
 
     val () = S.readyForSpawn (rhost)
