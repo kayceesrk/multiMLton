@@ -126,12 +126,12 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
 
   header = getHeader (p);
   if (header == GC_FORWARDED) {
-     objptr op = *((objptr*)p);
-     pointer realP = objptrToPointer (op, s->sharedHeap->start);
-     assert (isPointerInHeap (s, s->sharedHeap, realP));
-     header = getHeader (realP);
-     p += objectSizeFromPointer (s, realP);
-     return p;
+    objptr op = *((objptr*)p);
+    pointer realP = objptrToPointer (op, s->sharedHeap->start);
+    assert (isPointerInHeap (s, s->sharedHeap, realP));
+    header = getHeader (realP);
+    p += sizeofObjectNoHeader (s, realP);
+    return p;
   }
   splitHeader(s, header, &tag, NULL, &bytesNonObjptrs, &numObjptrs);
   if (DEBUG_DETAILED)

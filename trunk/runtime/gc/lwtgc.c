@@ -44,6 +44,40 @@ static inline void liftObjptr (GC_state s, objptr *opp) {
   }
 }
 
+/* Move an object from local heap to the shared heap */
+static inline void liftObjptrAndFillOrig (GC_state s, objptr *opp) {
+
+  if (not isObjptrInNursery (s, s->heap, *opp)) {
+    if (DEBUG_LWTGC) {
+      fprintf (stderr, "\t is not in nursery\n");
+    }
+  }
+  /* If pointer has already been forwarded, skip setting lift bit */
+  if (isObjptrInHeap (s, s->sharedHeap, *opp)) {
+    if (DEBUG_LWTGC) {
+      fprintf (stderr, "\t object in shared heap\n");
+    }
+    return;
+  }
+  pointer old_p = objptrToPointer (*opp, s->heap->start);
+  forwardObjptrToSharedHeap (s, opp);
+
+  objptr new_op = *opp;
+  pointer new_p = objptrToPointer (new_op, s->sharedHeap->start);
+
+  if (isPointerInHeap (s, s->sharedHeap, new_p)) {
+    size_t objSize = sizeofObject (s, new_p);
+    old_p = (pointer)getHeaderp (old_p);
+    if (DEBUG_LWTGC || DEBUG)
+      fprintf (stderr, "\t filling Gap between "FMTPTR" and "FMTPTR" of size %ld [%d]\n",
+               (uintptr_t)old_p, (uintptr_t)(old_p + objSize), objSize, s->procId);
+    fillGap (s, old_p, old_p + objSize);
+  }
+  else if (DEBUG_LWTGC) {
+    fprintf (stderr, "\t pointer "FMTPTR" was not lifted\n", (uintptr_t)new_p);
+  }
+}
+
 static inline void assertLiftedObjptr (GC_state s, objptr *opp) {
   objptr op = *opp;
   bool res = isObjptrInHeap (s, s->sharedHeap, op);
@@ -139,7 +173,8 @@ void liftAllObjectsDuringInit (GC_state s) {
 
 /* This lifts the transitive closure to the shared heap */
 inline void moveTransitiveClosure (GC_state s, objptr* opp,
-                                   bool forceStackForwarding) {
+                                   bool forceStackForwarding,
+                                   bool fillOrig) {
   //Set up the forwarding state
   s->forwardState.toStart = s->sharedFrontier;
   s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
@@ -148,9 +183,13 @@ inline void moveTransitiveClosure (GC_state s, objptr* opp,
   s->forwardState.amInMinorGC = TRUE;
   s->forwardState.forceStackForwarding = forceStackForwarding;
 
+  GC_foreachObjptrFun f = liftObjptr;
+  if (fillOrig)
+    f = liftObjptrAndFillOrig;
+
   /* Forward the given object to sharedHeap */
-  liftObjptr (s, opp);
-  foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, liftObjptr, TRUE);
+  f (s, opp);
+  foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, f, TRUE);
   s->forwardState.amInMinorGC = FALSE;
   s->forwardState.forceStackForwarding = FALSE;
   assert (!s->forwardState.rangeListFirst);
@@ -164,8 +203,6 @@ pointer GC_move (GC_state s, pointer p, bool forceStackForwarding) {
     return p;
   }
 
-  printf ("GC_move [%d]\n",s->procId);
-
   /* ENTER (0) */
   s->syncReason = SYNC_FORCE;
   getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
@@ -173,7 +210,7 @@ pointer GC_move (GC_state s, pointer p, bool forceStackForwarding) {
   beginAtomic (s);
 
   if (DEBUG_LWTGC)
-    fprintf (stderr, "GC_move: \n");
+    fprintf (stderr, "GC_move [%d]\n", s->procId);
 
   /* If objct has already been lifted, return */
   if (isObjectLifted (getHeader (p))) {
@@ -185,7 +222,7 @@ pointer GC_move (GC_state s, pointer p, bool forceStackForwarding) {
 
   objptr op = pointerToObjptr (p, s->heap->start);
   objptr* pOp = &op;
-  moveTransitiveClosure (s, pOp, forceStackForwarding);
+  moveTransitiveClosure (s, pOp, forceStackForwarding, FALSE);
 
   /* Force a garbage collection. Essential to fix the forwarding pointers from
    * the previous step.
@@ -280,7 +317,7 @@ void liftAllObjptrsInMoveOnWBA (GC_state s) {
              s->moveOnWBASize, s->procId);
   for (int32_t i=0; i < s->moveOnWBASize; i++) {
     objptr op = s->moveOnWBA[i];
-    moveTransitiveClosure (s, &op, FALSE);
+    moveTransitiveClosure (s, &op, FALSE, FALSE);
   }
   s->moveOnWBASize = 0;
 

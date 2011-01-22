@@ -317,7 +317,7 @@ size_t fillGap (__attribute__ ((unused)) GC_state s, pointer start, pointer end)
 }
 
 static void allocChunkInSharedHeap (GC_state s,
-                                    size_t nurseryBytesRequested) {
+                                    size_t bytesRequested) {
   /* First try and take another chunk from the shared nursery */
   while (TRUE)
   {
@@ -331,28 +331,33 @@ static void allocChunkInSharedHeap (GC_state s,
     size_t availableBytes = (size_t)((s->sharedHeap->start + s->sharedHeap->availableSize)
                                      - oldFrontier);
 
-    /* See if the mutator frontier invariant is already true */
+    assert (availableBytes > 0);
     assert (s->sharedLimitPlusSlop >= s->sharedFrontier);
-    if (nurseryBytesRequested <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier)) {
+
+    /* See if the mutator frontier invariant is already true */
+    if (bytesRequested <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier)) {
       if (DEBUG)
         fprintf (stderr, "[GC: aborting shared alloc: satisfied.] [%d]\n", s->procId);
       return;
     }
     /* Perhaps there is not enough space in the nursery to satify this
        request; if that's true then we need to do a full collection */
-    if (nurseryBytesRequested + GC_BONUS_SLOP > availableBytes) {
+    if (bytesRequested + GC_BONUS_SLOP > availableBytes) {
       fprintf (stderr, "[GC: aborting shared alloc: no space.] [%d]\n", s->procId);
       assert (0);
       return;
     }
 
+    /* alloc a chunk so that subsequent requests can be satisfied locally */
+    if (bytesRequested < s->controls->allocChunkSize)
+        bytesRequested = s->controls->allocChunkSize;
+
     /* OK! We might possibly satisfy this request without the runtime lock!
        Let's see what that will entail... */
-
     /* Now see if we were the most recent thread to allocate */
     if (oldFrontier == s->sharedLimitPlusSlop + GC_BONUS_SLOP) {
       /* This is the next chunk so no need to fill */
-      newHeapFrontier = s->sharedFrontier + nurseryBytesRequested + GC_BONUS_SLOP;
+      newHeapFrontier = s->sharedFrontier + bytesRequested + GC_BONUS_SLOP;
       /* Leave "start" and "frontier" where they are */
       newStart = s->sharedStart;
       newProcFrontier = s->sharedFrontier;
@@ -364,7 +369,7 @@ static void allocChunkInSharedHeap (GC_state s,
          overwrite them (if we succeed) or just fill the same gap again
          (if we fail).  (There is no obvious other pair of values that
          we can set them to that is safe.) */
-      newHeapFrontier = oldFrontier + nurseryBytesRequested + GC_BONUS_SLOP;
+      newHeapFrontier = oldFrontier + bytesRequested + GC_BONUS_SLOP;
       newProcFrontier = oldFrontier;
       /* Move "start" since the space between old-start and frontier is not
          necessary filled */

@@ -10,16 +10,10 @@
 /*                          translateHeap                           */
 /* ---------------------------------------------------------------- */
 
-struct translateState {
-  pointer from;
-  pointer to;
-};
-static struct translateState translateState;
-
 void translateObjptr (GC_state s, objptr *opp) {
   pointer p;
 
-  p = objptrToPointer (*opp, translateState.from);
+  p = objptrToPointer (*opp, s->translateState.from);
 
   /* Do not translate pointers that does not belong to your heap */
   //XXX GCSH -- this needs to change
@@ -32,14 +26,18 @@ void translateObjptr (GC_state s, objptr *opp) {
 
   if (DEBUG_DETAILED)
       fprintf (stderr, "translateObjptr: Remapping pointer "FMTPTR" to "FMTPTR"\n",
-               (uintptr_t)p, (uintptr_t)((p - translateState.from) + translateState.to));
-  p = (p - translateState.from) + translateState.to;
-  *opp = pointerToObjptr (p, translateState.to);
+               (uintptr_t)p, (uintptr_t)((p - s->translateState.from) + s->translateState.to));
+  p = (p - s->translateState.from) + s->translateState.to;
+  *opp = pointerToObjptr (p, s->translateState.to);
 
-  GC_objectTypeTag tag;
+  if (!isPointerInHeap (s, s->heap, p)) {
+    if (DEBUG)
+        fprintf (stderr, "translate: p="FMTPTR" not in new heap. [%d]\n",
+                 (uintptr_t)p, s->procId);
+    assert (0);
+  }
   GC_header header = getHeader (p);
-  if (header == GC_FORWARDED)
-      return;
+  GC_objectTypeTag tag;
   splitHeader (s, header, &tag, NULL, NULL, NULL);
   if (tag == STACK_TAG) {
       GC_stack stack = (GC_stack)p;
@@ -63,8 +61,8 @@ void translateHeap (GC_state s, pointer from, pointer to, size_t size) {
              (uintptr_t)to,
              uintmaxToCommaString(size),
              (uintptr_t)from, s->procId);
-  translateState.from = from;
-  translateState.to = to;
+  s->translateState.from = from;
+  s->translateState.to = to;
   /* Translate globals and heap. */
   foreachGlobalObjptrInScope (s, translateObjptr);
   limit = to + size;

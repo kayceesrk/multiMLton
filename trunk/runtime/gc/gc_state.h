@@ -107,6 +107,7 @@ struct GC_state {
   int32_t copiedSize;
   int32_t syncReason;
   struct GC_sysvals sysvals;
+  struct GC_translateState translateState;
   struct GC_vectorInit *vectorInits;
   uint32_t vectorInitsLength;
   GC_weak weaks; /* Linked list of (live) weak pointers */

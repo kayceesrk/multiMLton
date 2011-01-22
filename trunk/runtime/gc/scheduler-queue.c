@@ -89,7 +89,11 @@ void GC_sqEnque (GC_state s, pointer p, int proc, int i) {
     if (DEBUG_SQ)
       fprintf (stderr, "GC_sqEnque: moving closure to shared heap[%d]\n",
                s->procId);
-    moveTransitiveClosure (s, &op, FALSE);
+    moveTransitiveClosure (s, &op, FALSE, TRUE);
+    if (DEBUG_SQ)
+      fprintf (stderr, "GC_sqEnque: moving closure to shared heap done. "FMTOBJPTR" [%d]\n",
+               op, s->procId);
+
   }
 
   CircularBuffer* cq = getSubQ (fromProc->schedulerQueue, i);
@@ -154,6 +158,7 @@ void GC_sqReleaseLock (GC_state s, int proc) {
 void foreachObjptrInSQ (GC_state s, SchedulerQueue* sq, GC_foreachObjptrFun f) {
   if (!sq)
     return;
+  GC_sqAcquireLock (s, s->procId);
   for (int i=0; i<2; i++) {
     CircularBuffer* cq = getSubQ (sq, i);
     uint32_t rp = cq->readPointer;
@@ -168,4 +173,5 @@ void foreachObjptrInSQ (GC_state s, SchedulerQueue* sq, GC_foreachObjptrFun f) {
       rp %= cq->size;
     }
   }
+  GC_sqReleaseLock (s, s->procId);
 }
