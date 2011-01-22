@@ -62,15 +62,10 @@ struct
     rthrd
   end
 
-  fun empty () =
-  let
-    val _ = PacmlFFI.maybeWaitForGC ()
-  in
-    PrimSQ.isEmpty ()
-  end
+  val empty = PrimSQ.isEmpty
+  val clean =  PrimSQ.clean
 
   fun dequeAny () = raise Fail "ml-scheduler-queue: dequeAny not implemented"
 
-  fun clean () =  PrimSQ.clean ()
 
 end

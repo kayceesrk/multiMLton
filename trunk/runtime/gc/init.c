@@ -123,8 +123,16 @@ int processAtMLton (GC_state s, int argc, char **argv,
           i++;
           s->controls->messages = TRUE;
         } else if (0 == strcmp (arg, "gc-summary")) {
+          if (i == argc)
+              die ("@MLton gc-summary missing argument");
           i++;
-          s->controls->summary = TRUE;
+          if (0 == strcmp (argv[i], "cumulative"))
+              s->controls->summary = SUMMARY_CUMULATIVE;
+          else if (0 == strcmp (argv[i], "individual"))
+              s->controls->summary = SUMMARY_INDIVIDUAL;
+          else
+              die ("@MLton gc-summary invalid argument");
+          i++;
         } else if (0 == strcmp (arg, "alloc-chunk")) {
           i++;
           if (i == argc)
@@ -310,6 +318,62 @@ int processAtMLton (GC_state s, int argc, char **argv,
   return i;
 }
 
+static inline void* initCumulativeStatistics (void) {
+  struct GC_cumulativeStatistics* cumul =
+      (struct GC_cumulativeStatistics *) malloc (sizeof (struct GC_cumulativeStatistics));
+  cumul->bytesAllocated = 0;
+  cumul->bytesFilled = 0;
+  cumul->bytesCopied = 0;
+  cumul->bytesCopiedMinor = 0;
+  cumul->bytesHashConsed = 0;
+  cumul->bytesLifted = 0;
+  cumul->bytesMarkCompacted = 0;
+  cumul->bytesScannedMinor = 0;
+  cumul->maxBytesLive = 0;
+  cumul->maxBytesLiveSinceReset = 0;
+  cumul->maxHeapSize = 0;
+  cumul->maxPauseTime = 0;
+  cumul->maxStackSize = 0;
+  cumul->numCardsMarked = 0;
+  cumul->numLimitChecks = 0;
+  cumul->syncForOldGenArray = 0;
+  cumul->syncForNewGenArray = 0;
+  cumul->syncForStack = 0;
+  cumul->syncForHeap = 0;
+  cumul->syncForLift = 0;
+  cumul->syncForce = 0;
+  cumul->syncMisc = 0;
+  cumul->numCopyingGCs = 0;
+  cumul->numHashConsGCs = 0;
+  cumul->numMarkCompactGCs = 0;
+  cumul->numMinorGCs = 0;
+  cumul->numThreadsCreated = 0;
+  cumul->numPreemptWB = 0;
+  cumul->numMoveWB = 0;
+  cumul->numReadyWB = 0;
+  timevalZero (&cumul->ru_gc);
+  rusageZero (&cumul->ru_gcCopying);
+  rusageZero (&cumul->ru_gcMarkCompact);
+  rusageZero (&cumul->ru_gcMinor);
+  timevalZero (&cumul->tv_sync);
+  rusageZero (&cumul->ru_thread);
+  timevalZero (&cumul->tv_rt);
+  return (void*)cumul;
+}
+
+
+
+static inline void* initLastMajorStatistics (void) {
+  struct GC_lastMajorStatistics* cumul = (struct GC_lastMajorStatistics*)
+    malloc (sizeof (struct GC_lastMajorStatistics));
+  cumul->bytesHashConsed = 0;
+  cumul->bytesLive = 0;
+  cumul->kind = GC_COPYING;
+  cumul->numMinorGCs = 0;
+  return (void*)cumul;
+}
+
+
 int GC_init (GC_state s, int argc, char **argv) {
   int res;
 
@@ -353,50 +417,14 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->controls->ratios.stackMaxReserved = 8.0;
   s->controls->ratios.stackShrink = 0.5;
   s->controls->rusageMeasureGC = FALSE;
-  s->controls->summary = FALSE;
-  s->cumulativeStatistics = (struct GC_cumulativeStatistics *)
-    malloc (sizeof (struct GC_cumulativeStatistics));
-  s->cumulativeStatistics->bytesAllocated = 0;
-  s->cumulativeStatistics->bytesFilled = 0;
-  s->cumulativeStatistics->bytesCopied = 0;
-  s->cumulativeStatistics->bytesCopiedMinor = 0;
-  s->cumulativeStatistics->bytesHashConsed = 0;
-  s->cumulativeStatistics->bytesMarkCompacted = 0;
-  s->cumulativeStatistics->bytesScannedMinor = 0;
-  s->cumulativeStatistics->maxBytesLive = 0;
-  s->cumulativeStatistics->maxBytesLiveSinceReset = 0;
-  s->cumulativeStatistics->maxHeapSize = 0;
-  s->cumulativeStatistics->maxPauseTime = 0;
-  s->cumulativeStatistics->maxStackSize = 0;
-  s->cumulativeStatistics->numCardsMarked = 0;
-  s->cumulativeStatistics->numLimitChecks = 0;
-  s->cumulativeStatistics->syncForOldGenArray = 0;
-  s->cumulativeStatistics->syncForNewGenArray = 0;
-  s->cumulativeStatistics->syncForStack = 0;
-  s->cumulativeStatistics->syncForHeap = 0;
-  s->cumulativeStatistics->syncMisc = 0;
-  s->cumulativeStatistics->numCopyingGCs = 0;
-  s->cumulativeStatistics->numHashConsGCs = 0;
-  s->cumulativeStatistics->numMarkCompactGCs = 0;
-  s->cumulativeStatistics->numMinorGCs = 0;
-  timevalZero (&s->cumulativeStatistics->ru_gc);
-  rusageZero (&s->cumulativeStatistics->ru_gcCopying);
-  rusageZero (&s->cumulativeStatistics->ru_gcMarkCompact);
-  rusageZero (&s->cumulativeStatistics->ru_gcMinor);
-  timevalZero (&s->cumulativeStatistics->tv_sync);
-  rusageZero (&s->cumulativeStatistics->ru_thread);
-  timevalZero (&s->cumulativeStatistics->tv_rt);
+  s->controls->summary = SUMMARY_NONE;
+  s->cumulativeStatistics = (struct GC_cumulativeStatistics*)initCumulativeStatistics ();
+  s->lastMajorStatistics = (struct GC_lastMajorStatistics*)initLastMajorStatistics ();
   s->currentThread = BOGUS_OBJPTR;
   s->danglingStackList = NULL;
   s->hashConsDuringGC = FALSE;
   s->heap = (GC_heap) malloc (sizeof (struct GC_heap));
   initHeap (s, s->heap, LOCAL_HEAP);
-  s->lastMajorStatistics = (struct GC_lastMajorStatistics *)
-    malloc (sizeof (struct GC_lastMajorStatistics));
-  s->lastMajorStatistics->bytesHashConsed = 0;
-  s->lastMajorStatistics->bytesLive = 0;
-  s->lastMajorStatistics->kind = GC_COPYING;
-  s->lastMajorStatistics->numMinorGCs = 0;
   s->numberOfProcs = 1;
   s->numIOThreads = 0;
   s->enableTimer = FALSE;
@@ -514,10 +542,10 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->atomicState = 0;
   d->callFromCHandlerThread = BOGUS_OBJPTR;
   d->controls = s->controls;
-  d->cumulativeStatistics = s->cumulativeStatistics;
+  d->cumulativeStatistics = initCumulativeStatistics ();
+  d->lastMajorStatistics = initLastMajorStatistics ();
   d->currentThread = BOGUS_OBJPTR;
   d->hashConsDuringGC = s->hashConsDuringGC;
-  d->lastMajorStatistics = s->lastMajorStatistics;
   d->numberOfProcs = s->numberOfProcs;
   d->numIOThreads = s->numIOThreads;
   d->enableTimer = s->enableTimer;

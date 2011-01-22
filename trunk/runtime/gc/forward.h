@@ -33,6 +33,8 @@ struct GC_forwardState {
    * basis-library/mlton/thread). The following boolean forces stack lifting
    */
   bool forceStackForwarding;
+
+  /* used to indicate if a GC would be required to fix the heap */
 };
 
 #define GC_FORWARDED ~((GC_header)0)

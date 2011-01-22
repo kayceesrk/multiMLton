@@ -52,6 +52,7 @@ bool Proc_isInitialized (GC_state s) {
 struct timeval tv_rt;
 struct timeval tv_sync;
 
+
 void Proc_beginCriticalSection (GC_state s) {
   if (Proc_isInitialized (s)) {
     int32_t myNumber = Proc_processorNumber (s);
@@ -64,42 +65,11 @@ void Proc_beginCriticalSection (GC_state s) {
       if (needGCTime (s))
         startWallTiming (&tv_sync);
 
-      switch (s->syncReason) {
-      case SYNC_NONE:
-        fprintf (stderr, "Got to begin without a reason?\n");
-        exit (1);
-        break;
-      case SYNC_SIGNALS:
-        break;
-      case SYNC_OLD_GEN_ARRAY:
-        s->cumulativeStatistics->syncForOldGenArray++;
-        break;
-      case SYNC_NEW_GEN_ARRAY:
-        s->cumulativeStatistics->syncForNewGenArray++;
-        break;
-      case SYNC_STACK:
-        s->cumulativeStatistics->syncForStack++;
-        break;
-      case SYNC_HEAP:
-        s->cumulativeStatistics->syncForHeap++;
-        break;
-      case SYNC_FORCE:
-        s->cumulativeStatistics->syncMisc++;
-        break;
-      case SYNC_PACK:
-        s->cumulativeStatistics->syncMisc++;
-        break;
-      case SYNC_SAVE_WORLD:
-        s->cumulativeStatistics->syncMisc++;
-        break;
-      default:
-        fprintf (stderr, "Unknown sync reason?\n");
-        exit (1);
-      }
+      incSync (s);
 
       //XXX KC signal every processor??
       for (int i=0;i<s->numberOfProcs;i++)
-          Parallel_wakeUpThread (i, 0);
+        Parallel_wakeUpThread (i, 0);
     }
 
     if (p == s->numberOfProcs) {

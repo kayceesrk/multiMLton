@@ -56,7 +56,7 @@ struct GC_controls {
   bool restrictAvailableSize; /* Use smaller heaps to improve space profiling accuracy */
   struct GC_ratios ratios;
   bool rusageMeasureGC;
-  bool summary; /* Print a summary of gc info when program exits. */
+  int32_t summary; /* Print a summary of gc info when program exits. */
 };
 
 #endif /* (defined (MLTON_GC_INTERNAL_TYPES)) */

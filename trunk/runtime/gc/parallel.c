@@ -90,7 +90,13 @@ void Parallel_maybeWaitForGC (void) {
     ENTER0 (s);
     LEAVE0 (s);
   }
-  else if (s->preemptOnWBASize > 0) {
+
+  //XXX KC
+  //To eliminate deadlocks that could occur because a thread could hold a lock
+  //and get preempted on a write. We force a GC if we fail on lock acquistion
+  //and find a preempted thread. This should really be fixed with some other
+  //solution. This will hinder performance.
+  if (s->preemptOnWBASize > 0) {
     forceLocalGC (s);
   }
 }

@@ -31,8 +31,6 @@ struct
 
     fun getCmlLock (l, count) ftid =
     let
-      val _ =
-      PacmlFFI.maybeWaitForGC ()
       val tid = ftid () (* Has to be this way to account for parasite reification at maybePreempt *)
     in
       if !l = tid then
@@ -44,10 +42,12 @@ struct
             ()
           else
             (maybePreempt ();
-            getCmlLock (l, count) ftid))
+             PacmlFFI.maybeWaitForGC ();
+             getCmlLock (l, count) ftid))
         else
           (maybePreempt ();
-          getCmlLock (l, count) ftid))
+           PacmlFFI.maybeWaitForGC ();
+           getCmlLock (l, count) ftid))
     end
 
     fun releaseCmlLock (l,count) tid =
@@ -55,7 +55,7 @@ struct
           count := !count - 1
       else
         if cas (l, tid, ~1) then
-           PacmlFFI.maybeWaitForGC ()
+          ()
         else
           let
             val holder = Int.toString(!l)

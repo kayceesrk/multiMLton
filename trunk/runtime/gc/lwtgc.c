@@ -203,20 +203,15 @@ pointer GC_move (GC_state s, pointer p, bool forceStackForwarding) {
     return p;
   }
 
-  /* ENTER (0) */
-  s->syncReason = SYNC_FORCE;
-  getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
-  getThreadCurrent(s)->exnStack = s->exnStack;
-  beginAtomic (s);
+  s->syncReason = SYNC_LIFT;
+  ENTER_LOCAL0 (s);
 
   if (DEBUG_LWTGC)
     fprintf (stderr, "GC_move [%d]\n", s->procId);
 
   /* If objct has already been lifted, return */
   if (isObjectLifted (getHeader (p))) {
-    /* LEAVE (0) */
-    s->syncReason = SYNC_NONE;
-    endAtomic (s);
+      LEAVE_LOCAL0 (s);
     return p;
   }
 
@@ -226,15 +221,13 @@ pointer GC_move (GC_state s, pointer p, bool forceStackForwarding) {
 
   /* Force a garbage collection. Essential to fix the forwarding pointers from
    * the previous step.
-   * NOTE: Major GC needs to be forced only if moving objects from the major heap.
-   * ENTER0 (s) -- atomicState is atomic */
+   * NOTE: Major GC needs to be forced only if moving objects from the major heap. */
   if (not s->canMinor || TRUE /* Force Major */)
     fixForwardingPointers (s, TRUE);
   else
     fixForwardingPointers (s, TRUE);
 
-  /* LEAVE0 (s) */
-  endAtomic (s);
+  LEAVE_LOCAL0 (s);
 
   if (DEBUG_LWTGC)
     fprintf (stderr, "GC_move: Exiting\n");
@@ -246,35 +239,26 @@ void forceLocalGC (GC_state s) {
   if (DEBUG_LWTGC)
     fprintf (stderr, "forceLocalGC [%d]\n", s->procId);
 
-  /* ENTER (0) */
   s->syncReason = SYNC_FORCE;
-  getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
-  getThreadCurrent(s)->exnStack = s->exnStack;
-  beginAtomic (s);
+  ENTER_LOCAL0 (s);
 
   fixForwardingPointers (s, TRUE);
 
-  /* LEAVE (0) */
-  endAtomic (s);
+  LEAVE_LOCAL0 (s);
 }
 
 void moveEachObjptrInObject (GC_state s, pointer p) {
   assert (p != BOGUS_POINTER);
 
-  /* ENTER (0) */
-  s->syncReason = SYNC_FORCE;
-  getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
-  getThreadCurrent(s)->exnStack = s->exnStack;
-  beginAtomic (s);
+  s->syncReason = SYNC_LIFT;
+  ENTER_LOCAL0 (s);
 
   if (DEBUG_LWTGC)
     fprintf (stderr, "moveEachObjptrInObject: \n");
 
   /* If objct has already been lifted, return */
   if (isObjectLifted (getHeader (p))) {
-    /* LEAVE (0) */
-    s->syncReason = SYNC_NONE;
-    endAtomic (s);
+    LEAVE_LOCAL0 (s);
     return;
   }
 
@@ -298,8 +282,7 @@ void moveEachObjptrInObject (GC_state s, pointer p) {
   else
     fixForwardingPointers (s, TRUE);
 
-  /* LEAVE0 (s) */
-  endAtomic (s);
+  LEAVE_LOCAL0 (s);
 
   if (DEBUG_LWTGC)
     fprintf (stderr, "moveEachObjptrInObject: Exiting\n");
@@ -336,6 +319,7 @@ void liftAllObjptrsInMoveOnWBA (GC_state s) {
 }
 
 void GC_addToMoveOnWBA (GC_state s, pointer p) {
+  s->cumulativeStatistics->numMoveWB++;
   ++(s->moveOnWBASize);
   if (s->moveOnWBASize > SIZE_WBA)
     die ("moveOnWBA overflow");
@@ -343,6 +327,8 @@ void GC_addToMoveOnWBA (GC_state s, pointer p) {
 }
 
 void GC_addToPreemptOnWBA (GC_state s, pointer p) {
+  s->cumulativeStatistics->numPreemptWB++;
+  s->cumulativeStatistics->numReadyWB += sizeofSchedulerQueue (s);
   objptr op = pointerToObjptr (p, s->heap->start);
   ++(s->preemptOnWBASize);
   if (s->preemptOnWBASize > SIZE_WBA)

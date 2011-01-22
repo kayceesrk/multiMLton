@@ -175,3 +175,16 @@ void foreachObjptrInSQ (GC_state s, SchedulerQueue* sq, GC_foreachObjptrFun f) {
   }
   GC_sqReleaseLock (s, s->procId);
 }
+
+int sizeofSchedulerQueue (GC_state s) {
+  SchedulerQueue* sq = s->schedulerQueue;
+  assert (sq);
+  int total = 0;
+  for (int i=0; i<2; i++) {
+    CircularBuffer* cq = getSubQ (sq, i);
+    uint32_t rp = cq->readPointer;
+    uint32_t wp = cq->writePointer;
+    total += ((wp - rp + cq->size) % cq->size);
+  }
+  return total;
+}

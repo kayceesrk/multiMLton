@@ -14,10 +14,17 @@ enum {
   SYNC_NEW_GEN_ARRAY,
   SYNC_STACK,
   SYNC_HEAP,
+  SYNC_LIFT,
   SYNC_FORCE,
   SYNC_PACK,
   SYNC_SAVE_WORLD,
   SYNC_SIGNALS,
+};
+
+enum {
+  SUMMARY_NONE = 0,
+  SUMMARY_CUMULATIVE,
+  SUMMARY_INDIVIDUAL,
 };
 
 struct GC_cumulativeStatistics {
@@ -27,6 +34,7 @@ struct GC_cumulativeStatistics {
   uintmax_t bytesHashConsed;
   uintmax_t bytesMarkCompacted;
   uintmax_t bytesScannedMinor;
+  uintmax_t bytesLifted;
 
   size_t maxBytesLive;
   size_t maxHeapSize;
@@ -40,6 +48,7 @@ struct GC_cumulativeStatistics {
   uintmax_t numHashConsGCs;
   uintmax_t numMarkCompactGCs;
   uintmax_t numMinorGCs;
+  uintmax_t numThreadsCreated;
 
   struct timeval ru_gc; /* total resource usage in gc. */
   struct rusage ru_gcCopying; /* resource usage in major copying gcs. */
@@ -59,7 +68,13 @@ struct GC_cumulativeStatistics {
   uintmax_t syncForNewGenArray;
   uintmax_t syncForStack;
   uintmax_t syncForHeap;
+  uintmax_t syncForLift;
+  uintmax_t syncForce;
   uintmax_t syncMisc;
+
+  uintmax_t numPreemptWB; /* # calls to addToPreemptOnWBA -- actual # threads preempted on write barrier */
+  uintmax_t numMoveWB; /* # calls to addToMoveOnWBA -- ideal # threads that should have been preempted on write barrier */
+  uintmax_t numReadyWB; /* # ready threads on scheduler while a thread is preempted on write barrier */
 
 };
 
@@ -71,3 +86,10 @@ struct GC_lastMajorStatistics {
 };
 
 #endif /* (defined (MLTON_GC_INTERNAL_TYPES)) */
+
+
+#if (defined (MLTON_GC_INTERNAL_FUNCS))
+
+static inline void incSync (GC_state s);
+
+#endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

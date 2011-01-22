@@ -7,6 +7,7 @@
  */
 
 GC_thread copyThread (GC_state s, GC_state target, GC_thread from, size_t used) {
+  s->cumulativeStatistics->numThreadsCreated++;
   GC_thread to;
 
   if (DEBUG_THREADS or s->controls->messages)

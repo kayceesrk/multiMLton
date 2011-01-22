@@ -54,7 +54,7 @@ pointer GC_arrayAllocate (GC_state s,
 
   if (holdLock) {
     s->syncReason = SYNC_OLD_GEN_ARRAY;
-    ENTER0 (s);
+    ENTER_LOCAL0 (s);
     if (not hasHeapBytesFree (s, s->heap, arraySizeAligned, ensureBytesFree)) {
       performGC (s, arraySizeAligned, ensureBytesFree, FALSE, TRUE);
     }
@@ -134,7 +134,7 @@ pointer GC_arrayAllocate (GC_state s,
    */
 
   if (holdLock) {
-    LEAVE1 (s, result);
+    LEAVE_LOCAL1 (s, result);
   }
 
   return result;

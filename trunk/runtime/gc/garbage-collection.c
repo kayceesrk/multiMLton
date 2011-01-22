@@ -318,7 +318,8 @@ size_t fillGap (__attribute__ ((unused)) GC_state s, pointer start, pointer end)
 
 static void allocChunkInSharedHeap (GC_state s,
                                     size_t bytesRequested) {
-  /* First try and take another chunk from the shared nursery */
+
+  s->cumulativeStatistics->bytesLifted += bytesRequested;
   while (TRUE)
   {
     /* This is the only read of the global frontier -- never read it again
