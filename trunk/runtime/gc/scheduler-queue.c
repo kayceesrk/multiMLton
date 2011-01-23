@@ -132,7 +132,7 @@ bool GC_sqIsEmpty (GC_state s) {
     /* Force a GC if we find that the primary scheduler queue is empty and
      * preemptOnWBA is not */
     forceLocalGC (s);
-    res = FALSE;
+    resPrim = FALSE;
   }
   return (resPrim && resSec);
 }
