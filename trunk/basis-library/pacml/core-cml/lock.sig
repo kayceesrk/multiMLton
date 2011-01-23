@@ -1,6 +1,6 @@
 signature LOCK =
 sig
-  type cmlLock
+  type cmlLock = RepTypes.cmlLock
 
   val initCmlLock : unit -> cmlLock
   val getCmlLock : cmlLock -> (unit->int) -> unit

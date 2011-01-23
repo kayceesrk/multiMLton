@@ -126,15 +126,15 @@ bool GC_sqIsEmptyPrio (int i) {
 }
 
 bool GC_sqIsEmpty (GC_state s) {
-  bool res = (CircularBufferIsEmpty (s->schedulerQueue->primary) &&
-              CircularBufferIsEmpty (s->schedulerQueue->secondary));
-  if (res && (s->preemptOnWBASize != 0)) {
-    /* Force a GC if we find that the scheduler queue is empty and
+  bool resPrim = CircularBufferIsEmpty (s->schedulerQueue->primary);
+  bool resSec = CircularBufferIsEmpty (s->schedulerQueue->secondary);
+  if (resPrim && (s->preemptOnWBASize != 0)) {
+    /* Force a GC if we find that the primary scheduler queue is empty and
      * preemptOnWBA is not */
     forceLocalGC (s);
     res = FALSE;
   }
-  return res;
+  return (resPrim && resSec);
 }
 
 void GC_sqClean (GC_state s) {

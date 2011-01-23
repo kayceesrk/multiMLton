@@ -390,8 +390,6 @@ in
 			../pacml/util/fun-priority-queue.sig
 			../pacml/util/fun-priority-queue.fun
 
-			../pacml/core-cml/lock.sig
-			../pacml/core-cml/lock.sml
 			../pacml/core-cml/rep-types.sml
 			../pacml/core-cml/prim.sml
 		ann "allowFFI true" in
@@ -402,6 +400,8 @@ in
 			../pacml/core-cml/cvar.sml
 			../pacml/core-cml/thread-id.sig
 			../pacml/core-cml/thread-id.sml
+			../pacml/core-cml/lock.sig
+			../pacml/core-cml/lock.sml
 			../pacml/core-cml/proto-thread.sig
 			../pacml/core-cml/proto-thread.sml
 			../pacml/core-cml/scheduler-hooks.sig

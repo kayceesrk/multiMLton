@@ -9,5 +9,5 @@ struct
   datatype cvar = datatype R.cvar
   datatype cvar_state = datatype R.cvar_state
 
-  fun new () = CVAR (ref (CVAR_unset []), Lock.initCmlLock ())
+  fun new () = CVAR (ref (CVAR_unset []))
 end

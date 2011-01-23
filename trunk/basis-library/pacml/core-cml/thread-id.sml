@@ -5,7 +5,6 @@ struct
 
   open Critical
   structure R = RepTypes
-  structure L = Lock
 
   datatype thread_id = datatype R.thread_id
   datatype thread_id' = datatype thread_id

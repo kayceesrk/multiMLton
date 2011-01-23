@@ -14,7 +14,7 @@
 
 structure RepTypes =
    struct
-      structure L = Lock
+      datatype cmlLock = LOCK of (int ref * int ref)
 
       type proc_num = int
 
@@ -27,7 +27,7 @@ structure RepTypes =
       type primHost = Primitive.MLton.Thread.thread
 
       (** condition variables --- see cvar.sml and events.sml *)
-      datatype cvar = CVAR of (cvar_state ref * L.cmlLock)
+      datatype cvar = CVAR of (cvar_state ref)
       and cvar_state =
          CVAR_unset of {transId : int ref, (* KC - Me wants macros *)
                         cleanUp : unit -> unit,
