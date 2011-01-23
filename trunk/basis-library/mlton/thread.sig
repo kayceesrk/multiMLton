@@ -70,4 +70,5 @@ signature MLTON_THREAD_EXTRA =
       val setSignalHandler: (Runnable.t -> Runnable.t) -> unit
       val switchToSignalHandler: unit -> unit
       val threadStatus: Runnable.t -> string
+      val atomicSwitchForWB : (Runnable.t -> Runnable.t) -> unit
    end

@@ -15,7 +15,7 @@ struct
         l
       end
 
-    fun maybePreempt () = if not (MLtonThread.amSwitching (pN ())) then
+    fun maybePreempt () = ((if not (MLtonThread.amSwitching (pN ())) then
                             (let
                               val atomicState = getAtomicState ()
                               (* Unmark this thread id so that if this thread is preempted,
@@ -28,10 +28,10 @@ struct
                               val () = setAtomicState (1)
                               val () = atomicEnd ()
                               val () = setAtomicState (atomicState)
-                            in
-                              PacmlFFI.maybeWaitForGC ()
+                            in ()
                             end)
-                          else ()
+                          else ());
+                          PacmlFFI.maybeWaitForGC ())
 
     fun getCmlLock (lock as RepTypes.LOCK (l, count)) ftid =
     let
@@ -52,7 +52,10 @@ struct
            getCmlLock lock ftid))
     end
 
-    fun releaseCmlLock (RepTypes.LOCK (l,count)) tid =
+    fun releaseCmlLock (RepTypes.LOCK (l,count)) ftid =
+    let
+      val tid = ftid ()
+    in
       if !l = tid andalso !count > 0 then
           count := !count - 1
       else
@@ -68,4 +71,5 @@ struct
           in
             raise Fail msg
           end
+    end
 end

@@ -4,6 +4,6 @@ sig
 
   val initCmlLock : unit -> cmlLock
   val getCmlLock : cmlLock -> (unit->int) -> unit
-  val releaseCmlLock : cmlLock -> int -> unit
+  val releaseCmlLock : cmlLock -> (unit->int) -> unit
 
 end

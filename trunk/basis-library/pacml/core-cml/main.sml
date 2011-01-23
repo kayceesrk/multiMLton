@@ -11,8 +11,8 @@ struct
   structure MT = MLtonThread
   structure PT = ProtoThread
 
-  structure Assert = LocalAssert(val assert = false)
-  structure Debug = LocalDebug(val debug = false)
+  structure Assert = LocalAssert(val assert = true)
+  structure Debug = LocalDebug(val debug = true)
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
   fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
@@ -127,6 +127,8 @@ struct
           val () = debug' (concat ["numComputeProcessors = ", Int.toString (PacmlFFI.numComputeProcessors)])
           val () = debug' (concat ["numIOProcessors = ", Int.toString (PacmlFFI.numIOProcessors)])
           val () = reset true
+          val handler = MLtonSignal.Handler.handler (S.unwrap alrmHandler Thread.reifyHostFromParasite)
+          val () = installAlrmHandler handler
           val () = debug' "Main(-2)"
           val () = SH.shutdownHook := PT.prepend (thrd, fn arg => (atomicBegin (); arg))
           val () = debug' "Main(-1)"
@@ -134,9 +136,7 @@ struct
           val () = debug' "Main(0)"
           val () = ignore (Thread.spawnHost (fn ()=> (lateInit (); initialProc ())))
           val () = debug' "Main(1)"
-          val handler = MLtonSignal.Handler.handler (S.unwrap alrmHandler Thread.reifyHostFromParasite)
           val () = debug' "Main(2)"
-          val () = installAlrmHandler handler
           val () = debug' "Main(3)"
         in
             ()

@@ -111,29 +111,30 @@ local
             Prim.copy base
          end
    end
-   val switching = Array.tabulate (numProcessors, fn _ => false)
+   (* val switching = Array.tabulate (numProcessors, fn _ => 0) *)
 in
-   fun amSwitching p =
-     Array.unsafeSub (switching, p)
+   fun amSwitching p = false
+   (* fun getNesting p = Array.unsafeSub (switching, p)
+   fun amSwitching p = (getNesting p) > 0
+   fun mark p = Array.update (switching, p, (getNesting p) + 1)
+   fun unmark p = Array.update (switching, p, (getNesting p) - 1) *)
+
    fun 'a atomicSwitch (f: 'a t -> Runnable.t): 'a =
       let val proc = procNum () in
       (* Atomic 1 *)
-      if Array.unsafeSub (switching, proc)
-         then let
-                 val () = atomicEnd ()
-                 (* Atomic 0 *)
-              in
-                 raise Fail "nested Thread.switch"
-              end
-      else
+      (* if (getNesting proc) > 0 then
+        (print "Too much nested thread switching\n";
+         atomicEnd ();
+         raise Fail "Too much nested thread switching")
+      else *)
          let
-            val _ = Array.update (switching, proc, true)
+            (* val _ = mark proc *)
             val r : (unit -> 'a) ref =
                ref (fn () => die "Thread.atomicSwitch didn't set r.\n")
             val t: 'a thread ref =
                ref (Paused (fn x => r := x, Prim.current gcState))
             fun fail e = (t := Dead
-                          ; Array.update (switching, proc, false)
+                          (* ; unmark proc *)
                           ; atomicEnd ()
                           ; raise e)
             val (T t': Runnable.t) = f (T t) handle e => fail e
@@ -144,11 +145,7 @@ in
                 | New g => (atomicBegin (); newThread g)
                 | Paused (f, t) => (f (fn () => ()); t)
 
-           val _ = if not (Array.unsafeSub (switching, proc))
-                    then raise Fail "switching switched?"
-                    else ()
-
-            val _ = Array.update (switching, proc, false)
+            (* val _ = unmark proc *)
             (* Atomic 1 when Paused/Interrupted, Atomic 2 when New *)
             val _ = Prim.switchTo primThread (* implicit atomicEnd() *)
             (* Atomic 0 when resuming *)
@@ -160,6 +157,24 @@ in
    fun switch f =
       (atomicBegin ()
        ; atomicSwitch f)
+
+   fun atomicSwitchForWB (f) =
+   let
+     val rt : Runnable.t = T (ref (Interrupted (Prim.current gcState)))
+     val (T t' : Runnable.t) = f (rt)
+     val primThread =
+       case !t' of
+            Dead => raise Fail "switch to a Dead thread"
+          | Interrupted t => t
+          | New g => (atomicBegin (); newThread g)
+          | Paused (f, t) => (f (fn () => ()); t)
+
+     (* Atomic 1 when Paused/Interrupted, Atomic 2 when New *)
+     val _ = Prim.switchTo primThread (* implicit atomicEnd() *)
+     (* Atomic 0 when resuming *)
+   in
+     ()
+   end
 
 end
 

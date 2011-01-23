@@ -11,7 +11,7 @@ struct
      L.getCmlLock lock ThreadID.tidNum)
 
   fun releaseLock lock =
-    (L.releaseCmlLock lock (ThreadID.tidNum());
+    (L.releaseCmlLock lock (ThreadID.tidNum);
     MLtonThread.atomicEnd ())
 
   val fetchAndAdd = PacmlFFI.fetchAndAdd

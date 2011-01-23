@@ -1,8 +1,8 @@
 structure Scheduler : SCHEDULER =
 struct
 
-  structure Assert = LocalAssert(val assert = false)
-  structure Debug = LocalDebug(val debug = false)
+  structure Assert = LocalAssert(val assert = true)
+  structure Debug = LocalDebug(val debug = true)
 
   open Critical
 
@@ -234,29 +234,31 @@ struct
            end)
 
   fun switchToNext (f : 'a thread -> unit) = (atomicBegin (); atomicSwitchToNext (f))
+  fun atomicSwitchForWB f =
+    MT.atomicSwitchForWB (fn (t: MT.Runnable.t) =>
+    let
+      val tid = TID.getCurThreadId ()
+      val _ = TID.mark tid
+      val RHOST (tid', t') = f (RHOST (tid, t))
+      val _ = TID.setCurThreadId tid'
+    in
+      t'
+    end)
 
   fun preemptOnWriteBarrier () =
-    if (MT.amSwitching (PacmlFFI.processorNumber ())) then
-      (debug' "preemptOnWriteBarrier: preemption skipped")
-    else
-      let
-        val () = debug' "preemptOnWriteBarrier(1)"
-        val atomicState = getAtomicState ()
-        val () = setAtomicState (1)
-        val () = atomicSwitchToNext (fn t =>
-                                      let
-                                        val rt = PT.prep t
-                                        val rhost =
-                                          case rt of
-                                               H_RTHRD (rhost) => rhost
-                                             | _ => raise Fail "P_RTHRD not implemented"
-                                        val RHOST (tid, rdyThrd) = rhost
-                                        val _ = MT.threadStatus rdyThrd
-                                      in
-                                        PacmlPrim.addToPreemptOnWBA (rhost)
-                                      end)
-        val () = setAtomicState (atomicState)
-      in
-        ()
-      end
+  let
+    val () = debug' "preemptOnWriteBarrier"
+    val atomicState = getAtomicState ()
+    val () = setAtomicState (1)
+    val () = atomicSwitchForWB
+              (fn rt =>
+                let
+                  val _ = PacmlPrim.addToPreemptOnWBA (rt)
+                in
+                  next ()
+                end)
+    val () = setAtomicState (atomicState)
+  in
+      ()
+  end
 end
