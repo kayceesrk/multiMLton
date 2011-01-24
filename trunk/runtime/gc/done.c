@@ -204,13 +204,12 @@ static inline void initStat (struct GC_cumulativeStatistics* cumul) {
   timevalZero (&cumul->tv_rt);
 }
 
-void GC_done (GC_state s) {
+void GC_summaryWrite (void) {
+  GC_state s = pthread_getspecific (gcstate_key);
   FILE *out;
   out = stderr;
-  minorGC (s);
   char fname[40];
   struct GC_cumulativeStatistics cumul;
-
   if (s->controls->summary) {
     initStat (&cumul);
     if (s->controls->summary == SUMMARY_INDIVIDUAL) {
@@ -292,6 +291,12 @@ void GC_done (GC_state s) {
     summaryWrite (s, &cumul, out, TRUE);
     fclose_safe (out);
   }
+}
+
+void GC_done (GC_state s) {
+  minorGC (s);
+  GC_summaryWrite ();
+
   releaseHeap (s, s->heap);
   releaseHeap (s, s->secondaryLocalHeap);
 }

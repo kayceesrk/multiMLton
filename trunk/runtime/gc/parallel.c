@@ -95,9 +95,9 @@ void Parallel_maybeWaitForGC (void) {
   //and get preempted on a write. We force a GC if we fail on lock acquistion
   //and find a preempted thread. All spinning threads get preempted to secondary
   //scheduler queue. Hence, if the primary scheduler queue is empty, we trigger gc.
-  if (s->preemptOnWBASize > 0 && GC_sqIsEmptyPrio (0)) {
-    forceLocalGC (s);
-  }
+  //if (s->preemptOnWBASize > 0 && GC_sqIsEmptyPrio (0)) {
+  //  forceLocalGC (s);
+  //}
 }
 
 //struct rusage ru_lock;

@@ -170,6 +170,8 @@ struct
                 end)
       end
 
+  val () = Lock.yieldForSpin := yield
+
   datatype proc_spec = ANY_PROC | ON_PROC of int
 
   fun spawnHostHelper (f, ps) =

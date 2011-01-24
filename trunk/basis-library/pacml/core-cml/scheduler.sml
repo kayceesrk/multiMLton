@@ -162,14 +162,13 @@ struct
     debug' ("Scheduler."^msg);
     case PT.getThreadType () of
          HOST =>
-           MT.atomicSwitch (fn t =>
+           MT.atomicSwitchAux (fn t =>
            let
              val tid = TID.getCurThreadId ()
              val _ = TID.mark tid
              val RHOST (tid', t') = f (H_THRD(tid, t))
-             val () = TID.setCurThreadId tid'
            in
-             t'
+             (t', fn () => TID.setCurThreadId tid')
            end)
        | PARASITE =>
            let
@@ -261,7 +260,9 @@ struct
                 end)
     val () = setAtomicState (atomicState)
     val tid' = TID.getCurThreadId ()
-    val _ = Assert.assert' ("TID", fn () => TID.sameTid (tid, tid'))
+    val _ = Assert.assert' ("preemptOnWriteBarreier: TIDs dont match ("
+                            ^(TID.tidToString tid)^", "^(TID.tidToString tid')^")"
+                            , fn () => TID.sameTid (tid, tid'))
   in
       ()
   end

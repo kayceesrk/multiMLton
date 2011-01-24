@@ -15,5 +15,6 @@ struct
   val vCompareAndSwap = _import "Parallel_vCompareAndSwap": Int32.int ref * Int32.int * Int32.int -> Int32.int;
   val wait = _import "Parallel_wait": unit -> unit;
   val wakeUp = _import "Parallel_wakeUpThread": Int32.int * Int32.int -> unit;
+  val summaryWrite = _import "GC_summaryWrite": unit -> unit;
 
 end

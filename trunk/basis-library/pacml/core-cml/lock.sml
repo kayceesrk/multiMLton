@@ -1,4 +1,4 @@
-structure Lock :> LOCK =
+structure Lock :> LOCK_EXTRA =
 struct
 
   open Critical
@@ -15,6 +15,8 @@ struct
         l
       end
 
+    val yieldForSpin = ref (fn () => ())
+
     fun maybePreempt () = ((if not (MLtonThread.amSwitching (pN ())) then
                             (let
                               val atomicState = getAtomicState ()
@@ -27,6 +29,7 @@ struct
                                *)
                               val () = setAtomicState (1)
                               val () = atomicEnd ()
+                              val () = (!yieldForSpin) ()
                               val () = setAtomicState (atomicState)
                             in ()
                             end)

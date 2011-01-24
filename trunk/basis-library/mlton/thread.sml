@@ -119,7 +119,7 @@ in
    fun mark p = Array.update (switching, p, (getNesting p) + 1)
    fun unmark p = Array.update (switching, p, (getNesting p) - 1) *)
 
-   fun 'a atomicSwitch (f: 'a t -> Runnable.t): 'a =
+   fun 'a atomicSwitchAux (f: 'a t -> (Runnable.t * (unit -> unit))): 'a =
       let val proc = procNum () in
       (* Atomic 1 *)
       (* if (getNesting proc) > 0 then
@@ -137,7 +137,7 @@ in
                           (* ; unmark proc *)
                           ; atomicEnd ()
                           ; raise e)
-            val (T t': Runnable.t) = f (T t) handle e => fail e
+            val (T t': Runnable.t, cleanup) = f (T t) handle e => fail e
             val primThread =
                case !t' before t' := Dead of
                   Dead => fail (Fail "switch to a Dead thread")
@@ -145,15 +145,19 @@ in
                 | New g => (atomicBegin (); newThread g)
                 | Paused (f, t) => (f (fn () => ()); t)
 
+            val () = cleanup ()
+            val _ = print "Before atomicSwitchForWB.Prim.switchTo"
             (* val _ = unmark proc *)
             (* Atomic 1 when Paused/Interrupted, Atomic 2 when New *)
-            val _ = print "atomicSwitch: Before Prim.switchTo\n"
             val _ = Prim.switchTo primThread (* implicit atomicEnd() *)
             (* Atomic 0 when resuming *)
          in
             !r ()
          end
       end
+
+   fun 'a atomicSwitch (f: 'a t -> Runnable.t): 'a =
+     atomicSwitchAux (fn v => (f v, fn () => ()))
 
    fun switch f =
       (atomicBegin ()
@@ -168,11 +172,10 @@ in
             Dead => raise Fail "switch to a Dead thread"
           | Interrupted t => t
           | New g => (atomicBegin (); newThread g)
-          | Paused (f, t) => (print "atomicSwitchForWB.Paused\n";
-                              f (fn () => ()); t)
+          | Paused (f, t) => (f (fn () => ()); t)
 
      val _ = cleanup ()
-     val _ = print "atomicSwitchForWB: Before Prim.switchTo\n"
+     val _ = print "Before atomicSwitchForWB.Prim.switchTo"
    in
      (* Atomic 1 when Paused/Interrupted, Atomic 2 when New *)
      Prim.switchTo primThread (* implicit atomicEnd() *)
