@@ -236,7 +236,7 @@ struct
   fun atomicSwitchForWB f =
     MT.atomicSwitchForWB (fn (t: MT.Runnable.t) =>
     let
-      val () = print "Scheduler.atomicSwitchForWB(1)"
+      val () = PacmlFFI.noop ()
       val tid = TID.getCurThreadId ()
       val _ = TID.mark tid
       val RHOST (tid', t') = f (RHOST (tid, t))
