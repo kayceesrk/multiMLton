@@ -1,8 +1,8 @@
 structure Scheduler : SCHEDULER =
 struct
 
-  structure Assert = LocalAssert(val assert = true)
-  structure Debug = LocalDebug(val debug = true)
+  structure Assert = LocalAssert(val assert = false)
+  structure Debug = LocalDebug(val debug = false)
 
   open Critical
 
@@ -236,11 +236,10 @@ struct
   fun atomicSwitchForWB f =
     MT.atomicSwitchForWB (fn (t: MT.Runnable.t) =>
     let
-      val () = debug' "Scheduler.atomicSwitchForWB(1)"
+      val () = print "Scheduler.atomicSwitchForWB(1)"
       val tid = TID.getCurThreadId ()
       val _ = TID.mark tid
       val RHOST (tid', t') = f (RHOST (tid, t))
-      val () = debug' "Scheduler.atomicSwitchForWB(2)"
     in
       (t', fn () => TID.setCurThreadId (tid'))
     end)

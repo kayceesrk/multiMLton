@@ -146,7 +146,7 @@ in
                 | Paused (f, t) => (f (fn () => ()); t)
 
             val () = cleanup ()
-            val _ = print "Before atomicSwitchForWB.Prim.switchTo"
+            (* val _ = print "Before atomicSwitchForWB.Prim.switchTo" *)
             (* val _ = unmark proc *)
             (* Atomic 1 when Paused/Interrupted, Atomic 2 when New *)
             val _ = Prim.switchTo primThread (* implicit atomicEnd() *)
@@ -175,7 +175,7 @@ in
           | Paused (f, t) => (f (fn () => ()); t)
 
      val _ = cleanup ()
-     val _ = print "Before atomicSwitchForWB.Prim.switchTo"
+     (* val _ = print "Before atomicSwitchForWB.Prim.switchTo" *)
    in
      (* Atomic 1 when Paused/Interrupted, Atomic 2 when New *)
      Prim.switchTo primThread (* implicit atomicEnd() *)

@@ -1,7 +1,7 @@
 structure ThreadID : THREAD_ID_EXTRA =
 struct
-  structure Assert = LocalAssert(val assert = true)
-  structure Debug = LocalDebug(val debug = true)
+  structure Assert = LocalAssert(val assert = false)
+  structure Debug = LocalDebug(val debug = false)
 
   open Critical
   structure R = RepTypes
@@ -100,11 +100,8 @@ struct
   fun setCurThreadId (tid as TID {processorId, ...}) =
   let
     val procNum = PacmlFFI.processorNumber ()
-    val tid = PacmlPrim.move (tid, false, true)
-    val () = debug' "setCurThreadID: before"
     val () = Array.update (curTid, PacmlFFI.processorNumber (), tid)
-  in
-    debug' "setCurThreadID: after"
+  in ()
   end
 
   fun tidNum () = tidToInt (getCurThreadId ())
