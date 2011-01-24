@@ -27,7 +27,7 @@ signature MLTON =
       val safe: bool
 (*      val serialize: 'a -> Word8Vector.vector *)
       val share: 'a -> unit
-      val move: 'a -> unit
+      val move: 'a -> 'a
       val shareAll: unit -> unit
       val size: 'a -> int
 

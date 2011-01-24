@@ -327,14 +327,14 @@ structure CFunction =
             writesStackTop = false}
 
       fun move t =
-         T {args = Vector.new3 (Type.gcState (), t, Type.bool),
+         T {args = Vector.new4 (Type.gcState (), t, Type.bool, Type.bool),
             bytesNeeded = NONE,
             convention = Cdecl,
             ensuresBytesFree = false,
             mayGC = true,
             maySwitchThreads = false,
             modifiesFrontier = true,
-            prototype = (Vector.new3 (CType.gcState, CType.cpointer, CType.bool),
+            prototype = (Vector.new4 (CType.gcState, CType.cpointer, CType.bool, CType.bool),
                          SOME CType.cpointer),
             readsStackTop = true,
             return = t,
@@ -1297,8 +1297,9 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                    statements = Vector.new0 (),
                                    transfer =
                                     Transfer.CCall
-                                    {args = Vector.new3 (GCState,
+                                    {args = Vector.new4 (GCState,
                                                          rhsAddr,
+                                                         Operand.bool false,
                                                          Operand.bool false),
                                     func = CFunction.move returnTy,
                                     return = SOME returnFromHandler}}

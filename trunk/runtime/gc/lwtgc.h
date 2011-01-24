@@ -8,7 +8,9 @@
 
 #if (defined (MLTON_GC_INTERNAL_BASIS))
 
-PRIVATE pointer GC_move (GC_state s, pointer object, bool forceStackForwarding);
+PRIVATE pointer GC_move (GC_state s, pointer object,
+                         bool forceStackForwarding,
+                         bool skipFixForwardingPointers);
 PRIVATE void GC_addToMoveOnWBA (GC_state s, pointer p);
 PRIVATE void GC_addToPreemptOnWBA (GC_state s, pointer p);
 

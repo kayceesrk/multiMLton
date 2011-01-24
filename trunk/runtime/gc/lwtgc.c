@@ -196,7 +196,9 @@ inline void moveTransitiveClosure (GC_state s, objptr* opp,
   assert (!s->forwardState.rangeListLast);
 }
 
-pointer GC_move (GC_state s, pointer p, bool forceStackForwarding) {
+pointer GC_move (GC_state s, pointer p,
+                 bool forceStackForwarding,
+                 bool skipFixForwardingPointers) {
   if (!(s->heap->start <= p and p < s->heap->start + s->heap->size)) {
     if (DEBUG_LWTGC)
       fprintf (stderr, "GC_move: pointer "FMTPTR" not in heap\n", (uintptr_t)p);
@@ -219,13 +221,15 @@ pointer GC_move (GC_state s, pointer p, bool forceStackForwarding) {
   objptr* pOp = &op;
   moveTransitiveClosure (s, pOp, forceStackForwarding, FALSE);
 
-  /* Force a garbage collection. Essential to fix the forwarding pointers from
-   * the previous step.
-   * NOTE: Major GC needs to be forced only if moving objects from the major heap. */
-  if (not s->canMinor || TRUE /* Force Major */)
-    fixForwardingPointers (s, TRUE);
-  else
-    fixForwardingPointers (s, TRUE);
+  if (!skipFixForwardingPointers) {
+    /* Force a garbage collection. Essential to fix the forwarding pointers from
+     * the previous step.
+     * NOTE: Major GC needs to be forced only if moving objects from the major heap. */
+    if (not s->canMinor || TRUE /* Force Major */)
+      fixForwardingPointers (s, TRUE);
+    else
+      fixForwardingPointers (s, TRUE);
+  }
 
   LEAVE_LOCAL0 (s);
 

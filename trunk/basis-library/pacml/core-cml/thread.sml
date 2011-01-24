@@ -53,7 +53,8 @@ struct
           val shutdownRhost = PT.getRunnableHost (PT.prepFn (!SH.shutdownHook, fn () => OS.Process.success))
         in
           if (PacmlFFI.processorNumber () = 0) then
-            (SH.pauseHook := (fn _ => (ignore (SH.deathTrap ()); !SH.pauseHook(0, NONE)));
+            (SH.pauseHook := (fn _ => (ignore (SH.deathTrap ());
+                                       raise Fail "generalExit.Should not reach here"));
              shutdownRhost)
           else
             (S.atomicReadyHost shutdownRhost;

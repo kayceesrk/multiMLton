@@ -101,7 +101,7 @@ local
                   end
          end
 
-      val () = Primitive.MLton.move (base, true)
+      val _ = Primitive.MLton.move (base, true, false)
    in
       fun newThread (f: unit -> unit) : Prim.thread =
          let
@@ -147,6 +147,7 @@ in
 
             (* val _ = unmark proc *)
             (* Atomic 1 when Paused/Interrupted, Atomic 2 when New *)
+            val _ = print "atomicSwitch: Before Prim.switchTo\n"
             val _ = Prim.switchTo primThread (* implicit atomicEnd() *)
             (* Atomic 0 when resuming *)
          in
@@ -158,22 +159,24 @@ in
       (atomicBegin ()
        ; atomicSwitch f)
 
-   fun atomicSwitchForWB (f) =
+   fun atomicSwitchForWB f =
    let
-     val rt : Runnable.t = T (ref (Interrupted (Prim.current gcState)))
-     val (T t' : Runnable.t) = f (rt)
+     val rt : Runnable.t = T (ref (Paused (fn x => (), Prim.current gcState)))
+     val (T t' : Runnable.t, cleanup) = f (rt)
      val primThread =
-       case !t' of
+       case !t' before t' := Dead of
             Dead => raise Fail "switch to a Dead thread"
           | Interrupted t => t
           | New g => (atomicBegin (); newThread g)
-          | Paused (f, t) => (f (fn () => ()); t)
+          | Paused (f, t) => (print "atomicSwitchForWB.Paused\n";
+                              f (fn () => ()); t)
 
-     (* Atomic 1 when Paused/Interrupted, Atomic 2 when New *)
-     val _ = Prim.switchTo primThread (* implicit atomicEnd() *)
-     (* Atomic 0 when resuming *)
+     val _ = cleanup ()
+     val _ = print "atomicSwitchForWB: Before Prim.switchTo\n"
    in
-     ()
+     (* Atomic 1 when Paused/Interrupted, Atomic 2 when New *)
+     Prim.switchTo primThread (* implicit atomicEnd() *)
+     (* Atomic 0 when resuming *)
    end
 
 end

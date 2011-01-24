@@ -117,8 +117,8 @@ struct
                         val _ = debug' "Scheduler.unwrap.HOST(1)"
                         val tid = TID.getCurThreadId ()
                         val RHOST (tid', host') = f (RHOST (tid, host))
-                        val () = TID.setCurThreadId tid'
                         val _ = debug' "Scheduler.unwrap.HOST(2)"
+                        val () = TID.setCurThreadId tid'
                       in
                         host'
                       end
@@ -167,7 +167,7 @@ struct
              val tid = TID.getCurThreadId ()
              val _ = TID.mark tid
              val RHOST (tid', t') = f (H_THRD(tid, t))
-             val _ = TID.setCurThreadId tid'
+             val () = TID.setCurThreadId tid'
            in
              t'
            end)
@@ -237,17 +237,19 @@ struct
   fun atomicSwitchForWB f =
     MT.atomicSwitchForWB (fn (t: MT.Runnable.t) =>
     let
+      val () = debug' "Scheduler.atomicSwitchForWB(1)"
       val tid = TID.getCurThreadId ()
       val _ = TID.mark tid
       val RHOST (tid', t') = f (RHOST (tid, t))
-      val _ = TID.setCurThreadId tid'
+      val () = debug' "Scheduler.atomicSwitchForWB(2)"
     in
-      t'
+      (t', fn () => TID.setCurThreadId (tid'))
     end)
 
   fun preemptOnWriteBarrier () =
   let
     val () = debug' "preemptOnWriteBarrier"
+    val tid = TID.getCurThreadId ()
     val atomicState = getAtomicState ()
     val () = setAtomicState (1)
     val () = atomicSwitchForWB
@@ -258,6 +260,8 @@ struct
                   next ()
                 end)
     val () = setAtomicState (atomicState)
+    val tid' = TID.getCurThreadId ()
+    val _ = Assert.assert' ("TID", fn () => TID.sameTid (tid, tid'))
   in
       ()
   end

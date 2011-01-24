@@ -135,9 +135,6 @@ struct
           val () = SH.pauseHook := pauseHook
           val () = debug' "Main(0)"
           val () = ignore (Thread.spawnHost (fn ()=> (lateInit (); initialProc ())))
-          val () = debug' "Main(1)"
-          val () = debug' "Main(2)"
-          val () = debug' "Main(3)"
         in
             ()
         end)
