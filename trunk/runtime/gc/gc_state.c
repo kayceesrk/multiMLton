@@ -460,7 +460,7 @@ void GC_setGCSignalPending (__attribute__ ((unused)) GC_state *gs, bool b) {
   s->signalsInfo.gcSignalPending = b;
 }
 
-void GC_print (void) {
+void GC_print (int i) {
   GC_state s = pthread_getspecific (gcstate_key);
-  printf ("GC_print [%d]\n", s->procId);
+  printf ("GC_print (%d)[%d]\n", i, s->procId);
 }

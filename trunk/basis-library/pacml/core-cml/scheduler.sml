@@ -236,12 +236,14 @@ struct
   fun atomicSwitchForWB f =
     MT.atomicSwitchForWB (fn (t: MT.Runnable.t) =>
     let
-      val () = PacmlFFI.noop ()
+      val _ = MT.threadStatus t
+      (* val _ = print "WHY?" *)
       val tid = TID.getCurThreadId ()
       val _ = TID.mark tid
       val RHOST (tid', t') = f (RHOST (tid, t))
+      val _ = MT.threadStatus t'
     in
-      (t', fn () => TID.setCurThreadId (tid'))
+      (t', fn () => TID.setCurThreadIdSpl (tid'))
     end)
 
   fun preemptOnWriteBarrier () =

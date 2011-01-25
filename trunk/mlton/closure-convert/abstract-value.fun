@@ -6,7 +6,7 @@
  * See the file MLton-LICENSE for details.
  *)
 
-functor AbstractValue (S: ABSTRACT_VALUE_STRUCTS): ABSTRACT_VALUE = 
+functor AbstractValue (S: ABSTRACT_VALUE_STRUCTS): ABSTRACT_VALUE =
 struct
 
 open S
@@ -94,8 +94,8 @@ structure LambdaNode:
          end
 
       val send =
-         Trace.trace2 
-         ("AbstractValue.LambdaNode.send", 
+         Trace.trace2
+         ("AbstractValue.LambdaNode.send",
           layout, Lambdas.layout, Unit.layout)
          send
 
@@ -148,10 +148,10 @@ structure LambdaNode:
 
 (*
       val unify =
-         Trace.trace2 
-         ("AbstractValue.LambdaNode.unify", layout, layout, Unit.layout) 
+         Trace.trace2
+         ("AbstractValue.LambdaNode.unify", layout, layout, Unit.layout)
          unify
-*)       
+*)
    end
 
 structure UnaryTycon =
@@ -304,7 +304,7 @@ fun deArray v =
     | _ => Error.bug "AbstractValue.deArray"
 
 fun lambda (l: Sxml.Lambda.t, t: Type.t): t =
-   new (Lambdas (LambdaNode.lambda l), t)       
+   new (Lambdas (LambdaNode.lambda l), t)
 
 fun unify (v, v') =
    if Dset.equals (v, v')
@@ -382,7 +382,7 @@ val {get = serialValue: Type.t -> t, ...} =
    Property.get (Type.plist, Property.initFun fromType)
 
 fun primApply {prim: Type.t Prim.t, args: t vector, resultTy: Type.t}: t =
-   let 
+   let
       fun result () = fromType resultTy
       fun typeError () =
          (Control.message
@@ -443,7 +443,7 @@ fun primApply {prim: Type.t Prim.t, args: t vector, resultTy: Type.t}: t =
        | Ref_ref =>
             let
                val r = result ()
-               val _ = 
+               val _ =
                   case dest r of
                      Ref x => coerce {from = oneArg (), to = x} (* unify (oneArg (), x) *)
                    | Type _ => ()
@@ -451,6 +451,14 @@ fun primApply {prim: Type.t Prim.t, args: t vector, resultTy: Type.t}: t =
             in
                r
             end
+       | MLton_move =>
+           let
+             val r = result ()
+             val a = (#1 (threeArgs ()))
+             val () = coerce {from = a, to = r}
+           in
+             r
+           end
        | Array_toVector =>
             let val r = result ()
             in (case (dest (oneArg ()), dest r) of

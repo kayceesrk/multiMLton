@@ -77,6 +77,7 @@ local
    val numProcessors = PacmlFFI.numberOfProcessors
    val procNum = PacmlFFI.processorNumber
    local
+
       (* create one reference per processor *)
       val func: (unit -> unit) option Array.array =
           Array.tabulate (numProcessors, fn _ => NONE)
@@ -101,18 +102,26 @@ local
                   end
          end
 
-      val _ = Primitive.MLton.move (base, true, false)
+      val _ = Primitive.MLton.move (ref base, true, false)
    in
-      fun newThread (f: unit -> unit) : Prim.thread =
+      fun newThreadOption (f: (unit -> unit) option) : Prim.thread =
          let
             (* Atomic 2 *)
-            val () = Array.update (func, procNum (), SOME f)
+            val () = Array.update (func, procNum (), f)
          in
             Prim.copy base
          end
+      fun newThread (f) = newThreadOption (SOME f)
    end
    (* val switching = Array.tabulate (numProcessors, fn _ => 0) *)
 in
+   fun threadStatus (T t : Runnable.t) =
+    case !t of
+        Dead => "Dead"
+      | Interrupted _ => "Interrupted"
+      | New _ => "New"
+      | Paused _ => "Paused"
+
    fun amSwitching p = false
    (* fun getNesting p = Array.unsafeSub (switching, p)
    fun amSwitching p = (getNesting p) > 0
@@ -146,7 +155,7 @@ in
                 | Paused (f, t) => (f (fn () => ()); t)
 
             val () = cleanup ()
-            (* val _ = print "Before atomicSwitchForWB.Prim.switchTo" *)
+            (* val _ = print "Before atomicSwitch.Prim.switchTo" *)
             (* val _ = unmark proc *)
             (* Atomic 1 when Paused/Interrupted, Atomic 2 when New *)
             val _ = Prim.switchTo primThread (* implicit atomicEnd() *)
@@ -163,16 +172,25 @@ in
       (atomicBegin ()
        ; atomicSwitch f)
 
-   fun atomicSwitchForWB f =
+   val globalNoopThunk : unit -> unit = !(Primitive.MLton.move (ref (fn () => ()), false, false))
+   (* val globalDead = (Primitive.MLton.move (Dead, false, false)) *)
+
+   fun 'a atomicSwitchForWB f =
    let
-     val rt : Runnable.t = T (ref (Paused (fn x => (), Prim.current gcState)))
-     val (T t' : Runnable.t, cleanup) = f (rt)
+     val rt : Runnable.t = T (ref (Interrupted (Prim.current gcState)))
+     val (newRt, cleanup) = f (rt)
+     val (T t' : Runnable.t) = newRt
      val primThread =
-       case !t' before t' := Dead of
+       case !t' (* before (t' := globalDead; PacmlFFI.ffiPrint (2)) *) of
             Dead => raise Fail "switch to a Dead thread"
           | Interrupted t => t
-          | New g => (atomicBegin (); newThread g)
-          | Paused (f, t) => (f (fn () => ()); t)
+          | New g => let
+                       val _ = atomicBegin ()
+                       val g' = Primitive.MLton.move (SOME g, false, true)
+                     in
+                      newThreadOption (g')
+                     end
+          | Paused (f, t) => (f (globalNoopThunk); t)
 
      val _ = cleanup ()
      (* val _ = print "Before atomicSwitchForWB.Prim.switchTo" *)
@@ -315,12 +333,6 @@ in
       end
 end
 
-fun threadStatus (T t : Runnable.t) =
-  case !t of
-       Dead => "Dead"
-     | Interrupted _ => "Interrupted"
-     | New _ => "New"
-     | Paused _ => "Paused"
 
 
 end

@@ -1533,6 +1533,7 @@ fun ('a, 'b) extractTargs (prim: 'b t,
                                        deWeak: 'a -> 'a}}) =
    let
       val one = Vector.new1
+      val two = Vector.new2
       fun arg i = Vector.sub (args, i)
       datatype z = datatype t
    in

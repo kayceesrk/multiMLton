@@ -25,6 +25,7 @@ sig
   include THREAD_ID where type thread_id = thread_id'
 
   val setCurThreadId : thread_id -> unit
+  val setCurThreadIdSpl : thread_id -> unit
 
   val new : unit -> thread_id
   val newOnProc : int -> thread_id

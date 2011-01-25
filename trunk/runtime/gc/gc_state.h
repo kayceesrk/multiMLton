@@ -157,7 +157,7 @@ PRIVATE pointer GC_getSavedThread (GC_state *gs);
 PRIVATE void GC_setSavedThread (GC_state *gs, pointer p);
 PRIVATE void GC_setSignalHandlerThread (GC_state *gs, pointer p);
 
-PRIVATE void GC_print (void);
+PRIVATE void GC_print (int);
 
 #endif /* (defined (MLTON_GC_INTERNAL_BASIS)) */
 

@@ -104,6 +104,14 @@ struct
   in ()
   end
 
+  fun setCurThreadIdSpl (tid as TID {processorId, ...}) =
+  let
+    val procNum = PacmlFFI.processorNumber ()
+    val tid = PacmlPrim.move (tid, false, true)
+    val () = Array.update (curTid, PacmlFFI.processorNumber (), tid)
+  in ()
+  end
+
   fun tidNum () = tidToInt (getCurThreadId ())
 
 end
