@@ -182,7 +182,7 @@ void duplicateWorld (GC_state d, GC_state s) {
   //set up local heap
   d->heap = (GC_heap) malloc (sizeof (struct GC_heap));
   initHeap (d, d->heap, LOCAL_HEAP);
-  createHeap (d, d->heap, 8192, 8192);
+  createHeap (d, d->heap, 1024 * 128, 1024 * 128);
   start = alignFrontier (d, d->heap->start);
   d->start = d->frontier = start;
   d->limitPlusSlop = d->heap->start + d->heap->size - GC_BONUS_SLOP;

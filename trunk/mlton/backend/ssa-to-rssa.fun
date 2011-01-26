@@ -316,7 +316,7 @@ structure CFunction =
             bytesNeeded = NONE,
             convention = Cdecl,
             ensuresBytesFree = false,
-            mayGC = true,
+            mayGC = false,
             maySwitchThreads = false,
             modifiesFrontier = false,
             prototype = (Vector.new2 (CType.gcState, CType.cpointer), NONE),
@@ -1687,6 +1687,8 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                            else
                                               simpleCCallWithGCState
                                               (CFunction.addToPreemptOnWBA (Operand.ty (a 0))))
+                               | Lwtgc_needPreemption =>
+                                   move (Operand.bool true)
                                | Lwtgc_isObjptrInLocalHeap =>
                                     (case toRtype (varType (arg 0)) of
                                         NONE => move (Operand.bool false)

@@ -459,10 +459,10 @@ int GC_init (GC_state s, int argc, char **argv) {
 
   s->schedulerQueue = NULL;
   s->schedulerLocks = NULL;
-  s->moveOnWBA = (objptr*) malloc (sizeof (pointer) * SIZE_WBA);
+  s->moveOnWBA = (objptr*) malloc (sizeof (pointer) * BUFFER_SIZE);
   s->moveOnWBASize = 0;
 
-  s->preemptOnWBA = (objptr*) malloc (sizeof (objptr) * SIZE_WBA);
+  s->preemptOnWBA = (objptr*) malloc (sizeof (objptr) * BUFFER_SIZE);
   s->preemptOnWBASize = 0;
 
   initIntInf (s);
@@ -573,10 +573,10 @@ void GC_duplicate (GC_state d, GC_state s) {
 
   d->schedulerLocks = NULL;
   d->schedulerQueue = NULL;
-  d->moveOnWBA = (objptr*) malloc (sizeof (pointer) * SIZE_WBA);
+  d->moveOnWBA = (objptr*) malloc (sizeof (pointer) * BUFFER_SIZE);
   d->moveOnWBASize = 0;
 
-  d->preemptOnWBA = (objptr*) malloc (sizeof (objptr) * SIZE_WBA);
+  d->preemptOnWBA = (objptr*) malloc (sizeof (objptr) * BUFFER_SIZE);
   d->preemptOnWBASize = 0;
 
   // XXX spoons better duplicate?

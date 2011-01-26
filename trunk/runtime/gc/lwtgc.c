@@ -213,7 +213,7 @@ pointer GC_move (GC_state s, pointer p,
   if (skipFixForwardingPointers)
     s->syncReason = SYNC_MISC;
   else
-    s->syncReason = SYNC_FORCE;
+    s->syncReason = SYNC_LIFT;
 
   ENTER_LOCAL0 (s);
 
@@ -328,7 +328,7 @@ void liftAllObjptrsInMoveOnWBA (GC_state s) {
 void GC_addToMoveOnWBA (GC_state s, pointer p) {
   s->cumulativeStatistics->numMoveWB++;
   ++(s->moveOnWBASize);
-  if (s->moveOnWBASize > SIZE_WBA)
+  if (s->moveOnWBASize > BUFFER_SIZE)
     die ("moveOnWBA overflow");
   s->moveOnWBA[s->moveOnWBASize - 1] = pointerToObjptr (p, s->heap->start);
 }
@@ -338,7 +338,7 @@ void GC_addToPreemptOnWBA (GC_state s, pointer p) {
   s->cumulativeStatistics->numReadyWB += sizeofSchedulerQueue (s);
   objptr op = pointerToObjptr (p, s->heap->start);
   ++(s->preemptOnWBASize);
-  if (s->preemptOnWBASize > SIZE_WBA)
+  if (s->preemptOnWBASize > BUFFER_SIZE)
     die ("preemptOnWBA overflow");
   s->preemptOnWBA[s->preemptOnWBASize - 1] = op;
 }

@@ -1064,6 +1064,25 @@ fun closureConvert
                                       Dexp.falsee
                                     end
                                  end
+                             | Lwtgc_needPreemption =>
+                                 let
+                                   val v = varExpInfo (arg 1)
+                                   val ty = valueType (VarInfo.value v)
+                                 in
+                                  if (Type.maybeObjptr ty) then
+                                    let
+                                      val r = varExpInfo (arg 0)
+                                      val y = varExpInfo (arg 1)
+                                      val v = Value.deRef (VarInfo.value r)
+                                    in
+                                      primApp (v1 (valueType v),
+                                                v2 (convertVarInfo r,
+                                                    coerce (convertVarInfo y,
+                                                            VarInfo.value y, v)))
+                                    end
+                                  else
+                                      Dexp.falsee
+                                 end
                              | MLton_serialize =>
                                   let
                                      val y = varExpInfo (arg 0)

@@ -8,8 +8,6 @@
 
 #if (defined (MLTON_GC_INTERNAL_TYPES))
 
-#define BUFFER_SIZE 1024
-
 /**< Circular Buffer Types */
 typedef objptr KeyType;
 

@@ -83,6 +83,7 @@ datatype 'a t =
  | IntInf_toVector (* ssa to rssa *)
  | IntInf_toWord (* ssa to rssa *)
  | IntInf_xorb (* ssa to rssa *)
+ | Lwtgc_needPreemption
  | Lwtgc_addToMoveOnWBA
  | Lwtgc_addToPreemptOnWBA
  | Lwtgc_isObjptr
@@ -286,6 +287,7 @@ fun toString (n: 'a t): string =
        | IntInf_toVector => "IntInf_toVector"
        | IntInf_toWord => "IntInf_toWord"
        | IntInf_xorb => "IntInf_xorb"
+       | Lwtgc_needPreemption => "Lwtgc_needPreemption"
        | Lwtgc_addToMoveOnWBA => "Lwtgc_addToMoveOnWBA"
        | Lwtgc_addToPreemptOnWBA => "Lwtgc_addToPreemptOnWBA"
        | Lwtgc_isObjptr => "Lwtgc_isObjptr"
@@ -446,6 +448,7 @@ val equals: 'a t * 'a t -> bool =
     | (IntInf_toVector, IntInf_toVector) => true
     | (IntInf_toWord, IntInf_toWord) => true
     | (IntInf_xorb, IntInf_xorb) => true
+    | (Lwtgc_needPreemption, Lwtgc_needPreemption) => true
     | (Lwtgc_addToMoveOnWBA, Lwtgc_addToMoveOnWBA) => true
     | (Lwtgc_addToPreemptOnWBA, Lwtgc_addToPreemptOnWBA) => true
     | (Lwtgc_isObjptr, Lwtgc_isObjptr) => true
@@ -629,6 +632,7 @@ val map: 'a t * ('a -> 'b) -> 'b t =
     | IntInf_toVector => IntInf_toVector
     | IntInf_toWord => IntInf_toWord
     | IntInf_xorb => IntInf_xorb
+    | Lwtgc_needPreemption => Lwtgc_needPreemption
     | Lwtgc_addToMoveOnWBA => Lwtgc_addToMoveOnWBA
     | Lwtgc_addToPreemptOnWBA => Lwtgc_addToPreemptOnWBA
     | Lwtgc_isObjptr => Lwtgc_isObjptr
@@ -897,6 +901,7 @@ val kind: 'a t -> Kind.t =
        | IntInf_toVector => Functional
        | IntInf_toWord => Functional
        | IntInf_xorb => Functional
+       | Lwtgc_needPreemption => DependsOnState
        | Lwtgc_addToMoveOnWBA => SideEffect
        | Lwtgc_addToPreemptOnWBA => SideEffect
        | Lwtgc_isObjptr => Functional
@@ -1395,6 +1400,7 @@ fun 'a checkApp (prim: 'a t,
             noTargs (fn () => (oneArg intInf, vector bigIntInfWord))
        | IntInf_toWord => noTargs (fn () => (oneArg intInf, smallIntInfWord))
        | IntInf_xorb => intInfBinary ()
+       | Lwtgc_needPreemption => oneTarg (fn t => (twoArgs (reff t, t), bool))
        | Lwtgc_addToMoveOnWBA => oneTarg (fn t => (oneArg t, unit))
        | Lwtgc_addToPreemptOnWBA => oneTarg (fn t => (oneArg t, unit))
        | Lwtgc_isObjptr => oneTarg (fn t => (oneArg t, bool))
@@ -1549,6 +1555,7 @@ fun ('a, 'b) extractTargs (prim: 'b t,
        | CPointer_setObjptr => one (arg 2)
        | Exn_extra => one result
        | Exn_setExtendExtra => one (#2 (deArrow (arg 0)))
+       | Lwtgc_needPreemption => one (deRef (arg 0))
        | Lwtgc_addToMoveOnWBA => one (arg 0)
        | Lwtgc_addToPreemptOnWBA => one (arg 0)
        | Lwtgc_isObjptr => one (arg 0)

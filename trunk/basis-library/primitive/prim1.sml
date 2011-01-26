@@ -71,7 +71,8 @@ structure Ref =
    struct
       open Ref
 
-      val preemptFn = ref (fn () => ())
+      val ffiPrint = _import "GC_print": Int32.int -> unit;
+      val preemptFn = ref (fn () => ffiPrint (0))
       val deref = _prim "Ref_deref": 'a ref -> 'a;
       val refAssign = _prim "Ref_assign": 'a ref * 'a -> unit;
       val addToPreemptOnWBA = _prim "Lwtgc_addToPreemptOnWBA": 'a -> unit;

@@ -349,6 +349,9 @@ structure Exp =
 
       val unit = Tuple (Vector.new0 ())
 
+      val falsee = ConApp {con = Con.fromBool (true),
+                           args = Vector.new0 ()}
+
       fun foreachVar (e, v) =
          let
             fun vs xs = Vector.foreach (xs, v)

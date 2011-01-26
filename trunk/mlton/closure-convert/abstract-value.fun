@@ -428,6 +428,14 @@ fun primApply {prim: Type.t Prim.t, args: t vector, resultTy: Type.t}: t =
             in coerce {from = arg, to = serialValue (ty arg)}
                ; result ()
             end
+       | Lwtgc_needPreemption =>
+            let val (r, x) = twoArgs ()
+            in (case dest r of
+                   Ref x' => coerce {from = x, to = x'} (* unify (x, x') *)
+                 | Type _ => ()
+                 | _ => typeError ())
+               ; result ()
+            end
        | Ref_assign =>
             let val (r, x) = twoArgs ()
             in (case dest r of

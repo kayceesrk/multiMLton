@@ -8,7 +8,7 @@
 
 #if (defined (MLTON_GC_INTERNAL_FUNCS))
 
-#define SIZE_WBA 1024
+#define BUFFER_SIZE 1024
 
 static int processAtMLton (GC_state s, int argc,
                            char **argv, char **worldFile);

@@ -125,6 +125,21 @@ bool GC_sqIsEmptyPrio (int i) {
   return CircularBufferIsEmpty (cq);
 }
 
+static inline void moveAllThreadsFromSecToPrim (GC_state s) {
+  GC_sqAcquireLock (s, s->procId);
+
+  CircularBuffer* prim = getSubQ (s->schedulerQueue, 0);
+  CircularBuffer* sec = getSubQ (s->schedulerQueue, 1);
+  objptr op = (objptr)NULL;
+
+  while (!CircularBufferDeque (sec, &op)) {
+    assert (!CircularBufferIsFull(prim));
+    CircularBufferEnque (prim, op);
+  }
+
+  GC_sqReleaseLock (s, s->procId);
+}
+
 bool GC_sqIsEmpty (GC_state s) {
   bool resPrim = CircularBufferIsEmpty (s->schedulerQueue->primary);
   bool resSec = CircularBufferIsEmpty (s->schedulerQueue->secondary);
@@ -132,6 +147,8 @@ bool GC_sqIsEmpty (GC_state s) {
     /* Force a GC if we find that the primary scheduler queue is empty and
      * preemptOnWBA is not */
     forceLocalGC (s);
+    if (!resSec && FALSE)
+      moveAllThreadsFromSecToPrim (s);
     resPrim = FALSE;
   }
   return (resPrim && resSec);

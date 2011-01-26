@@ -74,10 +74,11 @@ bool hasHeapBytesFree (GC_state s, GC_heap h, size_t oldGen, size_t nursery) {
       (s->heap->start + s->heap->oldGenSize + oldGen <= s->heap->nursery) and
       (nursery <= (size_t)(s->limitPlusSlop - s->frontier));
     if (DEBUG_DETAILED)
-      fprintf (stderr, "%s = hasBytesFree (%s, %s)\n",
+      fprintf (stderr, "%s = hasBytesFree in localHeap (%s, %s) [%d]\n",
                boolToString (res),
                uintmaxToCommaString(oldGen),
-               uintmaxToCommaString(nursery));
+               uintmaxToCommaString(nursery),
+               s->procId);
   }
   else {
     total = s->sharedHeap->oldGenSize + oldGen + (s->canMinor ? 2 : 1) * (s->sharedHeap->frontier - s->sharedHeap->nursery);
@@ -85,7 +86,7 @@ bool hasHeapBytesFree (GC_state s, GC_heap h, size_t oldGen, size_t nursery) {
           (s->sharedHeap->start + s->sharedHeap->oldGenSize + oldGen <= s->sharedHeap->nursery) and
           (nursery <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier));
     if (DEBUG_DETAILED)
-      fprintf (stderr, "%s = hasBytesFree (%s, %s)\n",
+      fprintf (stderr, "%s = hasBytesFree in sharedHeap (%s, %s)\n",
               boolToString (res),
               uintmaxToCommaString(oldGen),
               uintmaxToCommaString(nursery));
