@@ -38,7 +38,7 @@ PRIVATE pointer GC_sqDeque (GC_state s, int queue);
 PRIVATE bool GC_sqIsEmpty (GC_state s);
 PRIVATE bool GC_sqIsEmptyPrio (int i);
 PRIVATE void GC_sqClean (GC_state s);
-int sizeofSchedulerQueue (GC_state s);
+int sizeofSchedulerQueue (GC_state s, int i);
 
 #endif /* (defined (MLTON_GC_INTERNAL_BASIS)) */
 

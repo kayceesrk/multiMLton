@@ -350,7 +350,11 @@ static inline void* initCumulativeStatistics (void) {
   cumul->numThreadsCreated = 0;
   cumul->numPreemptWB = 0;
   cumul->numMoveWB = 0;
-  cumul->numReadyWB = 0;
+  cumul->numReadyPrimWB = 0;
+  cumul->numReadySecWB = 0;
+  cumul->numPreemptGC  = 0;
+  cumul->numReadyPrimGC = 0;
+  cumul->numReadySecGC = 0;
   timevalZero (&cumul->ru_gc);
   rusageZero (&cumul->ru_gcCopying);
   rusageZero (&cumul->ru_gcMarkCompact);

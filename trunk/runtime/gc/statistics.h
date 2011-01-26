@@ -81,8 +81,12 @@ struct GC_cumulativeStatistics {
 
   uintmax_t numPreemptWB; /* # calls to addToPreemptOnWBA -- actual # threads preempted on write barrier */
   uintmax_t numMoveWB; /* # calls to addToMoveOnWBA -- ideal # threads that should have been preempted on write barrier */
-  uintmax_t numReadyWB; /* # ready threads on scheduler while a thread is preempted on write barrier */
+  uintmax_t numReadyPrimWB; /* # ready threads on prim scheduler Q while a thread is preempted on write barrier */
+  uintmax_t numReadySecWB; /* # ready threads on sec scheduler Q while a thread is preempted on write barrier */
 
+  uintmax_t numPreemptGC; /* # threads preempted on write barrier array before GC */
+  uintmax_t numReadyPrimGC; /* # ready threads on prim scheduler Q before GC */
+  uintmax_t numReadySecGC; /* # ready threads on sec scheduler Q before GC */
 };
 
 struct GC_lastMajorStatistics {

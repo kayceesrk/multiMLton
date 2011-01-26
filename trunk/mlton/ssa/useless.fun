@@ -527,7 +527,7 @@ fun useless (program: Program.t): Program.t =
                    | MLton_equal => Vector.foreach (args, deepMakeUseful)
                    | MLton_hash => Vector.foreach (args, deepMakeUseful)
                    | Ref_assign => coerce {from = arg 1, to = deref (arg 0)}
-                   | Lwtgc_needPreemption => coerce {from = arg 1, to = deref (arg 0)}
+                   (* | Lwtgc_needPreemption => coerce {from = arg 1, to = deref (arg 0)} *)
                    | Ref_deref => return (deref (arg 0))
                    | Ref_ref => coerce {from = arg 0, to = deref result}
                    | Vector_length => return (vectorLength (arg 0))
@@ -833,9 +833,9 @@ fun useless (program: Program.t): Program.t =
                                  | Ref_assign =>
                                       Value.isUseful
                                       (Value.deref (value (arg 0)))
-                                 | Lwtgc_needPreemption =>
+                                 (* | Lwtgc_needPreemption =>
                                       Value.isUseful
-                                      (Value.deref (value (arg 0)))
+                                      (Value.deref (value (arg 0))) *)
                                  | Word8Array_updateWord _ => array ()
                                  | _ => true
                                 end

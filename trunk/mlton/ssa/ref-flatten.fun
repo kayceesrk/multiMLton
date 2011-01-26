@@ -469,6 +469,7 @@ fun flatten (program as Program.T {datatypes, functions, globals, main}) =
              | MLton_move => dontFlatten ()
              | SQ_enque => dontFlatten ()
              | SQ_deque => dontFlatten ()
+             | Lwtgc_needPreemption => dontFlatten ()
              | Lwtgc_addToMoveOnWBA => dontFlatten ()
              | Lwtgc_addToPreemptOnWBA => dontFlatten ()
              | Lwtgc_isObjptr => dontFlatten ()

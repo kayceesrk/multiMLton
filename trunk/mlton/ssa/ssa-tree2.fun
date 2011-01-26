@@ -352,7 +352,8 @@ structure Type =
             val seqIndex = word (WordSize.seqIndex ())
          in
             case Prim.name prim of
-               Array_array =>
+               Lwtgc_needPreemption => true (* HACK *)
+             | Array_array =>
                   oneArg (fn n =>
                           equals (n, seqIndex) andalso isVector result)
              | Array_length =>

@@ -1121,6 +1121,7 @@ in
        IntInf_toVector,
        IntInf_toWord,
        IntInf_xorb,
+       Lwtgc_needPreemption,
        Lwtgc_addToMoveOnWBA,
        Lwtgc_addToPreemptOnWBA,
        Lwtgc_isObjptr,

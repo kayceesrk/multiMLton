@@ -1399,6 +1399,19 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                       in
                         maybeBindStmt (stmts, Operand.Var {var = cond, ty = Type.bool})
                       end
+                    fun needPreemption (refAddr, valAddr) =
+                      let
+                        val (stmts1, cond1) = addressInSharedHeap (refAddr)
+                        val (stmts2, cond2) = addressInLocalHeap (valAddr)
+                        val cond = Var.newNoname ()
+                        val stmt =
+                          [PrimApp {args = Vector.new2 (Operand.Var {var = cond1, ty = Type.bool},
+                                                        Operand.Var {var = cond2, ty = Type.bool}),
+                                    dst = SOME (cond, Type.bool),
+                                    prim = Prim.wordAndb (WordSize.bool)}]
+                      in
+                        maybeBindStmt (stmts1@stmts2@stmt, Operand.Var {var = cond, ty = Type.bool})
+                      end
                   in
                      case exp of
                         S.Exp.Const c => move (Const (convertConst c))
@@ -1688,7 +1701,12 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                               simpleCCallWithGCState
                                               (CFunction.addToPreemptOnWBA (Operand.ty (a 0))))
                                | Lwtgc_needPreemption =>
-                                   move (Operand.bool true)
+                                    (case toRtype (varType (arg 1)) of
+                                        NONE => move (Operand.bool false)
+                                      | SOME t =>
+                                           if not (Type.isObjptr t) then
+                                             move (Operand.bool false)
+                                           else needPreemption (varOp (arg 0), varOp (arg 1)))
                                | Lwtgc_isObjptrInLocalHeap =>
                                     (case toRtype (varType (arg 0)) of
                                         NONE => move (Operand.bool false)

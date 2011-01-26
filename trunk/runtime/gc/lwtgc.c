@@ -210,6 +210,9 @@ pointer GC_move (GC_state s, pointer p,
     return p;
   }
 
+  if (Proc_isInitialized (s))
+    skipFixForwardingPointers = TRUE;
+
   if (skipFixForwardingPointers)
     s->syncReason = SYNC_MISC;
   else
@@ -298,10 +301,18 @@ void moveEachObjptrInObject (GC_state s, pointer p) {
 }
 
 //XXX KC -- if only a minor GC is performed, then how can you fix up all
-// forwarding pointers. So, I guess this can only be done at the end of
-// a major GC, which will be triggered if the scheduler queue is empty
-// and the preemptOnWB queue is not empty
+//forwarding pointers. So, I guess this can only be done at the end of a major
+//GC, which will be triggered if the primary scheduler queue is empty and the
+//preemptOnWB queue is not empty
 void liftAllObjptrsInMoveOnWBA (GC_state s) {
+
+  s->cumulativeStatistics->numPreemptGC += s->preemptOnWBASize;
+  if (s->schedulerQueue) {
+    s->cumulativeStatistics->numReadyPrimGC += sizeofSchedulerQueue (s, 0);
+    s->cumulativeStatistics->numReadySecGC += sizeofSchedulerQueue (s, 1);
+  }
+
+
   if (DEBUG_LWTGC)
     fprintf (stderr, "liftAllObjptrsInMoveOnWBA: moveOnWBASize = %d [%d]\n",
              s->moveOnWBASize, s->procId);
@@ -335,7 +346,8 @@ void GC_addToMoveOnWBA (GC_state s, pointer p) {
 
 void GC_addToPreemptOnWBA (GC_state s, pointer p) {
   s->cumulativeStatistics->numPreemptWB++;
-  s->cumulativeStatistics->numReadyWB += sizeofSchedulerQueue (s);
+  s->cumulativeStatistics->numReadyPrimWB += sizeofSchedulerQueue (s, 0);
+  s->cumulativeStatistics->numReadySecWB += sizeofSchedulerQueue (s, 1);
   objptr op = pointerToObjptr (p, s->heap->start);
   ++(s->preemptOnWBASize);
   if (s->preemptOnWBASize > BUFFER_SIZE)

@@ -147,21 +147,51 @@ static void summaryWrite (GC_state s,
            uintmaxToCommaString (cumul->syncForLift));
   fprintf (out, "sync force: %s\n",
            uintmaxToCommaString (cumul->syncForce));
-  fprintf (out, "sync misc: %s\n",
+  fprintf (out, "num lift transitive closure but no gc: %s\n",
            uintmaxToCommaString (cumul->syncMisc));
 
   fprintf (out, "\n");
   fprintf (out, "num threads created: %s\n",
            uintmaxToCommaString (cumul->numThreadsCreated));
+
+  fprintf (out, "\n");
   fprintf (out, "num preempt on WB: %s\n",
            uintmaxToCommaString (cumul->numPreemptWB));
   fprintf (out, "num ideal preempt on WB: %s\n",
            uintmaxToCommaString (cumul->numMoveWB));
-  float avgAvail =
+  float avgAvailPrim =
       (cumul->numPreemptWB > 0)
-      ? ((float)cumul->numReadyWB/cumul->numPreemptWB)
+      ? ((float)cumul->numReadyPrimWB/cumul->numPreemptWB)
       : 0.0f;
+  float avgAvailSec =
+      (cumul->numPreemptWB > 0)
+      ? ((float)cumul->numReadySecWB/cumul->numPreemptWB)
+      : 0.0f;
+  float avgAvail = (avgAvailPrim + avgAvailSec);
   fprintf (out, "avg # threads ready on WB: %f\n", avgAvail);
+  fprintf (out, "\tavg # threads on primQ on WB: %f\n", avgAvailPrim);
+  fprintf (out, "\tavg # threads on secQ on WB: %f\n", avgAvailSec);
+
+  fprintf (out, "\n");
+  uintmax_t numGCs = cumul->numCopyingGCs + cumul->numMarkCompactGCs;
+  avgAvailPrim =
+      (numGCs > 0)
+      ? ((float)cumul->numReadyPrimGC/numGCs)
+      : 0.0f;
+  avgAvailSec =
+      (numGCs > 0)
+      ? ((float)cumul->numReadySecGC/numGCs)
+      : 0.0f;
+  avgAvail = (avgAvailPrim + avgAvailSec);
+  float avgPreempt =
+      (numGCs > 0)
+      ? ((float)cumul->numPreemptGC/numGCs)
+      : 0.0f;
+
+  fprintf (out, "avg # threads ready before GC: %f\n", avgAvail);
+  fprintf (out, "\tavg # threads on primQ before GC: %f\n", avgAvailPrim);
+  fprintf (out, "\tavg # threads on secQ before GC: %f\n", avgAvailSec);
+  fprintf (out, "avg # threads on preemptedOnWBQ before GC: %f\n", avgPreempt);
 }
 
 static inline void initStat (struct GC_cumulativeStatistics* cumul) {
@@ -192,9 +222,16 @@ static inline void initStat (struct GC_cumulativeStatistics* cumul) {
   cumul->numMarkCompactGCs = 0;
   cumul->numMinorGCs = 0;
   cumul->numThreadsCreated = 0;
+
   cumul->numPreemptWB = 0;
   cumul->numMoveWB = 0;
-  cumul->numReadyWB = 0;
+  cumul->numReadyPrimWB = 0;
+  cumul->numReadySecWB = 0;
+
+  cumul->numPreemptGC  = 0;
+  cumul->numReadyPrimGC = 0;
+  cumul->numReadySecGC = 0;
+
   timevalZero (&cumul->ru_gc);
   rusageZero (&cumul->ru_gcCopying);
   rusageZero (&cumul->ru_gcMarkCompact);
@@ -266,9 +303,16 @@ void GC_summaryWrite (void) {
       cumul.numMarkCompactGCs += d->numMarkCompactGCs;
       cumul.numMinorGCs += d->numMinorGCs;
       cumul.numThreadsCreated += d->numThreadsCreated;
+
       cumul.numPreemptWB += d->numPreemptWB;
       cumul.numMoveWB += d->numMoveWB;
-      cumul.numReadyWB += d->numReadyWB;
+      cumul.numReadyPrimWB += d->numReadyPrimWB;
+      cumul.numReadySecWB += d->numReadySecWB;
+
+      cumul.numPreemptGC += d->numPreemptGC;
+      cumul.numReadyPrimGC += d->numReadyPrimGC;
+      cumul.numReadySecGC += d->numReadySecGC;
+
       timevalPlusMax (&cumul.ru_gc, &d->ru_gc, &cumul.ru_gc);
       rusagePlusMax (&cumul.ru_gcCopying,
                      &d->ru_gcCopying,
