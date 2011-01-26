@@ -1,0 +1,8 @@
+local
+   $(SML_LIB)/basis/basis.mlb
+   $(SML_LIB)/basis/mlton.mlb
+   print.mlb
+in
+   barnes-hutM.sml
+   run-main.sml
+end

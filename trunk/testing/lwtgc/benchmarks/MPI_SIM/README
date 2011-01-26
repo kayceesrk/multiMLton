@@ -1,0 +1,9 @@
+The benchmarks in this folder are CML versions of a subset of the benchmarks
+from Intel MPI Benchmarks suite. The Intel benchmark suite uses MPI
+primitives in the benchmarks. This suite *simulates* the behavior of Intel's
+suite with the help of CML primitives.
+
+Intel MPI benchmark suite -------------------------
+(http://software.intel.com/en-us/articles/intel-mpi-benchmarks/).
+
+-- kc
