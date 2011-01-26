@@ -38,6 +38,8 @@ void incSync (GC_state s) {
     case SYNC_SAVE_WORLD:
       s->cumulativeStatistics->syncMisc++;
       break;
+    case SYNC_MISC:
+      break;
     default:
       fprintf (stderr, "Unknown sync reason?\n");
       exit (1);

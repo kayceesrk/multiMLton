@@ -49,7 +49,6 @@ struct
         (fn t =>
         let
           val _ = debug' "Quiting"
-          val _ = PacmlFFI.summaryWrite ()
           val _ = PacmlFFI.disablePreemption ()
           val shutdownRhost = PT.getRunnableHost (PT.prepFn (!SH.shutdownHook, fn () => OS.Process.success))
         in

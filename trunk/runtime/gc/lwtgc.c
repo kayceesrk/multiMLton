@@ -210,7 +210,11 @@ pointer GC_move (GC_state s, pointer p,
     return p;
   }
 
-  s->syncReason = SYNC_LIFT;
+  if (skipFixForwardingPointers)
+    s->syncReason = SYNC_MISC;
+  else
+    s->syncReason = SYNC_FORCE;
+
   ENTER_LOCAL0 (s);
 
   if (DEBUG_LWTGC)

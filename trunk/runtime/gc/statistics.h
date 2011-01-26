@@ -14,11 +14,18 @@ enum {
   SYNC_NEW_GEN_ARRAY,
   SYNC_STACK,
   SYNC_HEAP,
+  /* When object needs to be lifted, and followed by a GC to fix the forwarding
+   * pointers */
   SYNC_LIFT,
+  /* Occurs when local GCs are forced, (ie) no runnable threads on primary
+   * scheduler queue but threads in preemptedOnWBA */
   SYNC_FORCE,
   SYNC_PACK,
   SYNC_SAVE_WORLD,
   SYNC_SIGNALS,
+  /* When objects need to be lifted but GC is not invoked to fix forwarding
+   * pointers */
+  SYNC_MISC,
 };
 
 enum {
