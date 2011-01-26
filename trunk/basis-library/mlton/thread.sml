@@ -173,7 +173,7 @@ in
        ; atomicSwitch f)
 
    val globalNoopThunk : unit -> unit = !(Primitive.MLton.move (ref (fn () => ()), false, false))
-   val globalDead = (Primitive.MLton.move (Dead, false, false))
+   (* val globalDead = (Primitive.MLton.move (Dead, false, false)) *)
 
    fun 'a atomicSwitchForWB f =
    let
@@ -181,7 +181,7 @@ in
      val (newRt, cleanup) = f (rt)
      val (T t' : Runnable.t) = newRt
      val primThread =
-       case !t' before (t' := globalDead) of
+       case !t' (* before (t' := globalDead) *) of
             Dead => raise Fail "switch to a Dead thread"
           | Interrupted t => t
           | New g => let

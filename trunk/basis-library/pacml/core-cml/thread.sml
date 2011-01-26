@@ -187,8 +187,8 @@ struct
 
     (* If the newly spawned thread is going to another processor, then
      * move it to the shared heap *)
-    val () = if (TID.getProcId (tid) = PacmlFFI.processorNumber ()) then ()
-             else
+    val () = (* if (TID.getProcId (tid) = PacmlFFI.processorNumber ()) then ()
+             else *)
                (debug' ("spawnHostHelper.lift(1): tid="^(TID.tidToString tid));
                Primitive.Ref.addToMoveOnWBA (rhost);
                S.preemptOnWriteBarrier ();
