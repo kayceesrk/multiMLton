@@ -6,8 +6,7 @@ struct
   fun ping ch n =
     if n=0 then ()
     else
-      (print "Sending value\n";
-       send (ch, n);
+      (send (ch, n);
        ping ch (n-1))
 
   fun pong ch n =

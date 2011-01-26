@@ -182,11 +182,11 @@ fun convert (S.Program.T {datatypes, functions, globals, main}) =
                              val s1 = Var.toString (arg 0)
                              val s2 = Layout.toString (S2.Type.layout mty)
                            in
-                            if (S2.Type.maybeObjptr mty) then
-                                simple (S2.Exp.PrimApp {args = args,
-                                                        prim = convertPrim prim})
-                            else
-                                makeFalsee (var, ty)
+                              if (S2.Type.maybeObjptr mty) then
+                                  simple (S2.Exp.PrimApp {args = args,
+                                                          prim = convertPrim prim})
+                              else
+                                  makeFalsee (var, ty)
                            end
                        | Ref_deref =>
                             simple (S2.Exp.Select {base = Base.Object (arg 0),

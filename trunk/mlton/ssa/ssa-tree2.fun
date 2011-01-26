@@ -554,7 +554,7 @@ structure Exp =
       val unit = Object {con = NONE, args = Vector.new0 ()}
 
      val truee = Object {con = SOME (Con.fromBool (true)), args = Vector.new0 ()}
-     val falsee = Object {con = SOME (Con.fromBool (true)), args = Vector.new0 ()}
+     val falsee = Object {con = SOME (Con.fromBool (false)), args = Vector.new0 ()}
 
       fun foreachVar (e, v) =
          let

@@ -49,6 +49,7 @@ struct
         (fn t =>
         let
           val _ = debug' "Quiting"
+          val _ = PacmlFFI.summaryWrite ()
           val _ = PacmlFFI.disablePreemption ()
           val shutdownRhost = PT.getRunnableHost (PT.prepFn (!SH.shutdownHook, fn () => OS.Process.success))
         in
@@ -187,7 +188,7 @@ struct
 
     (* If the newly spawned thread is going to another processor, then
      * move it to the shared heap *)
-    val () = if (TID.tidToInt (tid) = PacmlFFI.processorNumber ()) then ()
+    val () = if (TID.getProcId (tid) = PacmlFFI.processorNumber ()) then ()
              else
                (debug' ("spawnHostHelper.lift(1): tid="^(TID.tidToString tid));
                Primitive.Ref.addToMoveOnWBA (rhost);

@@ -205,17 +205,17 @@ pointer GC_move (GC_state s, pointer p,
     return p;
   }
 
+  /* If objct has already been lifted, return */
+  if (isObjectLifted (getHeader (p))) {
+    return p;
+  }
+
   s->syncReason = SYNC_LIFT;
   ENTER_LOCAL0 (s);
 
   if (DEBUG_LWTGC)
     fprintf (stderr, "GC_move [%d]\n", s->procId);
 
-  /* If objct has already been lifted, return */
-  if (isObjectLifted (getHeader (p))) {
-      LEAVE_LOCAL0 (s);
-    return p;
-  }
 
   objptr op = pointerToObjptr (p, s->heap->start);
   objptr* pOp = &op;
@@ -254,17 +254,16 @@ void forceLocalGC (GC_state s) {
 void moveEachObjptrInObject (GC_state s, pointer p) {
   assert (p != BOGUS_POINTER);
 
+  /* If objct has already been lifted, return */
+  if (isObjectLifted (getHeader (p))) {
+    return;
+  }
+
   s->syncReason = SYNC_LIFT;
   ENTER_LOCAL0 (s);
 
   if (DEBUG_LWTGC)
     fprintf (stderr, "moveEachObjptrInObject: \n");
-
-  /* If objct has already been lifted, return */
-  if (isObjectLifted (getHeader (p))) {
-    LEAVE_LOCAL0 (s);
-    return;
-  }
 
   //Set up the forwarding state
   s->forwardState.toStart = s->sharedFrontier;

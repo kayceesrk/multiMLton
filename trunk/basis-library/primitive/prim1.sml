@@ -83,19 +83,20 @@ structure Ref =
       fun writeBarrier (r, v) =
       let
         val preemptFn = deref preemptFn
-        val _ = if ((isObjptr v) andalso (isObjptrInLocalHeap v) andalso (isObjptrInSharedHeap r)) then
+        val v' = if ((isObjptr v) andalso (isObjptrInLocalHeap v) andalso (isObjptrInSharedHeap r)) then
                   (addToMoveOnWBA (v);
-                   preemptFn ())
-                else ()
+                   preemptFn ();
+                   v)
+                else v
       in
-        ()
+        v'
       end
 
       fun assign (r, v) =
       let
-        val _ = writeBarrier (r,v)
+        val v' = writeBarrier (r,v)
       in
-        refAssign (r, v)
+        refAssign (r, v')
       end
    end
 

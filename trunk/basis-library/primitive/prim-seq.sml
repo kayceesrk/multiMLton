@@ -25,9 +25,9 @@ structure Array =
 
       fun updateUnsafe (a, i, v) =
       let
-        val _ = Ref.writeBarrier (a,v)
+        val v' = Ref.writeBarrier (a, v)
       in
-        arrayUpdate (a, i, v)
+        arrayUpdate (a, i, v')
       end
 
    end
