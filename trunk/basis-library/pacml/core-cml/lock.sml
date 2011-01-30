@@ -22,14 +22,14 @@ struct
                               val atomicState = getAtomicState ()
                               (* Unmark this thread id so that if this thread is preempted,
                                * it goes to the secondary scheduler queue *)
-                              val () = ThreadID.unmark (ThreadID.getCurThreadId ())
+                              (* val () = ThreadID.unmark (ThreadID.getCurThreadId ()) *)
                               (* The following 2 step process is required to
                                * trigger the signal checks implemented in
                                * atomicEnd.
                                *)
                               val () = setAtomicState (1)
                               val () = atomicEnd ()
-                              val () = (!yieldForSpin) ()
+                              (* val () = (!yieldForSpin) () *)
                               val () = setAtomicState (atomicState)
                             in ()
                             end)
@@ -46,7 +46,7 @@ struct
         (* Don't bang on CAS. spin on conditional *)
         (if !l < 0 then
           (if cas (l, ~1, tid) then
-            ()
+            ThreadID.mark (ThreadID.getCurThreadId ())
           else
             (maybePreempt ();
              getCmlLock lock ftid))

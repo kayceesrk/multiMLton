@@ -250,6 +250,7 @@ struct
   let
     val () = debug' "preemptOnWriteBarrier"
     val tid = TID.getCurThreadId ()
+    val () = TID.mark tid
     val atomicState = getAtomicState ()
     val () = setAtomicState (1)
     val () = atomicSwitchForWB
