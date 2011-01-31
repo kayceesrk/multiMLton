@@ -7,6 +7,10 @@
  */
 
 objptr getThreadCurrentObjptr (GC_state s) {
+  objptr op = s->currentThread;
+  pointer p = objptrToPointer (op, s->sharedHeap->start);
+  if (getHeader (p) == GC_FORWARDED)
+    s->currentThread = *(objptr*)p;
   return s->currentThread;
 }
 
