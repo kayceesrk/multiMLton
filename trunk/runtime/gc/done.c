@@ -41,6 +41,7 @@ static void summaryWrite (GC_state s,
                           FILE* out,
                           bool isCumul) {
   uintmax_t totalTime;
+  uintmax_t realTime = 0;
   uintmax_t gcTime;
   uintmax_t syncTime;
   //uintmax_t threadTime;
@@ -74,11 +75,15 @@ static void summaryWrite (GC_state s,
   char str[20];
   sprintf (str, " ");
   if (isCumul) {
+      realTime = totalTime;
       totalTime *= s->numberOfProcs;
       sprintf (str, "(cumulative)");
   }
 
   fprintf (out, "\n");
+  if (isCumul)
+    fprintf (out, "real time: %s ms %s\n",
+               uintmaxToCommaString (realTime), str);
   fprintf (out, "total time: %s ms %s\n",
            uintmaxToCommaString (totalTime), str);
   fprintf (out, "total GC time: %s ms (%.1f%%)\n",
