@@ -387,6 +387,8 @@ in
 			../pacml/util/fun-queue.sml
 			../pacml/util/imp-queue.sig
 			../pacml/util/imp-queue.sml
+			../pacml/util/circular-queue.sig
+			../pacml/util/circular-queue.sml
 			../pacml/util/fun-priority-queue.sig
 			../pacml/util/fun-priority-queue.fun
 
