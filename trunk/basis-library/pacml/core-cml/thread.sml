@@ -221,8 +221,9 @@ struct
     val rhost = PT.getRunnableHost (PT.prep (thrd))
     val _ = case rhost of
                  RHOST (_, t) => MLtonThread.threadStatus (t)
+    val proc = TID.getProcId (tid)
     val _ = Config.incrementNumLiveThreads ()
-    val _ = PacmlPrim.addToSpawnOnWBA (rhost)
+    val _ = PacmlPrim.addToSpawnOnWBA (rhost, proc)
 
     (* If this thread was spawned on an IO processor, then decrement the
     * numLiveThreads as the IO worker threads never die *)

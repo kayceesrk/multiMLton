@@ -8,8 +8,8 @@ struct
   fun addToPreemptOnWBA (t : runnable_host) =
     Primitive.Ref.addToPreemptOnWBA (t)
 
-  fun addToSpawnOnWBA (t : runnable_host) =
-    Primitive.Ref.addToSpawnOnWBA (t)
+  fun addToSpawnOnWBA (t : runnable_host, proc) =
+    Primitive.Ref.addToSpawnOnWBA (t, proc)
 
   structure SchedulerQueue =
   struct

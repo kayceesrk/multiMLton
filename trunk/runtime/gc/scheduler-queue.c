@@ -99,6 +99,7 @@ void GC_sqEnque (GC_state s, pointer p, int proc, int i) {
   CircularBuffer* cq = getSubQ (fromProc->schedulerQueue, i);
   assert (!CircularBufferIsFull(cq));
   CircularBufferEnque (cq, op);
+  Parallel_wakeUpThread (proc, 1);
 }
 
 pointer GC_sqDeque (GC_state s, int i) {
