@@ -28,6 +28,9 @@ struct GC_state {
   int32_t moveOnWBASize;
   objptr* preemptOnWBA;
   int32_t preemptOnWBASize;
+  SpawnThread* spawnOnWBA;
+  int32_t spawnOnWBASize;
+
 
   pointer sharedFrontier;
   pointer sharedLimit;

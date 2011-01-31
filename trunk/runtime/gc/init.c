@@ -468,6 +468,8 @@ int GC_init (GC_state s, int argc, char **argv) {
 
   s->preemptOnWBA = (objptr*) malloc (sizeof (objptr) * BUFFER_SIZE);
   s->preemptOnWBASize = 0;
+  s->spawnOnWBA = (SpawnThread*) malloc (sizeof (SpawnThread) * BUFFER_SIZE);
+  s->spawnOnWBASize = 0;
 
   initIntInf (s);
   initSignalStack (s);
@@ -582,6 +584,8 @@ void GC_duplicate (GC_state d, GC_state s) {
 
   d->preemptOnWBA = (objptr*) malloc (sizeof (objptr) * BUFFER_SIZE);
   d->preemptOnWBASize = 0;
+  d->spawnOnWBA = (SpawnThread*) malloc (sizeof (SpawnThread) * BUFFER_SIZE);
+  d->spawnOnWBASize = 0;
 
   // XXX spoons better duplicate?
   //initSignalStack (d);

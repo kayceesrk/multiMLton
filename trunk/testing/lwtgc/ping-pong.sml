@@ -7,12 +7,14 @@ struct
     if n=0 then ()
     else
       (send (ch, n);
+       print (concat ["Ping ", Int.toString n, "\n"]);
        ping ch (n-1))
 
   fun pong ch n =
     if n=0 then ()
     else
       (ignore (recv ch);
+       print (concat ["Pong ", Int.toString n, "\n"]);
        pong ch (n-1))
 
   fun doit n =

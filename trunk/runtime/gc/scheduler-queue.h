@@ -25,6 +25,10 @@ typedef struct {
 
 typedef int32_t Lock;
 
+typedef struct {
+  objptr op;
+  int proc;
+} SpawnThread;
 
 #endif /* (defined (MLTON_GC_INTERNAL_TYPES)) */
 

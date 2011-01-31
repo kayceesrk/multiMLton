@@ -321,6 +321,9 @@ void liftAllObjptrsInMoveOnWBA (GC_state s) {
     moveTransitiveClosure (s, &op, FALSE, FALSE);
   }
   s->moveOnWBASize = 0;
+  for (int32_t i=0; i < s->spawnOnWBASize; i++) {
+    moveTransitiveClosure (s, &(s->spawnOnWBA[i].op), FALSE, FALSE);
+  }
 
   /* move the threads from preemptOnWBA to scheduler queue */
   if (DEBUG_LWTGC)
@@ -334,6 +337,17 @@ void liftAllObjptrsInMoveOnWBA (GC_state s) {
     s->preemptOnWBASize = 0;
     GC_sqReleaseLock (s, s->procId);
   }
+
+  int i=0;
+  while (i < s->spawnOnWBASize) {
+    int proc = s->spawnOnWBA[i].proc;
+    objptr op = s->spawnOnWBA[i].op;
+    GC_sqAcquireLock (s, proc);
+    GC_sqEnque (s, objptrToPointer (op, s->sharedHeap->start), proc, 0);
+    GC_sqReleaseLock (s, proc);
+    i++;
+  }
+  s->spawnOnWBASize = 0;
 }
 
 void GC_addToMoveOnWBA (GC_state s, pointer p) {
@@ -343,6 +357,15 @@ void GC_addToMoveOnWBA (GC_state s, pointer p) {
     die ("moveOnWBA overflow");
   s->moveOnWBA[s->moveOnWBASize - 1] = pointerToObjptr (p, s->heap->start);
 }
+
+void GC_addToSpawnOnWBA (GC_state s, pointer p, int proc) {
+  ++(s->spawnOnWBASize);
+  if (s->spawnOnWBASize > BUFFER_SIZE)
+    die ("spawnOnWBA overflow");
+  s->spawnOnWBA[s->spawnOnWBASize - 1].op = pointerToObjptr (p, s->heap->start);
+  s->spawnOnWBA[s->spawnOnWBASize - 1].proc = proc;
+}
+
 
 void GC_addToPreemptOnWBA (GC_state s, pointer p) {
   s->cumulativeStatistics->numPreemptWB++;

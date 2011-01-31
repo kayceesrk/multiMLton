@@ -74,6 +74,7 @@ signature PRIM =
              | IntInf_toWord (* ssa to rssa *)
              | IntInf_xorb (* ssa to rssa *)
              | Lwtgc_needPreemption
+             | Lwtgc_addToSpawnOnWBA
              | Lwtgc_addToMoveOnWBA (* backed *)
              | Lwtgc_addToPreemptOnWBA (* backed *)
              | Lwtgc_isObjptr (* backend *)

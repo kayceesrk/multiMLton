@@ -6,6 +6,11 @@
  * See the file MLton-LICENSE for details.
  */
 
+#if (defined (MLTON_GC_INTERNAL_TYPES))
+
+
+#endif /* (defined (MLTON_GC_INTERNAL_TYPES)) */
+
 #if (defined (MLTON_GC_INTERNAL_BASIS))
 
 PRIVATE pointer GC_move (GC_state s, pointer object,
@@ -13,6 +18,7 @@ PRIVATE pointer GC_move (GC_state s, pointer object,
                          bool skipFixForwardingPointers);
 PRIVATE void GC_addToMoveOnWBA (GC_state s, pointer p);
 PRIVATE void GC_addToPreemptOnWBA (GC_state s, pointer p);
+PRIVATE void GC_addToSpawnOnWBA (GC_state s, pointer p, int proc);
 
 void forceLocalGC (GC_state s);
 void moveTransitiveClosure (GC_state s, objptr *opp,

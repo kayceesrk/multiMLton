@@ -296,6 +296,22 @@ structure CFunction =
             target = Direct "GC_share",
             writesStackTop = true}
 
+      fun addToSpawnOnWBA t =
+         T {args = Vector.new3 (Type.gcState (), t, Type.cint ()),
+            bytesNeeded = NONE,
+            convention = Cdecl,
+            ensuresBytesFree = false,
+            mayGC = false,
+            maySwitchThreads = false,
+            modifiesFrontier = false,
+            prototype = (Vector.new3 (CType.gcState, CType.cpointer, CType.cint ()),
+                         NONE),
+            readsStackTop = false,
+            return = Type.unit,
+            symbolScope = Private,
+            target = Direct "GC_addToSpawnOnWBA",
+            writesStackTop = false}
+
       fun addToMoveOnWBA t =
          T {args = Vector.new2 (Type.gcState (), t),
             bytesNeeded = NONE,
@@ -1682,6 +1698,15 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                                             [Vector.new1 GCState,
                                                              vos args],
                                                     func = CFunction.move (Operand.ty (a 0))})
+                               | Lwtgc_addToSpawnOnWBA =>
+                                    (case toRtype (varType (arg 0)) of
+                                        NONE => none ()
+                                      | SOME t =>
+                                           if not (Type.isObjptr t)
+                                              then none ()
+                                           else
+                                              simpleCCallWithGCState
+                                              (CFunction.addToSpawnOnWBA (Operand.ty (a 0))))
                                | Lwtgc_addToMoveOnWBA =>
                                     (case toRtype (varType (arg 0)) of
                                         NONE => none ()
