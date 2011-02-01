@@ -128,6 +128,9 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
     }
     size = headerBytes + objectBytes;
     assert (s->forwardState.back + size + skip <= s->forwardState.toLimit);
+    if (s->forwardState.back + size + skip > s->forwardState.toLimit)
+      die ("Out of memory in the shared heap");
+
     /* Allocate chunk in the shared heap for the copy */
     allocChunkInSharedHeap (s, size + skip);
 

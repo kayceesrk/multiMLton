@@ -10,5 +10,5 @@ signature CIR_QUEUE =
       val deque: 'a t -> 'a option
       val isEmpty: 'a t -> bool
       val enque: 'a t * 'a option -> unit
-      val new: unit -> 'a t
+      val new: int -> 'a t
    end

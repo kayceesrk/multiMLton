@@ -11,9 +11,7 @@ struct
   exception CirQueueFull
   exception CirQueueEmpty
 
-  val startSize = 1024
-
-  fun new () =
+  fun new (startSize) =
   let
     val arr = Array.tabulate (startSize, fn _ => NONE)
   in

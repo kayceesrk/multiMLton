@@ -4,23 +4,28 @@ struct
   open Critical
   structure TID = ThreadID
 
-  structure Assert = LocalAssert(val assert = false)
-  structure Debug = LocalDebug(val debug = false)
+  structure Assert = LocalAssert(val assert = true)
+  structure Debug = LocalDebug(val debug = true)
+
+  fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
+  fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
 
   val pN = PacmlFFI.processorNumber
   val vCas = PacmlFFI.vCompareAndSwap
 
-  (* quickly try for a 1000 iterations before failing *)
+  (* quickly try for some iterations before failing *)
   val cas = fn (r, v1, v2) =>
             let
               fun loop i =
                 if (i=0) then
                   vCas (r, v1, v2)
-                else if (!r = v1) andalso (vCas (r, v1, v2) = v1) then
-                  v1
+                else if (!r = v1) then
+                  (if (vCas (r, v1, v2) = v1) then
+                    v1
+                  else loop (i-1))
                 else loop (i-1)
             in
-              loop (1000)
+              loop (100)
             end
 
   type cmlLock = RepTypes.cmlLock
@@ -31,7 +36,7 @@ struct
     RepTypes.LOCK {state = ref 0,
                    tid = ref ~1,
                    count = ref 0,
-                   que = CirQueue.new ()}
+                   que = CirQueue.new (1024)}
 
   val FREE = 0
   val LOCKED = 1
@@ -49,10 +54,14 @@ struct
                   val rt' = PacmlPrim.move (SOME rt, false, true)
                   val _ = CirQueue.enque (q, rt')
                   val _ = state := LOCKED
+                  val res = Scheduler.next ()
+                  val RepTypes.RHOST (t, _) = res
+                  val _ = debug' ("yieldForLock(5) "^(TID.tidToString t))
                 in
-                  Scheduler.next ()
+                  res
                 end)
     val () = setAtomicState (atomicState)
+    val _ = debug' "yieldForLock(6)"
     val tid' = TID.getCurThreadId ()
     val _ = Assert.assert' ("yieldForLock: TIDs dont match ("
                             ^(TID.tidToString tid)^", "^(TID.tidToString tid')^")"
