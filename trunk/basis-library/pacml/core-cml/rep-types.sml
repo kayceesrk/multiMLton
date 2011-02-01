@@ -14,7 +14,8 @@
 
 structure RepTypes =
    struct
-      datatype cmlLock = LOCK of (int ref * int ref)
+
+
 
       type proc_num = int
 
@@ -72,6 +73,11 @@ structure RepTypes =
                     | P_THRD of (parasite * ((unit -> 'a) -> unit))
 
       and runnable_host = RHOST of (thread_id * MLtonThread.Runnable.t)
+
+     and cmlLock = LOCK of {state: int ref,
+                            tid: int ref,
+                            count: int ref,
+                            que: runnable_host CirQueue.t}
 
       (* Ready to run -- 0 *)
       and rdy_thread = H_RTHRD of runnable_host

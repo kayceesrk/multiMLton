@@ -402,18 +402,18 @@ in
 			../pacml/core-cml/cvar.sml
 			../pacml/core-cml/thread-id.sig
 			../pacml/core-cml/thread-id.sml
-			../pacml/core-cml/lock.sig
-			../pacml/core-cml/lock.sml
 			../pacml/core-cml/proto-thread.sig
 			../pacml/core-cml/proto-thread.sml
 			../pacml/core-cml/scheduler-hooks.sig
 			../pacml/core-cml/scheduler-hooks.sml
 			../pacml/core-cml/scheduler-queue.sig
-			../pacml/core-cml/ml-scheduler-queue.sml
+			(* ../pacml/core-cml/ml-scheduler-queue.sml *)
 			../pacml/core-cml/c-scheduler-queue.sml
 			../pacml/core-cml/scheduler-queue.sml
 			../pacml/core-cml/scheduler.sig
 			../pacml/core-cml/scheduler.sml
+			../pacml/core-cml/lock.sig
+			../pacml/core-cml/lock.sml
 			../pacml/core-cml/thread.sig
 			../pacml/core-cml/thread.sml
 			../pacml/core-cml/event.sig

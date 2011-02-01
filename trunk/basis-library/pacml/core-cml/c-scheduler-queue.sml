@@ -5,7 +5,6 @@ struct
   structure Q = ImpQueue
   structure A = Array
   structure R = RepTypes
-  structure L = Lock
   structure PrimSQ = PacmlPrim.SchedulerQueue
 
   structure Assert = LocalAssert(val assert = false)

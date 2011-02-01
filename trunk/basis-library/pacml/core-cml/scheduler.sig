@@ -24,6 +24,8 @@ sig
   val atomicSwitchToNext : ('a thread -> unit) -> 'a
   val switchToNext : ('a thread -> unit) -> 'a
 
+  val atomicSwitchForWB : (runnable_host -> runnable_host) -> unit
+
   (* scheduler control *)
   val deque : unit -> runnable_host option
   val preemptOnWriteBarrier : unit -> unit

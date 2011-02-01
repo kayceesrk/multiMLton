@@ -1,78 +1,125 @@
-structure Lock :> LOCK_EXTRA =
+structure Lock :> LOCK =
 struct
 
   open Critical
+  structure TID = ThreadID
 
-    val pN = PacmlFFI.processorNumber
-    val cas = PacmlFFI.compareAndSwap
+  structure Assert = LocalAssert(val assert = false)
+  structure Debug = LocalDebug(val debug = false)
 
-    type cmlLock = RepTypes.cmlLock
+  val pN = PacmlFFI.processorNumber
+  val vCas = PacmlFFI.vCompareAndSwap
 
-    fun initCmlLock () =
+  (* quickly try for a 1000 iterations before failing *)
+  val cas = fn (r, v1, v2) =>
+            let
+              fun loop i =
+                if (i=0) then
+                  vCas (r, v1, v2)
+                else if (!r = v1) andalso (vCas (r, v1, v2) = v1) then
+                  v1
+                else loop (i-1)
+            in
+              loop (1000)
+            end
+
+  type cmlLock = RepTypes.cmlLock
+
+  exception UnlockError of string
+
+  fun initCmlLock () =
+    RepTypes.LOCK {state = ref 0,
+                   tid = ref ~1,
+                   count = ref 0,
+                   que = CirQueue.new ()}
+
+  val FREE = 0
+  val LOCKED = 1
+  val CLAIMED = 2
+
+  fun yieldForLock (q, state) =
+  let
+    val tid = TID.getCurThreadId ()
+    val () = TID.mark tid
+    val atomicState = getAtomicState ()
+    val () = setAtomicState (1)
+    val () = Scheduler.atomicSwitchForWB
+              (fn rt =>
+                let
+                  val rt' = PacmlPrim.move (SOME rt, false, true)
+                  val _ = CirQueue.enque (q, rt')
+                  val _ = state := LOCKED
+                in
+                  Scheduler.next ()
+                end)
+    val () = setAtomicState (atomicState)
+    val tid' = TID.getCurThreadId ()
+    val _ = Assert.assert' ("yieldForLock: TIDs dont match ("
+                            ^(TID.tidToString tid)^", "^(TID.tidToString tid')^")"
+                            , fn () => TID.sameTid (tid, tid'))
+  in
+      ()
+  end
+
+  fun getCmlLock (l as RepTypes.LOCK {state, tid, count, que}) ftid =
+  let
+    val t = ftid () (* Has to be this way to account for parasite reification at maybePreempt *)
+    fun enque () =
+    let
+      val res = cas (state, LOCKED, CLAIMED)
+    in
+      if res = LOCKED then
+        (yieldForLock (que, state);
+        getCmlLock l ftid)
+      else if res = CLAIMED then
+        enque ()
+      else (* res = FREE *)
+        getCmlLock l ftid
+    end
+  in
+    if (!tid = t) then
+      count := !count + 1
+    else
       let
-        val l = RepTypes.LOCK (ref ~1, ref 0)
+        val res = cas (state, FREE, LOCKED)
       in
-        l
+        if res = FREE then
+          (* We got the lock *)
+          tid := t
+        else (* res = LOCKED orelse res = CLAIMED *)
+          enque ()
+      end
+  end
+
+  fun releaseCmlLock (l as RepTypes.LOCK {state, tid, count, que}) ftid =
+  let
+    val t = ftid ()
+  in
+    if (!tid = t) andalso (!count > 0) then
+      count := !count - 1
+    else
+      let
+        val res = cas (state, LOCKED, CLAIMED)
+      in
+        if (res = LOCKED) then
+          let
+            (* val str = concat ["Current: ", Int.toString t,
+                              " Lock: ", Int.toString (!tid)] *)
+            val _ = if not (!tid = t) then
+                      raise UnlockError ("Kind1")
+                    else ()
+            val _ = tid := ~1
+            val _ = state := FREE
+          in
+           case (CirQueue.deque que) of
+                NONE => ()
+              | SOME t => SchedulerQueues.enque (t, RepTypes.PRI)
+          end
+        else if (res = CLAIMED) then
+          releaseCmlLock l ftid
+        else (* res = FREE *)
+          raise UnlockError ("Kind2")
       end
 
-    val yieldForSpin = ref (fn () => ())
-
-    fun maybePreempt () = ((if not (MLtonThread.amSwitching (pN ())) then
-                            (let
-                              val atomicState = getAtomicState ()
-                              (* Unmark this thread id so that if this thread is preempted,
-                               * it goes to the secondary scheduler queue *)
-                              val () = ThreadID.unmark (ThreadID.getCurThreadId ())
-                              (* The following 2 step process is required to
-                               * trigger the signal checks implemented in
-                               * atomicEnd.
-                               *)
-                              val () = setAtomicState (1)
-                              val () = atomicEnd ()
-                              val () = (!yieldForSpin) ()
-                              val () = setAtomicState (atomicState)
-                            in ()
-                            end)
-                          else ());
-                          PacmlFFI.maybeWaitForGC ())
-
-    fun getCmlLock (lock as RepTypes.LOCK (l, count)) ftid =
-    let
-      val tid = ftid () (* Has to be this way to account for parasite reification at maybePreempt *)
-    in
-      if !l = tid then
-        count := !count +1
-      else
-        (* Don't bang on CAS. spin on conditional *)
-        (if !l < 0 then
-          (if cas (l, ~1, tid) then
-            ThreadID.mark (ThreadID.getCurThreadId ())
-          else
-            (maybePreempt ();
-             getCmlLock lock ftid))
-        else
-          (maybePreempt ();
-           getCmlLock lock ftid))
-    end
-
-    fun releaseCmlLock (RepTypes.LOCK (l,count)) ftid =
-    let
-      val tid = ftid ()
-    in
-      if !l = tid andalso !count > 0 then
-          count := !count - 1
-      else
-        if cas (l, tid, ~1) then
-          ()
-        else
-          let
-            val holder = Int.toString(!l)
-            val attempt = Int.toString(tid)
-            val msg = ("Parallel.Lock : Can't unlock if you dont hold the lock"
-                      ^". Currently held by "^holder
-                      ^". Failed attempt by "^attempt)
-          in
-            raise Fail msg
-          end
-    end
+  end
 end

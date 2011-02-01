@@ -144,11 +144,12 @@ static inline void moveAllThreadsFromSecToPrim (GC_state s) {
 bool GC_sqIsEmpty (GC_state s) {
   bool resPrim = CircularBufferIsEmpty (s->schedulerQueue->primary);
   bool resSec = CircularBufferIsEmpty (s->schedulerQueue->secondary);
-  if (resPrim && (s->preemptOnWBASize != 0 || s->spawnOnWBASize != 0)) {
+  bool res = resPrim && resSec;
+  if (res && (s->preemptOnWBASize != 0 || s->spawnOnWBASize != 0)) {
     /* Force a GC if we find that the primary scheduler queue is empty and
      * preemptOnWBA is not */
     forceLocalGC (s);
-    if (!resSec && FALSE)
+    if (!resSec)
       moveAllThreadsFromSecToPrim (s);
     resPrim = FALSE;
   }
