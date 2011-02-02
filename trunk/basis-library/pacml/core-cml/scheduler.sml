@@ -15,8 +15,7 @@ struct
   structure SH = SchedulerHooks
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
-  fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
-  fun debug'' msg = (* print (msg^" : "^Int.toString(PacmlFFI.processorNumber())^"\n") *) ()
+  fun debug' msg = debug (fn () => (msg())^" : "^Int.toString(PacmlFFI.processorNumber()))
 
   datatype thread_type = datatype RepTypes.thread_type
   datatype thread = datatype RepTypes.thread
@@ -72,8 +71,8 @@ struct
      atomicReady (rt))
 
   fun reset running =
-      (if running then debug' "Scheduler.reset true"
-        else  debug' "Scheduler.reset false"
+      (if running then (debug' (fn () => "Scheduler.reset true"))
+        else (debug' (fn () => "Scheduler.reset false"))
       ; SQ.clean ())
 
   fun readyForSpawn (t : runnable_host) =
@@ -84,7 +83,7 @@ struct
 
   fun unwrap (f : runnable_host -> runnable_host) (reify : parasite -> runnable_host) (host: MT.Runnable.t) : MT.Runnable.t =
     let
-      val () = debug' "Scheduler.unwrap"
+      val () = debug' (fn () => "Scheduler.unwrap")
       val () = Assert.assertAtomic' ("Scheduler.unwrap", NONE)
       val thrdType = PT.getThreadType ()
       val pBottom = PT.getParasiteBottom ()
@@ -93,7 +92,7 @@ struct
       val host' = case thrdType of
                     PARASITE => if ((not (PT.proceedToExtractParasite (primHost, pBottom))) orelse (pBottom=0) orelse (not (PT.toPreemptParasite ()))) then
                                   let
-                                    val _ = debug' "Scheduler.unwrap.PARASITE(1)"
+                                    val _ = debug' (fn () => "Scheduler.unwrap.PARASITE(1)")
                                     val tid = TID.getCurThreadId ()
                                     val RHOST (tid', host') = f (RHOST (tid, host))
                                     val () = TID.setCurThreadId tid'
@@ -102,7 +101,7 @@ struct
                                   end
                                 else
                                   let
-                                    val _ = debug' "Scheduler.unwrap.PARASITE(2)"
+                                    val _ = debug' (fn () => "Scheduler.unwrap.PARASITE(2)")
                                     val host' = MT.toPrimitive host
                                     val thlet = PT.extractParasiteFromHost (host', pBottom)
                                     val newHost = reify (thlet)
@@ -114,10 +113,10 @@ struct
                                   end
                   | HOST =>
                       let
-                        val _ = debug' "Scheduler.unwrap.HOST(1)"
+                        val _ = debug' (fn () => "Scheduler.unwrap.HOST(1)")
                         val tid = TID.getCurThreadId ()
                         val RHOST (tid', host') = f (RHOST (tid, host))
-                        val _ = debug' "Scheduler.unwrap.HOST(2)"
+                        val _ = debug' (fn () => "Scheduler.unwrap.HOST(2)")
                         val () = TID.setCurThreadId tid'
                       in
                         host'
@@ -132,7 +131,7 @@ struct
     else
       (let
         val () = Assert.assertAtomic' ("Scheduler.nextWithCounter", NONE)
-        val () = debug' "Scheduler.nextWithCounter"
+        val () = debug' (fn () => "Scheduler.nextWithCounter")
         val thrd =
             case deque1 () of
               NONE => nextWithCounter (iter, to)
@@ -159,7 +158,7 @@ struct
 
   fun atomicSwitchAux msg (f : 'a thread -> runnable_host) : 'a =
     (Assert.assertAtomic (fn () => "Scheduler."^msg, NONE);
-    debug' ("Scheduler."^msg);
+    debug' (fn () => "Scheduler."^msg);
     case PT.getThreadType () of
          HOST =>
            MT.atomicSwitchAux (fn t =>
@@ -208,7 +207,7 @@ struct
        | PARASITE =>
            let
              val r : (unit -> 'a) ref = ref (fn () => raise Fail "atomicSwitchToNext : Switching to a unprepared thread")
-             val _ = debug' ("Scheduler.atomicSwitchToNext on "^(PT.getThreadTypeString ()))
+             val _ = debug' (fn () => "Scheduler.atomicSwitchToNext on "^(PT.getThreadTypeString ()))
              fun dummyFrame () =
              let
                val tid = TID.getCurThreadId ()
@@ -248,7 +247,7 @@ struct
 
   fun preemptOnWriteBarrier () =
   let
-    val () = debug' "preemptOnWriteBarrier"
+    val () = debug' (fn () => "preemptOnWriteBarrier")
     val tid = TID.getCurThreadId ()
     val () = TID.mark tid
     val atomicState = getAtomicState ()

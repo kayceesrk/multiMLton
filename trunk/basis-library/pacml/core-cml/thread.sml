@@ -18,7 +18,7 @@ struct
   datatype rdy_thread = datatype RepTypes.rdy_thread
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
-  fun debug' msg = debug (fn () => msg^"."^(PT.getThreadTypeString())
+  fun debug' msg = debug (fn () => (msg ())^"."^(PT.getThreadTypeString())
                                    ^" : "^Int.toString(PacmlFFI.processorNumber()))
 
   val getTid = TID.getCurThreadId
@@ -26,7 +26,7 @@ struct
   fun generalExit (tid', clr') =
     let
       val () = Assert.assertNonAtomic' "Thread.generalExit"
-      val () = debug' "Thread.generalExit(1)" (* NonAtomic *)
+      val () = debug' (fn () => "Thread.generalExit(1)") (* NonAtomic *)
       val () = Assert.assertNonAtomic' "Thread.generalExit"
       val () = Assert.assert' ("Thread.generalExit", fn () => case PT.getThreadType () of
                                                                    RepTypes.HOST => true
@@ -42,13 +42,13 @@ struct
                                 | SOME tid' => TID.sameTid (tid', tid))
       val () = if clr' then props := [] else ()
       (* val () = Event.atomicCVarSet dead XXX *)
-      val () = debug' "Thread.generalExit(2)"
+      val () = debug' (fn () => "Thread.generalExit(2)")
     in
       if Config.decrementNumLiveThreads () then
         S.atomicSwitch
         (fn t =>
         let
-          val _ = debug' "Quiting"
+          val _ = debug' (fn () => "Quiting")
           val _ = PacmlFFI.disablePreemption ()
           val shutdownRhost = PT.getRunnableHost (PT.prepFn (!SH.shutdownHook, fn () => OS.Process.success))
         in
@@ -82,7 +82,7 @@ struct
   fun exit () =
       let
         val () = Assert.assertNonAtomic' "Thread.exit"
-        val () = debug' "exit" (* NonAtomic *)
+        val () = debug' (fn () => "exit") (* NonAtomic *)
         val () = Assert.assertNonAtomic' "Thread.exit"
       in
         generalExit (NONE, true)
@@ -96,7 +96,7 @@ struct
     val _ = Assert.assertAtomic' ("Scheduler.reifyHostFromParasite", SOME 1)
     val wf = wrapFunction
     val tid = TID.new ()
-    val _ = debug' ("Reifying host from parasite. "^
+    val _ = debug' (fn () => "Reifying host from parasite. "^
                       "NumThreads = "^(Int.toString(!Config.numLiveThreads))^
                       ". curtid = "^(Int.toString(TID.tidNum()))^
                       ". newtid = "^(TID.tidToString(tid)))
@@ -187,10 +187,10 @@ struct
      * move it to the shared heap *)
     val () = (* if (TID.getProcId (tid) = PacmlFFI.processorNumber ()) then ()
              else *)
-               (debug' ("spawnHostHelper.lift(1): tid="^(TID.tidToString tid));
+               (debug' (fn () => "spawnHostHelper.lift(1): tid="^(TID.tidToString tid));
                Primitive.Ref.addToMoveOnWBA (rhost);
                S.preemptOnWriteBarrier ();
-               debug' ("spawnHostHelper.lift(2): tid="^(TID.tidToString tid)))
+               debug' (fn () => "spawnHostHelper.lift(2): tid="^(TID.tidToString tid)))
 
 
     val () = S.readyForSpawn (rhost)
@@ -243,7 +243,7 @@ struct
   fun createHost f =
   let
     val () = atomicBegin ()
-    val () = debug' "Thread.createHost"
+    val () = debug' (fn () => "Thread.createHost")
     val tid = TID.newOnProc (PacmlFFI.processorNumber ())
     fun thrdFun () = ((f ()) handle ex => doHandler (tid, ex);
                     generalExit (SOME tid, false))

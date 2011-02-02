@@ -4,11 +4,11 @@ struct
   open Critical
   structure TID = ThreadID
 
-  structure Assert = LocalAssert(val assert = true)
-  structure Debug = LocalDebug(val debug = true)
+  structure Assert = LocalAssert(val assert = false)
+  structure Debug = LocalDebug(val debug = false)
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
-  fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
+  fun debug' msg = debug (fn () => (msg())^" : "^Int.toString(PacmlFFI.processorNumber()))
 
   val pN = PacmlFFI.processorNumber
   val vCas = PacmlFFI.vCompareAndSwap
@@ -55,13 +55,13 @@ struct
                   val _ = CirQueue.enque (q, rt')
                   val _ = state := LOCKED
                   val res = Scheduler.next ()
-                  val RepTypes.RHOST (t, _) = res
-                  val _ = debug' ("yieldForLock(5) "^(TID.tidToString t))
+                  val RepTypes.RHOST (t, mt) = res
+                  val _ = debug' (fn () => "yieldForLock(5) "^(TID.tidToString t))
                 in
                   res
                 end)
     val () = setAtomicState (atomicState)
-    val _ = debug' "yieldForLock(6)"
+    val _ = debug' (fn () => "yieldForLock(6)")
     val tid' = TID.getCurThreadId ()
     val _ = Assert.assert' ("yieldForLock: TIDs dont match ("
                             ^(TID.tidToString tid)^", "^(TID.tidToString tid')^")"
@@ -118,11 +118,13 @@ struct
                       raise UnlockError ("Kind1")
                     else ()
             val _ = tid := ~1
+            val waitingT = CirQueue.deque que
             val _ = state := FREE
           in
-           case (CirQueue.deque que) of
+           case waitingT of
                 NONE => ()
-              | SOME t => SchedulerQueues.enque (t, RepTypes.PRI)
+              | SOME t =>
+                    SchedulerQueues.enque (t, RepTypes.PRI)
           end
         else if (res = CLAIMED) then
           releaseCmlLock l ftid
