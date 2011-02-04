@@ -142,6 +142,7 @@ static inline void moveAllThreadsFromSecToPrim (GC_state s) {
 }
 
 bool GC_sqIsEmpty (GC_state s) {
+  Parallel_maybeWaitForGC ();
   bool resPrim = CircularBufferIsEmpty (s->schedulerQueue->primary);
   bool resSec = CircularBufferIsEmpty (s->schedulerQueue->secondary);
   bool res = resPrim && resSec;

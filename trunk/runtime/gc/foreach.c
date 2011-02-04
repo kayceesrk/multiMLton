@@ -36,41 +36,12 @@ void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f) {
           callIfIsObjptr (s, f, &s->procStates[proc].roots[i]);
         }
       }
-
-      DanglingStack* danglingStack = s->procStates[proc].danglingStackList;
-      while (danglingStack) {
-        if (DEBUG_DETAILED)
-          fprintf (stderr, "foreachDanglingStack "FMTOBJPTR" [%d]\n",
-                   danglingStack->stack, s->procId);
-        callIfIsObjptr (s, f, &danglingStack->stack);
-        GC_stack stk = (GC_stack) objptrToPointer (danglingStack->stack, s->procStates[proc].heap->start);
-        GC_thread thrd = (GC_thread) objptrToPointer (stk->thread, s->procStates[proc].sharedHeap->start);
-        callIfIsObjptr (s, f, &thrd->stack);
-        danglingStack = danglingStack->next;
-      }
       foreachObjptrInWBAs (s, &s->procStates[proc], f);
       foreachObjptrInSQ (s, s->procStates[proc].schedulerQueue, f);
     }
   }
   else {
-    callIfIsObjptr (s, f, &s->callFromCHandlerThread);
-    callIfIsObjptr (s, f, &s->currentThread);
-    callIfIsObjptr (s, f, &s->savedThread);
-    callIfIsObjptr (s, f, &s->signalHandlerThread);
-
-    DanglingStack* danglingStack = s->danglingStackList;
-    while (danglingStack) {
-        if (DEBUG_DETAILED)
-          fprintf (stderr, "foreachDanglingStack "FMTOBJPTR" [%d]\n",
-                   danglingStack->stack, s->procId);
-        callIfIsObjptr (s, f, &danglingStack->stack);
-        GC_stack stk = (GC_stack) objptrToPointer (danglingStack->stack, s->heap->start);
-        GC_thread thrd = (GC_thread) objptrToPointer (stk->thread, s->sharedHeap->start);
-        callIfIsObjptr (s, f, &thrd->stack);
-        danglingStack = danglingStack->next;
-    }
-    foreachObjptrInWBAs (s, s, f);
-    foreachObjptrInSQ (s, s->schedulerQueue, f);
+    assert (0 and "foreachGlobalObjptr: s->procStates not initialized");
   }
 }
 

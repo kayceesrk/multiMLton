@@ -370,6 +370,31 @@ void forwardObjptrIfInLocalHeap (GC_state s, objptr *opp) {
 }
 
 
+void forwardObjptrIfInSharedHeap (GC_state s, objptr *opp) {
+  objptr op;
+  pointer p;
+
+  op = *opp;
+  p = objptrToPointer (op, s->heap->start);
+  if (isPointerInHeap (s, s->sharedHeap, p)) {
+    if (DEBUG_GENERATIONAL)
+        fprintf (stderr,
+                "forwardObjptrIfInLocalHeap  opp = "FMTPTR"  op = "FMTOBJPTR"  p = "FMTPTR"\n",
+                (uintptr_t)opp, op, (uintptr_t)p);
+    forwardObjptr (s, opp);
+  }
+  else if (isPointerInHeap (s, s->sharedHeap, (pointer)opp)) {
+    //opp is in shared heap, and p is in local heap. Hence, add to danglingStackList
+    GC_state r = getGCStateFromPointer (s, p);
+    GC_objectTypeTag tag;
+    splitHeader (r, getHeader (p), &tag, NULL, NULL, NULL);
+    assert (tag == STACK_TAG);
+    DanglingStack* danglingStack = newDanglingStack (s);
+    danglingStack->stack = pointerToObjptr (p, r->heap->start);
+  }
+}
+
+
 /* Walk through all the cards and forward all intergenerational pointers. */
 void forwardInterGenerationalObjptrs (GC_state s) {
   GC_cardMapElem *cardMap;

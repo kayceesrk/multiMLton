@@ -66,6 +66,7 @@ struct GC_state {
   struct GC_intInfInit *intInfInits;
   uint32_t intInfInitsLength;
   struct GC_lastMajorStatistics *lastMajorStatistics;
+  struct GC_lastSharedMajorStatistics *lastSharedMajorStatistics;
   pointer limitPlusSlop; /* limit + GC_HEAP_LIMIT_SLOP */
   pointer sharedLimitPlusSlop;
   //XXX SPH -- This should not be needed for local heaps
@@ -133,6 +134,8 @@ static void setGCStateCurrentSharedHeap (GC_state s,
 static void setGCStateCurrentLocalHeap (GC_state s,
                                         size_t oldGenBytesRequested,
                                         size_t nurseryBytesRequested);
+
+static GC_state getGCStateFromPointer (GC_state s, pointer p);
 
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

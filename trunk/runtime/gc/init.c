@@ -324,6 +324,7 @@ static inline void* initCumulativeStatistics (void) {
   cumul->bytesAllocated = 0;
   cumul->bytesFilled = 0;
   cumul->bytesCopied = 0;
+  cumul->bytesCopiedShared = 0;
   cumul->bytesCopiedMinor = 0;
   cumul->bytesHashConsed = 0;
   cumul->bytesLifted = 0;
@@ -344,6 +345,8 @@ static inline void* initCumulativeStatistics (void) {
   cumul->syncForce = 0;
   cumul->syncMisc = 0;
   cumul->numCopyingGCs = 0;
+  cumul->numCopyingSharedGCs = 0;
+  cumul->numSharedGCs = 0;
   cumul->numHashConsGCs = 0;
   cumul->numMarkCompactGCs = 0;
   cumul->numMinorGCs = 0;
@@ -357,6 +360,7 @@ static inline void* initCumulativeStatistics (void) {
   cumul->numReadySecGC = 0;
   timevalZero (&cumul->ru_gc);
   rusageZero (&cumul->ru_gcCopying);
+  rusageZero (&cumul->ru_gcCopyingShared);
   rusageZero (&cumul->ru_gcMarkCompact);
   rusageZero (&cumul->ru_gcMinor);
   timevalZero (&cumul->tv_sync);
@@ -365,8 +369,6 @@ static inline void* initCumulativeStatistics (void) {
   return (void*)cumul;
 }
 
-
-
 static inline void* initLastMajorStatistics (void) {
   struct GC_lastMajorStatistics* cumul = (struct GC_lastMajorStatistics*)
     malloc (sizeof (struct GC_lastMajorStatistics));
@@ -374,6 +376,13 @@ static inline void* initLastMajorStatistics (void) {
   cumul->bytesLive = 0;
   cumul->kind = GC_COPYING;
   cumul->numMinorGCs = 0;
+  return (void*)cumul;
+}
+
+static inline void* initLastSharedMajorStatistics (void) {
+  struct GC_lastSharedMajorStatistics* cumul =
+    (struct GC_lastSharedMajorStatistics*) malloc (sizeof (struct GC_lastSharedMajorStatistics));
+  cumul->bytesLive = 0;
   return (void*)cumul;
 }
 
@@ -424,6 +433,7 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->controls->summary = SUMMARY_NONE;
   s->cumulativeStatistics = (struct GC_cumulativeStatistics*)initCumulativeStatistics ();
   s->lastMajorStatistics = (struct GC_lastMajorStatistics*)initLastMajorStatistics ();
+  s->lastSharedMajorStatistics = (struct GC_lastSharedMajorStatistics*)initLastSharedMajorStatistics ();
   s->currentThread = BOGUS_OBJPTR;
   s->danglingStackList = NULL;
   s->hashConsDuringGC = FALSE;
@@ -550,6 +560,7 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->controls = s->controls;
   d->cumulativeStatistics = initCumulativeStatistics ();
   d->lastMajorStatistics = initLastMajorStatistics ();
+  d->lastSharedMajorStatistics = s->lastSharedMajorStatistics;
   d->currentThread = BOGUS_OBJPTR;
   d->hashConsDuringGC = s->hashConsDuringGC;
   d->numberOfProcs = s->numberOfProcs;

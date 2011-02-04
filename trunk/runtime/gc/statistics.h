@@ -37,6 +37,7 @@ enum {
 struct GC_cumulativeStatistics {
   uintmax_t bytesAllocated;
   uintmax_t bytesCopied;
+  uintmax_t bytesCopiedShared;
   uintmax_t bytesCopiedMinor;
   uintmax_t bytesHashConsed;
   uintmax_t bytesMarkCompacted;
@@ -52,6 +53,8 @@ struct GC_cumulativeStatistics {
 
   uintmax_t numGCs;
   uintmax_t numCopyingGCs;
+  uintmax_t numCopyingSharedGCs;
+  uintmax_t numSharedGCs;
   uintmax_t numHashConsGCs;
   uintmax_t numMarkCompactGCs;
   uintmax_t numMinorGCs;
@@ -59,6 +62,7 @@ struct GC_cumulativeStatistics {
 
   struct timeval ru_gc; /* total resource usage in gc. */
   struct rusage ru_gcCopying; /* resource usage in major copying gcs. */
+  struct rusage ru_gcCopyingShared; /* resource usage in major shared copying gcs. */
   struct rusage ru_gcMarkCompact; /* resource usage in major mark-compact gcs. */
   struct rusage ru_gcMinor; /* resource usage in minor copying gcs. */
 
@@ -95,6 +99,12 @@ struct GC_lastMajorStatistics {
   GC_majorKind kind;
   uintmax_t numMinorGCs;
 };
+
+/* Statistics about the most recent shared heap GC */
+struct GC_lastSharedMajorStatistics {
+  size_t bytesLive;
+};
+
 
 #endif /* (defined (MLTON_GC_INTERNAL_TYPES)) */
 

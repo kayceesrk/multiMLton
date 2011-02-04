@@ -274,6 +274,11 @@ bool createHeapSecondary (GC_state s, size_t desiredSize) {
   return createHeap (s, s->secondaryLocalHeap, desiredSize, s->heap->oldGenSize);
 }
 
+bool createHeapSharedSecondary (GC_state s, size_t desiredSize) {
+  return createHeap (s, s->secondarySharedHeap,
+                     desiredSize, s->sharedHeap->oldGenSize);
+}
+
 /* remapHeap (s, h, desiredSize, minSize)
  */
 bool remapHeap (GC_state s, GC_heap h,

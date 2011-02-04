@@ -148,6 +148,55 @@ void fixForwardingPointers (GC_state s, bool mayResize) {
 }
 
 
+void performSharedGC (GC_state s,
+                      size_t bytesRequested) {
+  size_t bytesFilled = 0;
+
+  enterGC (s);
+  ENTER0 (s);
+
+  if (bytesRequested > ((s->controls->allocChunkSize + GC_BONUS_SLOP) * s->numberOfProcs))
+    assert (0 and "performSharedGC: what to do?");
+  size_t availableBytes =
+    (size_t)(s->sharedHeap->start + s->sharedHeap->availableSize - s->sharedHeap->frontier);
+
+  /* See if a GC has already been performed */
+  if (bytesRequested + GC_BONUS_SLOP > availableBytes) {
+    /* perform GC */
+    bytesRequested = (s->controls->allocChunkSize + GC_BONUS_SLOP) * s->numberOfProcs;
+    for (int proc = 0; proc < s->numberOfProcs; proc++) {
+      clearDanglingStackList (&s->procStates[proc]);
+      /* Add in the bonus slop now since we need to fill it */
+      s->procStates[proc].sharedLimitPlusSlop += GC_BONUS_SLOP;
+      if (s->procStates[proc].sharedLimitPlusSlop != s->sharedHeap->frontier) {
+        /* Fill to avoid an uninitialized gap in the middle of the heap */
+        bytesFilled += fillGap (s, s->procStates[proc].sharedFrontier,
+                                s->procStates[proc].sharedLimitPlusSlop);
+      }
+      else {
+        /* If this is at the end of the heap there is no need to fill the gap
+         -- there will be no break in the initialized portion of the
+         heap.  Also, this is the last chunk allocated in the nursery, so it is
+         safe to use the frontier from this processor as the global frontier.  */
+        s->sharedHeap->oldGenSize = s->procStates[proc].sharedFrontier - s->sharedHeap->start;
+      }
+    }
+
+    size_t desiredSize =
+      sizeofHeapDesired (s, s->lastSharedMajorStatistics->bytesLive + bytesRequested, 0);
+    if (!isHeapInit (s->secondarySharedHeap))
+      createHeapSharedSecondary (s, desiredSize);
+    majorCheneyCopySharedGC (s);
+    s->lastSharedMajorStatistics->bytesLive = s->sharedHeap->oldGenSize;
+    //XXX TODO resize heap
+    assert (s->sharedHeap->oldGenSize + bytesRequested <= s->sharedHeap->size);
+  }
+
+  LEAVE0 (s);
+  leaveGC (s);
+}
+
+
 void performGC (GC_state s,
                 size_t oldGenBytesRequested,
                 size_t nurseryBytesRequested,
@@ -344,9 +393,7 @@ static void allocChunkInSharedHeap (GC_state s,
     /* Perhaps there is not enough space in the nursery to satify this
        request; if that's true then we need to do a full collection */
     if (bytesRequested + GC_BONUS_SLOP > availableBytes) {
-      fprintf (stderr, "[GC: aborting shared alloc: no space.] [%d]\n", s->procId);
-      assert (0);
-      return;
+      performSharedGC (s, bytesRequested);
     }
 
     /* alloc a chunk so that subsequent requests can be satisfied locally */

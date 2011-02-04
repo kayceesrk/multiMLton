@@ -149,12 +149,12 @@ void liftAllObjectsDuringInit (GC_state s) {
   assert (!s->forwardState.rangeListFirst);
   assert (!s->forwardState.rangeListLast);
 
-  if (DEBUG_LWTGC)
+  /* if (DEBUG_LWTGC)
     fprintf (stderr, "liftAllObjectsDuringInit: updateWeaksForCheneyCopy\n");
-  //updateWeaksForCheneyCopy (s);
+  updateWeaksForCheneyCopy (s);
   if (DEBUG_LWTGC)
     fprintf (stderr, "liftAllObjectsDuringInit: resizeHeap\n");
-  //resizeHeap (s, s->heap->oldGenSize);
+  resizeHeap (s, s->heap->oldGenSize); */
 
   //Check
   if (DEBUG_LWTGC) {
@@ -165,6 +165,7 @@ void liftAllObjectsDuringInit (GC_state s) {
 
   /* Force a major GC to clean up the local heap. */
   fixForwardingPointers (s, TRUE);
+  s->lastSharedMajorStatistics->bytesLive = s->sharedHeap->frontier - s->sharedHeap->start;
   endAtomic (s);
   if (DEBUG_LWTGC)
     fprintf (stderr, "liftAllObjectsDuringInit: Exiting\n");
@@ -383,4 +384,6 @@ static inline void foreachObjptrInWBAs (GC_state s, GC_state fromState, GC_forea
     callIfIsObjptr (s, f, &(fromState->moveOnWBA [i]));
   for (int i=0; i < fromState->preemptOnWBASize; i++)
     callIfIsObjptr (s, f, &(fromState->preemptOnWBA [i]));
+  for (int i=0; i < fromState->spawnOnWBASize; i++)
+    callIfIsObjptr (s, f, &((fromState->spawnOnWBA [i]).op));
 }

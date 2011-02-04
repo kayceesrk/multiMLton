@@ -41,6 +41,7 @@ struct
     else
       let
         val e = Array.sub (arr, !rp)
+        (* val _ = Array.update (arr, !rp, NONE) *)
         val _ = rp := ((!rp + 1) mod !size)
       in
         e

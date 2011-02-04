@@ -61,6 +61,11 @@ static void summaryWrite (GC_state s,
      cumul->numCopyingGCs,
      cumul->bytesCopied);
   displayCollectionStats
+    (out, "shared\t\t",
+     &cumul->ru_gcCopyingShared,
+     cumul->numCopyingSharedGCs,
+     cumul->bytesCopiedShared);
+  displayCollectionStats
     (out, "mark-compact\t",
      &cumul->ru_gcMarkCompact,
      cumul->numMarkCompactGCs,
@@ -203,6 +208,7 @@ static inline void initStat (struct GC_cumulativeStatistics* cumul) {
   cumul->bytesAllocated = 0;
   cumul->bytesFilled = 0;
   cumul->bytesCopied = 0;
+  cumul->bytesCopiedShared = 0;
   cumul->bytesCopiedMinor = 0;
   cumul->bytesHashConsed = 0;
   cumul->bytesMarkCompacted = 0;
@@ -223,6 +229,7 @@ static inline void initStat (struct GC_cumulativeStatistics* cumul) {
   cumul->syncForce = 0;
   cumul->syncMisc = 0;
   cumul->numCopyingGCs = 0;
+  cumul->numCopyingSharedGCs = 0;
   cumul->numHashConsGCs = 0;
   cumul->numMarkCompactGCs = 0;
   cumul->numMinorGCs = 0;
@@ -239,6 +246,7 @@ static inline void initStat (struct GC_cumulativeStatistics* cumul) {
 
   timevalZero (&cumul->ru_gc);
   rusageZero (&cumul->ru_gcCopying);
+  rusageZero (&cumul->ru_gcCopyingShared);
   rusageZero (&cumul->ru_gcMarkCompact);
   rusageZero (&cumul->ru_gcMinor);
   timevalZero (&cumul->tv_sync);
@@ -269,6 +277,7 @@ void GC_summaryWrite (void) {
       cumul.bytesAllocated += d->bytesAllocated;
       cumul.bytesFilled += d->bytesFilled;
       cumul.bytesCopied += d->bytesCopied;
+      cumul.bytesCopiedShared += d->bytesCopiedShared;
       cumul.bytesCopiedMinor += d->bytesCopiedMinor;
       cumul.bytesHashConsed += d->bytesHashConsed;
       cumul.bytesLifted += d->bytesLifted;
@@ -304,6 +313,8 @@ void GC_summaryWrite (void) {
       cumul.syncForce += d->syncForce;
       cumul.syncMisc += d->syncMisc;
       cumul.numCopyingGCs += d->numCopyingGCs;
+      cumul.numCopyingSharedGCs += d->numCopyingSharedGCs;
+      cumul.numSharedGCs += d->numSharedGCs;
       cumul.numHashConsGCs += d->numHashConsGCs;
       cumul.numMarkCompactGCs += d->numMarkCompactGCs;
       cumul.numMinorGCs += d->numMinorGCs;

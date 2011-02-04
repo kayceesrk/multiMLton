@@ -245,23 +245,29 @@ void copyStack (GC_state s, GC_stack from, GC_stack to) {
 }
 
 DanglingStack* newDanglingStack (GC_state s) {
-    DanglingStack* danglingStack = (DanglingStack*) malloc (sizeof (DanglingStack));
-    assert (danglingStack);
-    danglingStack->next = NULL;
-    danglingStack->stack = BOGUS_OBJPTR;
+  DanglingStack* danglingStack = (DanglingStack*) malloc (sizeof (DanglingStack));
+  assert (danglingStack);
+  danglingStack->next = NULL;
+  danglingStack->stack = BOGUS_OBJPTR;
 
-    if (s->danglingStackList == NULL) {
-        s->danglingStackList = danglingStack;
-    }
-    else {
-        DanglingStack* prev = s->danglingStackList;
-        s->danglingStackList = danglingStack;
-        danglingStack->next = prev;
-    }
-    return danglingStack;
+  if (s->danglingStackList == NULL) {
+    s->danglingStackList = danglingStack;
+  }
+  else {
+    DanglingStack* prev = s->danglingStackList;
+    s->danglingStackList = danglingStack;
+    danglingStack->next = prev;
+  }
+  return danglingStack;
 }
 
 void clearDanglingStackList (GC_state s) {
-    s=s;
-    assert (0);
+  DanglingStack* danglingStack = s->danglingStackList;
+
+  while (danglingStack) {
+    DanglingStack* next = danglingStack->next;
+    free (danglingStack);
+    danglingStack = next;
+  }
+  s->danglingStackList = NULL;
 }

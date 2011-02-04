@@ -6,6 +6,16 @@
  * See the file MLton-LICENSE for details.
  */
 
+GC_state getGCStateFromPointer (GC_state s, pointer p) {
+  for (int proc=0; proc < s->numberOfProcs; proc++) {
+    GC_state r = &s->procStates[proc];
+    if (isPointerInHeap (r, r->heap, p))
+      return r;
+  }
+  assert (0 and "getGCStateFromPointer: pointer location unknown");
+  die ("getGCStateFromPointer: pointer location unknown");
+}
+
 void displayGCState (GC_state s, FILE *stream) {
   fprintf (stream,
            "GC state\n");
