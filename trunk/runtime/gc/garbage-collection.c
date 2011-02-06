@@ -390,15 +390,16 @@ static void allocChunkInSharedHeap (GC_state s,
         fprintf (stderr, "[GC: aborting shared alloc: satisfied.] [%d]\n", s->procId);
       return;
     }
+
+    /* alloc a chunk so that subsequent requests can be satisfied locally */
+    if (bytesRequested < s->controls->allocChunkSize)
+        bytesRequested = s->controls->allocChunkSize;
+
     /* Perhaps there is not enough space in the nursery to satify this
        request; if that's true then we need to do a full collection */
     if (bytesRequested + GC_BONUS_SLOP > availableBytes) {
       performSharedGC (s, bytesRequested);
     }
-
-    /* alloc a chunk so that subsequent requests can be satisfied locally */
-    if (bytesRequested < s->controls->allocChunkSize)
-        bytesRequested = s->controls->allocChunkSize;
 
     /* OK! We might possibly satisfy this request without the runtime lock!
        Let's see what that will entail... */

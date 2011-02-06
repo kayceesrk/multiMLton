@@ -8,16 +8,21 @@
 
 #define FACT 4
 
-static inline void liftObjptr (GC_state s, objptr *opp);
 
 /* Move an object from local heap to the shared heap */
 static inline void liftObjptr (GC_state s, objptr *opp) {
 
-  if (not isObjptrInNursery (s, s->heap, *opp)) {
-    if (DEBUG_LWTGC) {
-      fprintf (stderr, "\t is not in nursery\n");
-    }
+  if (s->forwardState.liftingObject == BOGUS_OBJPTR) {
+    /* A shared heap GC has been issued since we started lifting which has
+     * completed the lifting process for us. Hence, abort lifting again */
+    return;
   }
+
+  pointer p = objptrToPointer (*opp, s->heap->start);
+  if (getHeader (p) == GC_FORWARDED) {
+    *opp = *(objptr*)p;
+  }
+
   /* If pointer has already been forwarded, skip setting lift bit */
   if (isObjptrInHeap (s, s->sharedHeap, *opp)) {
     if (DEBUG_LWTGC) {
@@ -183,6 +188,7 @@ inline void moveTransitiveClosure (GC_state s, objptr* opp,
   s->forwardState.rangeListFirst = s->forwardState.rangeListLast = NULL;
   s->forwardState.amInMinorGC = TRUE;
   s->forwardState.forceStackForwarding = forceStackForwarding;
+  s->forwardState.liftingObject = *opp;
 
   GC_foreachObjptrFun f = liftObjptr;
   if (fillOrig)
@@ -193,6 +199,7 @@ inline void moveTransitiveClosure (GC_state s, objptr* opp,
   foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, f, TRUE);
   s->forwardState.amInMinorGC = FALSE;
   s->forwardState.forceStackForwarding = FALSE;
+  s->forwardState.liftingObject = BOGUS_OBJPTR;
   assert (!s->forwardState.rangeListFirst);
   assert (!s->forwardState.rangeListLast);
 }
@@ -280,11 +287,15 @@ void moveEachObjptrInObject (GC_state s, pointer p) {
   s->forwardState.rangeListFirst = s->forwardState.rangeListLast = NULL;
   s->forwardState.amInMinorGC = TRUE;
   s->forwardState.forceStackForwarding = FALSE;
+  //XXX KC this is not entirely correct since a shared heap GC during the lifting
+  // process would put p in the shared heap, which we do not want
+  s->forwardState.liftingObject = pointerToObjptr (p, s->heap->start);
 
   /* Forward objptrs in the given object to sharedHeap */
   foreachObjptrInObject (s, p, liftObjptr, TRUE);
   foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, liftObjptr, TRUE);
   s->forwardState.amInMinorGC = FALSE;
+  s->forwardState.liftingObject = BOGUS_OBJPTR;
   assert (!s->forwardState.rangeListFirst);
   assert (!s->forwardState.rangeListLast);
 

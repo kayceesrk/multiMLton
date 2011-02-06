@@ -34,6 +34,14 @@ struct GC_forwardState {
    */
   bool forceStackForwarding;
 
+  /* This indicates the object being lifted if forwardState is being used in
+   * an transitive closure lift operation. If the shared heap GC finishes the
+   * lifting, liftingObject is set to BOGUS_POINTER, in which case, the liftin
+   * has completed, and hence, the thread performing the lifting process, aborts
+   * lifting.
+   */
+  objptr liftingObject;
+
   /* used to indicate if a GC would be required to fix the heap */
 };
 

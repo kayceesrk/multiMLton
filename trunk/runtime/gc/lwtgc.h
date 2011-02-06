@@ -20,6 +20,7 @@ PRIVATE void GC_addToMoveOnWBA (GC_state s, pointer p);
 PRIVATE void GC_addToPreemptOnWBA (GC_state s, pointer p);
 PRIVATE void GC_addToSpawnOnWBA (GC_state s, pointer p, int proc);
 
+static inline void liftObjptr (GC_state s, objptr *opp);
 void forceLocalGC (GC_state s);
 void moveTransitiveClosure (GC_state s, objptr *opp,
                             bool forceStackForwarding,

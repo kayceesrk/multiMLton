@@ -51,8 +51,6 @@ size_t sizeofGCStateCurrentStackUsed (GC_state s) {
 void setGCStateCurrentThreadAndStack (GC_state s) {
   GC_thread thread;
   GC_stack stack;
-  if (DEBUG_DETAILED)
-    fprintf (stderr, "setGCStateCurrentThreadAndStack\n");
 
   thread = getThreadCurrent (s);
   s->exnStack = thread->exnStack;
@@ -61,6 +59,9 @@ void setGCStateCurrentThreadAndStack (GC_state s) {
   s->stackBottom = getStackBottom (s, stack);
   s->stackTop = getStackTop (s, stack);
   s->stackLimit = getStackLimit (s, stack);
+  if (DEBUG_DETAILED)
+    fprintf (stderr, "setGCStateCurrentThreadAndStack: thread = "FMTPTR" stack = "FMTPTR" [%d]\n",
+             (uintptr_t)thread, (uintptr_t)stack, s->procId);
   markCard (s, (pointer)stack);
 }
 
@@ -107,7 +108,7 @@ void setGCStateCurrentLocalHeap (GC_state s,
            <= (h->withMapsSize < s->sysvals.ram
                ? s->controls->ratios.copyGenerational
                : s->controls->ratios.markCompactGenerational))
-       )) {
+      )) {
     s->canMinor = TRUE;
     nursery = genNursery;
     nurserySize = genNurserySize;
@@ -181,7 +182,7 @@ void setGCStateCurrentSharedHeap (GC_state s,
            <= (h->size < s->sysvals.ram
                ? s->controls->ratios.copyGenerational
                : s->controls->ratios.markCompactGenerational))
-       )) {
+      )) {
     s->canMinor = TRUE;
     nursery = genNursery;
     nurserySize = genNurserySize;
@@ -303,8 +304,8 @@ void setGCStateCurrentSharedHeap (GC_state s,
 
   //Set sharedHeap limits in gcState
   for (int proc=0; proc < s->numberOfProcs; proc++) {
-      s->procStates[proc].sharedHeapStart = s->sharedHeap->start;
-      s->procStates[proc].sharedHeapEnd = s->sharedHeap->start + s->sharedHeap->size;
+    s->procStates[proc].sharedHeapStart = s->sharedHeap->start;
+    s->procStates[proc].sharedHeapEnd = s->sharedHeap->start + s->sharedHeap->size;
   }
 
   if (not duringInit) {

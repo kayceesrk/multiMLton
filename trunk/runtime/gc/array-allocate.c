@@ -21,7 +21,7 @@ pointer GC_arrayAllocate (GC_state s,
   bool holdLock;
 
   splitHeader(s, header, NULL, NULL, &bytesNonObjptrs, &numObjptrs);
-  if (DEBUG)
+  if (DEBUG_ARRAY)
     fprintf (stderr, "GC_arrayAllocate (%"PRIuMAX", "FMTARRLEN", "FMTHDR") [%d]\n",
              (uintmax_t)ensureBytesFree, numElements, header, Proc_processorNumber (s));
   bytesPerElement = bytesNonObjptrs + (numObjptrs * OBJPTR_SIZE);

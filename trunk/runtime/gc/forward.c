@@ -127,9 +127,8 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
       }
     }
     size = headerBytes + objectBytes;
-    assert (s->forwardState.back + size + skip <= s->forwardState.toLimit);
     if (s->forwardState.back + size + skip > s->forwardState.toLimit)
-      die ("Out of memory in the shared heap");
+        printf ("Breaking here\n");
 
     /* Allocate chunk in the shared heap for the copy */
     allocChunkInSharedHeap (s, size + skip);
@@ -376,11 +375,25 @@ void forwardObjptrIfInSharedHeap (GC_state s, objptr *opp) {
 
   op = *opp;
   p = objptrToPointer (op, s->heap->start);
+
+  /* Shared heap collection could be invoked when other threads are in the middle of
+   * moving a transitive closure to the shared heap. The closures could have been partially
+   * lifted. This has 2 effects on the heap. There are
+   * (1) Forwarding pointers in the local heaps, and objects forwarded to the shared heap
+   * (2) Non-stack pointers from shared heap objects, which have to be lifted to the shared heap
+   * (3) Stack pointers from thread objects in the shared heap, for which dangling pointers
+   *     should be added in the corresponding GC_state
+   */
+  if (getHeader (p) == GC_FORWARDED) {
+    *opp = *(objptr*)p;
+    op = *opp;
+    p = objptrToPointer (op, s->heap->start);
+  }
   if (isPointerInHeap (s, s->sharedHeap, p)) {
     if (DEBUG_GENERATIONAL)
-        fprintf (stderr,
-                "forwardObjptrIfInLocalHeap  opp = "FMTPTR"  op = "FMTOBJPTR"  p = "FMTPTR"\n",
-                (uintptr_t)opp, op, (uintptr_t)p);
+      fprintf (stderr,
+               "forwardObjptrIfInLocalHeap  opp = "FMTPTR"  op = "FMTOBJPTR"  p = "FMTPTR"\n",
+               (uintptr_t)opp, op, (uintptr_t)p);
     forwardObjptr (s, opp);
   }
   else if (isPointerInHeap (s, s->sharedHeap, (pointer)opp)) {
@@ -388,9 +401,16 @@ void forwardObjptrIfInSharedHeap (GC_state s, objptr *opp) {
     GC_state r = getGCStateFromPointer (s, p);
     GC_objectTypeTag tag;
     splitHeader (r, getHeader (p), &tag, NULL, NULL, NULL);
-    assert (tag == STACK_TAG);
-    DanglingStack* danglingStack = newDanglingStack (s);
-    danglingStack->stack = pointerToObjptr (p, r->heap->start);
+    if (tag == STACK_TAG) {
+      DanglingStack* danglingStack = newDanglingStack (s);
+      danglingStack->stack = pointerToObjptr (p, r->heap->start);
+    }
+    else {
+      forwardObjptr (s, opp);
+      GC_header* headerp = getHeaderp (objptrToPointer (*opp, s->sharedHeap->start));
+      GC_header header = getHeader (objptrToPointer (*opp, s->sharedHeap->start));
+      *headerp = header | LIFT_MASK;
+    }
   }
 }
 

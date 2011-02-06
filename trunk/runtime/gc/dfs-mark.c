@@ -66,8 +66,8 @@ size_t dfsMarkByMode (GC_state s, pointer root,
     /* Object has already been marked. */
     return 0;
 
-  if (isObjectLifted (getHeader (root))) {
-      /* Object resides in the Aux heap. Don not collect */
+  if (isPointerInHeap (s, s->sharedHeap, root)) {
+      /* Object resides in the shared heap. Do not collect */
       if (DEBUG_LWTGC)
           fprintf (stderr, "dfsMarkByMode p = "FMTPTR"already LIFTED\n", (uintptr_t)root);
       return 0;
