@@ -65,7 +65,7 @@ size_t sizeofHeapDesired (GC_state s, size_t liveSize, size_t currentSize) {
              and withMapsRatio >= 2 * s->controls->ratios.copy) {
     /* Split RAM in half.  Round down by pageSize so that the total
      * amount of space taken isn't greater than RAM once rounding
-     * happens.  This is so resizeHeapSecondary doesn't get confused
+     * happens.  This is so resizeLocalHeapSecondary doesn't get confused
      * and free a semispace in a misguided attempt to avoid paging.
      */
     res = alignDown (s->sysvals.ram / 2, s->sysvals.pageSize);
@@ -492,9 +492,9 @@ void resizeHeap (GC_state s, size_t minSize) {
   assert (s->heap->size >= minSize);
 }
 
-/* resizeHeapSecondary (s)
+/* resizeLocalHeapSecondary (s)
  */
-void resizeHeapSecondary (GC_state s) {
+void resizeLocalHeapSecondary (GC_state s) {
   size_t primarySize;
   size_t secondarySize;
 
@@ -514,4 +514,28 @@ void resizeHeapSecondary (GC_state s) {
     shrinkHeap (s, s->secondaryLocalHeap, primarySize);
   assert (0 == s->secondaryLocalHeap->size
           or s->heap->size == s->secondaryLocalHeap->size);
+}
+
+/* resizeSharedHeapSecondary (s)
+ */
+void resizeSharedHeapSecondary (GC_state s) {
+  size_t primarySize;
+  size_t secondarySize;
+
+  primarySize = s->sharedHeap->size;
+  secondarySize = s->secondarySharedHeap->size;
+  if (DEBUG_RESIZING)
+    fprintf (stderr, "secondarySharedHeapResize\n");
+  if (0 == secondarySize)
+    return;
+  if (2 * primarySize > s->sysvals.ram)
+    /* Holding on to secondarySharedHeap might cause paging.  So don't. */
+    releaseHeap (s, s->secondarySharedHeap);
+  else if (secondarySize < primarySize) {
+    unless (remapHeap (s, s->secondarySharedHeap, primarySize, primarySize))
+      releaseHeap (s, s->secondarySharedHeap);
+  } else if (secondarySize > primarySize)
+    shrinkHeap (s, s->secondarySharedHeap, primarySize);
+  assert (0 == s->secondarySharedHeap->size
+          or s->sharedHeap->size == s->secondarySharedHeap->size);
 }

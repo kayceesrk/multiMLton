@@ -54,7 +54,7 @@ void GC_unpack (__attribute__ ((unused)) GC_state *gs) {
   minorGC (s);
   resizeHeap (s, s->heap->oldGenSize);
   setCardMapAndCrossMap (s);
-  resizeHeapSecondary (s);
+  resizeLocalHeapSecondary (s);
   setGCStateCurrentLocalHeap (s, 0, 0);
   setGCStateCurrentThreadAndStack (s);
   leaveGC (s);

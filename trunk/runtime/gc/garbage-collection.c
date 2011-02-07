@@ -46,7 +46,7 @@ void majorGC (GC_state s, size_t bytesRequested, bool mayResize) {
     resizeHeap (s, s->lastMajorStatistics->bytesLive + bytesRequested);
     setCardMapAndCrossMap (s);
   }
-  resizeHeapSecondary (s);
+  resizeLocalHeapSecondary (s);
   assert (s->heap->oldGenSize + bytesRequested <= s->heap->size);
 }
 
@@ -216,9 +216,11 @@ void performSharedGC (GC_state s,
 
     majorCheneyCopySharedGC (s);
     s->lastSharedMajorStatistics->bytesLive = s->sharedHeap->oldGenSize;
-    setGCStateCurrentSharedHeap (s, 0, 0, FALSE);
     //XXX TODO resize heap
+    resizeSharedHeapSecondary (s);
     assert (s->sharedHeap->oldGenSize + bytesRequested <= s->sharedHeap->size);
+
+    setGCStateCurrentSharedHeap (s, 0, 0, FALSE);
   }
 
   LEAVE0 (s);
