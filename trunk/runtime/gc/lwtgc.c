@@ -12,17 +12,10 @@
 /* Move an object from local heap to the shared heap */
 static inline void liftObjptr (GC_state s, objptr *opp) {
 
-  if (s->forwardState.liftingObject == BOGUS_OBJPTR) {
-    /* A shared heap GC has been issued since we started lifting which has
-     * completed the lifting process for us. Hence, abort lifting again */
-    return;
-  }
-
   pointer p = objptrToPointer (*opp, s->heap->start);
   if (getHeader (p) == GC_FORWARDED) {
     *opp = *(objptr*)p;
   }
-
   /* If pointer has already been forwarded, skip setting lift bit */
   if (isObjptrInHeap (s, s->sharedHeap, *opp)) {
     if (DEBUG_LWTGC) {
@@ -170,7 +163,7 @@ void liftAllObjectsDuringInit (GC_state s) {
 
   /* Force a major GC to clean up the local heap. */
   fixForwardingPointers (s, TRUE);
-  s->lastSharedMajorStatistics->bytesLive = s->sharedHeap->frontier - s->sharedHeap->start;
+  s->lastSharedMajorStatistics->bytesLive = s->sharedHeap->size;
   endAtomic (s);
   if (DEBUG_LWTGC)
     fprintf (stderr, "liftAllObjectsDuringInit: Exiting\n");
@@ -194,9 +187,19 @@ inline void moveTransitiveClosure (GC_state s, objptr* opp,
   if (fillOrig)
     f = liftObjptrAndFillOrig;
 
-  /* Forward the given object to sharedHeap */
-  f (s, opp);
-  foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, f, TRUE);
+  if (saveReturnLocation (s) == 0) {
+    /* Original call: Forward the given object to sharedHeap */
+    f (s, &s->forwardState.liftingObject);
+    foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, f, TRUE);
+  }
+  else {
+    /* retry -- this time it should work (since we have perfomed a shared GC
+     * and hence should not run out of space*/
+    moveTransitiveClosure (s, &s->forwardState.liftingObject,
+                           forceStackForwarding, fillOrig);
+  }
+
+  *opp = s->forwardState.liftingObject;
   s->forwardState.amInMinorGC = FALSE;
   s->forwardState.forceStackForwarding = FALSE;
   s->forwardState.liftingObject = BOGUS_OBJPTR;
@@ -287,15 +290,13 @@ void moveEachObjptrInObject (GC_state s, pointer p) {
   s->forwardState.rangeListFirst = s->forwardState.rangeListLast = NULL;
   s->forwardState.amInMinorGC = TRUE;
   s->forwardState.forceStackForwarding = FALSE;
-  //XXX KC this is not entirely correct since a shared heap GC during the lifting
-  // process would put p in the shared heap, which we do not want
-  s->forwardState.liftingObject = pointerToObjptr (p, s->heap->start);
 
   /* Forward objptrs in the given object to sharedHeap */
-  foreachObjptrInObject (s, p, liftObjptr, TRUE);
+  foreachObjptrInObject (s, p, liftObjptr, TRUE); //XXX KC need to handle liftObject here
   foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, liftObjptr, TRUE);
   s->forwardState.amInMinorGC = FALSE;
   s->forwardState.liftingObject = BOGUS_OBJPTR;
+
   assert (!s->forwardState.rangeListFirst);
   assert (!s->forwardState.rangeListLast);
 
@@ -397,4 +398,15 @@ static inline void foreachObjptrInWBAs (GC_state s, GC_state fromState, GC_forea
     callIfIsObjptr (s, f, &(fromState->preemptOnWBA [i]));
   for (int i=0; i < fromState->spawnOnWBASize; i++)
     callIfIsObjptr (s, f, &((fromState->spawnOnWBA [i]).op));
+}
+
+int saveReturnLocation (GC_state s) {
+  s->forwardState.isReturnLocationSet = TRUE;
+  return setjmp (s->forwardState.returnLocation);
+}
+
+void jumpToReturnLocation (GC_state s) {
+  assert (s->forwardState.isReturnLocationSet);
+  s->forwardState.isReturnLocationSet = FALSE;
+  longjmp (s->forwardState.returnLocation, 1);
 }

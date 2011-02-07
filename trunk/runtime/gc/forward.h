@@ -34,13 +34,17 @@ struct GC_forwardState {
    */
   bool forceStackForwarding;
 
-  /* This indicates the object being lifted if forwardState is being used in
-   * an transitive closure lift operation. If the shared heap GC finishes the
-   * lifting, liftingObject is set to BOGUS_POINTER, in which case, the liftin
-   * has completed, and hence, the thread performing the lifting process, aborts
-   * lifting.
+  /* This indicates the object being lifted if forwardState is being used in an
+   * transitive closure lift operation. If the shared heap GC finishes the
+   * lifting, the thread performing the lifting process, aborts lifting.
    */
   objptr liftingObject;
+
+  /* When aborting transitive closure lifting, the following location is used
+   * for a non-local goto operation. Similar to throwing an exception.
+   */
+  jmp_buf returnLocation;
+  bool isReturnLocationSet;
 
   /* used to indicate if a GC would be required to fix the heap */
 };
@@ -59,5 +63,7 @@ static inline void forwardObjptrIfInNursery (GC_state s, objptr *opp);
 static inline void forwardObjptrIfInLocalHeap (GC_state s, objptr *opp);
 static inline void forwardObjptrIfInSharedHeap (GC_state s, objptr *opp);
 static inline void forwardInterGenerationalObjptrs (GC_state s);
+static inline void saveForwardState (GC_state s, struct GC_forwardState* fwd);
+static inline void restoreForwardState (GC_state s, struct GC_forwardState* fwd);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

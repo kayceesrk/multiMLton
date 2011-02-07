@@ -43,7 +43,7 @@ size_t sizeofObject (GC_state s, pointer p) {
                (uintptr_t)p, s->procId);
     objptr op = *((objptr*)p);
     p = objptrToPointer (op, s->sharedHeap->start);
-    assert (isPointerInHeap (s, s->sharedHeap, p));
+    assert (isPointerInHeap (s, s->sharedHeap, p) or isPointerInToSpace (s, p));
     header = getHeader (p);
     assert (header != GC_FORWARDED);
   }
@@ -92,7 +92,7 @@ size_t sizeofObjectNoHeader (GC_state s, pointer p) {
                (uintptr_t)p, s->procId);
     objptr op = *((objptr*)p);
     p = objptrToPointer (op, s->sharedHeap->start);
-    assert (isPointerInHeap (s, s->sharedHeap, p));
+    assert (isPointerInHeap (s, s->sharedHeap, p) or isPointerInToSpace (s, p));
     header = getHeader (p);
     assert (header != GC_FORWARDED);
   }

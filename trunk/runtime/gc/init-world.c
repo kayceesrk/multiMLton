@@ -162,7 +162,7 @@ void initWorld (GC_state s) {
 
   //set up shared heap
   //Create an initial heap of size 10M
-  createHeap (s, s->sharedHeap, 1024 * 1024 * 10, 1024 * 1024 * 10);
+  createHeap (s, s->sharedHeap, 1024 * 1024 * 1, 1024 * 1024 * 1);
   start = alignFrontier (s, s->sharedHeap->start);
   s->sharedStart = s->sharedFrontier = start;
   s->sharedLimitPlusSlop = s->sharedHeap->start + s->sharedHeap->size - GC_BONUS_SLOP;

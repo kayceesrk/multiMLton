@@ -28,7 +28,7 @@ static void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s,
                                                             size_t nurseryBytesRequested,
                                                             bool handlesSignals,
                                                             bool forceStackGrowth);
-static void allocChunkInSharedHeap (GC_state s,
+static bool allocChunkInSharedHeap (GC_state s,
                                     size_t nurseryBytesRequested);
 static void fixForwardingPointers (GC_state s, bool mayResize);
 

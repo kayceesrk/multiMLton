@@ -29,6 +29,8 @@ void moveEachObjptrInObject (GC_state s, pointer object);
 void liftAllObjectsDuringInit (GC_state s);
 void liftAllObjptrsInMoveOnWBA (GC_state s);
 static inline void assertLiftedObjptr (GC_state s, objptr *opp);
+int saveReturnLocation (GC_state s);
+void jumpToReturnLocation (GC_state s) __attribute__((noreturn));
 
 #endif /* (defined (MLTON_GC_INTERNAL_BASIS)) */
 

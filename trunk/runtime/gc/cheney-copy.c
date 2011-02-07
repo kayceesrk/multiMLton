@@ -136,10 +136,6 @@ void majorCheneyCopySharedGC (GC_state s) {
     foreachObjptrInRange (&(s->procStates[proc]), s->procStates[proc].heap->start,
                           &(s->procStates[proc].frontier), forwardObjptrIfInSharedHeap, TRUE);
   foreachObjptrInRange (s, toStart, &s->forwardState.back, forwardObjptrIfInSharedHeap, TRUE);
-  for (int proc=0; proc < s->numberOfProcs; proc++) { /* perform pending object lifting */
-    callIfIsObjptr (&s->procStates[proc], liftObjptr, &s->forwardState.liftingObject);
-    s->forwardState.liftingObject = BOGUS_OBJPTR;
-  }
 
   //XXX KC todo -- weak pointers
   //updateWeaksForCheneyCopy (s);

@@ -183,11 +183,12 @@ void performSharedGC (GC_state s,
     }
 
     size_t desiredSize =
-      sizeofHeapDesired (s, s->lastSharedMajorStatistics->bytesLive + bytesRequested, 0);
-    if (!isHeapInit (s->secondarySharedHeap))
+      sizeofHeapDesired (s, s->lastSharedMajorStatistics->bytesLive + bytesRequested, s->sharedHeap->size);
+    if (isHeapInit (s->secondarySharedHeap))
       createHeapSharedSecondary (s, desiredSize);
     majorCheneyCopySharedGC (s);
     s->lastSharedMajorStatistics->bytesLive = s->sharedHeap->oldGenSize;
+    setGCStateCurrentSharedHeap (s, 0, 0, FALSE);
     //XXX TODO resize heap
     assert (s->sharedHeap->oldGenSize + bytesRequested <= s->sharedHeap->size);
   }
@@ -365,7 +366,8 @@ size_t fillGap (__attribute__ ((unused)) GC_state s, pointer start, pointer end)
   }
 }
 
-static void allocChunkInSharedHeap (GC_state s,
+/* returns TRUE if a shared heap GC was performed */
+static bool allocChunkInSharedHeap (GC_state s,
                                     size_t bytesRequested) {
 
   s->cumulativeStatistics->bytesLifted += bytesRequested;
@@ -388,7 +390,7 @@ static void allocChunkInSharedHeap (GC_state s,
     if (bytesRequested <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier)) {
       if (DEBUG)
         fprintf (stderr, "[GC: aborting shared alloc: satisfied.] [%d]\n", s->procId);
-      return;
+      return FALSE;
     }
 
     /* alloc a chunk so that subsequent requests can be satisfied locally */
@@ -399,6 +401,7 @@ static void allocChunkInSharedHeap (GC_state s,
        request; if that's true then we need to do a full collection */
     if (bytesRequested + GC_BONUS_SLOP > availableBytes) {
       performSharedGC (s, bytesRequested);
+      return TRUE;
     }
 
     /* OK! We might possibly satisfy this request without the runtime lock!
@@ -437,7 +440,7 @@ static void allocChunkInSharedHeap (GC_state s,
       s->sharedLimitPlusSlop = newHeapFrontier - GC_BONUS_SLOP;
       s->sharedLimit = s->sharedLimitPlusSlop - GC_HEAP_LIMIT_SLOP;
 
-      return;
+      return FALSE;
     }
     else {
       if (DEBUG)
@@ -445,6 +448,7 @@ static void allocChunkInSharedHeap (GC_state s,
                  (uintptr_t)s->sharedHeap->frontier, s->procId);
     }
   }
+  return FALSE;
 }
 
 

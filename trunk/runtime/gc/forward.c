@@ -127,11 +127,21 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
       }
     }
     size = headerBytes + objectBytes;
-    if (s->forwardState.back + size + skip > s->forwardState.toLimit)
-        printf ("Breaking here\n");
-
     /* Allocate chunk in the shared heap for the copy */
-    allocChunkInSharedHeap (s, size + skip);
+    if (allocChunkInSharedHeap (s, size + skip)) {
+      /* A shared heap GC has been performed and the object we are forwarding
+       * has been forwarded as a part of the GC. We will abort now. */
+
+      //Cleanup the range list
+      while (s->forwardState.rangeListFirst) {
+        SkipRange* next = s->forwardState.rangeListFirst->next;
+        free (s->forwardState.rangeListFirst);
+        s->forwardState.rangeListFirst = next;
+      }
+      s->forwardState.rangeListFirst = NULL;
+      s->forwardState.rangeListLast = NULL;
+      jumpToReturnLocation (s);
+    }
 
     if (s->sharedFrontier != s->forwardState.back) {
       SkipRange* sr = (SkipRange*) malloc (sizeof (SkipRange));
@@ -226,8 +236,6 @@ void forwardObjptr (GC_state s, objptr *opp) {
       fprintf (stderr, " already LIFTED\n");
     return;
   }
-
-  assert (isObjptrInFromSpace (s, s->heap, *opp));
 
   if (header != GC_FORWARDED) { /* forward the object */
     size_t size, skip;
@@ -394,7 +402,15 @@ void forwardObjptrIfInSharedHeap (GC_state s, objptr *opp) {
       fprintf (stderr,
                "forwardObjptrIfInLocalHeap  opp = "FMTPTR"  op = "FMTOBJPTR"  p = "FMTPTR"\n",
                (uintptr_t)opp, op, (uintptr_t)p);
+    //remove the lift bit
+    GC_header* headerp = getHeaderp (objptrToPointer (*opp, s->sharedHeap->start));
+    GC_header header = getHeader (objptrToPointer (*opp, s->sharedHeap->start));
+    *headerp = header & (~(LIFT_MASK));
     forwardObjptr (s, opp);
+    //add the lift bit back again
+    headerp = getHeaderp (objptrToPointer (*opp, s->sharedHeap->start));
+    header = getHeader (objptrToPointer (*opp, s->sharedHeap->start));
+    *headerp = header | LIFT_MASK;
   }
   else if (isPointerInHeap (s, s->sharedHeap, (pointer)opp)) {
     //opp is in shared heap, and p is in local heap. Hence, add to danglingStackList
@@ -494,4 +510,12 @@ checkCard:
 done:
   if (DEBUG_GENERATIONAL)
     fprintf (stderr, "Forwarding inter-generational pointers done.\n");
+}
+
+void saveForwardState (GC_state s, struct GC_forwardState* fwd) {
+  fwd->forceStackForwarding = s->forwardState.forceStackForwarding;
+}
+
+void restoreForwardState (GC_state s, struct GC_forwardState* fwd) {
+  s->forwardState.forceStackForwarding = fwd->forceStackForwarding;
 }

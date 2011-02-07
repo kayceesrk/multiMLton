@@ -23,7 +23,6 @@ void enter (GC_state s) {
     fprintf (stderr, "enter locked [%d]\n", Proc_processorNumber (s));
   if (DEBUG_ENTER_LEAVE)
     displayGCState (s, stderr);
-  assert (invariantForGC (s));
   if (DEBUG_ENTER_LEAVE)
     fprintf (stderr, "enter ok [%d]\n", Proc_processorNumber (s));
 }

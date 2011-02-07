@@ -141,15 +141,6 @@ void setGCStateCurrentSharedHeap (GC_state s,
   pointer frontier;
   size_t bonus = GC_BONUS_SLOP * s->numberOfProcs;
 
-  if (not duringInit) {
-    nurseryBytesRequested = 0;
-    for (int proc = 0; proc < s->numberOfProcs; proc++) {
-      GC_thread thread = getThreadCurrent(&s->procStates[proc]);
-      if (thread)
-        nurseryBytesRequested += thread->bytesNeeded;
-    }
-  }
-
   if (DEBUG_DETAILED)
     fprintf (stderr, "setGCStateCurrentSharedHeap(%s, %s)\n",
              uintmaxToCommaString(oldGenBytesRequested),

@@ -38,6 +38,7 @@ void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f) {
       }
       foreachObjptrInWBAs (s, &s->procStates[proc], f);
       foreachObjptrInSQ (s, s->procStates[proc].schedulerQueue, f);
+      callIfIsObjptr (s, f, &s->forwardState.liftingObject);
     }
   }
   else {
@@ -96,14 +97,6 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
   GC_objectTypeTag tag;
 
   header = getHeader (p);
-  if (header == GC_FORWARDED) {
-    objptr op = *((objptr*)p);
-    pointer realP = objptrToPointer (op, s->sharedHeap->start);
-    assert (isPointerInHeap (s, s->sharedHeap, realP));
-    header = getHeader (realP);
-    p += sizeofObjectNoHeader (s, realP);
-    return p;
-  }
   splitHeader(s, header, &tag, NULL, &bytesNonObjptrs, &numObjptrs);
   if (DEBUG_DETAILED)
     fprintf (stderr,
@@ -279,7 +272,17 @@ pointer foreachObjptrInRange (GC_state s, pointer front, pointer *back,
                  (uintptr_t)front, (uintptr_t)(*back), s->procId);
       pointer p = advanceToObjectData (s, front);
       assert (isAligned ((size_t)p, s->alignment));
-      front = foreachObjptrInObject (s, p, f, skipWeaks);
+      if (getHeader (p) == GC_FORWARDED) {
+          objptr op = *((objptr*)p);
+          pointer realP = objptrToPointer (op, s->sharedHeap->start);
+          assert (isPointerInHeap (s, s->sharedHeap, realP));
+          pointer oldFront = front;
+          front = p + sizeofObjectNoHeader (s, realP);
+          fillGap (s, oldFront, front);
+      }
+      else {
+        front = foreachObjptrInObject (s, p, f, skipWeaks);
+      }
     }
     b = *back;
   }
