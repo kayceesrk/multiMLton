@@ -164,6 +164,33 @@ void performSharedGC (GC_state s,
   if (bytesRequested + GC_BONUS_SLOP > availableBytes) {
     /* perform GC */
     bytesRequested = (s->controls->allocChunkSize + GC_BONUS_SLOP) * s->numberOfProcs;
+
+    if (DEBUG or s->controls->messages) {
+        size_t nurserySize = s->sharedHeap->size - (s->sharedHeap->nursery - s->sharedHeap->start);
+        size_t nurseryUsed = s->sharedFrontier - s->sharedHeap->nursery;
+        fprintf (stderr,
+                "[GC: Starting shared heap gc #%s; requesting %s bytes,]\n",
+                uintmaxToCommaString(s->cumulativeStatistics->numCopyingSharedGCs + 1),
+                uintmaxToCommaString(bytesRequested));
+        fprintf (stderr,
+                "[GC:\tshared heap at "FMTPTR" of size %s bytes,]\n",
+                (uintptr_t)(s->sharedHeap->start),
+                uintmaxToCommaString(s->sharedHeap->size));
+        fprintf (stderr,
+                "[GC:\twith nursery of size %s bytes (%.1f%% of heap),]\n",
+                uintmaxToCommaString(nurserySize),
+                100.0 * ((double)(nurserySize) / (double)(s->sharedHeap->size)));
+        fprintf (stderr,
+                "[GC:\tand old-gen of size %s bytes (%.1f%% of heap),]\n",
+                uintmaxToCommaString(s->sharedHeap->oldGenSize),
+                100.0 * ((double)(s->sharedHeap->oldGenSize) / (double)(s->sharedHeap->size)));
+        fprintf (stderr,
+                "[GC:\tand nursery using %s bytes (%.1f%% of heap, %.1f%% of nursery).]\n",
+                uintmaxToCommaString(nurseryUsed),
+                100.0 * ((double)(nurseryUsed) / (double)(s->sharedHeap->size)),
+                100.0 * ((double)(nurseryUsed) / (double)(nurserySize)));
+    }
+
     for (int proc = 0; proc < s->numberOfProcs; proc++) {
       clearDanglingStackList (&s->procStates[proc]);
       /* Add in the bonus slop now since we need to fill it */
@@ -186,6 +213,7 @@ void performSharedGC (GC_state s,
       sizeofHeapDesired (s, s->lastSharedMajorStatistics->bytesLive + bytesRequested, s->sharedHeap->size);
     if (isHeapInit (s->secondarySharedHeap))
       createHeapSharedSecondary (s, desiredSize);
+
     majorCheneyCopySharedGC (s);
     s->lastSharedMajorStatistics->bytesLive = s->sharedHeap->oldGenSize;
     setGCStateCurrentSharedHeap (s, 0, 0, FALSE);

@@ -14,5 +14,6 @@ static inline size_t sizeofStackNoHeader (GC_state s, GC_stack stack);
 
 static inline size_t sizeofObject (GC_state s, pointer p);
 static inline size_t sizeofObjectNoHeader (GC_state s, pointer p);
+static inline size_t sizeofObjectHeader (GC_state s, GC_header h);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

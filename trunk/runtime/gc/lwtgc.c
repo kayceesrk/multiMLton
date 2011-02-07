@@ -65,7 +65,7 @@ static inline void liftObjptrAndFillOrig (GC_state s, objptr *opp) {
 
   if (isPointerInHeap (s, s->sharedHeap, new_p)) {
     size_t objSize = sizeofObject (s, new_p);
-    old_p = (pointer)getHeaderp (old_p);
+    old_p -= sizeofObjectHeader (s, getHeader (new_p));
     if (DEBUG_LWTGC || DEBUG)
       fprintf (stderr, "\t filling Gap between "FMTPTR" and "FMTPTR" of size %ld [%d]\n",
                (uintptr_t)old_p, (uintptr_t)(old_p + objSize), objSize, s->procId);
@@ -199,7 +199,9 @@ inline void moveTransitiveClosure (GC_state s, objptr* opp,
                            forceStackForwarding, fillOrig);
   }
 
+
   *opp = s->forwardState.liftingObject;
+  s->forwardState.isReturnLocationSet = FALSE;
   s->forwardState.amInMinorGC = FALSE;
   s->forwardState.forceStackForwarding = FALSE;
   s->forwardState.liftingObject = BOGUS_OBJPTR;
@@ -402,7 +404,8 @@ static inline void foreachObjptrInWBAs (GC_state s, GC_state fromState, GC_forea
 
 int saveReturnLocation (GC_state s) {
   s->forwardState.isReturnLocationSet = TRUE;
-  return setjmp (s->forwardState.returnLocation);
+  int ret = setjmp (s->forwardState.returnLocation);
+  return ret;
 }
 
 void jumpToReturnLocation (GC_state s) {

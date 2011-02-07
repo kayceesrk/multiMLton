@@ -119,3 +119,13 @@ size_t sizeofObjectNoHeader (GC_state s, pointer p) {
   }
   return objectBytes;
 }
+
+size_t sizeofObjectHeader (GC_state s, GC_header header) {
+  GC_objectTypeTag tag;
+  assert (header != GC_FORWARDED);
+  splitHeader (s, header, &tag, NULL, NULL, NULL);
+  if (tag == ARRAY_TAG)
+    return GC_ARRAY_HEADER_SIZE;
+  else
+    return GC_NORMAL_HEADER_SIZE;
+}

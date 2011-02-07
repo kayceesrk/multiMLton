@@ -412,7 +412,7 @@ void forwardObjptrIfInSharedHeap (GC_state s, objptr *opp) {
     header = getHeader (objptrToPointer (*opp, s->sharedHeap->start));
     *headerp = header | LIFT_MASK;
   }
-  else if (isPointerInHeap (s, s->sharedHeap, (pointer)opp)) {
+  else if (isPointerInToSpace (s, (pointer)opp) and isPointerInHeap (s, s->heap, p)) {
     //opp is in shared heap, and p is in local heap. Hence, add to danglingStackList
     GC_state r = getGCStateFromPointer (s, p);
     GC_objectTypeTag tag;
@@ -420,6 +420,12 @@ void forwardObjptrIfInSharedHeap (GC_state s, objptr *opp) {
     if (tag == STACK_TAG) {
       DanglingStack* danglingStack = newDanglingStack (s);
       danglingStack->stack = pointerToObjptr (p, r->heap->start);
+      GC_stack stk = (GC_stack)p;
+      pointer thread = objptrToPointer (stk->thread, r->heap->start);
+      if (getHeader (thread) == GC_FORWARDED) {
+        stk->thread = *(objptr*)thread;
+        assert (isObjptrInToSpace (s, stk->thread));
+      }
     }
     else {
       forwardObjptr (s, opp);

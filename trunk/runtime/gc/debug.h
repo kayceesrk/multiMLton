@@ -7,7 +7,7 @@
  */
 
 #ifndef DEBUG
-#define DEBUG FALSE
+#define DEBUG TRUE
 #endif
 
 
