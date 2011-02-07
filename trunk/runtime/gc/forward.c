@@ -141,6 +141,7 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
       s->forwardState.rangeListFirst = NULL;
       s->forwardState.rangeListLast = NULL;
       jumpToReturnLocation (s);
+      assert (0 and "Should not reach here\n");
     }
 
     if (s->sharedFrontier != s->forwardState.back) {

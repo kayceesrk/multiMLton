@@ -66,7 +66,7 @@ static inline void liftObjptrAndFillOrig (GC_state s, objptr *opp) {
   if (isPointerInHeap (s, s->sharedHeap, new_p)) {
     size_t objSize = sizeofObject (s, new_p);
     old_p -= sizeofObjectHeader (s, getHeader (new_p));
-    if (DEBUG_LWTGC || DEBUG)
+    if (DEBUG_LWTGC)
       fprintf (stderr, "\t filling Gap between "FMTPTR" and "FMTPTR" of size %ld [%d]\n",
                (uintptr_t)old_p, (uintptr_t)(old_p + objSize), objSize, s->procId);
     fillGap (s, old_p, old_p + objSize);
@@ -171,7 +171,7 @@ void liftAllObjectsDuringInit (GC_state s) {
 }
 
 /* This lifts the transitive closure to the shared heap */
-inline void moveTransitiveClosure (GC_state s, objptr* opp,
+void moveTransitiveClosure (GC_state s, objptr* opp,
                                    bool forceStackForwarding,
                                    bool fillOrig) {
   //Set up the forwarding state
@@ -187,7 +187,8 @@ inline void moveTransitiveClosure (GC_state s, objptr* opp,
   if (fillOrig)
     f = liftObjptrAndFillOrig;
 
-  if (saveReturnLocation (s) == 0) {
+  s->forwardState.isReturnLocationSet = TRUE;
+  if (setjmp (s->forwardState.returnLocation) == 0) {
     /* Original call: Forward the given object to sharedHeap */
     f (s, &s->forwardState.liftingObject);
     foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, f, TRUE);
@@ -195,6 +196,9 @@ inline void moveTransitiveClosure (GC_state s, objptr* opp,
   else {
     /* retry -- this time it should work (since we have perfomed a shared GC
      * and hence should not run out of space*/
+    if (DEBUG_LWTGC)
+      fprintf (stderr, "retry with "FMTPTR" [%d]\n",
+               (uintptr_t)s->forwardState.liftingObject, s->procId);
     moveTransitiveClosure (s, &s->forwardState.liftingObject,
                            forceStackForwarding, fillOrig);
   }
@@ -212,6 +216,8 @@ inline void moveTransitiveClosure (GC_state s, objptr* opp,
 pointer GC_move (GC_state s, pointer p,
                  bool forceStackForwarding,
                  bool skipFixForwardingPointers) {
+  assert (s);
+  assert (s->heap);
   if (!(s->heap->start <= p and p < s->heap->start + s->heap->size)) {
     if (DEBUG_LWTGC)
       fprintf (stderr, "GC_move: pointer "FMTPTR" not in heap\n", (uintptr_t)p);
@@ -240,6 +246,10 @@ pointer GC_move (GC_state s, pointer p,
   objptr op = pointerToObjptr (p, s->heap->start);
   objptr* pOp = &op;
   moveTransitiveClosure (s, pOp, forceStackForwarding, FALSE);
+  if (DEBUG_LWTGC)
+    fprintf (stderr, "GC_move: After move transitive closure [%d]\n", s->procId);
+
+  assert (isObjptrInHeap (s, s->sharedHeap, op));
 
   if (!skipFixForwardingPointers) {
     /* Force a garbage collection. Essential to fix the forwarding pointers from
@@ -400,12 +410,6 @@ static inline void foreachObjptrInWBAs (GC_state s, GC_state fromState, GC_forea
     callIfIsObjptr (s, f, &(fromState->preemptOnWBA [i]));
   for (int i=0; i < fromState->spawnOnWBASize; i++)
     callIfIsObjptr (s, f, &((fromState->spawnOnWBA [i]).op));
-}
-
-int saveReturnLocation (GC_state s) {
-  s->forwardState.isReturnLocationSet = TRUE;
-  int ret = setjmp (s->forwardState.returnLocation);
-  return ret;
 }
 
 void jumpToReturnLocation (GC_state s) {

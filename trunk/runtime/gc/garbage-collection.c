@@ -695,6 +695,7 @@ void GC_collect (GC_state s, size_t bytesRequested, bool force,
   ensureHasHeapBytesFreeAndOrInvariantForMutator (s, force,
                                                   TRUE, TRUE,
                                                   0, 0, TRUE, FALSE);
+  Parallel_maybeWaitForGC ();
 }
 
 pointer FFI_getOpArgsResPtr (GC_state s) {
