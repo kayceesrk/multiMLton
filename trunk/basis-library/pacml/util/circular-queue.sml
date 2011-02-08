@@ -24,7 +24,7 @@ struct
   fun isEmpty (T {rp, wp, size, ...}) =
     (!rp) = (!wp)
 
-  fun enque (q as T {arr, size, rp, wp}, e) =
+  fun enque (q as T {arr, size, wp, ...}, e) =
     if (isFull (q)) then
       raise CirQueueFull
     else
@@ -35,15 +35,35 @@ struct
         ()
       end
 
-  fun deque (q as T {arr, size, rp, wp}) =
+  fun deque (q as T {arr, size, rp, ...}) =
     if (isEmpty (q)) then
       NONE
     else
       let
         val e = Array.sub (arr, !rp)
-        val _ = Array.update (arr, !rp, NONE)
+        (* val _ = Array.update (arr, !rp, NONE) *)
         val _ = rp := ((!rp + 1) mod !size)
       in
         e
       end
+
+  val enque =
+    fn (q as T {arr, size, rp, wp}, e) =>
+    let
+      val res = enque (q, e)
+      val _ = print (concat ["Enque: rp=",Int.toString (!rp)," wp=", Int.toString (!wp), "\n"])
+    in
+      res
+    end
+
+  val deque =
+    fn (q as T {arr, size, rp, wp}) =>
+    let
+      val res = deque (q)
+      val _ = case res of
+                   NONE => ()
+                 | SOME _ => print (concat ["Deque: rp=",Int.toString (!rp)," wp=", Int.toString (!wp), "\n"])
+    in
+      res
+    end
 end

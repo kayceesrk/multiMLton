@@ -4,8 +4,8 @@ struct
   open Critical
   structure TID = ThreadID
 
-  structure Assert = LocalAssert(val assert = false)
-  structure Debug = LocalDebug(val debug = false)
+  structure Assert = LocalAssert(val assert = true)
+  structure Debug = LocalDebug(val debug = true)
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
   fun debug' msg = debug (fn () => (msg())^" : "^Int.toString(PacmlFFI.processorNumber()))
@@ -56,12 +56,12 @@ struct
                   val _ = state := LOCKED
                   val res = Scheduler.next ()
                   val RepTypes.RHOST (t, mt) = res
-                  val _ = debug' (fn () => "yieldForLock(5) "^(TID.tidToString t))
+                  val _ = debug' (fn () => "yieldForLock(2) "^(TID.tidToString t))
                 in
                   res
                 end)
     val () = setAtomicState (atomicState)
-    val _ = debug' (fn () => "yieldForLock(6)")
+    val _ = debug' (fn () => "yieldForLock(3)")
     val tid' = TID.getCurThreadId ()
     val _ = Assert.assert' ("yieldForLock: TIDs dont match ("
                             ^(TID.tidToString tid)^", "^(TID.tidToString tid')^")"
@@ -78,8 +78,9 @@ struct
       val res = cas (state, LOCKED, CLAIMED)
     in
       if res = LOCKED then
-        (yieldForLock (que, state);
-        getCmlLock l ftid)
+        (debug' (fn () => concat["yieldForLock(1): Lock held by ", Int.toString (!tid)])
+        ; yieldForLock (que, state)
+        ; getCmlLock l ftid)
       else if res = CLAIMED then
         enque ()
       else (* res = FREE *)
@@ -124,7 +125,12 @@ struct
            case waitingT of
                 NONE => ()
               | SOME t =>
+                  let
+                    val RepTypes.RHOST (tid, _) = t
+                    val _ = debug' (fn () => "Lock: readying "^(TID.tidToString tid))
+                  in
                     SchedulerQueues.enque (t, RepTypes.PRI)
+                  end
           end
         else if (res = CLAIMED) then
           releaseCmlLock l ftid
