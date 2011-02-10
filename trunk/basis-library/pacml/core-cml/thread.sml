@@ -1,8 +1,8 @@
 structure Thread : THREAD_EXTRA =
 struct
 
-  structure Assert = LocalAssert(val assert = true)
-  structure Debug = LocalDebug(val debug = true)
+  structure Assert = LocalAssert(val assert = false)
+  structure Debug = LocalDebug(val debug = false)
 
   open Critical
   open ThreadID

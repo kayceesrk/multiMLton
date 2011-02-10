@@ -6,9 +6,6 @@
  * See the file MLton-LICENSE for details.
  */
 
-#define FACT 4
-
-
 /* Move an object from local heap to the shared heap */
 static inline void liftObjptr (GC_state s, objptr *opp) {
 
@@ -148,11 +145,11 @@ void liftAllObjectsDuringInit (GC_state s) {
   assert (!s->forwardState.rangeListLast);
 
   /* if (DEBUG_LWTGC)
-    fprintf (stderr, "liftAllObjectsDuringInit: updateWeaksForCheneyCopy\n");
-  updateWeaksForCheneyCopy (s);
-  if (DEBUG_LWTGC)
-    fprintf (stderr, "liftAllObjectsDuringInit: resizeHeap\n");
-  resizeHeap (s, s->heap->oldGenSize); */
+     fprintf (stderr, "liftAllObjectsDuringInit: updateWeaksForCheneyCopy\n");
+     updateWeaksForCheneyCopy (s);
+     if (DEBUG_LWTGC)
+     fprintf (stderr, "liftAllObjectsDuringInit: resizeHeap\n");
+     resizeHeap (s, s->heap->oldGenSize); */
 
   //Check
   if (DEBUG_LWTGC) {
@@ -172,35 +169,39 @@ void liftAllObjectsDuringInit (GC_state s) {
 
 /* This lifts the transitive closure to the shared heap */
 void moveTransitiveClosure (GC_state s, objptr* opp,
-                                   bool forceStackForwarding,
-                                   bool fillOrig) {
-  //Set up the forwarding state
-  s->forwardState.toStart = s->sharedFrontier;
-  s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
-  s->forwardState.back = s->forwardState.toStart;
-  s->forwardState.rangeListFirst = s->forwardState.rangeListLast = NULL;
-  s->forwardState.amInMinorGC = TRUE;
-  s->forwardState.forceStackForwarding = forceStackForwarding;
+                            bool forceStackForwarding,
+                            bool fillOrig) {
+  bool done = false;
   s->forwardState.liftingObject = *opp;
+  s->forwardState.forceStackForwarding = forceStackForwarding;
 
-  GC_foreachObjptrFun f = liftObjptr;
-  if (fillOrig)
-    f = liftObjptrAndFillOrig;
 
-  s->forwardState.isReturnLocationSet = TRUE;
-  if (setjmp (s->forwardState.returnLocation) == 0) {
-    /* Original call: Forward the given object to sharedHeap */
-    f (s, &s->forwardState.liftingObject);
-    foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, f, TRUE);
-  }
-  else {
-    /* retry -- this time it should work (since we have perfomed a shared GC
-     * and hence should not run out of space*/
-    if (DEBUG_LWTGC)
-      fprintf (stderr, "retry with "FMTPTR" [%d]\n",
-               (uintptr_t)s->forwardState.liftingObject, s->procId);
-    moveTransitiveClosure (s, &s->forwardState.liftingObject,
-                           forceStackForwarding, fillOrig);
+  while (!done) {
+    //Set up the forwarding state
+    s->forwardState.toStart = s->sharedFrontier;
+    s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
+    s->forwardState.back = s->forwardState.toStart;
+    s->forwardState.rangeListFirst = s->forwardState.rangeListLast = NULL;
+    s->forwardState.amInMinorGC = TRUE;
+    s->forwardState.isReturnLocationSet = TRUE;
+
+    GC_foreachObjptrFun f = liftObjptr;
+    if (fillOrig)
+      f = liftObjptrAndFillOrig;
+
+    if (setjmp (s->forwardState.returnLocation) == 0) {
+      /* Original call: Forward the given object to sharedHeap */
+      f (s, &s->forwardState.liftingObject);
+      foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, f, TRUE);
+      done = true;
+    }
+    else {
+      /* retry -- this time it should work since we have perfomed a shared GC
+       * and hence should not run out of space */
+      if (DEBUG_LWTGC)
+        fprintf (stderr, "retry with "FMTPTR" [%d]\n",
+                 (uintptr_t)s->forwardState.liftingObject, s->procId);
+    }
   }
 
 
@@ -263,23 +264,26 @@ pointer GC_move (GC_state s, pointer p,
 
   LEAVE_LOCAL0 (s);
 
-  if (DEBUG_LWTGC)
-    fprintf (stderr, "GC_move: Exiting\n");
+  pointer res = objptrToPointer (*pOp, s->sharedHeap->start);
+  assert (res != BOGUS_POINTER);
 
-  return objptrToPointer (*pOp, s->sharedHeap->start);
+  if (DEBUG_LWTGC)
+    fprintf (stderr, "GC_move: Exiting with "FMTPTR" [%d]\n",
+             (uintptr_t)res, s->procId);
+  return res;
 }
 
-void forceLocalGC (GC_state s) {
-  if (DEBUG_LWTGC)
-    fprintf (stderr, "forceLocalGC [%d]\n", s->procId);
+  void forceLocalGC (GC_state s) {
+    if (DEBUG_LWTGC)
+      fprintf (stderr, "forceLocalGC [%d]\n", s->procId);
 
-  s->syncReason = SYNC_FORCE;
-  ENTER_LOCAL0 (s);
+    s->syncReason = SYNC_FORCE;
+    ENTER_LOCAL0 (s);
 
-  fixForwardingPointers (s, TRUE);
+    fixForwardingPointers (s, TRUE);
 
-  LEAVE_LOCAL0 (s);
-}
+    LEAVE_LOCAL0 (s);
+  }
 
 void moveEachObjptrInObject (GC_state s, pointer p) {
   assert (p != BOGUS_POINTER);

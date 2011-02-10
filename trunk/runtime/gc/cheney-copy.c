@@ -156,29 +156,20 @@ void majorCheneyCopySharedGC (GC_state s) {
 /*                 Minor Cheney Copying Collection                  */
 /* ---------------------------------------------------------------- */
 
-void minorCheneyCopyGC (GC_state s, bool isAfterLifting) {
+void minorCheneyCopyGC (GC_state s) {
   size_t bytesAllocated;
   size_t bytesFilled = 0;
   size_t bytesCopied;
   struct rusage ru_start;
 
   if (DEBUG_GENERATIONAL)
-    fprintf (stderr, "minorGC  nursery = "FMTPTR"  frontier = "FMTPTR" isAfterLifting = %d\n",
-             (uintptr_t)s->heap->nursery, (uintptr_t)s->frontier, isAfterLifting);
+    fprintf (stderr, "minorGC  nursery = "FMTPTR"  frontier = "FMTPTR"\n",
+             (uintptr_t)s->heap->nursery, (uintptr_t)s->frontier);
 
   /* The invariant does not hold for the GC invoked after object has been
    * explicitly moved due to unresolved forwarding pointers.
    */
-  if (not isAfterLifting)
-      assert (invariantForGC (s));
-
-  if (DEBUG_GENERATIONAL) {
-      if (not isAfterLifting)
-          fprintf (stderr, "minorGC Invariant check done\n");
-      else
-          fprintf (stderr, "minorGC Invariant check skipped\n");
-  }
-
+   //assert (invariantForGC (s));
 
   /* XXX spoons not accurate if this doesn't account for gaps */
   bytesAllocated = s->heap->frontier - s->heap->nursery;
@@ -214,11 +205,6 @@ void minorCheneyCopyGC (GC_state s, bool isAfterLifting) {
     assert (isFrontierAligned (s, s->forwardState.toStart));
     s->forwardState.toLimit = s->forwardState.toStart + bytesAllocated;
     s->forwardState.forceStackForwarding = FALSE;
-
-    /* Invariants do not hold, skip.. */
-    if (not isAfterLifting)
-        assert (invariantForGC (s));
-
     s->forwardState.back = s->forwardState.toStart;
     /* Forward all globals.  Would like to avoid doing this once all
      * the globals have been assigned.

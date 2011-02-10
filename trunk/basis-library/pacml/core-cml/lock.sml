@@ -4,8 +4,8 @@ struct
   open Critical
   structure TID = ThreadID
 
-  structure Assert = LocalAssert(val assert = true)
-  structure Debug = LocalDebug(val debug = true)
+  structure Assert = LocalAssert(val assert = false)
+  structure Debug = LocalDebug(val debug = false)
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
   fun debug' msg = debug (fn () => (msg())^" : "^Int.toString(PacmlFFI.processorNumber()))
@@ -51,21 +51,22 @@ struct
     val () = Scheduler.atomicSwitchForWB
               (fn rt =>
                 let
-                  val rt' = PacmlPrim.move (SOME rt, false, true)
+                  val rt' = SOME rt
+                  val rt' = PacmlPrim.move (rt', false, true)
                   val _ = CirQueue.enque (q, rt')
                   val _ = state := LOCKED
                   val res = Scheduler.next ()
                   val RepTypes.RHOST (t, mt) = res
-                  val _ = debug' (fn () => "yieldForLock(2) "^(TID.tidToString t))
+                  (* val _ = debug' (fn () => "yieldForLock(2) "^(TID.tidToString t)) *)
                 in
                   res
                 end)
     val () = setAtomicState (atomicState)
-    val _ = debug' (fn () => "yieldForLock(3)")
+    (* val _ = debug' (fn () => "yieldForLock(3)") *)
     val tid' = TID.getCurThreadId ()
-    val _ = Assert.assert' ("yieldForLock: TIDs dont match ("
+    (* val _ = Assert.assert' ("yieldForLock: TIDs dont match ("
                             ^(TID.tidToString tid)^", "^(TID.tidToString tid')^")"
-                            , fn () => TID.sameTid (tid, tid'))
+                            , fn () => TID.sameTid (tid, tid')) *)
   in
       ()
   end
@@ -78,8 +79,8 @@ struct
       val res = cas (state, LOCKED, CLAIMED)
     in
       if res = LOCKED then
-        (debug' (fn () => concat["yieldForLock(1): Lock held by ", Int.toString (!tid)])
-        ; yieldForLock (que, state)
+        ( (* debug' (fn () => concat["yieldForLock(1): Lock held by ", Int.toString (!tid)]) ; *)
+        yieldForLock (que, state)
         ; getCmlLock l ftid)
       else if res = CLAIMED then
         enque ()
@@ -119,15 +120,21 @@ struct
                       raise UnlockError ("Kind1")
                     else ()
             val _ = tid := ~1
-            val waitingT = CirQueue.deque que
+            val waitingT = if CirQueue.isEmpty que then
+                             NONE
+                           else
+                             (* case *) CirQueue.deque que (* of
+                                  NONE => (Assert.assert' ("Impossible: Queue is empty", fn () => false)
+                                          ; raise Fail "Impossible: Queue is empty")
+                                | SOME t => SOME t *)
             val _ = state := FREE
           in
            case waitingT of
                 NONE => ()
               | SOME t =>
                   let
-                    val RepTypes.RHOST (tid, _) = t
-                    val _ = debug' (fn () => "Lock: readying "^(TID.tidToString tid))
+                    (* val RepTypes.RHOST (tid, _) = t
+                    val _ = debug' (fn () => "Lock: readying "^(TID.tidToString tid)) *)
                   in
                     SchedulerQueues.enque (t, RepTypes.PRI)
                   end

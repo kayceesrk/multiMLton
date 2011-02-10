@@ -276,9 +276,9 @@ pointer foreachObjptrInRange (GC_state s, pointer front, pointer *back,
           objptr op = *((objptr*)p);
           pointer realP = objptrToPointer (op, s->sharedHeap->start);
           assert (isPointerInHeap (s, s->sharedHeap, realP));
-          pointer oldFront = front;
+          //pointer oldFront = front;
           front = p + sizeofObjectNoHeader (s, realP);
-          fillGap (s, oldFront, front);
+          //fillGap (s, oldFront, front);
       }
       else {
         front = foreachObjptrInObject (s, p, f, skipWeaks);

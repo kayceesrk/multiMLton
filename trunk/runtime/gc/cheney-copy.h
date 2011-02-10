@@ -13,6 +13,6 @@ static inline void swapHeapsForCheneyCopy (GC_state s);
 static inline void swapHeapsForSharedCheneyCopy (GC_state s);
 static void majorCheneyCopyGC (GC_state s);
 static void majorCheneyCopySharedGC (GC_state s);
-static void minorCheneyCopyGC (GC_state s, bool afterLifting);
+static void minorCheneyCopyGC (GC_state s);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

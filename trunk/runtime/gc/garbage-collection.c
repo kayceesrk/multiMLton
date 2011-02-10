@@ -7,7 +7,7 @@
  */
 
 void minorGC (GC_state s) {
-  minorCheneyCopyGC (s, FALSE);
+  minorCheneyCopyGC (s);
 }
 
 void majorGC (GC_state s, size_t bytesRequested, bool mayResize) {
@@ -112,7 +112,7 @@ void fixForwardingPointers (GC_state s, bool mayResize) {
   size_t nurseryBytesRequested = GC_HEAP_LIMIT_SLOP;
   size_t totalBytesRequested = nurseryBytesRequested;
 
-  minorCheneyCopyGC (s, true);
+  minorCheneyCopyGC (s);
   majorGC (s, totalBytesRequested, mayResize);
   setGCStateCurrentLocalHeap (s, 0, nurseryBytesRequested);
   assert (hasHeapBytesFree (s, s->heap, 0, nurseryBytesRequested));
@@ -267,10 +267,11 @@ void performGC (GC_state s,
              100.0 * ((double)(nurseryUsed) / (double)(s->heap->size)),
              100.0 * ((double)(nurseryUsed) / (double)(nurserySize)));
   }
-  assert (invariantForGC (s));
+  /* Invariant does not hold if shared GCs are performed and read barriers */
+  //assert (invariantForGC (s));
   if (needGCTime (s))
     startWallTiming (&tv_start);
-  minorCheneyCopyGC (s, false);
+  minorCheneyCopyGC (s);
   stackTopOk = invariantForMutatorStack (s);
   stackBytesRequested =
     stackTopOk

@@ -56,6 +56,7 @@ struct GC_controls {
   bool restrictAvailableSize; /* Use smaller heaps to improve space profiling accuracy */
   struct GC_ratios ratios;
   bool rusageMeasureGC;
+  bool selectiveDebug;
   int32_t summary; /* Print a summary of gc info when program exits. */
 };
 

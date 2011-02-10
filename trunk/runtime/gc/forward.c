@@ -403,10 +403,13 @@ void forwardObjptrIfInSharedHeap (GC_state s, objptr *opp) {
       fprintf (stderr,
                "forwardObjptrIfInLocalHeap  opp = "FMTPTR"  op = "FMTOBJPTR"  p = "FMTPTR"\n",
                (uintptr_t)opp, op, (uintptr_t)p);
-    //remove the lift bit
+    //remove the lift bit if not forwarded
     GC_header* headerp = getHeaderp (objptrToPointer (*opp, s->sharedHeap->start));
     GC_header header = getHeader (objptrToPointer (*opp, s->sharedHeap->start));
-    *headerp = header & (~(LIFT_MASK));
+    if (header != GC_FORWARDED)
+      *headerp = header & (~(LIFT_MASK));
+    else
+      printf ("forwardObjptrIfInLocalHeap: header has been forwarded\n");
     forwardObjptr (s, opp);
     //add the lift bit back again
     headerp = getHeaderp (objptrToPointer (*opp, s->sharedHeap->start));

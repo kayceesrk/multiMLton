@@ -33,7 +33,7 @@ void leave (GC_state s) {
   /* The mutator frontier invariant may not hold
    * for functions that don't ensureBytesFree.
    */
-  assert (invariantForMutator (s, FALSE, TRUE));
+  //assert (invariantForMutator (s, FALSE, TRUE));
   s->syncReason = SYNC_NONE;
   if (DEBUG_ENTER_LEAVE)
     fprintf (stderr, "leave ok [%d]\n", Proc_processorNumber (s));

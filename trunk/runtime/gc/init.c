@@ -429,7 +429,6 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->controls->ratios.stackCurrentShrink = 0.5;
   s->controls->ratios.stackMaxReserved = 8.0;
   s->controls->ratios.stackShrink = 0.5;
-  s->controls->rusageMeasureGC = FALSE;
   s->controls->summary = SUMMARY_NONE;
   s->cumulativeStatistics = (struct GC_cumulativeStatistics*)initCumulativeStatistics ();
   s->lastMajorStatistics = (struct GC_lastMajorStatistics*)initLastMajorStatistics ();

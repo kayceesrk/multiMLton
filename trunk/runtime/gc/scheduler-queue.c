@@ -89,7 +89,7 @@ void GC_sqEnque (GC_state s, pointer p, int proc, int i) {
     if (DEBUG_SQ)
       fprintf (stderr, "GC_sqEnque: moving closure to shared heap[%d]\n",
                s->procId);
-    moveTransitiveClosure (s, &op, FALSE, TRUE);
+    moveTransitiveClosure (s, &op, FALSE, FALSE);
     if (DEBUG_SQ)
       fprintf (stderr, "GC_sqEnque: moving closure to shared heap done. "FMTOBJPTR" [%d]\n",
                op, s->procId);
