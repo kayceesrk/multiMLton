@@ -46,9 +46,12 @@ void swapHeapsForCheneyCopy (GC_state s) {
 
 void swapHeapsForSharedCheneyCopy (GC_state s) {
   GC_heap tempHeap;
-  tempHeap = s->secondarySharedHeap;
-  s->secondarySharedHeap = s->sharedHeap;
-  s->sharedHeap = tempHeap;
+  for (int proc = 0; proc < s->numberOfProcs; proc++) {
+    tempHeap = s->procStates[proc].secondarySharedHeap;
+    s->procStates[proc].secondarySharedHeap =
+        s->procStates[proc].sharedHeap;
+    s->procStates[proc].sharedHeap = tempHeap;
+  }
 }
 
 void majorCheneyCopyGC (GC_state s) {
@@ -124,17 +127,24 @@ void majorCheneyCopySharedGC (GC_state s) {
              uintmaxToCommaString(s->secondarySharedHeap->size), s->procId);
   }
 
-  s->forwardState.toStart = s->secondarySharedHeap->start;
-  s->forwardState.toLimit = s->secondarySharedHeap->start + s->secondarySharedHeap->size;
+  for (int proc=0; proc < s->numberOfProcs; proc++) {
+    s->procStates[proc].forwardState.toStart = s->secondarySharedHeap->start;
+    s->procStates[proc].forwardState.toLimit =
+      s->secondarySharedHeap->start + s->secondarySharedHeap->size;
+  }
   s->forwardState.forceStackForwarding = TRUE;
   assert (s->secondarySharedHeap->start);
   assert (s->secondarySharedHeap->size >= s->sharedHeap->oldGenSize);
   toStart = alignFrontier (s, s->secondarySharedHeap->start);
   s->forwardState.back = toStart;
   foreachGlobalObjptr (s, forwardObjptrIfInSharedHeap);
-  for (int proc=0; proc < s->numberOfProcs; proc++) /* Walk the local heaps */
+  for (int proc=0; proc < s->numberOfProcs; proc++) { /* Walk the local heaps */
     foreachObjptrInRange (&(s->procStates[proc]), s->procStates[proc].heap->start,
                           &(s->procStates[proc].frontier), forwardObjptrIfInSharedHeap, TRUE);
+    pointer back = s->forwardState.back;
+    for (int i=0; i < s->numberOfProcs; i++)
+      s->procStates[i].forwardState.back = back;
+  }
   foreachObjptrInRange (s, toStart, &s->forwardState.back, forwardObjptrIfInSharedHeap, TRUE);
 
   //XXX KC todo -- weak pointers

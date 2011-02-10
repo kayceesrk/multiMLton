@@ -275,7 +275,14 @@ pointer foreachObjptrInRange (GC_state s, pointer front, pointer *back,
       if (getHeader (p) == GC_FORWARDED) {
           objptr op = *((objptr*)p);
           pointer realP = objptrToPointer (op, s->sharedHeap->start);
-          assert (isPointerInHeap (s, s->sharedHeap, realP));
+          if (getHeader (realP) == GC_FORWARDED) {
+            //This can happen during shared heap collection,
+            //when shared heap has been moved
+            *(objptr*)p = *(objptr*)realP;
+            op = *(objptr*)p;
+            realP = objptrToPointer (op, s->sharedHeap->start);
+          }
+          assert (isPointerInHeap (s, s->sharedHeap, realP) || isPointerInToSpace (s, realP));
           //pointer oldFront = front;
           front = p + sizeofObjectNoHeader (s, realP);
           //fillGap (s, oldFront, front);

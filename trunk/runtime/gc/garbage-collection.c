@@ -152,16 +152,22 @@ void performSharedGC (GC_state s,
                       size_t bytesRequested) {
   size_t bytesFilled = 0;
 
+
+  /* If we are not the last processor to sync, then someone else has to know
+   * about our request */
+  getThreadCurrent(s)->bytesNeeded = bytesRequested;
   enterGC (s);
   ENTER0 (s);
 
-  if (bytesRequested > ((s->controls->allocChunkSize + GC_BONUS_SLOP) * s->numberOfProcs))
-    assert (0 and "performSharedGC: what to do?");
+  bytesRequested = 0;
+  for (int proc=0; proc < s->numberOfProcs; proc++)
+    bytesRequested += getThreadCurrent(&s->procStates[proc])->bytesNeeded;
+
   size_t availableBytes =
     (size_t)(s->sharedHeap->start + s->sharedHeap->availableSize - s->sharedHeap->frontier);
 
   /* See if a GC has already been performed */
-  if (bytesRequested + GC_BONUS_SLOP > availableBytes) {
+  if (s->procId == 0 && bytesRequested > availableBytes) {
     /* perform GC */
     bytesRequested = (s->controls->allocChunkSize + GC_BONUS_SLOP) * s->numberOfProcs;
 
@@ -222,9 +228,12 @@ void performSharedGC (GC_state s,
 
     setGCStateCurrentSharedHeap (s, 0, 0, FALSE);
   }
+  setGCStateCurrentThreadAndStack (s);
 
   LEAVE0 (s);
   leaveGC (s);
+
+  assert(invariantForGC(s));
 }
 
 
@@ -431,7 +440,7 @@ static bool allocChunkInSharedHeap (GC_state s,
     /* Perhaps there is not enough space in the nursery to satify this
        request; if that's true then we need to do a full collection */
     if (bytesRequested + GC_BONUS_SLOP > availableBytes) {
-      performSharedGC (s, bytesRequested);
+      performSharedGC (s, bytesRequested + GC_BONUS_SLOP);
       return TRUE;
     }
 
@@ -621,8 +630,6 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
       /* this subsumes invariantForMutatorFrontier */
       or (not hasHeapBytesFree (s, s->heap, oldGenBytesRequested, nurseryBytesRequested)
             and (s->syncReason = SYNC_HEAP))
-      /* another thread is waiting for exclusive access */
-      or Proc_threadInSection (s)
       /* we are forcing a major collection */
       or (forceGC
            and (s->syncReason = SYNC_FORCE))
