@@ -48,6 +48,7 @@ typedef struct GC_heap {
 #if (defined (MLTON_GC_INTERNAL_FUNCS))
 
 static inline bool isPointerInHeap (GC_state s, GC_heap h, pointer p);
+static inline bool isPointerInAnyLocalHeap (GC_state s, pointer p);
 static inline bool isPointerInOldGen (GC_state s, GC_heap h, pointer p);
 static inline bool isPointerInNursery (GC_state s, GC_heap h, pointer p);
 static inline bool isPointerInFromSpace (GC_state s, GC_heap h, pointer p);

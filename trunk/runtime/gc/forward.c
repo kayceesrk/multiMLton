@@ -416,13 +416,15 @@ void forwardObjptrIfInSharedHeap (GC_state s, objptr *opp) {
     header = getHeader (objptrToPointer (*opp, s->sharedHeap->start));
     *headerp = header | LIFT_MASK;
   }
-  else if (isPointerInToSpace (s, (pointer)opp) and isPointerInHeap (s, s->heap, p)) {
-    //opp is in shared heap, and p is in local heap. Hence, add to danglingStackList
+  else if (isPointerInToSpace (s, (pointer)opp) and isPointerInAnyLocalHeap (s, p)) {
+    //opp is in shared heap, and p is in any local heap.
     GC_state r = getGCStateFromPointer (s, p);
     GC_objectTypeTag tag;
     splitHeader (r, getHeader (p), &tag, NULL, NULL, NULL);
     if (tag == STACK_TAG) {
-      DanglingStack* danglingStack = newDanglingStack (s);
+      //If the pointer from toSpace to local heap is a stack add a dangling
+      //pointer.
+      DanglingStack* danglingStack = newDanglingStack (r);
       danglingStack->stack = pointerToObjptr (p, r->heap->start);
       GC_stack stk = (GC_stack)p;
       pointer thread = objptrToPointer (stk->thread, r->heap->start);
@@ -432,7 +434,9 @@ void forwardObjptrIfInSharedHeap (GC_state s, objptr *opp) {
       }
     }
     else {
-      forwardObjptr (s, opp);
+      //If the pointer is not a stack, then we are completing a closure
+      //lifting. Perform the lift.
+      forwardObjptr (r, opp);
       GC_header* headerp = getHeaderp (objptrToPointer (*opp, s->sharedHeap->start));
       GC_header header = getHeader (objptrToPointer (*opp, s->sharedHeap->start));
       *headerp = header | LIFT_MASK;
@@ -528,4 +532,13 @@ void saveForwardState (GC_state s, struct GC_forwardState* fwd) {
 
 void restoreForwardState (GC_state s, struct GC_forwardState* fwd) {
   s->forwardState.forceStackForwarding = fwd->forceStackForwarding;
+}
+
+void fixFwdObjptr (GC_state s, objptr* opp) {
+  if (isObjptr (*opp)) {
+    pointer p = objptrToPointer (*opp, s->heap->start);
+    if (getHeader (p) == GC_FORWARDED) {
+      *opp = *(objptr*)p;
+    }
+  }
 }

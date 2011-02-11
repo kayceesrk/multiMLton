@@ -127,6 +127,13 @@ void majorCheneyCopySharedGC (GC_state s) {
              uintmaxToCommaString(s->secondarySharedHeap->size), s->procId);
   }
 
+  //Fix up just the forwarding pointers
+  for (int proc=0; proc < s->numberOfProcs; proc++) {
+    foreachObjptrInRange (&(s->procStates[proc]), s->procStates[proc].heap->start,
+                          &(s->procStates[proc].frontier), fixFwdObjptr, TRUE);
+  }
+
+  //Set up forwarding state
   for (int proc=0; proc < s->numberOfProcs; proc++) {
     s->procStates[proc].forwardState.toStart = s->secondarySharedHeap->start;
     s->procStates[proc].forwardState.toLimit =
@@ -137,11 +144,16 @@ void majorCheneyCopySharedGC (GC_state s) {
   assert (s->secondarySharedHeap->size >= s->sharedHeap->oldGenSize);
   toStart = alignFrontier (s, s->secondarySharedHeap->start);
   s->forwardState.back = toStart;
+
+  //Forward Globals
   foreachGlobalObjptr (s, forwardObjptrIfInSharedHeap);
   for (int proc=0; proc < s->numberOfProcs; proc++) { /* Walk the local heaps */
-    foreachObjptrInRange (&(s->procStates[proc]), s->procStates[proc].heap->start,
-                          &(s->procStates[proc].frontier), forwardObjptrIfInSharedHeap, TRUE);
-    pointer back = s->forwardState.back;
+    GC_state r = &(s->procStates[proc]);
+    foreachObjptrInRangeWithFill (r, r->heap->start,
+                                  &(r->frontier), forwardObjptrIfInSharedHeap,
+                                  TRUE, TRUE);
+    callIfIsObjptr (r, forwardObjptrIfInSharedHeap, &r->forwardState.liftingObject);
+    pointer back = r->forwardState.back;
     for (int i=0; i < s->numberOfProcs; i++)
       s->procStates[i].forwardState.back = back;
   }

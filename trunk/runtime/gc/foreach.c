@@ -242,9 +242,13 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
  *
  * If skipWeaks, then the object pointer in weak objects is skipped.
  */
-
 pointer foreachObjptrInRange (GC_state s, pointer front, pointer *back,
                               GC_foreachObjptrFun f, bool skipWeaks) {
+  return foreachObjptrInRangeWithFill (s, front, back, f, skipWeaks, FALSE);
+}
+
+pointer foreachObjptrInRangeWithFill (GC_state s, pointer front, pointer *back,
+                              GC_foreachObjptrFun f, bool skipWeaks, bool fillForwarded) {
   pointer b;
 
   assert (isFrontierAligned (s, front));
@@ -275,17 +279,11 @@ pointer foreachObjptrInRange (GC_state s, pointer front, pointer *back,
       if (getHeader (p) == GC_FORWARDED) {
           objptr op = *((objptr*)p);
           pointer realP = objptrToPointer (op, s->sharedHeap->start);
-          if (getHeader (realP) == GC_FORWARDED) {
-            //This can happen during shared heap collection,
-            //when shared heap has been moved
-            *(objptr*)p = *(objptr*)realP;
-            op = *(objptr*)p;
-            realP = objptrToPointer (op, s->sharedHeap->start);
-          }
           assert (isPointerInHeap (s, s->sharedHeap, realP) || isPointerInToSpace (s, realP));
-          //pointer oldFront = front;
+          pointer oldFront = front;
           front = p + sizeofObjectNoHeader (s, realP);
-          //fillGap (s, oldFront, front);
+          if (fillForwarded)
+            fillGap (s, oldFront, front);
       }
       else {
         front = foreachObjptrInObject (s, p, f, skipWeaks);
