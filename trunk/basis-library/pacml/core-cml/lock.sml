@@ -83,7 +83,8 @@ struct
         yieldForLock (que, state)
         ; getCmlLock l ftid)
       else if res = CLAIMED then
-        enque ()
+        (print "enque CLAIMED\n";
+         enque ())
       else (* res = FREE *)
         getCmlLock l ftid
     end
@@ -140,7 +141,8 @@ struct
                   end
           end
         else if (res = CLAIMED) then
-          releaseCmlLock l ftid
+          (print "releaseCmlLock CLAIMED\n";
+          releaseCmlLock l ftid)
         else (* res = FREE *)
           raise UnlockError ("Kind2")
       end

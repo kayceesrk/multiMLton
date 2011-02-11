@@ -67,7 +67,6 @@ void Proc_beginCriticalSection (GC_state s) {
 
       incSync (s);
 
-      //XXX KC signal every processor??
       for (int i=0;i<s->numberOfProcs;i++)
         Parallel_wakeUpThread (i, 0);
     }

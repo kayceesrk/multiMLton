@@ -6,11 +6,6 @@
  * See the file MLton-LICENSE for details.
  */
 
-/* enter and leave should be called at the start and end of every GC
- * function that is exported to the outside world.  They make sure
- * that the function is run in a critical section and check the GC
- * invariant.
- */
 void enter (GC_state s) {
   if (DEBUG_ENTER_LEAVE)
     fprintf (stderr, "enter [%d]\n", Proc_processorNumber (s));
