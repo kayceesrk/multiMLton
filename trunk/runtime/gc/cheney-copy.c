@@ -129,35 +129,56 @@ void majorCheneyCopySharedGC (GC_state s) {
 
   //Fix up just the forwarding pointers
   for (int proc=0; proc < s->numberOfProcs; proc++) {
+    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+      fprintf (stderr, "majorCheneyCopySharedGC: fixingForwardingPointers (1) [%d]\n",
+               proc);
     foreachObjptrInRange (&(s->procStates[proc]), s->procStates[proc].heap->start,
                           &(s->procStates[proc].frontier), fixFwdObjptr, TRUE);
+    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+      fprintf (stderr, "majorCheneyCopySharedGC: fixingForwardingPointers (2) [%d]\n",
+               proc);
   }
 
   //Set up forwarding state
+  toStart = alignFrontier (s, s->secondarySharedHeap->start);
   for (int proc=0; proc < s->numberOfProcs; proc++) {
     s->procStates[proc].forwardState.toStart = s->secondarySharedHeap->start;
     s->procStates[proc].forwardState.toLimit =
       s->secondarySharedHeap->start + s->secondarySharedHeap->size;
+    s->procStates[proc].forwardState.back = toStart;
+    s->procStates[proc].forwardState.forceStackForwarding = TRUE;
   }
-  s->forwardState.forceStackForwarding = TRUE;
   assert (s->secondarySharedHeap->start);
   assert (s->secondarySharedHeap->size >= s->sharedHeap->oldGenSize);
-  toStart = alignFrontier (s, s->secondarySharedHeap->start);
-  s->forwardState.back = toStart;
 
-  //Forward Globals
-  foreachGlobalObjptr (s, forwardObjptrIfInSharedHeap);
-  for (int proc=0; proc < s->numberOfProcs; proc++) { /* Walk the local heaps */
+  /* Walk the local heaps */
+  for (int proc=0; proc < s->numberOfProcs; proc++) {
     GC_state r = &(s->procStates[proc]);
+    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+      fprintf (stderr, "majorCheneyCopySharedGC: walking local heaps (1) [%d]\n",
+               proc);
     foreachObjptrInRangeWithFill (r, r->heap->start,
                                   &(r->frontier), forwardObjptrIfInSharedHeap,
                                   TRUE, TRUE);
+    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+      fprintf (stderr, "majorCheneyCopySharedGC: walking local heaps (2) [%d]\n",
+               proc);
     callIfIsObjptr (r, forwardObjptrIfInSharedHeap, &r->forwardState.liftingObject);
     pointer back = r->forwardState.back;
     for (int i=0; i < s->numberOfProcs; i++)
       s->procStates[i].forwardState.back = back;
   }
+
+  //Forward Globals
+  foreachGlobalObjptr (s, forwardObjptrIfInSharedHeap);
+
+  if (DEBUG_DETAILED or s->controls->selectiveDebug)
+    fprintf (stderr, "majorCheneyCopySharedGC: walking to space (1) [%d]\n",
+              s->procId);
   foreachObjptrInRange (s, toStart, &s->forwardState.back, forwardObjptrIfInSharedHeap, TRUE);
+  if (DEBUG_DETAILED or s->controls->selectiveDebug)
+    fprintf (stderr, "majorCheneyCopySharedGC: walking to space (2) [%d]\n",
+              s->procId);
 
   //XXX KC todo -- weak pointers
   //updateWeaksForCheneyCopy (s);

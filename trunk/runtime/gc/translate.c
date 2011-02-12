@@ -18,13 +18,13 @@ void translateObjptr (GC_state s, objptr *opp) {
   /* Do not translate pointers that does not belong to your heap */
   //XXX GCSH -- this needs to change
   if (isPointerInHeap (s, s->sharedHeap, p)) {
-      if (DEBUG_DETAILED)
+      if (DEBUG_DETAILED or s->controls->selectiveDebug)
           fprintf (stderr, "translateObjptr: shared heap pointer "FMTPTR" translation skipped.\n",
                    (uintptr_t)p);
       return;
   }
 
-  if (DEBUG_DETAILED)
+  if (DEBUG_DETAILED or s->controls->selectiveDebug)
       fprintf (stderr, "translateObjptr: Remapping pointer "FMTPTR" to "FMTPTR"\n",
                (uintptr_t)p, (uintptr_t)((p - s->translateState.from) + s->translateState.to));
   p = (p - s->translateState.from) + s->translateState.to;

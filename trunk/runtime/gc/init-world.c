@@ -118,13 +118,13 @@ void initVectors (GC_state s) {
     *((GC_header*)(frontier)) = buildHeaderFromTypeIndex (typeIndex);
     frontier = frontier + GC_HEADER_SIZE;
     s->globals[inits[i].globalIndex] = pointerToObjptr(frontier, s->heap->start);
-    if (DEBUG_DETAILED)
+    if (DEBUG_DETAILED or s->controls->selectiveDebug)
       fprintf (stderr, "allocated vector at "FMTPTR"\n",
                (uintptr_t)(s->globals[inits[i].globalIndex]));
     memcpy (frontier, inits[i].bytes, dataBytes);
     frontier += objectSize - GC_ARRAY_HEADER_SIZE;
   }
-  if (DEBUG_DETAILED)
+  if (DEBUG_DETAILED or s->controls->selectiveDebug)
     fprintf (stderr, "frontier after string allocation is "FMTPTR"\n",
              (uintptr_t)frontier);
   GC_profileAllocInc (s, (size_t)(frontier - s->frontier));

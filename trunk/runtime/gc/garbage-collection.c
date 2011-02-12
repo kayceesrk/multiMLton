@@ -168,6 +168,7 @@ void performSharedGC (GC_state s,
 
   /* See if a GC has already been performed */
   if (bytesRequested > availableBytes) {
+    //s->controls->selectiveDebug = TRUE;
     /* perform GC */
     bytesRequested = (s->controls->allocChunkSize + GC_BONUS_SLOP) * s->numberOfProcs;
 
@@ -227,8 +228,9 @@ void performSharedGC (GC_state s,
     assert (s->sharedHeap->oldGenSize + bytesRequested <= s->sharedHeap->size);
 
     setGCStateCurrentSharedHeap (s, 0, 0, FALSE);
-    for (int proc=0; proc < s->numberOfProcs; proc++)
-      setGCStateCurrentThreadAndStack (&s->procStates[proc]);
+    //for (int proc=0; proc < s->numberOfProcs; proc++)
+      //setGCStateCurrentThreadAndStack (&s->procStates[proc]);
+    s->controls->selectiveDebug = FALSE;
   }
 
   LEAVE0 (s);

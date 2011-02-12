@@ -83,7 +83,8 @@ struct
         yieldForLock (que, state)
         ; getCmlLock l ftid)
       else if res = CLAIMED then
-        (print "enque CLAIMED\n";
+        ((*print "enque CLAIMED\n";*)
+         PacmlFFI.maybeWaitForGC ();
          enque ())
       else (* res = FREE *)
         getCmlLock l ftid
@@ -141,7 +142,8 @@ struct
                   end
           end
         else if (res = CLAIMED) then
-          (print "releaseCmlLock CLAIMED\n";
+          ((* print "releaseCmlLock CLAIMED\n"; *)
+          PacmlFFI.maybeWaitForGC ();
           releaseCmlLock l ftid)
         else (* res = FREE *)
           raise UnlockError ("Kind2")

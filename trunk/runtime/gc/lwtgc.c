@@ -78,7 +78,7 @@ static inline void assertLiftedObjptr (GC_state s, objptr *opp) {
   bool res = isObjptrInHeap (s, s->sharedHeap, op);
   GC_header h = getHeader(objptrToPointer (op, s->heap->start));
   GC_objectTypeTag tag;
-  if (DEBUG_DETAILED)
+  if (DEBUG_DETAILED or s->controls->selectiveDebug)
     fprintf (stderr, "assertLiftedObjptr ("FMTOBJPTR")\n", *opp);
   splitHeader (s, h, &tag, NULL, NULL, NULL);
   bool stackType = (tag == STACK_TAG);
@@ -132,7 +132,7 @@ void liftAllObjectsDuringInit (GC_state s) {
   if (DEBUG_LWTGC)
     fprintf (stderr, "liftAllObjectsDuringInit: foreachGlobalObjptr\n");
   for (unsigned int i = 0; i < s->globalsLength; ++i) {
-    if (DEBUG_DETAILED)
+    if (DEBUG_DETAILED or s->controls->selectiveDebug)
       fprintf (stderr, "foreachGlobal %u [%d]\n", i, s->procId);
     callIfIsObjptr (s, liftObjptr, &s->globals [i]);
   }

@@ -6,8 +6,7 @@
  * See the file MLton-LICENSE for details.
  */
 
-void displayGenerationalMaps (__attribute__ ((unused)) GC_state s,
-                              struct GC_generationalMaps *generational,
+void displayGenerationalMaps (GC_state s, struct GC_generationalMaps *generational,
                               FILE *stream) {
   fprintf(stream,
           "\t\tcardMap = "FMTPTR"\n"
@@ -22,7 +21,7 @@ void displayGenerationalMaps (__attribute__ ((unused)) GC_state s,
           (uintptr_t)generational->crossMap,
           (uintmax_t)generational->crossMapLength,
           (uintmax_t)generational->crossMapValidSize);
-  if (DEBUG_GENERATIONAL and DEBUG_DETAILED) {
+  if (DEBUG_GENERATIONAL or DEBUG_DETAILED or s->controls->selectiveDebug) {
     GC_crossMapIndex i;
 
     fprintf (stderr, "crossMap trues\n");
@@ -161,14 +160,14 @@ GC_crossMapIndex lenofCrossMap (__attribute__ ((unused)) GC_state s, size_t cros
 }
 
 void clearCardMap (GC_state s) {
-  if (DEBUG_GENERATIONAL and DEBUG_DETAILED)
+  if (DEBUG_GENERATIONAL or DEBUG_DETAILED or s->controls->selectiveDebug)
     fprintf (stderr, "clearCardMap ()\n");
   memset (s->generationalMaps.cardMap, 0,
           s->generationalMaps.cardMapLength * CARD_MAP_ELEM_SIZE);
 }
 
 void clearCrossMap (GC_state s) {
-  if (DEBUG_GENERATIONAL and DEBUG_DETAILED)
+  if (DEBUG_GENERATIONAL or DEBUG_DETAILED or s->controls->selectiveDebug)
     fprintf (stderr, "clearCrossMap ()\n");
   s->generationalMaps.crossMapValidSize = 0;
   memset (s->generationalMaps.crossMap, CROSS_MAP_EMPTY,

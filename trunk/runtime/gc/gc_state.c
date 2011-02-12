@@ -59,7 +59,7 @@ void setGCStateCurrentThreadAndStack (GC_state s) {
   s->stackBottom = getStackBottom (s, stack);
   s->stackTop = getStackTop (s, stack);
   s->stackLimit = getStackLimit (s, stack);
-  if (DEBUG_DETAILED)
+  if (DEBUG_DETAILED or s->controls->selectiveDebug)
     fprintf (stderr, "setGCStateCurrentThreadAndStack: thread = "FMTPTR" stack = "FMTPTR" [%d]\n",
              (uintptr_t)thread, (uintptr_t)stack, s->procId);
   markCard (s, (pointer)stack);
@@ -74,7 +74,7 @@ void setGCStateCurrentLocalHeap (GC_state s,
   pointer genNursery;
   size_t genNurserySize;
 
-  if (DEBUG_DETAILED)
+  if (DEBUG_DETAILED or s->controls->selectiveDebug)
     fprintf (stderr, "setGCStateCurrentLocalHeap(%s, %s)\n",
              uintmaxToCommaString(oldGenBytesRequested),
              uintmaxToCommaString(nurseryBytesRequested));
@@ -123,6 +123,7 @@ void setGCStateCurrentLocalHeap (GC_state s,
   s->frontier = nursery;
   s->start = nursery;
   h->frontier = s->limitPlusSlop;
+  assert (s->heap->start + s->heap->oldGenSize <= s->heap->nursery);
   assert (nurseryBytesRequested <= (size_t)(s->limitPlusSlop - s->frontier));
   assert (isFrontierAligned (s, s->heap->nursery));
   assert (hasHeapBytesFree (s, s->heap, oldGenBytesRequested, nurseryBytesRequested));
@@ -141,7 +142,7 @@ void setGCStateCurrentSharedHeap (GC_state s,
   pointer frontier;
   size_t bonus = GC_BONUS_SLOP * s->numberOfProcs;
 
-  if (DEBUG_DETAILED)
+  if (DEBUG_DETAILED or s->controls->selectiveDebug)
     fprintf (stderr, "setGCStateCurrentSharedHeap(%s, %s)\n",
              uintmaxToCommaString(oldGenBytesRequested),
              uintmaxToCommaString(nurseryBytesRequested));
@@ -179,6 +180,7 @@ void setGCStateCurrentSharedHeap (GC_state s,
     nurserySize = genNurserySize;
     clearCardMap (s);
     /* XXX copy card map to other processors? */
+    assert (0 and "Minor collection not implemented");
   } else {
     unless (nurseryBytesRequested <= nurserySize)
       die ("Out of memory.  Insufficient space in nursery.");

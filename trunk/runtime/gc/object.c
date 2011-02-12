@@ -61,7 +61,7 @@ void splitHeader(GC_state s, GC_header header,
 
   header &= ~(LIFT_MASK);
 
-  if (DEBUG_DETAILED)
+  if (DEBUG_DETAILED or s->controls->selectiveDebug)
       fprintf (stderr, "splitHeader ("FMTHDR") [%d]\n", header, s->procId);
   assert (1 == (header & GC_VALID_HEADER_MASK));
   objectTypeIndex = (header & TYPE_INDEX_MASK) >> TYPE_INDEX_SHIFT;
@@ -74,7 +74,7 @@ void splitHeader(GC_state s, GC_header header,
   bytesNonObjptrs = objectType->bytesNonObjptrs;
   numObjptrs = objectType->numObjptrs;
 
-  if (DEBUG_DETAILED)
+  if (DEBUG_DETAILED or s->controls->selectiveDebug)
     fprintf (stderr,
              "splitHeader ("FMTHDR")"
              "  objectTypeIndex = %u"
@@ -116,7 +116,7 @@ pointer advanceToObjectData (__attribute__ ((unused)) GC_state s, pointer p) {
     /* Looking at a header word. */
     res = p + GC_NORMAL_HEADER_SIZE;
   assert (isAligned ((uintptr_t)res, s->alignment));
-  if (DEBUG_DETAILED)
+  if (DEBUG_DETAILED or s->controls->selectiveDebug)
     fprintf (stderr, FMTPTR" = advanceToObjectData ("FMTPTR")\n",
              (uintptr_t)res, (uintptr_t)p);
   return res;

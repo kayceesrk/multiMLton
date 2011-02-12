@@ -430,6 +430,7 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->controls->ratios.stackMaxReserved = 8.0;
   s->controls->ratios.stackShrink = 0.5;
   s->controls->summary = SUMMARY_NONE;
+  s->controls->selectiveDebug = FALSE;
   s->cumulativeStatistics = (struct GC_cumulativeStatistics*)initCumulativeStatistics ();
   s->lastMajorStatistics = (struct GC_lastMajorStatistics*)initLastMajorStatistics ();
   s->lastSharedMajorStatistics = (struct GC_lastSharedMajorStatistics*)initLastSharedMajorStatistics ();
