@@ -152,10 +152,10 @@ void performSharedGC (GC_state s,
                       size_t bytesRequested) {
   size_t bytesFilled = 0;
 
-
   /* If we are not the last processor to sync, then someone else has to know
    * about our request */
   getThreadCurrent(s)->bytesNeeded = bytesRequested;
+  s->syncReason = SYNC_HEAP;
   enterGC (s);
   ENTER0 (s);
 
@@ -235,8 +235,6 @@ void performSharedGC (GC_state s,
 
   LEAVE0 (s);
   leaveGC (s);
-
-  assert(invariantForGC(s));
 }
 
 
@@ -706,11 +704,7 @@ void GC_collect (GC_state s, size_t bytesRequested, bool force,
   ensureHasHeapBytesFreeAndOrInvariantForMutator (s, force,
                                                   TRUE, TRUE,
                                                   0, 0, TRUE, FALSE);
-  if (Proc_threadInSection (s)) {
-      /* Join a shared collection if a thread has already started one */
-      s->syncReason = SYNC_HEAP;
-      performSharedGC (s, 0);
-  }
+  Parallel_maybeWaitForGC ();
 }
 
 pointer FFI_getOpArgsResPtr (GC_state s) {

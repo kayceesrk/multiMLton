@@ -109,6 +109,15 @@ void Proc_endCriticalSection (__attribute__ ((unused)) GC_state s) {
   }
 }
 
+/* returns true if some thread has initiated a barrier and/or inside a critical
+ * section */
 bool Proc_threadInSection (__attribute__ ((unused)) GC_state s) {
   return Proc_criticalCount > 0;
+}
+
+/* Returns true if all threads are in a critical section and executing it. Main
+ * difference from Proc_threadInSection is that here true is returned only if
+ * all threads are already in critical section */
+bool Proc_executingInSection (__attribute__ ((unused)) GC_state s) {
+  return Proc_criticalTicket >= 0;
 }

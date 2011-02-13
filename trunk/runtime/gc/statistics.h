@@ -26,6 +26,9 @@ enum {
   /* When objects need to be lifted but GC is not invoked to fix forwarding
    * pointers */
   SYNC_MISC,
+  /* When some thread has requested a shared heap collection and we are joining
+   * the barrier */
+  SYNC_HELP,
 };
 
 enum {

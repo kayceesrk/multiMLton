@@ -42,6 +42,8 @@ void incSync (GC_state s) {
     case SYNC_MISC:
       s->cumulativeStatistics->syncMisc++;
       break;
+    case SYNC_HELP:
+      break;
     default:
       fprintf (stderr, "Unknown sync reason?\n");
       exit (1);

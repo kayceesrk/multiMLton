@@ -32,7 +32,7 @@ void leave (GC_state s) {
   if (DEBUG_ENTER_LEAVE)
     fprintf (stderr, "leave ok [%d]\n", Proc_processorNumber (s));
   Proc_endCriticalSection(s);
-  assert (invariantForMutator (s, FALSE, TRUE));
+  //assert (invariantForMutator (s, FALSE, TRUE));
   endAtomic (s);
   if (DEBUG_ENTER_LEAVE)
     fprintf (stderr, "leave unlocked [%d]\n", Proc_processorNumber (s));

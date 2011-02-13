@@ -9,15 +9,15 @@
 
 /**< Init Ciruclar Buffer */
 static inline CircularBuffer* CircularBufferInit(CircularBuffer** pQue, int size) {
-	int sz = size*sizeof(KeyType)+sizeof(CircularBuffer);
-	*pQue = (CircularBuffer*) malloc(sz);
-	if(*pQue)
-	{
-		(*pQue)->size=size;
-		(*pQue)->writePointer = 0;
-		(*pQue)->readPointer  = 0;
-	}
-	return *pQue;
+  int sz = size*sizeof(KeyType)+sizeof(CircularBuffer);
+  *pQue = (CircularBuffer*) malloc(sz);
+  if(*pQue)
+  {
+    (*pQue)->size=size;
+    (*pQue)->writePointer = 0;
+    (*pQue)->readPointer  = 0;
+  }
+  return *pQue;
 }
 
 static inline void CircularBufferClean (CircularBuffer* que) {
@@ -25,29 +25,29 @@ static inline void CircularBufferClean (CircularBuffer* que) {
 }
 
 static inline int CircularBufferIsFull(CircularBuffer* que) {
-	return ((que->writePointer + 1) % que->size == que->readPointer);
+  return ((que->writePointer + 1) % que->size == que->readPointer);
 }
 
 static inline int CircularBufferIsEmpty(CircularBuffer* que) {
-	return (que->readPointer == que->writePointer);
+  return (que->readPointer == que->writePointer);
 }
 
 static inline int CircularBufferEnque(CircularBuffer* que, KeyType k) {
-	int isFull = CircularBufferIsFull(que);
-	que->keys[que->writePointer] = k;
-	que->writePointer++;
-	que->writePointer %= que->size;
-	return isFull;
+  int isFull = CircularBufferIsFull(que);
+  que->keys[que->writePointer] = k;
+  que->writePointer++;
+  que->writePointer %= que->size;
+  return isFull;
 }
 
 static inline int CircularBufferDeque(CircularBuffer* que, KeyType* pK) {
-	int isEmpty = CircularBufferIsEmpty(que);
+  int isEmpty = CircularBufferIsEmpty(que);
   if (isEmpty)
     return TRUE;
-	*pK = que->keys[que->readPointer];
-	que->readPointer++;
-	que->readPointer %= que->size;
-	return(FALSE);
+  *pK = que->keys[que->readPointer];
+  que->readPointer++;
+  que->readPointer %= que->size;
+  return(FALSE);
 }
 
 static inline SchedulerQueue* newSchedulerQueue (void) {
@@ -57,11 +57,11 @@ static inline SchedulerQueue* newSchedulerQueue (void) {
   return sq;
 }
 
-static inline CircularBuffer* getSubQ (SchedulerQueue* sq, int i) {
-  if (i==0)
-    return sq->primary;
-  return sq->secondary;
-}
+  static inline CircularBuffer* getSubQ (SchedulerQueue* sq, int i) {
+    if (i==0)
+      return sq->primary;
+    return sq->secondary;
+  }
 
 void GC_sqCreateQueues (GC_state s) {
   assert (s->procStates);
@@ -73,34 +73,34 @@ void GC_sqCreateQueues (GC_state s) {
   }
 }
 
-void GC_sqEnque (GC_state s, pointer p, int proc, int i) {
-  if (DEBUG_SQ)
-    fprintf (stderr, "GC_sqEnque p="FMTPTR" proc=%d q=%d [%d]\n",
-             (uintptr_t)p, proc, i, s->procId);
-
-  assert (p);
-  GC_state fromProc = &s->procStates[proc];
-  objptr op = pointerToObjptr (p, fromProc->heap->start);
-
-  /* If I am placing a thread on another core, the thread must reside
-   * in the shared heap. So Lift it.
-   */
-  if (proc != (int)s->procId && !(isObjptrInHeap (s, s->sharedHeap, op))) {
+  void GC_sqEnque (GC_state s, pointer p, int proc, int i) {
     if (DEBUG_SQ)
-      fprintf (stderr, "GC_sqEnque: moving closure to shared heap[%d]\n",
-               s->procId);
-    moveTransitiveClosure (s, &op, FALSE, FALSE);
-    if (DEBUG_SQ)
-      fprintf (stderr, "GC_sqEnque: moving closure to shared heap done. "FMTOBJPTR" [%d]\n",
-               op, s->procId);
+      fprintf (stderr, "GC_sqEnque p="FMTPTR" proc=%d q=%d [%d]\n",
+               (uintptr_t)p, proc, i, s->procId);
 
+    assert (p);
+    GC_state fromProc = &s->procStates[proc];
+    objptr op = pointerToObjptr (p, fromProc->heap->start);
+
+    /* If I am placing a thread on another core, the thread must reside
+     * in the shared heap. So Lift it.
+     */
+    if (proc != (int)s->procId && !(isObjptrInHeap (s, s->sharedHeap, op))) {
+      if (DEBUG_SQ)
+        fprintf (stderr, "GC_sqEnque: moving closure to shared heap[%d]\n",
+                 s->procId);
+      moveTransitiveClosure (s, &op, FALSE, FALSE);
+      if (DEBUG_SQ)
+        fprintf (stderr, "GC_sqEnque: moving closure to shared heap done. "FMTOBJPTR" [%d]\n",
+                 op, s->procId);
+
+    }
+
+    CircularBuffer* cq = getSubQ (fromProc->schedulerQueue, i);
+    assert (!CircularBufferIsFull(cq));
+    CircularBufferEnque (cq, op);
+    Parallel_wakeUpThread (proc, 1);
   }
-
-  CircularBuffer* cq = getSubQ (fromProc->schedulerQueue, i);
-  assert (!CircularBufferIsFull(cq));
-  CircularBufferEnque (cq, op);
-  Parallel_wakeUpThread (proc, 1);
-}
 
 pointer GC_sqDeque (GC_state s, int i) {
   CircularBuffer* cq = getSubQ (s->schedulerQueue, i);
@@ -166,35 +166,48 @@ void GC_sqClean (GC_state s) {
 }
 
 void GC_sqAcquireLock (GC_state s, int proc) {
-    while (not Parallel_compareAndSwap
-            ((pointer)(&s->schedulerLocks[proc]), -1, s->procId));
+  do {
+  AGAIN:
+    /* Since GC_sqAcquireLock can be called while doing shared GC (while
+     * already in a critical section, try to join a barrier only if we are not
+     * already in one */
+    if (Proc_threadInSection (s) and
+        !Proc_executingInSection (s)) {
+      s->syncReason = SYNC_HELP;
+      ENTER0 (s);
+      LEAVE0 (s);
+    }
+    if (s->schedulerLocks[proc] >= 0)
+      goto AGAIN;
+  } while (not Parallel_compareAndSwap
+           ((pointer)(&s->schedulerLocks[proc]), -1, s->procId));
 }
 
 void GC_sqReleaseLock (GC_state s, int proc) {
-    assert (s->schedulerLocks[proc] == (int32_t)s->procId);
-    s->schedulerLocks[proc] = -1;
+  assert (s->schedulerLocks[proc] == (int32_t)s->procId);
+  s->schedulerLocks[proc] = -1;
 }
 
-void foreachObjptrInSQ (GC_state s, SchedulerQueue* sq, GC_foreachObjptrFun f) {
-  if (!sq)
-    return;
-  GC_sqAcquireLock (s, s->procId);
-  for (int i=0; i<2; i++) {
-    CircularBuffer* cq = getSubQ (sq, i);
-    uint32_t rp = cq->readPointer;
-    uint32_t wp = cq->writePointer;
+  void foreachObjptrInSQ (GC_state s, SchedulerQueue* sq, GC_foreachObjptrFun f) {
+    if (!sq)
+      return;
+    GC_sqAcquireLock (s, s->procId);
+    for (int i=0; i<2; i++) {
+      CircularBuffer* cq = getSubQ (sq, i);
+      uint32_t rp = cq->readPointer;
+      uint32_t wp = cq->writePointer;
 
-    if (DEBUG_DETAILED or s->controls->selectiveDebug)
-      fprintf (stderr, "foreachObjptrInSQ sq="FMTPTR" q=%d rp=%d wp=%d [%d]\n",
-                (uintptr_t)sq, i, rp, wp, s->procId);
-    while (rp != wp) {
-      callIfIsObjptr (s, f, &(cq->keys[rp]));
-      rp++;
-      rp %= cq->size;
+      if (DEBUG_DETAILED or s->controls->selectiveDebug)
+        fprintf (stderr, "foreachObjptrInSQ sq="FMTPTR" q=%d rp=%d wp=%d [%d]\n",
+                 (uintptr_t)sq, i, rp, wp, s->procId);
+      while (rp != wp) {
+        callIfIsObjptr (s, f, &(cq->keys[rp]));
+        rp++;
+        rp %= cq->size;
+      }
     }
+    GC_sqReleaseLock (s, s->procId);
   }
-  GC_sqReleaseLock (s, s->procId);
-}
 
 int sizeofSchedulerQueue (GC_state s, int i) {
   SchedulerQueue* sq = s->schedulerQueue;

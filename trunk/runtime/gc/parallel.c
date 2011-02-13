@@ -86,7 +86,7 @@ void Parallel_maybeWaitForGC (void) {
   if (Proc_threadInSection (s)) {
     //fprintf (stderr, "waiting for gc [%d]\n", Proc_processorNumber (s));
 
-    /* XXX hack? */
+    s->syncReason = SYNC_HELP;
     ENTER0 (s);
     LEAVE0 (s);
   }
