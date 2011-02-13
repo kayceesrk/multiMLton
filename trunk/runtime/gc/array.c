@@ -11,8 +11,8 @@
  * Returns a pointer to the length for the array pointed to by p.
  */
 GC_arrayLength* getArrayLengthp (pointer a) {
-  return (GC_arrayLength*)(a 
-                           - GC_HEADER_SIZE 
+  return (GC_arrayLength*)(a
+                           - GC_HEADER_SIZE
                            - GC_ARRAY_LENGTH_SIZE);
 }
 
@@ -33,9 +33,9 @@ uintmax_t GC_getArrayLength (pointer a) {
  * Returns a pointer to the counter for the array pointed to by p.
  */
 GC_arrayCounter* getArrayCounterp (pointer a) {
-  return (GC_arrayCounter*)(a 
-                            - GC_HEADER_SIZE 
-                            - GC_ARRAY_LENGTH_SIZE 
+  return (GC_arrayCounter*)(a
+                            - GC_HEADER_SIZE
+                            - GC_ARRAY_LENGTH_SIZE
                             - GC_ARRAY_COUNTER_SIZE);
 }
 
@@ -56,7 +56,7 @@ pointer indexArrayAtObjptrIndex (GC_state s, pointer a,
   GC_objectTypeTag tag;
 
   header = getHeader (a);
-  splitHeader(s, header, &tag, NULL, &bytesNonObjptrs, &numObjptrs);
+  splitHeader(s, header, getHeaderp (a), &tag, NULL, &bytesNonObjptrs, &numObjptrs);
   assert (tag == ARRAY_TAG);
 
   return a

@@ -127,7 +127,7 @@ thread:
       uint16_t bytesNonObjptrs, numObjptrs;
 
       assert (header == getHeader (p));
-      splitHeader(s, header, &tag, NULL, &bytesNonObjptrs, &numObjptrs);
+      splitHeader(s, header, getHeaderp (p), &tag, NULL, &bytesNonObjptrs, &numObjptrs);
 
       /* Compute the space taken by the header and object body. */
       if ((NORMAL_TAG == tag) or (WEAK_TAG == tag)) { /* Fixed size object. */
@@ -263,7 +263,7 @@ unmark:
       uint16_t bytesNonObjptrs, numObjptrs;
 
       assert (header == getHeader (p));
-      splitHeader(s, header, &tag, NULL, &bytesNonObjptrs, &numObjptrs);
+      splitHeader(s, header, getHeaderp (p), &tag, NULL, &bytesNonObjptrs, &numObjptrs);
 
       /* Compute the space taken by the header and object body. */
       if ((NORMAL_TAG == tag) or (WEAK_TAG == tag)) { /* Fixed size object. */

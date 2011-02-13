@@ -76,11 +76,12 @@ static inline void liftObjptrAndFillOrig (GC_state s, objptr *opp) {
 static inline void assertLiftedObjptr (GC_state s, objptr *opp) {
   objptr op = *opp;
   bool res = isObjptrInHeap (s, s->sharedHeap, op);
-  GC_header h = getHeader(objptrToPointer (op, s->heap->start));
+  GC_header h = getHeader (objptrToPointer (op, s->heap->start));
+  GC_header* hp = getHeaderp (objptrToPointer (op, s->heap->start));
   GC_objectTypeTag tag;
   if (DEBUG_DETAILED or s->controls->selectiveDebug)
     fprintf (stderr, "assertLiftedObjptr ("FMTOBJPTR")\n", *opp);
-  splitHeader (s, h, &tag, NULL, NULL, NULL);
+  splitHeader (s, h, hp, &tag, NULL, NULL, NULL);
   bool stackType = (tag == STACK_TAG);
   res = !(!res);
   stackType = !(!stackType);
@@ -98,7 +99,7 @@ static inline void liftThreadDuringInit (GC_state s, objptr op) {
   if (isObjptr (op)) {
     pointer p = objptrToPointer (op, s->heap->start);
     header = getHeader (p);
-    splitHeader(s, header, &tag, NULL, &bytesNonObjptrs, &numObjptrs);
+    splitHeader(s, header, getHeaderp (p), &tag, NULL, &bytesNonObjptrs, &numObjptrs);
 
     /* We know that the object is a GC_thread */
     assert (tag == NORMAL_TAG);

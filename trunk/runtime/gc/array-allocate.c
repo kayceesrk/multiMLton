@@ -20,7 +20,7 @@ pointer GC_arrayAllocate (GC_state s,
   pointer result;
   bool holdLock;
 
-  splitHeader(s, header, NULL, NULL, &bytesNonObjptrs, &numObjptrs);
+  splitHeader(s, header, NULL, NULL, NULL, &bytesNonObjptrs, &numObjptrs);
   if (DEBUG_ARRAY)
     fprintf (stderr, "GC_arrayAllocate (%"PRIuMAX", "FMTARRLEN", "FMTHDR") [%d]\n",
              (uintmax_t)ensureBytesFree, numElements, header, Proc_processorNumber (s));

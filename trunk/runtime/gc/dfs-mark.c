@@ -126,7 +126,7 @@ mark:
    * would see the object as unmarked and traverse it again.
    */
   *headerp = header;
-  splitHeader (s, header, &tag, NULL, &bytesNonObjptrs, &numObjptrs);
+  splitHeader (s, header, headerp, &tag, NULL, &bytesNonObjptrs, &numObjptrs);
   if (NORMAL_TAG == tag) {
     size +=
       GC_NORMAL_HEADER_SIZE
@@ -317,7 +317,7 @@ ret:
   cur = prev;
   headerp = getHeaderp (cur);
   header = *headerp;
-  splitHeader (s, header, &tag, NULL, &bytesNonObjptrs, &numObjptrs);
+  splitHeader (s, header, headerp, &tag, NULL, &bytesNonObjptrs, &numObjptrs);
   /* It's impossible to get a WEAK_TAG here, since we would never
    * follow the weak object pointer.
    */

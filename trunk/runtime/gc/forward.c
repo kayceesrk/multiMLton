@@ -53,7 +53,7 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
     GC_objectTypeTag tag;
     uint16_t bytesNonObjptrs, numObjptrs;
 
-    splitHeader(s, header, &tag, NULL, &bytesNonObjptrs, &numObjptrs);
+    splitHeader(s, header, getHeaderp (p), &tag, NULL, &bytesNonObjptrs, &numObjptrs);
 
     /* Compute the space taken by the header and object body. */
     if ((NORMAL_TAG == tag) or (WEAK_TAG == tag)) { /* Fixed size object. */
@@ -244,7 +244,7 @@ void forwardObjptr (GC_state s, objptr *opp) {
     size_t headerBytes, objectBytes;
     uint16_t bytesNonObjptrs, numObjptrs;
 
-    splitHeader(s, header, &tag, NULL, &bytesNonObjptrs, &numObjptrs);
+    splitHeader(s, header, getHeaderp (p), &tag, NULL, &bytesNonObjptrs, &numObjptrs);
 
     /* Compute the space taken by the header and object body. */
     if ((NORMAL_TAG == tag) or (WEAK_TAG == tag)) { /* Fixed size object. */
@@ -431,7 +431,7 @@ void forwardObjptrIfInSharedHeap (GC_state s, objptr *opp) {
     //opp is in shared heap, and p is in any local heap.
     GC_state r = getGCStateFromPointer (s, p);
     GC_objectTypeTag tag;
-    splitHeader (r, getHeader (p), &tag, NULL, NULL, NULL);
+    splitHeader (r, getHeader (p), getHeaderp (p), &tag, NULL, NULL, NULL);
 
     if (DEBUG_DETAILED or s->controls->selectiveDebug)
       fprintf (stderr, "forwardObjptrIfInSharedHeap: invariant breaking pointer opp="FMTPTR" p="FMTPTR" [%d]\n",

@@ -176,7 +176,7 @@ enum {
 #define GC_HEADER_ONLY_HEADER buildHeaderFromTypeIndex (HEADER_ONLY_TYPE_INDEX)
 #define GC_FILL_HEADER buildHeaderFromTypeIndex (FILL_TYPE_INDEX)
 
-static inline void splitHeader (GC_state s, GC_header header,
+static inline void splitHeader (GC_state s, GC_header header, GC_header* headerp,
                                 GC_objectTypeTag *tagRet, bool *hasIdentityRet,
                                 uint16_t *bytesNonObjptrsRet, uint16_t *numObjptrsRet);
 static inline pointer advanceToObjectData (GC_state s, pointer p);

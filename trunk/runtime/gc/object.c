@@ -50,7 +50,7 @@ GC_header buildHeaderFromTypeIndex (uint32_t t) {
   return 1 | (t << 1);
 }
 
-void splitHeader(GC_state s, GC_header header,
+void splitHeader(GC_state s, GC_header header, GC_header* headerp,
                  GC_objectTypeTag *tagRet, bool *hasIdentityRet,
                  uint16_t *bytesNonObjptrsRet, uint16_t *numObjptrsRet) {
   unsigned int objectTypeIndex;
@@ -62,7 +62,7 @@ void splitHeader(GC_state s, GC_header header,
   header &= ~(LIFT_MASK);
 
   if (DEBUG_DETAILED or s->controls->selectiveDebug)
-      fprintf (stderr, "splitHeader ("FMTHDR") [%d]\n", header, s->procId);
+      fprintf (stderr, "splitHeader p="FMTPTR" ("FMTHDR") [%d]\n", (uintptr_t)headerp, header, s->procId);
   assert (1 == (header & GC_VALID_HEADER_MASK));
   objectTypeIndex = (header & TYPE_INDEX_MASK) >> TYPE_INDEX_SHIFT;
   if (objectTypeIndex > s->objectTypesLength)

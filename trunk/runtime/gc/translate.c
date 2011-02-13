@@ -38,7 +38,7 @@ void translateObjptr (GC_state s, objptr *opp) {
   }
   GC_header header = getHeader (p);
   GC_objectTypeTag tag;
-  splitHeader (s, header, &tag, NULL, NULL, NULL);
+  splitHeader (s, header, getHeaderp (p), &tag, NULL, NULL, NULL);
   if (tag == STACK_TAG) {
       GC_stack stack = (GC_stack)p;
       if (DEBUG_TRANSLATE)

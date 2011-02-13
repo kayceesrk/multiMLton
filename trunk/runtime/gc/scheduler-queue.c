@@ -73,34 +73,34 @@ void GC_sqCreateQueues (GC_state s) {
   }
 }
 
-  void GC_sqEnque (GC_state s, pointer p, int proc, int i) {
+void GC_sqEnque (GC_state s, pointer p, int proc, int i) {
+  if (DEBUG_SQ)
+    fprintf (stderr, "GC_sqEnque p="FMTPTR" proc=%d q=%d [%d]\n",
+              (uintptr_t)p, proc, i, s->procId);
+
+  assert (p);
+  GC_state fromProc = &s->procStates[proc];
+  objptr op = pointerToObjptr (p, fromProc->heap->start);
+
+  /* If I am placing a thread on another core, the thread must reside
+    * in the shared heap. So Lift it.
+    */
+  if (proc != (int)s->procId && !(isObjptrInHeap (s, s->sharedHeap, op))) {
     if (DEBUG_SQ)
-      fprintf (stderr, "GC_sqEnque p="FMTPTR" proc=%d q=%d [%d]\n",
-               (uintptr_t)p, proc, i, s->procId);
+      fprintf (stderr, "GC_sqEnque: moving closure to shared heap[%d]\n",
+                s->procId);
+    moveTransitiveClosure (s, &op, FALSE, FALSE);
+    if (DEBUG_SQ)
+      fprintf (stderr, "GC_sqEnque: moving closure to shared heap done. "FMTOBJPTR" [%d]\n",
+                op, s->procId);
 
-    assert (p);
-    GC_state fromProc = &s->procStates[proc];
-    objptr op = pointerToObjptr (p, fromProc->heap->start);
-
-    /* If I am placing a thread on another core, the thread must reside
-     * in the shared heap. So Lift it.
-     */
-    if (proc != (int)s->procId && !(isObjptrInHeap (s, s->sharedHeap, op))) {
-      if (DEBUG_SQ)
-        fprintf (stderr, "GC_sqEnque: moving closure to shared heap[%d]\n",
-                 s->procId);
-      moveTransitiveClosure (s, &op, FALSE, FALSE);
-      if (DEBUG_SQ)
-        fprintf (stderr, "GC_sqEnque: moving closure to shared heap done. "FMTOBJPTR" [%d]\n",
-                 op, s->procId);
-
-    }
-
-    CircularBuffer* cq = getSubQ (fromProc->schedulerQueue, i);
-    assert (!CircularBufferIsFull(cq));
-    CircularBufferEnque (cq, op);
-    Parallel_wakeUpThread (proc, 1);
   }
+
+  CircularBuffer* cq = getSubQ (fromProc->schedulerQueue, i);
+  assert (!CircularBufferIsFull(cq));
+  CircularBufferEnque (cq, op);
+  Parallel_wakeUpThread (proc, 1);
+}
 
 pointer GC_sqDeque (GC_state s, int i) {
   CircularBuffer* cq = getSubQ (s->schedulerQueue, i);
@@ -172,11 +172,15 @@ void GC_sqAcquireLock (GC_state s, int proc) {
      * already in a critical section, try to join a barrier only if we are not
      * already in one */
     if (Proc_threadInSection (s) and
-        !Proc_executingInSection (s)) {
+        !Proc_executingInSection (s) and FALSE) {
       s->syncReason = SYNC_HELP;
       ENTER0 (s);
       LEAVE0 (s);
     }
+
+    if (Proc_executingInSection (s) and s->schedulerLocks[proc] >= 0)
+      assert (0 and "GC_sqAcquireLock: DEADLOCK!!");
+
     if (s->schedulerLocks[proc] >= 0)
       goto AGAIN;
   } while (not Parallel_compareAndSwap

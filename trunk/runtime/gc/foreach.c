@@ -97,7 +97,7 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
   GC_objectTypeTag tag;
 
   header = getHeader (p);
-  splitHeader(s, header, &tag, NULL, &bytesNonObjptrs, &numObjptrs);
+  splitHeader(s, header, getHeaderp (p), &tag, NULL, &bytesNonObjptrs, &numObjptrs);
   if (DEBUG_DETAILED or s->controls->selectiveDebug)
     fprintf (stderr,
              "foreachObjptrInObject ("FMTPTR")"
