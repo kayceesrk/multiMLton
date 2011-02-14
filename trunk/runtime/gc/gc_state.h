@@ -24,12 +24,18 @@ struct GC_state {
   /* ML arrays and queues */
   SchedulerQueue* schedulerQueue;
   Lock* schedulerLocks;
+
   objptr* moveOnWBA;
   int32_t moveOnWBASize;
+  int32_t moveOnWBAMaxSize;
+
   objptr* preemptOnWBA;
   int32_t preemptOnWBASize;
+  int32_t preemptOnWBAMaxSize;
+
   SpawnThread* spawnOnWBA;
   int32_t spawnOnWBASize;
+  int32_t spawnOnWBAMaxSize;
 
 
   pointer sharedFrontier;

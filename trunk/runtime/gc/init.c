@@ -473,13 +473,16 @@ int GC_init (GC_state s, int argc, char **argv) {
 
   s->schedulerQueue = NULL;
   s->schedulerLocks = NULL;
-  s->moveOnWBA = (objptr*) malloc (sizeof (pointer) * BUFFER_SIZE);
-  s->moveOnWBASize = 0;
 
+  s->moveOnWBA = (objptr*) malloc (sizeof (objptr) * BUFFER_SIZE);
+  s->moveOnWBASize = 0;
+  s->moveOnWBAMaxSize = BUFFER_SIZE;
   s->preemptOnWBA = (objptr*) malloc (sizeof (objptr) * BUFFER_SIZE);
   s->preemptOnWBASize = 0;
+  s->preemptOnWBAMaxSize = BUFFER_SIZE;
   s->spawnOnWBA = (SpawnThread*) malloc (sizeof (SpawnThread) * BUFFER_SIZE);
   s->spawnOnWBASize = 0;
+  s->spawnOnWBAMaxSize = BUFFER_SIZE;
 
   initIntInf (s);
   initSignalStack (s);
@@ -590,13 +593,15 @@ void GC_duplicate (GC_state d, GC_state s) {
 
   d->schedulerLocks = NULL;
   d->schedulerQueue = NULL;
-  d->moveOnWBA = (objptr*) malloc (sizeof (pointer) * BUFFER_SIZE);
+  d->moveOnWBA = (objptr*) malloc (sizeof (objptr) * BUFFER_SIZE);
   d->moveOnWBASize = 0;
-
+  d->moveOnWBAMaxSize = BUFFER_SIZE;
   d->preemptOnWBA = (objptr*) malloc (sizeof (objptr) * BUFFER_SIZE);
   d->preemptOnWBASize = 0;
+  d->preemptOnWBAMaxSize = BUFFER_SIZE;
   d->spawnOnWBA = (SpawnThread*) malloc (sizeof (SpawnThread) * BUFFER_SIZE);
   d->spawnOnWBASize = 0;
+  d->spawnOnWBAMaxSize = BUFFER_SIZE;
 
   // XXX spoons better duplicate?
   //initSignalStack (d);

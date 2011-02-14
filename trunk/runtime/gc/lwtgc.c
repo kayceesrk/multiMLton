@@ -383,15 +383,29 @@ void liftAllObjptrsInMoveOnWBA (GC_state s) {
 void GC_addToMoveOnWBA (GC_state s, pointer p) {
   s->cumulativeStatistics->numMoveWB++;
   ++(s->moveOnWBASize);
-  if (s->moveOnWBASize > BUFFER_SIZE)
-    die ("moveOnWBA overflow");
+  if (s->moveOnWBASize > s->moveOnWBAMaxSize) {
+    s->moveOnWBAMaxSize *= 2;
+    objptr* newMoveOnWBA =
+        (objptr*) realloc (s->moveOnWBA, sizeof (objptr) * s->moveOnWBAMaxSize);
+    if (newMoveOnWBA == NULL) {
+      fprintf (stderr, "newMoveOnWBA s->moveOnWBA="FMTPTR" oldMaxSize=%d [%d]\n",
+               (uintptr_t)s->moveOnWBA, s->moveOnWBAMaxSize, s->procId);
+    }
+    assert (newMoveOnWBA);
+    s->moveOnWBA = newMoveOnWBA;
+  }
   s->moveOnWBA[s->moveOnWBASize - 1] = pointerToObjptr (p, s->heap->start);
 }
 
 void GC_addToSpawnOnWBA (GC_state s, pointer p, int proc) {
   ++(s->spawnOnWBASize);
-  if (s->spawnOnWBASize > BUFFER_SIZE)
-    die ("spawnOnWBA overflow");
+  if (s->spawnOnWBASize > s->spawnOnWBAMaxSize) {
+    s->spawnOnWBAMaxSize *= 2;
+    SpawnThread* newSpawnOnWBA =
+        (SpawnThread*) realloc (s->spawnOnWBA, sizeof (objptr) * s->spawnOnWBAMaxSize);
+    assert (newSpawnOnWBA);
+    s->spawnOnWBA = newSpawnOnWBA;
+  }
   s->spawnOnWBA[s->spawnOnWBASize - 1].op = pointerToObjptr (p, s->heap->start);
   s->spawnOnWBA[s->spawnOnWBASize - 1].proc = proc;
 }
@@ -403,8 +417,13 @@ void GC_addToPreemptOnWBA (GC_state s, pointer p) {
   s->cumulativeStatistics->numReadySecWB += sizeofSchedulerQueue (s, 1);
   objptr op = pointerToObjptr (p, s->heap->start);
   ++(s->preemptOnWBASize);
-  if (s->preemptOnWBASize > BUFFER_SIZE)
-    die ("preemptOnWBA overflow");
+  if (s->preemptOnWBASize > s->preemptOnWBAMaxSize) {
+    s->preemptOnWBAMaxSize *= 2;
+    objptr* newPreemptOnWBA =
+        (objptr*) realloc (s->preemptOnWBA, sizeof (objptr) * s->preemptOnWBAMaxSize);
+    assert (newPreemptOnWBA);
+    s->preemptOnWBA = newPreemptOnWBA;
+  }
   s->preemptOnWBA[s->preemptOnWBASize - 1] = op;
 }
 
