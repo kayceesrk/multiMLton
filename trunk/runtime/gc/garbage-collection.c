@@ -216,8 +216,14 @@ void performSharedGC (GC_state s,
       }
     }
 
+    /* This is the maximum size (over approximation) of the shared heap. We
+     * will resize the heap after collection to a reasonable size. */
+    size_t maxBytes = s->lastSharedMajorStatistics->bytesLive + bytesRequested;
+    for (int proc=0; proc < s->numberOfProcs; proc++)
+      maxBytes += s->procStates[proc].lastMajorStatistics->bytesLive;
+
     size_t desiredSize =
-      sizeofHeapDesired (s, s->lastSharedMajorStatistics->bytesLive + bytesRequested, s->sharedHeap->size);
+      sizeofHeapDesired (s, maxBytes, s->sharedHeap->size);
     if (isHeapInit (s->secondarySharedHeap))
       createHeapSharedSecondary (s, desiredSize);
 
@@ -228,8 +234,6 @@ void performSharedGC (GC_state s,
     assert (s->sharedHeap->oldGenSize + bytesRequested <= s->sharedHeap->size);
 
     setGCStateCurrentSharedHeap (s, 0, 0, FALSE);
-    //for (int proc=0; proc < s->numberOfProcs; proc++)
-      //setGCStateCurrentThreadAndStack (&s->procStates[proc]);
     s->controls->selectiveDebug = FALSE;
   }
 

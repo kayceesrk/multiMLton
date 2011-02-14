@@ -24,6 +24,32 @@ static inline void CircularBufferClean (CircularBuffer* que) {
   que->readPointer = que->writePointer = 0;
 }
 
+static inline CircularBuffer* growCircularBuffer (CircularBuffer* que) {
+  //Double the circular queue size
+  CircularBuffer* newBuf;
+  CircularBufferInit (&newBuf, que->size * 2);
+  if (que->readPointer < que->writePointer) {
+    memcpy ((void*)&(newBuf->keys[0]),
+            (void*)&(que->keys[que->readPointer]),
+            (que->writePointer - que->readPointer)*sizeof(KeyType));
+  }
+  else {
+    memcpy ((void*)&(newBuf->keys[0]),
+            (void*)&(que->keys[que->readPointer]),
+            (que->size - que->readPointer)*sizeof(KeyType));
+    memcpy ((void*)&(newBuf->keys[que->size - que->readPointer]),
+            (void*)&(que->keys[0]),
+            (que->writePointer)*sizeof(KeyType));
+
+  }
+  newBuf->writePointer =
+    (que->writePointer - que->readPointer + que->size)
+    % que->size;
+  free (que);
+  return newBuf;
+}
+
+
 static inline int CircularBufferIsFull(CircularBuffer* que) {
   return ((que->writePointer + 1) % que->size == que->readPointer);
 }
@@ -97,6 +123,14 @@ void GC_sqEnque (GC_state s, pointer p, int proc, int i) {
   }
 
   CircularBuffer* cq = getSubQ (fromProc->schedulerQueue, i);
+  if (CircularBufferIsFull(cq)) {
+    if (i == 0)
+      fromProc->schedulerQueue->primary = growCircularBuffer (cq);
+    else
+      fromProc->schedulerQueue->secondary = growCircularBuffer (cq);
+    cq = getSubQ (fromProc->schedulerQueue, i);
+  }
+
   assert (!CircularBufferIsFull(cq));
   CircularBufferEnque (cq, op);
   Parallel_wakeUpThread (proc, 1);

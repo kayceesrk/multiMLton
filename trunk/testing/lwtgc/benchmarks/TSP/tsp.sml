@@ -217,14 +217,15 @@ structure TSP = struct
             t
           end (* merge *)
 
-    fun combine(ch1, ch2, t) =
-      select [wrap(recvEvt ch1, fn(res1)=> (res1, sSync (recvEvt ch2), t)),
-              wrap(recvEvt ch2, fn(res2)=> (sSync (recvEvt ch1), res2, t))]
+    fun combine(ch1, ch2, t) = (recv ch1, recv ch2, t)
+      (* select [wrap(recvEvt ch1, fn(res1)=> (res1, sSync (recvEvt ch2), t)),
+              wrap(recvEvt ch2, fn(res2)=> (sSync (recvEvt ch1), res2, t))] *)
 
     (* Compute TSP for the tree t -- use conquer for problems <= sz * *)
     fun tsp (t, sz) =
     let
       val ch = channel()
+      val _ = print (concat [Int.toString sz, "\n"])
       fun work () =
         (let
           val returnTree =
@@ -514,15 +515,13 @@ structure Main : sig
     fun doit () = (doit' (!problemSz); ())
     (*let  val _ = (testit(TextIO.stdOut)) in () end*)
 
-    val doit =
-       fn n =>
-       let
-          fun loop n =
-             if n = 0
-                then ()
-             else (MLton.Pacml.run(doit);
-                   loop(n-1))
-       in loop n
-       end
-    (* n = 4 *)
+    val doit = fn _ => ignore (MLton.Pacml.run(doit))
   end
+
+val ts = Time.now ()
+val _ = Main.doit 0
+val te = Time.now ()
+val d = Time.-(te, ts)
+val _ = TextIO.print (concat ["Time start: ", Time.toString ts, "\n"])
+val _ = TextIO.print (concat ["Time end:   ", Time.toString te, "\n"])
+val _ = TextIO.print (concat ["Time diff:  ", LargeInt.toString (Time.toMilliseconds d), "ms\n"])
