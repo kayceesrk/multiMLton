@@ -372,9 +372,25 @@ void liftAllObjptrsInMoveOnWBA (GC_state s) {
   while (i < s->spawnOnWBASize) {
     int proc = s->spawnOnWBA[i].proc;
     objptr op = s->spawnOnWBA[i].op;
+
+    /* If I am placing a thread on another core, the thread must reside
+     * in the shared heap. So Lift it.
+     */
+    if (proc != (int)s->procId && !(isObjptrInHeap (s, s->sharedHeap, op))) {
+      if (DEBUG_SQ)
+        fprintf (stderr, "GC_sqEnque: moving closure to shared heap[%d]\n",
+                 s->procId);
+      moveTransitiveClosure (s, &op, FALSE, TRUE);
+      if (DEBUG_SQ)
+        fprintf (stderr, "GC_sqEnque: moving closure to shared heap done. "FMTOBJPTR" [%d]\n",
+                 op, s->procId);
+
+    }
+
     GC_sqAcquireLock (s, proc);
     GC_sqEnque (s, objptrToPointer (op, s->sharedHeap->start), proc, 0);
     GC_sqReleaseLock (s, proc);
+
     i++;
   }
   s->spawnOnWBASize = 0;

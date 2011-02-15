@@ -327,10 +327,14 @@ struct
   val isEmpty = _prim "SQ_isEmpty": unit -> bool;
   val isEmptyPrio = _import "GC_sqIsEmptyPrio": C_Int.t -> bool;
   val clean = _prim "SQ_clean": unit -> unit;
+  val processorNumber = _import "Parallel_processorNumber": unit -> Int32.int;
 
   fun enque (t, proc, prio) =
   let
     val prim_enque = _prim "SQ_enque": ('a * C_Int.t * C_Int.t) -> unit;
+    val t = if not (proc = processorNumber ()) then (* we are enqueueing on some other core *)
+              move (t, false, true)
+            else t
   in
     prim_enque (t, proc, prio)
   end

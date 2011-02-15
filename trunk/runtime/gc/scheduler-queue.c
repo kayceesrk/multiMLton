@@ -107,20 +107,8 @@ void GC_sqEnque (GC_state s, pointer p, int proc, int i) {
   assert (p);
   GC_state fromProc = &s->procStates[proc];
   objptr op = pointerToObjptr (p, fromProc->heap->start);
-
-  /* If I am placing a thread on another core, the thread must reside
-    * in the shared heap. So Lift it.
-    */
-  if (proc != (int)s->procId && !(isObjptrInHeap (s, s->sharedHeap, op))) {
-    if (DEBUG_SQ)
-      fprintf (stderr, "GC_sqEnque: moving closure to shared heap[%d]\n",
-                s->procId);
-    moveTransitiveClosure (s, &op, FALSE, FALSE);
-    if (DEBUG_SQ)
-      fprintf (stderr, "GC_sqEnque: moving closure to shared heap done. "FMTOBJPTR" [%d]\n",
-                op, s->procId);
-
-  }
+  assert (isPointerInHeap (s, s->sharedHeap, p) or
+          (s->procId == proc));
 
   CircularBuffer* cq = getSubQ (fromProc->schedulerQueue, i);
   if (CircularBufferIsFull(cq)) {
