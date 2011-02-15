@@ -43,7 +43,7 @@ void majorGC (GC_state s, size_t bytesRequested, bool mayResize) {
    * estimate.  Here, it is exactly how much was live after the GC.
    */
   if (mayResize) {
-    resizeHeap (s, s->lastMajorStatistics->bytesLive + bytesRequested);
+    resizeHeap (s, s->heap, s->lastMajorStatistics->bytesLive + bytesRequested);
     setCardMapAndCrossMap (s);
   }
   resizeLocalHeapSecondary (s);
@@ -229,7 +229,7 @@ void performSharedGC (GC_state s,
 
     majorCheneyCopySharedGC (s);
     s->lastSharedMajorStatistics->bytesLive = s->sharedHeap->oldGenSize;
-    //XXX TODO resize heap
+    resizeHeap (s, s->sharedHeap, s->lastSharedMajorStatistics->bytesLive + bytesRequested);
     resizeSharedHeapSecondary (s);
     assert (s->sharedHeap->oldGenSize + bytesRequested <= s->sharedHeap->size);
 

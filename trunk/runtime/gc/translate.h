@@ -17,7 +17,9 @@ struct GC_translateState {
 
 #if (defined (MLTON_GC_INTERNAL_FUNCS))
 
-static inline void translateObjptr (GC_state s, objptr *opp);
+static inline void translateObjptrLocal (GC_state s, objptr *opp);
 static void translateHeap (GC_state s, pointer from, pointer to, size_t size);
+static inline void translateObjptrShared (GC_state s, objptr *opp);
+static void translateSharedHeap (GC_state s, pointer from, pointer to, size_t size);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

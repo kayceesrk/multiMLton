@@ -357,7 +357,7 @@ enum {
 
 /* growHeap (s, desiredSize, minSize)
  */
-void growHeap (GC_state s, size_t desiredSize, size_t minSize) {
+void growHeap (GC_state s, GC_heap h, size_t desiredSize, size_t minSize) {
   GC_heap curHeapp;
   struct GC_heap newHeap;
   GC_heap newHeapp;
@@ -366,26 +366,30 @@ void growHeap (GC_state s, size_t desiredSize, size_t minSize) {
   pointer origStart;
   size_t liveSize;
 
-  assert (desiredSize >= s->heap->size);
+  bool isShared = FALSE;
+  if (h == s->sharedHeap)
+    isShared = TRUE;
+
+  assert (desiredSize >= h->size);
   if (DEBUG_RESIZING or s->controls->messages) {
     fprintf (stderr,
              "[GC: Growing heap at "FMTPTR" of size %s bytes (+ %s bytes card/cross map),]\n",
-             (uintptr_t)s->heap->start,
-             uintmaxToCommaString(s->heap->size),
-             uintmaxToCommaString(s->heap->withMapsSize - s->heap->size));
+             (uintptr_t)h->start,
+             uintmaxToCommaString(h->size),
+             uintmaxToCommaString(h->withMapsSize - h->size));
     fprintf (stderr,
              "[GC:\tto desired size of %s bytes and minimum size of %s bytes.]\n",
              uintmaxToCommaString(desiredSize),
              uintmaxToCommaString(minSize));
   }
-  if (minSize <= s->heap->size) {
+  if (minSize <= h->size) {
     useCurrent = TRUE;
     /* Demand real growth from remapHeap and/or createHeap. */
-    minSize = (desiredSize / 2) + (s->heap->size / 2);
+    minSize = (desiredSize / 2) + (h->size / 2);
   } else {
     useCurrent = FALSE;
   }
-  curHeapp = s->heap;
+  curHeapp = h;
   newHeapp = &newHeap;
   origStart = curHeapp->start;
   liveSize = curHeapp->oldGenSize;
@@ -427,9 +431,9 @@ copy:
     if (DEBUG_RESIZING or s->controls->messages) {
       fprintf (stderr,
                "[GC: Using heap at "FMTPTR" of size %s bytes (+ %s bytes card/cross map).]\n",
-               (uintptr_t)s->heap->start,
-               uintmaxToCommaString(s->heap->size),
-               uintmaxToCommaString(s->heap->withMapsSize - s->heap->size));
+               (uintptr_t)h->start,
+               uintmaxToCommaString(h->size),
+               uintmaxToCommaString(h->withMapsSize - h->size));
     }
   } else if (s->controls->mayPageHeap) {
     /* Page the heap to disk and try again. */
@@ -467,29 +471,39 @@ copy:
          uintmaxToCommaString(minSize));
   }
 done:
-  unless (origStart == s->heap->start) {
-    translateHeap (s, origStart, s->heap->start, s->heap->oldGenSize);
+  unless (origStart == h->start) {
+    if (!isShared)
+      translateHeap (s, origStart, h->start, h->oldGenSize);
+    else
+      translateSharedHeap (s, origStart, h->start, h->oldGenSize);
   }
 }
 
-/* resizeHeap (s, minSize)
+/* resizeHeap (s, h, minSize)
  */
-void resizeHeap (GC_state s, size_t minSize) {
+void resizeHeap (GC_state s, GC_heap h, size_t minSize) {
   size_t desiredSize;
+  bool isShared = FALSE;
+
+  if (h == s->sharedHeap)
+    isShared = TRUE;
 
   if (DEBUG_RESIZING)
     fprintf (stderr, "resizeHeap  minSize = %s  size = %s\n",
              uintmaxToCommaString(minSize),
-             uintmaxToCommaString(s->heap->size));
-  desiredSize = sizeofHeapDesired (s, minSize, s->heap->size);
+             uintmaxToCommaString(h->size));
+  desiredSize = sizeofHeapDesired (s, minSize, h->size);
   assert (minSize <= desiredSize);
-  if (desiredSize <= s->heap->size) {
-    shrinkHeap (s, s->heap, desiredSize);
+  if (desiredSize <= h->size) {
+    shrinkHeap (s, h, desiredSize);
   } else {
-    releaseHeap (s, s->secondaryLocalHeap);
-    growHeap (s, desiredSize, minSize);
+    if (isShared)
+      releaseHeap (s, s->secondarySharedHeap);
+    else
+      releaseHeap (s, s->secondaryLocalHeap);
+    growHeap (s, h, desiredSize, minSize);
   }
-  assert (s->heap->size >= minSize);
+  assert (h->size >= minSize);
 }
 
 /* resizeLocalHeapSecondary (s)
