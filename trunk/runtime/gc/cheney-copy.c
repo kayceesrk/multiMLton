@@ -128,6 +128,7 @@ void majorCheneyCopySharedGC (GC_state s) {
   }
 
   //Fix up just the forwarding pointers
+  foreachGlobalObjptr (s, fixFwdObjptr);
   for (int proc=0; proc < s->numberOfProcs; proc++) {
     if (DEBUG_DETAILED or s->controls->selectiveDebug)
       fprintf (stderr, "majorCheneyCopySharedGC: fixingForwardingPointers (1) [%d]\n",
