@@ -1,11 +1,11 @@
-(* Matrix-multiply PCML
+(* Matrix-multiply Pacml
  * -------------------
  *  This implementation uses network of channels to multiply 2 nXn matrices.
  *)
 
 structure Main =
 struct
-  open MLton.PCML
+  open MLton.Pacml
   structure Array = Array2
 
   val dim = ref 5
@@ -26,7 +26,8 @@ struct
     (* initialize *)
     (* val _ = print("\nInitializing : "^Int.toString(rowNum)) *)
     val argV = Vector.fromList([Real.fromInt(rowNum)])
-    val colV = sync (wrap(sendEvt(rootLink, argV), fn(e)=>recv rootLink))
+    val _ = send (rootLink, argV)
+    val colV = recv rootLink
     val rowV = Array.row(leftMat, rowNum)
 
     fun work(colV, colNum) =
@@ -79,7 +80,7 @@ struct
     ()
   end
 
-  fun doit' () = MLton.RunPCML.doit(fn()=>
+  fun doit' () = run(fn()=>
     let
       val _ = dim := 500
       val a = (Array.tabulate Array.RowMajor (!dim, !dim, fn (r, c) =>
@@ -110,8 +111,7 @@ struct
       createLoop(0,NONE,channel()(*dummy*),ch, a, resMat))
     in
       initializer()
-    end,
-      NONE)
+    end)
 
   fun doit n =
     if n =0 then ()
@@ -119,3 +119,18 @@ struct
     (* n = 2 *)
 end
 
+val n =
+   case CommandLine.arguments () of
+      [] => 1
+    | s::_ => (case Int.fromString s of
+                  NONE => 1
+                | SOME n => n)
+
+val ts = Time.now ()
+val _ = TextIO.print "\nStarting main"
+val _ = Main.doit n
+val te = Time.now ()
+val d = Time.-(te, ts)
+val _ = TextIO.print (concat ["Time start: ", Time.toString ts, "\n"])
+val _ = TextIO.print (concat ["Time end:   ", Time.toString te, "\n"])
+val _ = TextIO.print (concat ["Time diff:  ", LargeInt.toString (Time.toMilliseconds d), "ms\n"])
