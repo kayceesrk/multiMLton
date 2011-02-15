@@ -1,7 +1,7 @@
 structure Main =
 struct
     open MLton
-    open PCML
+    open Pacml
 
 
   fun split(inCh, outCh1, outCh2 : int option chan) = let
@@ -68,19 +68,35 @@ struct
       if n=0 then send(sor,NONE) else (send(sor, SOME(n));
                                         loop'(n-1)))
     fun loop () = case (recv sor) of
-                        NONE => RunPCML.shutdown OS.Process.success
+                        NONE => shutdown OS.Process.success
                       | SOME x => (print((Int.toString(x))^" ");loop())
   in
     loop'(n); print "Getting results\n"; loop()
   end
 
   fun doit n =
-    RunPCML.doit(fn()=>
+    run (fn()=>
     let
       val _ = sort n
     in
       ()
-    end, NONE)
+    end)
     (* n = 10000 *)
 
 end
+
+val n =
+   case CommandLine.arguments () of
+      [] => 100
+    | s::_ => (case Int.fromString s of
+                  NONE => 100
+                | SOME n => n)
+
+val ts = Time.now ()
+val _ = TextIO.print "\nStarting main"
+val _ = Main.doit n
+val te = Time.now ()
+val d = Time.-(te, ts)
+val _ = TextIO.print (concat ["Time start: ", Time.toString ts, "\n"])
+val _ = TextIO.print (concat ["Time end:   ", Time.toString te, "\n"])
+val _ = TextIO.print (concat ["Time diff:  ", LargeInt.toString (Time.toMilliseconds d), "ms\n"])

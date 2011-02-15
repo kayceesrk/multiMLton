@@ -155,7 +155,9 @@ void setGCStateCurrentSharedHeap (GC_state s,
   nursery = limit - nurserySize;
   genNursery = alignFrontier (s, limit - (nurserySize / 2));
   genNurserySize = limit - genNursery;
-  if (/* The mutator marks cards. */
+  if (FALSE /* disabling minor collection of shared heap */
+      and
+      /* The mutator marks cards. */
       s->mutatorMarksCards
       /* There is enough space in the generational nursery. */
       and (nurseryBytesRequested <= genNurserySize)

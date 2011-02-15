@@ -36,6 +36,18 @@ void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f) {
           callIfIsObjptr (s, f, &s->procStates[proc].roots[i]);
         }
       }
+
+      DanglingStack* danglingStack = s->procStates[proc].danglingStackList;
+      while (danglingStack) {
+          if (DEBUG_DETAILED or s->controls->selectiveDebug)
+            fprintf (stderr, "foreachDanglingStack "FMTOBJPTR"\n", danglingStack->stack);
+          callIfIsObjptr (s, f, &danglingStack->stack);
+          GC_stack stk = (GC_stack) objptrToPointer (danglingStack->stack, s->heap->start);
+          GC_thread thrd = (GC_thread) objptrToPointer (stk->thread, s->sharedHeap->start);
+          callIfIsObjptr (s, f, &thrd->stack);
+          danglingStack = danglingStack->next;
+      }
+
       foreachObjptrInWBAs (s, &s->procStates[proc], f);
       foreachObjptrInSQ (s, s->procStates[proc].schedulerQueue, f);
       callIfIsObjptr (s, f, &s->forwardState.liftingObject);
