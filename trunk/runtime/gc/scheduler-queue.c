@@ -83,17 +83,18 @@ static inline SchedulerQueue* newSchedulerQueue (void) {
   return sq;
 }
 
-  static inline CircularBuffer* getSubQ (SchedulerQueue* sq, int i) {
-    if (i==0)
-      return sq->primary;
-    return sq->secondary;
-  }
+static inline CircularBuffer* getSubQ (SchedulerQueue* sq, int i) {
+  if (i==0)
+    return sq->primary;
+  return sq->secondary;
+}
 
 void GC_sqCreateQueues (GC_state s) {
   assert (s->procStates);
   Lock* schedulerLocks = (Lock*) malloc (sizeof(Lock) * s->numberOfProcs);
   for (int proc=0; proc < s->numberOfProcs; proc++) {
-    schedulerLocks[proc] = -1;
+    schedulerLocks[proc].id = -1;
+    schedulerLocks[proc].count = 0;
     s->procStates[proc].schedulerQueue = newSchedulerQueue ();
     s->procStates[proc].schedulerLocks = schedulerLocks;
   }
@@ -188,6 +189,15 @@ void GC_sqClean (GC_state s) {
 }
 
 void GC_sqAcquireLock (GC_state s, int proc) {
+  Lock* lock = &s->schedulerLocks[proc];
+
+  if (lock->id == (int)s->procId) {
+    lock->count++;
+    return;
+  }
+
+  assert (lock->id != s->procId);
+
   do {
   AGAIN:
     /* Since GC_sqAcquireLock can be called while doing shared GC (while
@@ -200,18 +210,24 @@ void GC_sqAcquireLock (GC_state s, int proc) {
       LEAVE0 (s);
     }
 
-    if (Proc_executingInSection (s) and s->schedulerLocks[proc] >= 0)
+    if (Proc_executingInSection (s) and lock->id >= 0)
       assert (0 and "GC_sqAcquireLock: DEADLOCK!!");
 
-    if (s->schedulerLocks[proc] >= 0)
+    if (lock->id >= 0)
       goto AGAIN;
   } while (not Parallel_compareAndSwap
-           ((pointer)(&s->schedulerLocks[proc]), -1, s->procId));
+           ((pointer)(&lock->id), -1, s->procId));
 }
 
 void GC_sqReleaseLock (GC_state s, int proc) {
-  assert (s->schedulerLocks[proc] == (int32_t)s->procId);
-  s->schedulerLocks[proc] = -1;
+  Lock* lock = &s->schedulerLocks[proc];
+  assert (lock->id == (int32_t)s->procId);
+  if (lock->count > 0) {
+    --lock->count;
+    return;
+  }
+  assert (lock->count == 0);
+  lock->id = -1;
 }
 
   void foreachObjptrInSQ (GC_state s, SchedulerQueue* sq, GC_foreachObjptrFun f) {

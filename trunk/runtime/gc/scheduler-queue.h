@@ -23,7 +23,10 @@ typedef struct {
   CircularBuffer* secondary;
 } SchedulerQueue;
 
-typedef int32_t Lock;
+typedef struct {
+  int32_t count;
+  int32_t id;
+} Lock;
 
 typedef struct {
   objptr op;
