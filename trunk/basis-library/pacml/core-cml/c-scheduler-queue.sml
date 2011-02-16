@@ -28,12 +28,12 @@ struct
     val _ = atomicBegin ()
     val _ = (MLtonThread.threadStatus t) (* DO NOT REMOVE *)
     val targetProc = ThreadID.getProcId (tid)
-    val _ = PrimSQ.acquireLock targetProc
+    (* val _ = PrimSQ.acquireLock targetProc *)
     val q = case prio of
                  R.PRI => pri
                | _ => sec
     val _ = PrimSQ.enque (rthrd, targetProc, q)
-    val _ = PrimSQ.releaseLock targetProc
+    (* val _ = PrimSQ.releaseLock targetProc *)
     val _ = PacmlFFI.wakeUp (targetProc, 1)
     val _ = atomicEnd ()
   in
@@ -44,7 +44,7 @@ struct
   let
     val proc = PacmlFFI.processorNumber ()
     val _ = atomicBegin ()
-    val _ = PrimSQ.acquireLock proc
+    (* val _ = PrimSQ.acquireLock proc *)
     val rthrd = case prio of
                      R.PRI => PrimSQ.deque (pri)
                    | R.SEC => PrimSQ.deque (sec)
@@ -55,7 +55,7 @@ struct
                  NONE => "NONE"
                | SOME (RHOST (_, t)) =>
                    MLtonThread.threadStatus t (* DO NOT REMOVE *)
-    val _ = PrimSQ.releaseLock proc
+    (* val _ = PrimSQ.releaseLock proc *)
     val _ = atomicEnd ()
   in
     rthrd

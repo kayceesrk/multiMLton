@@ -100,9 +100,9 @@ void GC_sqCreateQueues (GC_state s) {
   }
 }
 
-void GC_sqEnque (GC_state s, pointer p, int proc, int i) {
+void sqEnque (GC_state s, pointer p, int proc, int i) {
   if (DEBUG_SQ)
-    fprintf (stderr, "GC_sqEnque p="FMTPTR" proc=%d q=%d [%d]\n",
+    fprintf (stderr, "sqEnque p="FMTPTR" proc=%d q=%d [%d]\n",
               (uintptr_t)p, proc, i, s->procId);
 
   assert (p);
@@ -125,12 +125,22 @@ void GC_sqEnque (GC_state s, pointer p, int proc, int i) {
   Parallel_wakeUpThread (proc, 1);
 }
 
+void GC_sqEnque (GC_state s, pointer p, int proc, int i) {
+  GC_sqAcquireLock (s, proc);
+  sqEnque (s, p, proc, i);
+  GC_sqReleaseLock (s, proc);
+}
+
 pointer GC_sqDeque (GC_state s, int i) {
+  GC_sqAcquireLock (s, s->procId);
+
   CircularBuffer* cq = getSubQ (s->schedulerQueue, i);
   objptr op = (objptr)NULL;
   pointer res = (pointer)NULL;
   if (!CircularBufferDeque (cq, &op))
     res = objptrToPointer (op, s->heap->start);
+
+  GC_sqReleaseLock (s, s->procId);
 
   assert (res);
 

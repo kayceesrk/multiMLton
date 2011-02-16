@@ -362,7 +362,7 @@ void liftAllObjptrsInMoveOnWBA (GC_state s) {
   if (s->preemptOnWBASize > 0) {
     GC_sqAcquireLock (s, s->procId);
     for (int i=0; i < s->preemptOnWBASize; i++) {
-      GC_sqEnque (s, objptrToPointer (s->preemptOnWBA[i], s->heap->start), s->procId, 0);
+      sqEnque (s, objptrToPointer (s->preemptOnWBA[i], s->heap->start), s->procId, 0);
     }
     s->preemptOnWBASize = 0;
     GC_sqReleaseLock (s, s->procId);
@@ -378,18 +378,16 @@ void liftAllObjptrsInMoveOnWBA (GC_state s) {
      */
     if (proc != (int)s->procId && !(isObjptrInHeap (s, s->sharedHeap, op))) {
       if (DEBUG_SQ)
-        fprintf (stderr, "GC_sqEnque: moving closure to shared heap[%d]\n",
+        fprintf (stderr, "moving closure to shared heap[%d]\n",
                  s->procId);
       moveTransitiveClosure (s, &op, FALSE, TRUE);
       if (DEBUG_SQ)
-        fprintf (stderr, "GC_sqEnque: moving closure to shared heap done. "FMTOBJPTR" [%d]\n",
+        fprintf (stderr, "moving closure to shared heap done. "FMTOBJPTR" [%d]\n",
                  op, s->procId);
 
     }
 
-    GC_sqAcquireLock (s, proc);
     GC_sqEnque (s, objptrToPointer (op, s->sharedHeap->start), proc, 0);
-    GC_sqReleaseLock (s, proc);
 
     i++;
   }

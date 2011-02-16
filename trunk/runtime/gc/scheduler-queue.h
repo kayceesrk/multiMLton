@@ -40,6 +40,7 @@ typedef struct {
 PRIVATE void GC_sqAcquireLock (GC_state s, int proc);
 PRIVATE void GC_sqReleaseLock (GC_state s, int proc);
 PRIVATE void GC_sqCreateQueues (GC_state s);
+void sqEnque (GC_state s, pointer p, int proc, int i);
 PRIVATE void GC_sqEnque (GC_state s, pointer p, int proc, int i);
 PRIVATE pointer GC_sqDeque (GC_state s, int queue);
 PRIVATE bool GC_sqIsEmpty (GC_state s);
