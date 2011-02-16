@@ -127,17 +127,34 @@ void majorCheneyCopySharedGC (GC_state s) {
              uintmaxToCommaString(s->secondarySharedHeap->size), s->procId);
   }
 
+  //Perform localGCs
+  for (int proc=0; proc < s->numberOfProcs; proc++) {
+    GC_state r = &s->procStates[proc];
+    objptr op = r->forwardState.liftingObject;
+    if ((op == BOGUS_OBJPTR) /* || (getHeader (objptrToPointer (op, r->heap->start)) != GC_FORWARDED) */) {
+      minorCheneyCopyGC (r);
+      majorGC (r, GC_HEAP_LIMIT_SLOP, TRUE, FALSE);
+      setGCStateCurrentLocalHeap (r, 0, GC_HEAP_LIMIT_SLOP);
+      setGCStateCurrentThreadAndStack (r);
+    }
+    //clear remembered stacks
+    clearDanglingStackList (r);
+  }
+
   //Fix up just the forwarding pointers
   foreachGlobalObjptr (s, fixFwdObjptr);
   for (int proc=0; proc < s->numberOfProcs; proc++) {
+
     if (DEBUG_DETAILED or s->controls->selectiveDebug)
-      fprintf (stderr, "majorCheneyCopySharedGC: fixingForwardingPointers (1) [%d]\n",
-               proc);
-    foreachObjptrInRange (&(s->procStates[proc]), s->procStates[proc].heap->start,
-                          &(s->procStates[proc].frontier), fixFwdObjptr, TRUE);
+      fprintf (stderr, "majorCheneyCopySharedGC: fixingForwardingPointers (1) [%d]\n", proc);
+
+    GC_state r = &s->procStates[proc];
+    objptr op = r->forwardState.liftingObject;
+    if (op != BOGUS_OBJPTR)
+      foreachObjptrInRange (r, r->heap->start, &r->frontier, fixFwdObjptr, TRUE);
+
     if (DEBUG_DETAILED or s->controls->selectiveDebug)
-      fprintf (stderr, "majorCheneyCopySharedGC: fixingForwardingPointers (2) [%d]\n",
-               proc);
+      fprintf (stderr, "majorCheneyCopySharedGC: fixingForwardingPointers (2) [%d]\n", proc);
   }
 
   //Set up forwarding state
@@ -195,6 +212,7 @@ void majorCheneyCopySharedGC (GC_state s) {
              "[GC: Finished shared major Cheney-copy; copied %s bytes.] [%d]\n",
              uintmaxToCommaString(bytesCopied), s->procId);
 }
+
 
 /* ---------------------------------------------------------------- */
 /*                 Minor Cheney Copying Collection                  */

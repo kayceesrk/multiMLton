@@ -92,6 +92,7 @@ void foreachGlobalObjptrInScope (GC_state s, GC_foreachObjptrFun f) {
   }
   foreachObjptrInWBAs (s, s, f);
   foreachObjptrInSQ (s, s->schedulerQueue, f);
+  callIfIsObjptr (s, f, &s->forwardState.liftingObject);
 }
 
 /* foreachObjptrInObject (s, p, f, skipWeaks)

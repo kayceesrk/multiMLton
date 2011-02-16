@@ -79,8 +79,8 @@ static void summaryWrite (GC_state s,
 
   char str[20];
   sprintf (str, " ");
+  realTime = totalTime;
   if (isCumul) {
-      realTime = totalTime;
       totalTime *= s->numberOfProcs;
       sprintf (str, "(cumulative)");
   }
@@ -108,11 +108,11 @@ static void summaryWrite (GC_state s,
      ? 0.0
      : 100.0 * ((double) threadTime) / (double)totalTime);
    */
-  fprintf (out, "total rt time: %s ms (%.1f%%)\n",
+  fprintf (out, "total rt time: %s ms (%.1f%%) [All threads sync'ed]\n",
            uintmaxToCommaString (rtTime),
            (0 == totalTime)
            ? 0.0
-           : 100.0 * ((double) rtTime) / (double)totalTime);
+           : 100.0 * ((double) rtTime) / (double)realTime);
   /*
      fprintf (out, "total lock time: %s ms (%.1f%%)\n",
      uintmaxToCommaString (lockTime),
@@ -333,6 +333,9 @@ void GC_summaryWrite (void) {
       rusagePlusMax (&cumul.ru_gcCopying,
                      &d->ru_gcCopying,
                      &cumul.ru_gcCopying);
+      rusagePlusMax (&cumul.ru_gcCopyingShared,
+                     &d->ru_gcCopyingShared,
+                     &cumul.ru_gcCopyingShared);
       rusagePlusMax (&cumul.ru_gcMarkCompact,
                      &d->ru_gcMarkCompact,
                      &cumul.ru_gcMarkCompact);

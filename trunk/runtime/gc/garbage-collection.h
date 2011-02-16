@@ -9,7 +9,7 @@
 #if (defined (MLTON_GC_INTERNAL_FUNCS))
 
 static void minorGC (GC_state s);
-static void majorGC (GC_state s, size_t bytesRequested, bool mayResize);
+static void majorGC (GC_state s, size_t bytesRequested, bool mayResize, bool liftWBAs);
 static inline void growStackCurrent (GC_state s, bool allocInOldGen, bool allocInSharedHeap);
 static inline void enterGC (GC_state s);
 static inline void leaveGC (GC_state s);

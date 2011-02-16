@@ -10,7 +10,7 @@ void minorGC (GC_state s) {
   minorCheneyCopyGC (s);
 }
 
-void majorGC (GC_state s, size_t bytesRequested, bool mayResize) {
+void majorGC (GC_state s, size_t bytesRequested, bool mayResize, bool liftWBAs) {
   uintmax_t numGCs;
   size_t desiredSize;
 
@@ -24,7 +24,8 @@ void majorGC (GC_state s, size_t bytesRequested, bool mayResize) {
     s->hashConsDuringGC = TRUE;
   desiredSize =
     sizeofHeapDesired (s, s->lastMajorStatistics->bytesLive + bytesRequested, 0);
-  liftAllObjptrsInMoveOnWBA (s);
+  if (liftWBAs)
+    liftAllObjptrsInMoveOnWBA (s);
   if (not FORCE_MARK_COMPACT
       and not s->hashConsDuringGC // only markCompact can hash cons
       and s->heap->size < s->sysvals.ram
@@ -113,7 +114,7 @@ void fixForwardingPointers (GC_state s, bool mayResize) {
   size_t totalBytesRequested = nurseryBytesRequested;
 
   minorCheneyCopyGC (s);
-  majorGC (s, totalBytesRequested, mayResize);
+  majorGC (s, totalBytesRequested, mayResize, TRUE);
   setGCStateCurrentLocalHeap (s, 0, nurseryBytesRequested);
   assert (hasHeapBytesFree (s, s->heap, 0, nurseryBytesRequested));
   setGCStateCurrentThreadAndStack (s);
@@ -199,7 +200,6 @@ void performSharedGC (GC_state s,
     }
 
     for (int proc = 0; proc < s->numberOfProcs; proc++) {
-      clearDanglingStackList (&s->procStates[proc]);
       /* Add in the bonus slop now since we need to fill it */
       s->procStates[proc].sharedLimitPlusSlop += GC_BONUS_SLOP;
       if (s->procStates[proc].sharedLimitPlusSlop != s->sharedHeap->frontier) {
@@ -304,7 +304,7 @@ void performGC (GC_state s,
 
   if (forceMajor
       or totalBytesRequested > s->heap->availableSize - s->heap->oldGenSize)
-    majorGC (s, totalBytesRequested, mayResize);
+    majorGC (s, totalBytesRequested, mayResize, TRUE);
   setGCStateCurrentLocalHeap (s, oldGenBytesRequested + stackBytesRequested,
                               nurseryBytesRequested);
   assert (hasHeapBytesFree (s, s->heap, oldGenBytesRequested + stackBytesRequested,

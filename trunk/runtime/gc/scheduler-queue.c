@@ -109,7 +109,7 @@ void sqEnque (GC_state s, pointer p, int proc, int i) {
   GC_state fromProc = &s->procStates[proc];
   objptr op = pointerToObjptr (p, fromProc->heap->start);
   assert (isPointerInHeap (s, s->sharedHeap, p) or
-          (s->procId == proc));
+          ((int)s->procId == proc));
 
   CircularBuffer* cq = getSubQ (fromProc->schedulerQueue, i);
   if (CircularBufferIsFull(cq)) {
@@ -206,7 +206,7 @@ void GC_sqAcquireLock (GC_state s, int proc) {
     return;
   }
 
-  assert (lock->id != s->procId);
+  assert (lock->id != (int)s->procId);
 
   do {
   AGAIN:
