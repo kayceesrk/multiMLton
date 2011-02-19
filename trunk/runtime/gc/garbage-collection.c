@@ -74,6 +74,10 @@ void growStackCurrent (GC_state s, bool allocInOldGen, bool allocInSharedHeap) {
   copyStack (s, getStackCurrent(s), stack);
   getThreadCurrent(s)->stack = pointerToObjptr ((pointer)stack, s->heap->start);
   stack->thread = getThreadCurrentObjptr (s);
+  if (DEBUG_STACKS)
+    fprintf (stderr, "growStackCurrent: setting stack->thread pointer. stack="FMTPTR" and thread="FMTPTR"\n",
+             (uintptr_t)stack, (uintptr_t)stack->thread);
+  updateStackIfDangling (s, getStackCurrentObjptr (s), getThreadCurrent(s)->stack);
   markCard (s, objptrToPointer (getThreadCurrentObjptr(s), s->heap->start));
 }
 
@@ -229,12 +233,14 @@ void performSharedGC (GC_state s,
 
     majorCheneyCopySharedGC (s);
     s->lastSharedMajorStatistics->bytesLive = s->sharedHeap->oldGenSize;
+
     resizeHeap (s, s->sharedHeap, s->lastSharedMajorStatistics->bytesLive + bytesRequested);
     resizeSharedHeapSecondary (s);
     assert (s->sharedHeap->oldGenSize + bytesRequested <= s->sharedHeap->size);
-
     setGCStateCurrentSharedHeap (s, 0, 0, FALSE);
     s->controls->selectiveDebug = FALSE;
+
+    s->cumulativeStatistics->bytesFilled += bytesFilled;
   }
 
   LEAVE0 (s);
@@ -361,13 +367,15 @@ size_t fillGap (__attribute__ ((unused)) GC_state s, pointer start, pointer end)
     return 0;
   }
 
-  if (DEBUG)
+  if (DEBUG_DETAILED or s->controls->selectiveDebug)
     fprintf (stderr, "[GC: Filling gap between "FMTPTR" and "FMTPTR" (size = %zu).]\n",
              (uintptr_t)start, (uintptr_t)end, diff);
 
   if (start) {
     /* See note in the array case of foreach.c (line 103) */
     if (diff >= GC_ARRAY_HEADER_SIZE + OBJPTR_SIZE) {
+      if (DEBUG_DETAILED or s->controls->selectiveDebug)
+          fprintf (stderr, "[GC: Filling gap with GC_ARRAY]\n");
       assert (diff >= GC_ARRAY_HEADER_SIZE);
       /* Counter */
       *((GC_arrayCounter *)start) = 0;
@@ -428,12 +436,11 @@ static bool allocChunkInSharedHeap (GC_state s,
     size_t availableBytes = (size_t)((s->sharedHeap->start + s->sharedHeap->availableSize)
                                      - oldFrontier);
 
-    assert (availableBytes > 0);
     assert (s->sharedLimitPlusSlop >= s->sharedFrontier);
 
     /* See if the mutator frontier invariant is already true */
     if (bytesRequested <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier)) {
-      if (DEBUG)
+      if (DEBUG_DETAILED or s->controls->selectiveDebug)
         fprintf (stderr, "[GC: aborting shared alloc: satisfied.] [%d]\n", s->procId);
       return FALSE;
     }
@@ -515,7 +522,7 @@ static void maybeSatisfyAllocationRequestLocally (GC_state s,
     /* See if the mutator frontier invariant is already true */
     assert (s->limitPlusSlop >= s->frontier);
     if (nurseryBytesRequested <= (size_t)(s->limitPlusSlop - s->frontier)) {
-      if (DEBUG)
+      if (DEBUG_DETAILED or s->controls->selectiveDebug)
         fprintf (stderr, "[GC: aborting local alloc: satisfied.]\n");
       return;
     }

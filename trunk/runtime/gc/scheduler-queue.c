@@ -49,7 +49,6 @@ static inline CircularBuffer* growCircularBuffer (CircularBuffer* que) {
   return newBuf;
 }
 
-
 static inline int CircularBufferIsFull(CircularBuffer* que) {
   return ((que->writePointer + 1) % que->size == que->readPointer);
 }
@@ -119,7 +118,6 @@ void sqEnque (GC_state s, pointer p, int proc, int i) {
       fromProc->schedulerQueue->secondary = growCircularBuffer (cq);
     cq = getSubQ (fromProc->schedulerQueue, i);
   }
-
   assert (!CircularBufferIsFull(cq));
   CircularBufferEnque (cq, op);
   Parallel_wakeUpThread (proc, 1);
@@ -178,8 +176,7 @@ bool GC_sqIsEmpty (GC_state s) {
   Parallel_maybeWaitForGC ();
   bool resPrim = CircularBufferIsEmpty (s->schedulerQueue->primary);
   bool resSec = CircularBufferIsEmpty (s->schedulerQueue->secondary);
-  bool res = resPrim && resSec;
-  if (res && (s->preemptOnWBASize != 0 || s->spawnOnWBASize != 0)) {
+  if (resPrim && resSec && (s->preemptOnWBASize != 0 || s->spawnOnWBASize != 0)) {
     /* Force a GC if we find that the primary scheduler queue is empty and
      * preemptOnWBA is not */
     forceLocalGC (s);
@@ -240,26 +237,26 @@ void GC_sqReleaseLock (GC_state s, int proc) {
   lock->id = -1;
 }
 
-  void foreachObjptrInSQ (GC_state s, SchedulerQueue* sq, GC_foreachObjptrFun f) {
-    if (!sq)
-      return;
-    GC_sqAcquireLock (s, s->procId);
-    for (int i=0; i<2; i++) {
-      CircularBuffer* cq = getSubQ (sq, i);
-      uint32_t rp = cq->readPointer;
-      uint32_t wp = cq->writePointer;
+void foreachObjptrInSQ (GC_state s, SchedulerQueue* sq, GC_foreachObjptrFun f) {
+  if (!sq)
+    return;
+  GC_sqAcquireLock (s, s->procId);
+  for (int i=0; i<2; i++) {
+    CircularBuffer* cq = getSubQ (sq, i);
+    uint32_t rp = cq->readPointer;
+    uint32_t wp = cq->writePointer;
 
-      if (DEBUG_DETAILED or s->controls->selectiveDebug)
-        fprintf (stderr, "foreachObjptrInSQ sq="FMTPTR" q=%d rp=%d wp=%d [%d]\n",
-                 (uintptr_t)sq, i, rp, wp, s->procId);
-      while (rp != wp) {
-        callIfIsObjptr (s, f, &(cq->keys[rp]));
-        rp++;
-        rp %= cq->size;
-      }
+    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+      fprintf (stderr, "foreachObjptrInSQ sq="FMTPTR" q=%d rp=%d wp=%d [%d]\n",
+                (uintptr_t)sq, i, rp, wp, s->procId);
+    while (rp != wp) {
+      callIfIsObjptr (s, f, &(cq->keys[rp]));
+      rp++;
+      rp %= cq->size;
     }
-    GC_sqReleaseLock (s, s->procId);
   }
+  GC_sqReleaseLock (s, s->procId);
+}
 
 int sizeofSchedulerQueue (GC_state s, int i) {
   SchedulerQueue* sq = s->schedulerQueue;

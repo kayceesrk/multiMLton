@@ -474,15 +474,25 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->schedulerQueue = NULL;
   s->schedulerLocks = NULL;
 
+  s->danglingStackList = (objptr*) malloc (sizeof (objptr) * BUFFER_SIZE);
+  s->danglingStackListSize = 0;
+  s->danglingStackListMaxSize = BUFFER_SIZE;
+
   s->moveOnWBA = (objptr*) malloc (sizeof (objptr) * BUFFER_SIZE);
   s->moveOnWBASize = 0;
   s->moveOnWBAMaxSize = BUFFER_SIZE;
+
   s->preemptOnWBA = (objptr*) malloc (sizeof (objptr) * BUFFER_SIZE);
   s->preemptOnWBASize = 0;
   s->preemptOnWBAMaxSize = BUFFER_SIZE;
+
   s->spawnOnWBA = (SpawnThread*) malloc (sizeof (SpawnThread) * BUFFER_SIZE);
   s->spawnOnWBASize = 0;
   s->spawnOnWBAMaxSize = BUFFER_SIZE;
+
+  s->translateState.from = BOGUS_POINTER;
+  s->translateState.to = BOGUS_POINTER;
+  s->translateState.size = 0;
 
   initIntInf (s);
   initSignalStack (s);
@@ -574,7 +584,6 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->sharedHeapEnd = s->sharedHeapEnd;
   d->roots = NULL;
   d->rootsLength = 0;
-  d->danglingStackList = NULL;
   d->savedThread = BOGUS_OBJPTR;
   d->signalHandlerThread = BOGUS_OBJPTR;
   d->signalsInfo.amInSignalHandler = FALSE;
@@ -596,12 +605,18 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->moveOnWBA = (objptr*) malloc (sizeof (objptr) * BUFFER_SIZE);
   d->moveOnWBASize = 0;
   d->moveOnWBAMaxSize = BUFFER_SIZE;
+  d->danglingStackList = (objptr*) malloc (sizeof (objptr) * BUFFER_SIZE);
+  d->danglingStackListSize = 0;
+  d->danglingStackListMaxSize = BUFFER_SIZE;
   d->preemptOnWBA = (objptr*) malloc (sizeof (objptr) * BUFFER_SIZE);
   d->preemptOnWBASize = 0;
   d->preemptOnWBAMaxSize = BUFFER_SIZE;
   d->spawnOnWBA = (SpawnThread*) malloc (sizeof (SpawnThread) * BUFFER_SIZE);
   d->spawnOnWBASize = 0;
   d->spawnOnWBAMaxSize = BUFFER_SIZE;
+  d->translateState.from = BOGUS_POINTER;
+  d->translateState.to = BOGUS_POINTER;
+  d->translateState.size = 0;
 
   // XXX spoons better duplicate?
   //initSignalStack (d);

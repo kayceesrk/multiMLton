@@ -131,27 +131,32 @@ void majorCheneyCopySharedGC (GC_state s) {
   for (int proc=0; proc < s->numberOfProcs; proc++) {
     GC_state r = &s->procStates[proc];
     objptr op = r->forwardState.liftingObject;
-    if ((op == BOGUS_OBJPTR) /* || (getHeader (objptrToPointer (op, r->heap->start)) != GC_FORWARDED) */) {
+    if ((op == BOGUS_OBJPTR)) {
       minorCheneyCopyGC (r);
       majorGC (r, GC_HEAP_LIMIT_SLOP, TRUE, FALSE);
       setGCStateCurrentLocalHeap (r, 0, GC_HEAP_LIMIT_SLOP);
       setGCStateCurrentThreadAndStack (r);
     }
-    //clear remembered stacks
-    clearDanglingStackList (r);
   }
 
   //Fix up just the forwarding pointers
   foreachGlobalObjptr (s, fixFwdObjptr);
   for (int proc=0; proc < s->numberOfProcs; proc++) {
+    GC_state r = &s->procStates[proc];
+    //clear remembered stacks
+    clearDanglingStackList (r);
 
     if (DEBUG_DETAILED or s->controls->selectiveDebug)
       fprintf (stderr, "majorCheneyCopySharedGC: fixingForwardingPointers (1) [%d]\n", proc);
 
-    GC_state r = &s->procStates[proc];
     objptr op = r->forwardState.liftingObject;
-    if (op != BOGUS_OBJPTR)
+    if (op != BOGUS_OBJPTR) {
+      //Fix forwarding pointers in local heaps
       foreachObjptrInRange (r, r->heap->start, &r->frontier, fixFwdObjptr, TRUE);
+      //Fix forwarding pointers in forwarded range -- NOTE: Because of the
+      //following walk, range list will be cleared
+      foreachObjptrInRange (r, r->forwardState.toStart, &r->forwardState.back, fixFwdObjptr, TRUE);
+    }
 
     if (DEBUG_DETAILED or s->controls->selectiveDebug)
       fprintf (stderr, "majorCheneyCopySharedGC: fixingForwardingPointers (2) [%d]\n", proc);
@@ -165,11 +170,14 @@ void majorCheneyCopySharedGC (GC_state s) {
       s->secondarySharedHeap->start + s->secondarySharedHeap->size;
     s->procStates[proc].forwardState.back = toStart;
     s->procStates[proc].forwardState.forceStackForwarding = TRUE;
+
+    assert (!s->procStates[proc].forwardState.rangeListFirst);
+    assert (!s->procStates[proc].forwardState.rangeListLast);
   }
   assert (s->secondarySharedHeap->start);
   assert (s->secondarySharedHeap->size >= s->sharedHeap->oldGenSize);
 
-  /* Walk the local heaps */
+  // Walk the local heaps and forward objptrs
   for (int proc=0; proc < s->numberOfProcs; proc++) {
     GC_state r = &(s->procStates[proc]);
     if (DEBUG_DETAILED or s->controls->selectiveDebug)
@@ -187,7 +195,7 @@ void majorCheneyCopySharedGC (GC_state s) {
       s->procStates[i].forwardState.back = back;
   }
 
-  //Forward Globals
+  //Forward Globals -- must come after walking local heaps for correct forwarding state
   foreachGlobalObjptr (s, forwardObjptrIfInSharedHeap);
 
   if (DEBUG_DETAILED or s->controls->selectiveDebug)
@@ -207,6 +215,30 @@ void majorCheneyCopySharedGC (GC_state s) {
   s->lastMajorStatistics->kind = GC_COPYING;
   if (detailedGCTime (s))
     stopTiming (&ru_start, &s->cumulativeStatistics->ru_gcCopyingShared);
+
+  #if ASSERT
+  fprintf (stderr, "DEBUG MODE CHECK\n");
+  if (DEBUG)
+    fprintf (stderr, "Starting shared heap checks [%d]\n", s->procId);
+
+  pointer end = s->sharedHeap->start + s->sharedHeap->oldGenSize;
+  foreachObjptrInRange (s, s->sharedHeap->start, &end, assertLiftedObjptr, TRUE);
+
+  if (DEBUG)
+    fprintf (stderr, "Ending shared heap checks [%d]\n", s->procId);
+
+  for (int proc=0; proc < s->numberOfProcs; proc++) {
+    if (DEBUG)
+      fprintf (stderr, "Starting local heap %d check [%d]\n", proc, s->procId);
+
+    GC_state r = &s->procStates[proc];
+    foreachObjptrInRange (r, r->heap->start, &r->frontier, assertIsObjptrInFromSpaceOrLifted, TRUE);
+
+    if (DEBUG)
+      fprintf (stderr, "Ending local heap %d check [%d]\n", proc, s->procId);
+  }
+  #endif
+
   if (DEBUG or s->controls->messages)
     fprintf (stderr,
              "[GC: Finished shared major Cheney-copy; copied %s bytes.] [%d]\n",

@@ -244,30 +244,32 @@ void copyStack (GC_state s, GC_stack from, GC_stack to) {
   GC_memcpy (fromBottom, toBottom, from->used);
 }
 
-DanglingStack* newDanglingStack (GC_state s) {
-  DanglingStack* danglingStack = (DanglingStack*) malloc (sizeof (DanglingStack));
-  assert (danglingStack);
-  danglingStack->next = NULL;
-  danglingStack->stack = BOGUS_OBJPTR;
-
-  if (s->danglingStackList == NULL) {
-    s->danglingStackList = danglingStack;
-  }
-  else {
-    DanglingStack* prev = s->danglingStackList;
-    s->danglingStackList = danglingStack;
-    danglingStack->next = prev;
-  }
-  return danglingStack;
+void clearDanglingStackList (GC_state s) {
+  s->danglingStackListSize = 0;
 }
 
-void clearDanglingStackList (GC_state s) {
-  DanglingStack* danglingStack = s->danglingStackList;
-
-  while (danglingStack) {
-    DanglingStack* next = danglingStack->next;
-    free (danglingStack);
-    danglingStack = next;
+void addToDanglingStackList (GC_state s, objptr op) {
+  if (DEBUG_STACKS)
+    fprintf (stderr, "addToDanglingStackList "FMTOBJPTR" [%d]\n",
+             op, s->procId);
+  ++(s->danglingStackListSize);
+  if (s->danglingStackListSize > s->danglingStackListMaxSize) {
+    s->danglingStackListMaxSize *= 2;
+    objptr* newDanglingStackList =
+        (objptr*) realloc (s->danglingStackList, sizeof (objptr) * s->danglingStackListMaxSize);
+    assert (newDanglingStackList);
+    s->danglingStackList = newDanglingStackList;
   }
-  s->danglingStackList = NULL;
+  s->danglingStackList[s->danglingStackListSize - 1] = op;
+}
+
+bool updateStackIfDangling (GC_state s, objptr old, objptr new) {
+  for (int i=0; i < s->danglingStackListSize; i++) {
+    if (s->danglingStackList[i] == old) {
+      fprintf (stderr, "updating dangling stack old="FMTOBJPTR" new="FMTOBJPTR" [%d]\n", old, new, s->procId);
+      s->danglingStackList[i] = new;
+      return TRUE;
+    }
+  }
+  return FALSE;
 }

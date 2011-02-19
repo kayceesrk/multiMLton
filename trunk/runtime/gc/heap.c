@@ -367,13 +367,19 @@ void growHeap (GC_state s, GC_heap h, size_t desiredSize, size_t minSize) {
   size_t liveSize;
 
   bool isShared = FALSE;
-  if (h == s->sharedHeap)
+
+  char str[20];
+  sprintf (str, "local");
+  if (h == s->sharedHeap) {
     isShared = TRUE;
+    sprintf (str, "shared");
+  }
 
   assert (desiredSize >= h->size);
   if (DEBUG_RESIZING or s->controls->messages) {
     fprintf (stderr,
-             "[GC: Growing heap at "FMTPTR" of size %s bytes (+ %s bytes card/cross map),]\n",
+             "[GC: Growing %s heap at "FMTPTR" of size %s bytes (+ %s bytes card/cross map),]\n",
+             str,
              (uintptr_t)h->start,
              uintmaxToCommaString(h->size),
              uintmaxToCommaString(h->withMapsSize - h->size));
@@ -489,9 +495,10 @@ void resizeHeap (GC_state s, GC_heap h, size_t minSize) {
     isShared = TRUE;
 
   if (DEBUG_RESIZING)
-    fprintf (stderr, "resizeHeap  minSize = %s  size = %s\n",
+    fprintf (stderr, "resizeHeap  minSize = %s  size = %s isShared=%d\n",
              uintmaxToCommaString(minSize),
-             uintmaxToCommaString(h->size));
+             uintmaxToCommaString(h->size),
+             isShared);
   desiredSize = sizeofHeapDesired (s, minSize, h->size);
   assert (minSize <= desiredSize);
   if (desiredSize <= h->size) {

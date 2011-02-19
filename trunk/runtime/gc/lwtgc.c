@@ -63,7 +63,7 @@ static inline void liftObjptrAndFillOrig (GC_state s, objptr *opp) {
   if (isPointerInHeap (s, s->sharedHeap, new_p)) {
     size_t objSize = sizeofObject (s, new_p);
     old_p -= sizeofObjectHeader (s, getHeader (new_p));
-    if (DEBUG_LWTGC)
+    if (DEBUG_DETAILED or s->controls->selectiveDebug)
       fprintf (stderr, "\t filling Gap between "FMTPTR" and "FMTPTR" of size %ld [%d]\n",
                (uintptr_t)old_p, (uintptr_t)(old_p + objSize), objSize, s->procId);
     fillGap (s, old_p, old_p + objSize);
@@ -174,11 +174,10 @@ void moveTransitiveClosure (GC_state s, objptr* opp,
                             bool fillOrig) {
   bool done = false;
   s->forwardState.liftingObject = *opp;
-  s->forwardState.forceStackForwarding = forceStackForwarding;
-
 
   while (!done) {
     //Set up the forwarding state
+    s->forwardState.forceStackForwarding = forceStackForwarding;
     s->forwardState.toStart = s->sharedFrontier;
     s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
     s->forwardState.back = s->forwardState.toStart;
@@ -242,7 +241,7 @@ pointer GC_move (GC_state s, pointer p,
   ENTER_LOCAL0 (s);
 
   if (DEBUG_LWTGC)
-    fprintf (stderr, "GC_move [%d]\n", s->procId);
+    fprintf (stderr, "GC_move "FMTPTR" [%d]\n", (uintptr_t)p, s->procId);
 
 
   objptr op = pointerToObjptr (p, s->heap->start);
@@ -454,4 +453,10 @@ void jumpToReturnLocation (GC_state s) {
   assert (s->forwardState.isReturnLocationSet);
   s->forwardState.isReturnLocationSet = FALSE;
   longjmp (s->forwardState.returnLocation, 1);
+}
+
+bool GC_isInSharedOrForwarded (GC_state s, pointer p) {
+  if (getHeader (p) == GC_FORWARDED || isPointerInHeap (s, s->sharedHeap,p))
+    return true;
+  return false;
 }

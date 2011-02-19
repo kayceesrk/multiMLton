@@ -37,20 +37,29 @@ void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f) {
         }
       }
 
-      DanglingStack* danglingStack = s->procStates[proc].danglingStackList;
-      while (danglingStack) {
-          if (DEBUG_DETAILED or s->controls->selectiveDebug)
-            fprintf (stderr, "foreachDanglingStack "FMTOBJPTR"\n", danglingStack->stack);
-          callIfIsObjptr (s, f, &danglingStack->stack);
-          GC_stack stk = (GC_stack) objptrToPointer (danglingStack->stack, s->heap->start);
-          GC_thread thrd = (GC_thread) objptrToPointer (stk->thread, s->sharedHeap->start);
-          callIfIsObjptr (s, f, &thrd->stack);
-          danglingStack = danglingStack->next;
+      for (int i=0; i < s->procStates[proc].danglingStackListSize; i++) {
+        if (DEBUG_DETAILED or s->controls->selectiveDebug)
+          fprintf (stderr, "foreachDanlingStack(1) i=%d stack="FMTPTR" [%d]\n",
+                   i, (uintptr_t)s->procStates[proc].danglingStackList[i], s->procId);
+
+        callIfIsObjptr (s, f, &(s->procStates[proc].danglingStackList[i]));
+        if (DEBUG_DETAILED or s->controls->selectiveDebug)
+          fprintf (stderr, "foreachDanlingStack(2) "FMTOBJPTR" i=%d [%d]\n",
+                   s->procStates[proc].danglingStackList[i], i, s->procId);
+        GC_stack stk = (GC_stack) objptrToPointer (s->procStates[proc].danglingStackList[i],
+                                                   s->heap->start);
+        callIfIsObjptr (s, f, &stk->thread);
+        GC_thread thrd = (GC_thread) objptrToPointer (stk->thread, s->sharedHeap->start);
+        if (DEBUG_DETAILED or s->controls->selectiveDebug)
+          fprintf (stderr, "foreachDanlingStack(2) thrd="FMTPTR" i=%d [%d]\n",
+                   (uintptr_t)thrd, i, s->procId);
+
+        callIfIsObjptr (s, f, &thrd->stack);
       }
 
       foreachObjptrInWBAs (s, &s->procStates[proc], f);
       foreachObjptrInSQ (s, s->procStates[proc].schedulerQueue, f);
-      callIfIsObjptr (s, f, &s->forwardState.liftingObject);
+      callIfIsObjptr (s, f, &s->procStates[proc].forwardState.liftingObject);
     }
   }
   else {
@@ -80,15 +89,32 @@ void foreachGlobalObjptrInScope (GC_state s, GC_foreachObjptrFun f) {
       callIfIsObjptr (s, f, &s->roots[i]);
   }
 
-  DanglingStack* danglingStack = s->danglingStackList;
-  while (danglingStack) {
-      if (DEBUG_DETAILED or s->controls->selectiveDebug)
-        fprintf (stderr, "foreachDanglingStack "FMTOBJPTR"\n", danglingStack->stack);
-      callIfIsObjptr (s, f, &danglingStack->stack);
-      GC_stack stk = (GC_stack) objptrToPointer (danglingStack->stack, s->heap->start);
-      GC_thread thrd = (GC_thread) objptrToPointer (stk->thread, s->sharedHeap->start);
-      callIfIsObjptr (s, f, &thrd->stack);
-      danglingStack = danglingStack->next;
+  for (int i=0; i < s->danglingStackListSize; i++) {
+    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+      fprintf (stderr, "foreachDanlingStack(1) i=%d stack="FMTPTR" [%d]\n",
+               i, (uintptr_t)s->danglingStackList[i], s->procId);
+
+    callIfIsObjptr (s, f, &s->danglingStackList[i]);
+    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+      fprintf (stderr, "foreachDanlingStack(2) "FMTOBJPTR" i=%d [%d]\n",
+               s->danglingStackList[i], i, s->procId);
+
+    GC_stack stk = (GC_stack) objptrToPointer (s->danglingStackList[i],
+                                               s->heap->start);
+
+    callIfIsObjptr (s, f, &stk->thread);
+    GC_thread thrd = (GC_thread) objptrToPointer (stk->thread, s->sharedHeap->start);
+
+    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+      fprintf (stderr, "foreachDanlingStack(2) thrd="FMTPTR" i=%d [%d]\n",
+               (uintptr_t)thrd, i, s->procId);
+
+    assert (isPointerInToSpace (s, (pointer)thrd) or isPointerInHeap (s, s->sharedHeap, (pointer) thrd));
+    callIfIsObjptr (s, f, &thrd->stack);
+
+    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+      fprintf (stderr, "foreachDanlingStack(2) thrd="FMTPTR" i=%d [%d]\n",
+               (uintptr_t)thrd, i, s->procId);
   }
   foreachObjptrInWBAs (s, s, f);
   foreachObjptrInSQ (s, s->schedulerQueue, f);
@@ -261,7 +287,7 @@ pointer foreachObjptrInRange (GC_state s, pointer front, pointer *back,
 }
 
 pointer foreachObjptrInRangeWithFill (GC_state s, pointer front, pointer *back,
-                              GC_foreachObjptrFun f, bool skipWeaks, bool fillForwarded) {
+                                      GC_foreachObjptrFun f, bool skipWeaks, bool fillForwarded) {
   pointer b;
 
   assert (isFrontierAligned (s, front));
@@ -289,14 +315,28 @@ pointer foreachObjptrInRangeWithFill (GC_state s, pointer front, pointer *back,
                  (uintptr_t)front, (uintptr_t)(*back), s->procId);
       pointer p = advanceToObjectData (s, front);
       assert (isAligned ((size_t)p, s->alignment));
+
+      //Skip over forwarded object and may be fill the gap
       if (getHeader (p) == GC_FORWARDED) {
-          objptr op = *((objptr*)p);
-          pointer realP = objptrToPointer (op, s->sharedHeap->start);
-          assert (isPointerInHeap (s, s->sharedHeap, realP) || isPointerInToSpace (s, realP));
-          pointer oldFront = front;
-          front = p + sizeofObjectNoHeader (s, realP);
-          if (fillForwarded)
-            fillGap (s, oldFront, front);
+        objptr op = *((objptr*)p);
+        pointer realP = objptrToPointer (op, s->sharedHeap->start);
+
+        //We might be in the middle of a heap translation in which case,
+        //the realP needs to be translated. We must also be in the middle
+        //of a shared heap collection.
+        if (s->translateState.from != BOGUS_POINTER and
+            Proc_executingInSection (s)) {
+          op = (objptr)realP;
+          translateObjptrShared (s, &op);
+          realP = (pointer)op;
+          //Update the forwarding pointer to point to the translated location
+          *(objptr*)p = op;
+        }
+
+        pointer oldFront = front;
+        front = p + sizeofObjectNoHeader (s, realP);
+        if (fillForwarded)
+          fillGap (s, oldFront, front);
       }
       else {
         front = foreachObjptrInObject (s, p, f, skipWeaks);
@@ -334,7 +374,7 @@ void foreachStackFrame (GC_state s, GC_foreachStackFrameFun f) {
     f (s, findex);
     layout = &(s->frameLayouts[findex]);
     if (DEBUG_SPLICE)
-        fprintf (stderr, "size = %d\n", layout->size);
+      fprintf (stderr, "size = %d\n", layout->size);
     assert (layout->size > 0);
   }
   if (DEBUG_PROFILE or DEBUG_SPLICE)

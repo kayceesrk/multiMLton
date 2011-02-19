@@ -470,3 +470,24 @@ void GC_print (int i) {
   GC_state s = pthread_getspecific (gcstate_key);
   printf ("GC_print (%d)[%d]\n", i, s->procId);
 }
+
+pointer GC_forwardBase (GC_state s, pointer p) {
+  if (DEBUG_READ_BARRIER && (DEBUG_DETAILED or s->controls->selectiveDebug))
+    fprintf (stderr, "GC_forwardBase: "FMTPTR" [%d]\n",
+             (uintptr_t)p, s->procId);
+  if (p == (pointer)s->generationalMaps.cardMapAbsolute)
+      return p;
+  else if (p == 0) {
+    if (DEBUG_READ_BARRIER)
+      fprintf (stderr, "GC_forwardBase saw NULL [%d]\n", s->procId);
+    return p;
+  }
+  while (*(GC_header*)(p - GC_HEADER_SIZE) == GC_FORWARDED) {
+    if (DEBUG_READ_BARRIER)
+      fprintf (stderr, "GC_forwardBase: forwarding "FMTPTR" to "FMTPTR" [%d]\n",
+               (uintptr_t)p, (uintptr_t)*(pointer*)p, s->procId);
+    p = *(pointer*)p;
+    assert (isPointerInAnyLocalHeap (s, p) or isPointerInHeap (s, s->sharedHeap, p));
+  }
+  return p;
+}

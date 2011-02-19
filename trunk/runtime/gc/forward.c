@@ -76,8 +76,8 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
           return;
         }
         skip = headerBytes = objectBytes = 0;
-        DanglingStack* danglingStack = newDanglingStack (s);
-        danglingStack->stack = pointerToObjptr ((pointer)stack, s->heap->start);
+
+        addToDanglingStackList (s, pointerToObjptr ((pointer)stack, s->heap->start));
 
         /* By this time the thread corresponding to this stack would have been
          * forwarded.
@@ -127,6 +127,7 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
       }
     }
     size = headerBytes + objectBytes;
+
     /* Allocate chunk in the shared heap for the copy */
     if (allocChunkInSharedHeap (s, size + skip)) {
       /* A shared heap GC has been performed and the object we are forwarding
@@ -211,6 +212,13 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
     fprintf (stderr,
              "forwardObjptr --> *opp = "FMTPTR"\n",
              (uintptr_t)*opp);
+  while (isObjptrInHeap (s, s->heap, *opp)) {
+    /* This can happen in the presence of read barriers */
+    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+      fprintf (stderr, "Recursive forwarding "FMTPTR"\n",
+               (uintptr_t)*opp);
+    forwardObjptrToSharedHeap (s, opp);
+  }
   assert (isObjptrInToSpace (s, *opp) || isObjptrInHeap (s, s->sharedHeap, *opp));
 }
 
@@ -342,6 +350,14 @@ void forwardObjptr (GC_state s, objptr *opp) {
     fprintf (stderr,
              "forwardObjptr --> *opp = "FMTPTR"\n",
              (uintptr_t)*opp);
+  while (isObjptrInHeap (s, s->heap, *opp)) {
+    /* This can happen in the presence of read barriers */
+    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+      fprintf (stderr, "Recursive forwarding "FMTPTR"\n",
+               (uintptr_t)*opp);
+    forwardObjptr (s, opp);
+  }
+
   assert (isObjptrInToSpace (s, *opp) || isObjptrInHeap (s, s->sharedHeap, *opp));
 }
 
@@ -378,7 +394,7 @@ void forwardObjptrIfInLocalHeap (GC_state s, objptr *opp) {
 }
 
 
-void forwardObjptrIfInSharedHeap (GC_state s, objptr *opp) {
+static inline void forwardObjptrIfInSharedHeap (GC_state s, objptr *opp) {
   objptr op;
   pointer p;
 
@@ -440,17 +456,18 @@ void forwardObjptrIfInSharedHeap (GC_state s, objptr *opp) {
     if (tag == STACK_TAG) {
       //If the pointer from toSpace to local heap is a stack add a dangling
       //pointer.
-      if (DEBUG_DETAILED or s->controls->selectiveDebug)
-        fprintf (stderr, "forwardObjptrIfInSharedHeap: invariant breaking pointer is stack [%d]\n",
-                 s->procId);
-      DanglingStack* danglingStack = newDanglingStack (r);
-      danglingStack->stack = pointerToObjptr (p, r->heap->start);
       GC_stack stk = (GC_stack)p;
       pointer thread = objptrToPointer (stk->thread, r->heap->start);
       if (getHeader (thread) == GC_FORWARDED) {
         stk->thread = *(objptr*)thread;
-        assert (isObjptrInToSpace (s, stk->thread));
       }
+      assert (isObjptrInToSpace (s, stk->thread));
+
+      if (DEBUG_DETAILED or s->controls->selectiveDebug)
+        fprintf (stderr, "forwardObjptrIfInSharedHeap: invariant breaking pointer is stack. Stack->thread="FMTOBJPTR" [%d]\n",
+                 ((GC_stack)p)->thread, s->procId);
+
+      addToDanglingStackList (r, pointerToObjptr (p, r->heap->start));
     }
     else {
       //If the pointer is not a stack, then we are completing a closure
@@ -559,12 +576,13 @@ void restoreForwardState (GC_state s, struct GC_forwardState* fwd) {
 void fixFwdObjptr (GC_state s, objptr* opp) {
   if (isObjptr (*opp)) {
     pointer p = objptrToPointer (*opp, s->heap->start);
-    if (getHeader (p) == GC_FORWARDED) {
+    while (isObjptr (*opp) && getHeader (p) == GC_FORWARDED) {
       if (DEBUG_DETAILED or s->controls->selectiveDebug)
         fprintf (stderr,
                  "fixFwdObjptr  opp = "FMTPTR"  op = "FMTOBJPTR"  p = "FMTPTR"\n",
                  (uintptr_t)opp, *opp, (uintptr_t)p);
       *opp = *(objptr*)p;
+      p = objptrToPointer (*opp, s->heap->start);
       if (DEBUG_DETAILED or s->controls->selectiveDebug)
         fprintf (stderr,
                  "fixFwdObjptr --> *opp = "FMTPTR"\n",

@@ -58,13 +58,6 @@ typedef struct GC_stack {
  * the shared heap to the stacks on the local heaps.
  */
 
-typedef struct _DanglingStack DanglingStack;
-
-struct _DanglingStack {
-    objptr stack;
-    DanglingStack* next;
-};
-
 #define GC_STACK_HEADER_SIZE GC_HEADER_SIZE
 
 #endif /* (defined (MLTON_GC_INTERNAL_TYPES)) */
@@ -80,8 +73,10 @@ static inline bool isStackReservedAligned (GC_state s, size_t reserved);
 
 static inline size_t sizeofStackSlop (GC_state s);
 
-static inline DanglingStack* newDanglingStack (GC_state s);
 static inline void clearDanglingStackList (GC_state s);
+static inline void addToDanglingStackList (GC_state s, objptr stack);
+static inline bool updateStackIfDangling (GC_state s, objptr oldOp, objptr newOp);
+
 static inline pointer getStackBottom (GC_state s, GC_stack stack);
 static inline pointer getStackTop (GC_state s, GC_stack stack);
 static inline pointer getStackLimitPlusSlop (GC_state s, GC_stack stack);

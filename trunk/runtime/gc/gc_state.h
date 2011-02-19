@@ -33,6 +33,10 @@ struct GC_state {
   int32_t preemptOnWBASize;
   int32_t preemptOnWBAMaxSize;
 
+  objptr* danglingStackList;
+  int32_t danglingStackListSize;
+  int32_t danglingStackListMaxSize;
+
   SpawnThread* spawnOnWBA;
   int32_t spawnOnWBASize;
   int32_t spawnOnWBAMaxSize;
@@ -56,7 +60,7 @@ struct GC_state {
   struct GC_controls *controls;
   struct GC_cumulativeStatistics *cumulativeStatistics;
   objptr currentThread; /* Currently executing thread (in heap). */
-  DanglingStack* danglingStackList;
+
   struct GC_forwardState forwardState;
   pointer ffiOpArgsResPtr;
   GC_frameLayout frameLayouts; /* Array of frame layouts. */
@@ -170,6 +174,7 @@ PRIVATE void GC_setSavedThread (GC_state *gs, pointer p);
 PRIVATE void GC_setSignalHandlerThread (GC_state *gs, pointer p);
 
 PRIVATE void GC_print (int);
+PRIVATE inline pointer GC_forwardBase (GC_state s, pointer p);
 
 #endif /* (defined (MLTON_GC_INTERNAL_BASIS)) */
 
