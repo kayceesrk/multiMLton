@@ -67,6 +67,17 @@ structure Option =
       datatype option = datatype t
    end
 
+structure Lwtgc =
+struct
+  val addToPreemptOnWBA = _prim "Lwtgc_addToPreemptOnWBA": 'a -> unit;
+  val addToMoveOnWBA = _prim "Lwtgc_addToMoveOnWBA": 'a -> unit;
+  val addToSpawnOnWBA = _prim "Lwtgc_addToSpawnOnWBA": 'a * Int32.int -> unit;
+  val isObjptrInLocalHeap = _prim "Lwtgc_isObjptrInLocalHeap": 'a -> bool;
+  val isObjptrInSharedHeap = _prim "Lwtgc_isObjptrInSharedHeap": 'a -> bool;
+  val isObjptr = _prim "Lwtgc_isObjptr": 'a -> bool;
+  val needPreemption = _prim "Lwtgc_needPreemption": 'a ref * 'a -> bool;
+end
+
 structure Ref =
    struct
       open Ref
@@ -75,20 +86,13 @@ structure Ref =
       val preemptFn = ref (fn () => ())
       val deref = _prim "Ref_deref": 'a ref -> 'a;
       val refAssign = _prim "Ref_assign": 'a ref * 'a -> unit;
-      val addToPreemptOnWBA = _prim "Lwtgc_addToPreemptOnWBA": 'a -> unit;
-      val addToMoveOnWBA = _prim "Lwtgc_addToMoveOnWBA": 'a -> unit;
-      val addToSpawnOnWBA = _prim "Lwtgc_addToSpawnOnWBA": 'a * Int32.int -> unit;
-      val isObjptrInLocalHeap = _prim "Lwtgc_isObjptrInLocalHeap": 'a -> bool;
-      val isObjptrInSharedHeap = _prim "Lwtgc_isObjptrInSharedHeap": 'a -> bool;
-      val isObjptr = _prim "Lwtgc_isObjptr": 'a -> bool;
-      val needPreemption = _prim "Lwtgc_needPreemption": 'a ref * 'a -> bool;
       val eq = _prim "MLton_eq": 'a * 'a -> bool;
 
       fun writeBarrier (r, v) =
       let
         val preemptFn = deref preemptFn
-        val v' = if (isObjptr v) andalso (isObjptrInLocalHeap v) andalso (isObjptrInSharedHeap r) then
-                  (addToMoveOnWBA (v);
+        val v' = if (Lwtgc.isObjptr v) andalso (Lwtgc.isObjptrInLocalHeap v) andalso (Lwtgc.isObjptrInSharedHeap r) then
+                  (Lwtgc.addToMoveOnWBA (v);
                    preemptFn ();
                    v)
                 else v

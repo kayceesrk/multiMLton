@@ -188,7 +188,7 @@ struct
     val () = (* if (TID.getProcId (tid) = PacmlFFI.processorNumber ()) then ()
              else *)
                (debug' (fn () => "spawnHostHelper.lift(1): tid="^(TID.tidToString tid));
-               Primitive.Ref.addToMoveOnWBA (rhost);
+               Primitive.Lwtgc.addToMoveOnWBA (rhost);
                S.preemptOnWriteBarrier ();
                debug' (fn () => "spawnHostHelper.lift(2): tid="^(TID.tidToString tid)))
 

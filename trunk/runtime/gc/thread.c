@@ -44,3 +44,19 @@ size_t sizeofThread (GC_state s) {
 size_t offsetofThread (GC_state s) {
   return (sizeofThread (s)) - (GC_NORMAL_HEADER_SIZE + sizeof (struct GC_thread));
 }
+
+
+bool GC_testSavedClosure (GC_state s) {
+  return (s->savedClosure != BOGUS_OBJPTR);
+}
+
+pointer GC_getSavedClosure (GC_state s) {
+  pointer p = objptrToPointer (s->savedClosure, s->heap->start);
+  s->savedClosure = BOGUS_OBJPTR;
+  return p;
+}
+
+void GC_setSavedClosure (GC_state s, pointer p) {
+  assert (s->savedClosure == BOGUS_OBJPTR);
+  s->savedClosure = pointerToObjptr (p, s->heap->start);
+}

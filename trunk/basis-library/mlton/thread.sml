@@ -49,6 +49,8 @@ datatype 'a thread =
  (* In Paused (f, t), f is guaranteed to not raise an exception. *)
  | Paused of ((unit -> 'a) -> unit) * Prim.thread
 
+datatype closure = Closure of (unit -> unit)
+
 datatype 'a t = T of 'a thread ref
 
 structure Runnable =
@@ -77,41 +79,36 @@ local
    val numProcessors = PacmlFFI.numberOfProcessors
    val procNum = PacmlFFI.processorNumber
    local
-
-      (* create one reference per processor *)
-      val func: (unit -> unit) option Array.array =
-          Array.tabulate (numProcessors, fn _ => NONE)
       val base: Prim.preThread =
          let
             val () = Prim.copyCurrent ()
             (* Call to procNum *must* come after copy *)
             val proc = procNum ()
          in
-            case Array.unsafeSub (func, proc) of
-               NONE => Prim.savedPre gcState
-             | SOME x =>
-                  (* This branch never returns. *)
-                  let
-                     (* Atomic 1 *)
-                     val () = Array.update (func, proc, NONE)
-                     val () = atomicEnd ()
-                     (* Atomic 0 *)
-                  in
-                     (x () handle e => MLtonExn.topLevelHandler e)
-                     ; die "Thread didn't exit properly.\n"
-                  end
+           if not (Prim.testSavedClosure ()) then
+             Prim.savedPre gcState
+           else
+             (* This branch never returns. *)
+             (let
+               (* Atomic 1 *)
+               val Closure (x) = Prim.getSavedClosure ()
+               val () = atomicEnd ()
+               (* Atomic 0 *)
+             in
+               (x () handle e => MLtonExn.topLevelHandler e)
+               ; die "Thread didn't exit properly.\n"
+             end)
          end
 
       val _ = Primitive.MLton.move (ref base, true, false)
    in
-      fun newThreadOption (f: (unit -> unit) option) : Prim.thread =
+      fun newThread (f: (unit -> unit)) : Prim.thread =
          let
             (* Atomic 2 *)
-            val () = Array.update (func, procNum (), f)
+            val () = Prim.setSavedClosure (Closure f)
          in
             Prim.copy base
          end
-      fun newThread (f) = newThreadOption (SOME f)
    end
    (* val switching = Array.tabulate (numProcessors, fn _ => 0) *)
 in
@@ -186,12 +183,7 @@ in
        case vt' of
             Dead => raise Fail "switch to a Dead thread"
           | Interrupted t => t
-          | New g => let
-                       val _ = atomicBegin ()
-                       val g' = Primitive.MLton.move (SOME g, false, true)
-                     in
-                      newThreadOption (g')
-                     end
+          | New g => (atomicBegin (); newThread (g))
           | Paused (f, t) => (f (globalNoopThunk); t)
 
      val _ = cleanup ()

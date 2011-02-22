@@ -1,11 +1,19 @@
+/* Copyright (C) 1999-2007 Henry Cejtin, Matthew Fluet, Suresh
+ *    Jagannathan, and Stephen Weeks.
+ * Copyright (C) 1997-2000 NEC Research Institute.
+ *
+ * MLton is released under a BSD-style license.
+ * See the file MLton-LICENSE for details.
+ */
+
 #if (defined (MLTON_GC_INTERNAL_BASIS))
 
-PRIVATE GC_thread GC_copyParasite (int startOffset);
-static pointer GC_getFrameBottom (void);
-PRIVATE int GC_getFrameBottomAsOffset (void);
 bool GC_proceedToExtract (pointer p, int startOffset);
-GC_thread GC_extractParasite (pointer p, int startOffset);
+static pointer GC_getFrameBottom (void);
 void GC_noop (void);
+GC_thread GC_extractParasite (pointer p, int startOffset);
+PRIVATE GC_thread GC_copyParasite (int startOffset);
+PRIVATE int GC_getFrameBottomAsOffset (void);
 
 /* Management and debugging functions */
 void GC_printFrames (void);

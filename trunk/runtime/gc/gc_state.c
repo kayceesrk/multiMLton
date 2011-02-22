@@ -472,7 +472,7 @@ void GC_print (int i) {
 }
 
 pointer GC_forwardBase (GC_state s, pointer p) {
-  if (DEBUG_READ_BARRIER && (DEBUG_DETAILED or s->controls->selectiveDebug))
+  if (DEBUG_READ_BARRIER && (DEBUG_DETAILED or s->controls->selectiveDebug) && FALSE)
     fprintf (stderr, "GC_forwardBase: "FMTPTR" [%d]\n",
              (uintptr_t)p, s->procId);
   if (p == (pointer)s->generationalMaps.cardMapAbsolute)

@@ -225,7 +225,7 @@ structure TSP = struct
     fun tsp (t, sz) =
     let
       val ch = channel()
-      val _ = print (concat [Int.toString sz, "\n"])
+      (* val _ = print (concat [Int.toString sz, "\n"]) *)
       fun work () =
         (let
           val returnTree =
@@ -458,7 +458,7 @@ structure Main : sig
     val print = TextIO.print
     val output = TextIO.output
 
-    val problemSz = ref 209715
+    val problemSz = ref 1000000
     val divideSz = ref 150
 
     fun printLength (outS, Tree.NULL) = print "(* 0 points *)\n"

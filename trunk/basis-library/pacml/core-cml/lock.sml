@@ -52,7 +52,10 @@ struct
               (fn rt =>
                 let
                   val rt' = SOME rt
-                  val rt' = PacmlPrim.move (rt', false, true)
+                  val rt' = if (Primitive.Lwtgc.isObjptrInSharedHeap q) then
+                              PacmlPrim.move (rt', false, true)
+                            else
+                              rt'
                   val _ = CirQueue.enque (q, rt')
                   val _ = state := LOCKED
                   val res = Scheduler.next ()

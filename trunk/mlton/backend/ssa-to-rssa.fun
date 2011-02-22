@@ -505,6 +505,57 @@ structure CFunction =
             symbolScope = Private,
             target = Direct "GC_size",
             writesStackTop = true}
+
+      fun testSavedClosure () =
+         T {args = Vector.new1 (Type.gcState ()),
+            bytesNeeded = NONE,
+            convention = Cdecl,
+            ensuresBytesFree = false,
+            mayGC = false,
+            maySwitchThreads = false,
+            modifiesFrontier = false,
+            prototype = (Vector.new1 (CType.gcState),
+                         SOME CType.bool),
+            readsStackTop = false,
+            return = Type.bool,
+            symbolScope = Private,
+            target = Direct "GC_testSavedClosure",
+            writesStackTop = false}
+
+      fun getSavedClosure t =
+         T {args = Vector.new1 (Type.gcState ()),
+            bytesNeeded = NONE,
+            convention = Cdecl,
+            ensuresBytesFree = false,
+            mayGC = false,
+            maySwitchThreads = false,
+            modifiesFrontier = false,
+            prototype = (Vector.new1 (CType.gcState),
+                         SOME CType.cpointer),
+            readsStackTop = false,
+            return = t,
+            symbolScope = Private,
+            target = Direct "GC_getSavedClosure",
+            writesStackTop = false}
+
+      fun setSavedClosure t =
+         T {args = Vector.new2 (Type.gcState (), t),
+            bytesNeeded = NONE,
+            convention = Cdecl,
+            ensuresBytesFree = false,
+            mayGC = false,
+            maySwitchThreads = false,
+            modifiesFrontier = false,
+            prototype = (Vector.new2 (CType.gcState,
+                                      CType.cpointer),
+                         NONE),
+            readsStackTop = false,
+            return = Type.unit,
+            symbolScope = Private,
+            target = Direct "GC_setSavedClosure",
+            writesStackTop = false}
+
+
    end
 
 structure Name =
@@ -1676,7 +1727,24 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                             simpleCCallWithGCState
                                             (CFunction.sqEnque (Operand.ty (a 0))))
                                | SQ_deque =>
-                                   simpleCCallWithGCState (CFunction.sqDeque (valOf (toRtype ty)))
+                                   (case toRtype ty of
+                                        NONE => Error.bug "SQ_deque saw unit"
+                                      | SOME t => simpleCCallWithGCState (CFunction.sqDeque t))
+                               | Thread_testSavedClosure =>
+                                   simpleCCallWithGCState (CFunction.testSavedClosure ())
+                               | Thread_getSavedClosure =>
+                                   (case toRtype ty of
+                                        NONE => Error.bug "Thread_getSavedClosure saw unit"
+                                      | SOME t => simpleCCallWithGCState (CFunction.getSavedClosure t))
+                               | Thread_setSavedClosure =>
+                                  (case toRtype (varType (arg 0)) of
+                                      NONE => Error.bug "Thread_setSavedClosure found unit"
+                                    | SOME t =>
+                                          if not (Type.isObjptr t)
+                                            then Error.bug "Thread_setSavedClosure saw non-objptr"
+                                          else
+                                            simpleCCallWithGCState
+                                            (CFunction.setSavedClosure (Operand.ty (a 0))))
                                | SQ_makeObject => cast ()
                                | MLton_share =>
                                     (case toRtype (varType (arg 0)) of

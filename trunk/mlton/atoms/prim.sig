@@ -162,6 +162,9 @@ signature PRIM =
               * on the stack.
               *)
              | Thread_switchTo (* ssa to rssa *)
+             | Thread_testSavedClosure (* backend *)
+             | Thread_setSavedClosure (* backend *)
+             | Thread_getSavedClosure (* backend *)
              | Threadlet_jumpDown (* ssa to rssa *)
              | Threadlet_prefixAndSwitchTo (* ssa to rssa *)
              | TopLevel_getHandler (* implement exceptions *)

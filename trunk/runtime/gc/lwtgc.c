@@ -350,9 +350,6 @@ void liftAllObjptrsInMoveOnWBA (GC_state s) {
     moveTransitiveClosure (s, &op, FALSE, FALSE);
   }
   s->moveOnWBASize = 0;
-  for (int32_t i=0; i < s->spawnOnWBASize; i++) {
-    moveTransitiveClosure (s, &(s->spawnOnWBA[i].op), FALSE, FALSE);
-  }
 
   /* move the threads from preemptOnWBA to scheduler queue */
   if (DEBUG_LWTGC)
@@ -379,7 +376,7 @@ void liftAllObjptrsInMoveOnWBA (GC_state s) {
       if (DEBUG_SQ)
         fprintf (stderr, "moving closure to shared heap[%d]\n",
                  s->procId);
-      moveTransitiveClosure (s, &op, FALSE, TRUE);
+      moveTransitiveClosure (s, &op, FALSE, FALSE);
       if (DEBUG_SQ)
         fprintf (stderr, "moving closure to shared heap done. "FMTOBJPTR" [%d]\n",
                  op, s->procId);

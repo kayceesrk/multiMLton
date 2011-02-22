@@ -59,3 +59,13 @@ static inline size_t sizeofThread (GC_state s);
 static inline size_t offsetofThread (GC_state s);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */
+
+
+#if (defined (MLTON_GC_INTERNAL_BASIS))
+
+
+PRIVATE bool GC_testSavedClosure (GC_state s);
+PRIVATE pointer GC_getSavedClosure (GC_state s);
+PRIVATE void GC_setSavedClosure (GC_state s, pointer p);
+
+#endif /* (defined (MLTON_GC_INTERNAL_BASIS)) */

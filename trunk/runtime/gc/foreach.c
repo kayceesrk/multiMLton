@@ -30,6 +30,7 @@ void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f) {
       callIfIsObjptr (s, f, &s->procStates[proc].currentThread);
       callIfIsObjptr (s, f, &s->procStates[proc].savedThread);
       callIfIsObjptr (s, f, &s->procStates[proc].signalHandlerThread);
+      callIfIsObjptr (s, f, &s->procStates[proc].savedClosure);
 
       if (s->procStates[proc].roots) {
         for (uint32_t i = 0; i < s->procStates[proc].rootsLength; i++) {
@@ -83,6 +84,7 @@ void foreachGlobalObjptrInScope (GC_state s, GC_foreachObjptrFun f) {
   callIfIsObjptr (s, f, &s->currentThread);
   callIfIsObjptr (s, f, &s->savedThread);
   callIfIsObjptr (s, f, &s->signalHandlerThread);
+  callIfIsObjptr (s, f, &s->savedClosure);
 
   if (s->procStates and s->roots) {
     for (uint32_t i = 0; i < s->rootsLength; i++)

@@ -6,10 +6,9 @@ struct
     Primitive.MLton.move (x, forceStackLifting, skipFixingForwaringPointers)
   fun initRefUpdate f = Primitive.Ref.preemptFn := f
   fun addToPreemptOnWBA (t : runnable_host) =
-    Primitive.Ref.addToPreemptOnWBA (t)
-
+    Primitive.Lwtgc.addToPreemptOnWBA (t)
   fun addToSpawnOnWBA (t : runnable_host, proc) =
-    Primitive.Ref.addToSpawnOnWBA (t, proc)
+    Primitive.Lwtgc.addToSpawnOnWBA (t, proc)
 
   structure SchedulerQueue =
   struct

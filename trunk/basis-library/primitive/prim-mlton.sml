@@ -395,6 +395,10 @@ structure Thread =
       val setSaved = _import "GC_setSavedThread" private: GCState.t * thread -> unit;
       val startSignalHandler = _import "GC_startSignalHandler" private: GCState.t -> unit;
       val switchTo = _prim "Thread_switchTo": thread -> unit;
+
+      val testSavedClosure = _prim "Thread_testSavedClosure": unit -> bool;
+      val getSavedClosure = _prim "Thread_getSavedClosure": unit -> 'a;
+      val setSavedClosure = _prim "Thread_setSavedClosure": 'a -> unit;
    end
 
 structure Weak =

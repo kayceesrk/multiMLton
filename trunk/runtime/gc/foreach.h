@@ -27,9 +27,9 @@ static inline void foreachGlobalObjptrInScope (GC_state s, GC_foreachObjptrFun f
 static inline pointer foreachObjptrInObject (GC_state s, pointer p,
                                              GC_foreachObjptrFun f, bool skipWeaks);
 
-static inline pointer foreachObjptrInRangeWithFill (GC_state s, pointer front,
-                                                    pointer *back, GC_foreachObjptrFun f,
-                                                    bool skipWeaks, bool fillForwarded);
+static pointer foreachObjptrInRangeWithFill (GC_state s, pointer front,
+                                             pointer *back, GC_foreachObjptrFun f,
+                                             bool skipWeaks, bool fillForwarded);
 
 /* foreachObjptrInRange (s, front, back, f, skipWeaks)
  *

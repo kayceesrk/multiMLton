@@ -97,14 +97,14 @@ struct
   fun debug msg = Debug.sayDebug ([atomicMsg, tidMsg], msg)
   fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
 
-  fun setCurThreadId (tid as TID {processorId, ...}) =
-  let
+  fun setCurThreadId (tid as TID {processorId, ...}) = setCurThreadIdSpl (tid)
+  (* let
     val procNum = PacmlFFI.processorNumber ()
     val () = Array.update (curTid, PacmlFFI.processorNumber (), tid)
   in ()
-  end
+  end *)
 
-  fun setCurThreadIdSpl (tid as TID {processorId, ...}) =
+  and setCurThreadIdSpl (tid as TID {processorId, ...}) =
   let
     val procNum = PacmlFFI.processorNumber ()
     val tid = PacmlPrim.move (tid, false, true)

@@ -59,7 +59,7 @@ static inline bool isPointerInToSpace (GC_state s, pointer p);
 static inline bool isObjptrInToSpace (GC_state s, objptr op);
 
 static inline void forwardObjptr (GC_state s, objptr *opp);
-static inline void forwardObjptrToSharedHeap (GC_state s, objptr *opp);
+static void forwardObjptrToSharedHeap (GC_state s, objptr *opp);
 static inline void forwardObjptrIfInNursery (GC_state s, objptr *opp);
 static inline void forwardObjptrIfInLocalHeap (GC_state s, objptr *opp);
 static inline void forwardObjptrIfInSharedHeap (GC_state s, objptr *opp);
