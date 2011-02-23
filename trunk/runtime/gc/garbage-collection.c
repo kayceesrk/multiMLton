@@ -123,9 +123,11 @@ void fixForwardingPointers (GC_state s, bool mayResize) {
   assert (hasHeapBytesFree (s, s->heap, 0, nurseryBytesRequested));
   setGCStateCurrentThreadAndStack (s);
 
+  #if ASSERT
   if (isPointerInNursery (s, s->heap, (pointer)getStackCurrent(s))) {
       assert (s->frontier > (pointer)getStackCurrent(s));
   }
+  #endif
 
   if (needGCTime (s)) {
     gcTime = stopWallTiming (&tv_start, &s->cumulativeStatistics->ru_gc);

@@ -60,3 +60,18 @@ void GC_setSavedClosure (GC_state s, pointer p) {
   assert (s->savedClosure == BOGUS_OBJPTR);
   s->savedClosure = pointerToObjptr (p, s->heap->start);
 }
+
+
+bool GC_testThreadId (GC_state s) {
+  return (s->pacmlThreadId != BOGUS_OBJPTR);
+}
+
+pointer GC_getThreadId (GC_state s) {
+  assert (s->pacmlThreadId != BOGUS_OBJPTR);
+  pointer p = objptrToPointer (s->pacmlThreadId, s->heap->start);
+  return p;
+}
+
+void GC_setThreadId (GC_state s, pointer p) {
+  s->pacmlThreadId = pointerToObjptr (p, s->heap->start);
+}

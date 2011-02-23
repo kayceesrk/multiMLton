@@ -68,4 +68,9 @@ PRIVATE bool GC_testSavedClosure (GC_state s);
 PRIVATE pointer GC_getSavedClosure (GC_state s);
 PRIVATE void GC_setSavedClosure (GC_state s, pointer p);
 
+//Refers to CML thread IDs
+PRIVATE bool GC_testThreadId (GC_state s);
+PRIVATE pointer GC_getThreadId (GC_state s);
+PRIVATE void GC_setThreadId (GC_state s, pointer p);
+
 #endif /* (defined (MLTON_GC_INTERNAL_BASIS)) */

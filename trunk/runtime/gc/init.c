@@ -449,6 +449,7 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->rootsLength = 0;
   s->savedThread = BOGUS_OBJPTR;
   s->savedClosure = BOGUS_OBJPTR;
+  s->pacmlThreadId = BOGUS_OBJPTR;
   s->secondaryLocalHeap = (GC_heap) malloc (sizeof (struct GC_heap));
   initHeap (s, s->secondaryLocalHeap, LOCAL_HEAP);
   s->sharedHeap = (GC_heap) malloc (sizeof (struct GC_heap));
@@ -587,6 +588,7 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->rootsLength = 0;
   d->savedThread = BOGUS_OBJPTR;
   d->savedClosure = BOGUS_OBJPTR;
+  d->pacmlThreadId = BOGUS_OBJPTR;
   d->signalHandlerThread = BOGUS_OBJPTR;
   d->signalsInfo.amInSignalHandler = FALSE;
   d->signalsInfo.gcSignalHandled = FALSE;

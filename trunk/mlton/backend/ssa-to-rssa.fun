@@ -555,6 +555,56 @@ structure CFunction =
             target = Direct "GC_setSavedClosure",
             writesStackTop = false}
 
+      fun testThreadId () =
+         T {args = Vector.new1 (Type.gcState ()),
+            bytesNeeded = NONE,
+            convention = Cdecl,
+            ensuresBytesFree = false,
+            mayGC = false,
+            maySwitchThreads = false,
+            modifiesFrontier = false,
+            prototype = (Vector.new1 (CType.gcState),
+                         SOME CType.bool),
+            readsStackTop = false,
+            return = Type.bool,
+            symbolScope = Private,
+            target = Direct "GC_testThreadId",
+            writesStackTop = false}
+
+      fun getThreadId t =
+         T {args = Vector.new1 (Type.gcState ()),
+            bytesNeeded = NONE,
+            convention = Cdecl,
+            ensuresBytesFree = false,
+            mayGC = false,
+            maySwitchThreads = false,
+            modifiesFrontier = false,
+            prototype = (Vector.new1 (CType.gcState),
+                         SOME CType.cpointer),
+            readsStackTop = false,
+            return = t,
+            symbolScope = Private,
+            target = Direct "GC_getThreadId",
+            writesStackTop = false}
+
+      fun setThreadId t =
+         T {args = Vector.new2 (Type.gcState (), t),
+            bytesNeeded = NONE,
+            convention = Cdecl,
+            ensuresBytesFree = false,
+            mayGC = false,
+            maySwitchThreads = false,
+            modifiesFrontier = false,
+            prototype = (Vector.new2 (CType.gcState,
+                                      CType.cpointer),
+                         NONE),
+            readsStackTop = false,
+            return = Type.unit,
+            symbolScope = Private,
+            target = Direct "GC_setThreadId",
+            writesStackTop = false}
+
+
 
    end
 
@@ -1745,6 +1795,21 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                           else
                                             simpleCCallWithGCState
                                             (CFunction.setSavedClosure (Operand.ty (a 0))))
+                               | ThreadId_testThreadId =>
+                                   simpleCCallWithGCState (CFunction.testThreadId ())
+                               | ThreadId_getThreadId =>
+                                   (case toRtype ty of
+                                        NONE => Error.bug "ThreadId_getThreadId saw unit"
+                                      | SOME t => simpleCCallWithGCState (CFunction.getThreadId t))
+                               | ThreadId_setThreadId =>
+                                  (case toRtype (varType (arg 0)) of
+                                      NONE => Error.bug "ThreadId_setThreadId found unit"
+                                    | SOME t =>
+                                          if not (Type.isObjptr t)
+                                            then Error.bug "ThreadId_setThreadId saw non-objptr"
+                                          else
+                                            simpleCCallWithGCState
+                                            (CFunction.setThreadId (Operand.ty (a 0))))
                                | SQ_makeObject => cast ()
                                | MLton_share =>
                                     (case toRtype (varType (arg 0)) of

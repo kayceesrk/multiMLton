@@ -185,13 +185,10 @@ struct
 
     (* If the newly spawned thread is going to another processor, then
      * move it to the shared heap *)
-    val () = (* if (TID.getProcId (tid) = PacmlFFI.processorNumber ()) then ()
-             else *)
-               (debug' (fn () => "spawnHostHelper.lift(1): tid="^(TID.tidToString tid));
-               Primitive.Lwtgc.addToMoveOnWBA (rhost);
-               S.preemptOnWriteBarrier ();
-               debug' (fn () => "spawnHostHelper.lift(2): tid="^(TID.tidToString tid)))
-
+    val () = (debug' (fn () => "spawnHostHelper.lift(1): tid="^(TID.tidToString tid));
+              Primitive.Lwtgc.addToMoveOnWBA (rhost);
+              S.preemptOnWriteBarrier ();
+              debug' (fn () => "spawnHostHelper.lift(2): tid="^(TID.tidToString tid)))
 
     val () = S.readyForSpawn (rhost)
 
@@ -234,7 +231,6 @@ struct
   in
     tid
   end
-
 
   fun spawnHost f = spawnHostHelperLazy (f, ANY_PROC)
   fun spawn f = spawnHost f

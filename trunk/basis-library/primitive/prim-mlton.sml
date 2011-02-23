@@ -401,6 +401,13 @@ structure Thread =
       val setSavedClosure = _prim "Thread_setSavedClosure": 'a -> unit;
    end
 
+structure ThreadId =
+struct
+  val testThreadId= _prim "ThreadId_testThreadId": unit -> bool;
+  val getThreadId = _prim "ThreadId_getThreadId": unit -> 'a;
+  val setThreadId = _prim "ThreadId_setThreadId": 'a -> unit;
+end
+
 structure Weak =
    struct
       open Weak

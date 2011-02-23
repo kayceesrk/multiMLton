@@ -109,6 +109,7 @@ struct GC_state {
                        * Thread interrupted by arrival of signal.
                        */
   objptr savedClosure; /* This is used for switching to a new thread */
+  objptr pacmlThreadId; /* ThreadId of the current pacml thread */
   int (*saveGlobals)(FILE *f); /* saves the globals to the file. */
   bool saveWorldStatus; /* */
   struct GC_heap *secondaryLocalHeap; /* Used for major copying collection. */

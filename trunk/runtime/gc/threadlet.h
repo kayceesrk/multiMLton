@@ -23,8 +23,6 @@ void GC_printPointerAtOffset (int offset);
 pointer GC_getPointerFromOffset (int offset);
 int GC_getCopiedSize (void);
 
-static inline void foo (GC_state s, GC_frameIndex i);
-
 // offset from bottom of stack
 PRIVATE void GC_jumpDown (GC_state s, int offset);
 PRIVATE void GC_prefixAndSwitchTo (GC_state s, pointer p);

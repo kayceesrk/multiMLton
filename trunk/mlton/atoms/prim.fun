@@ -175,6 +175,9 @@ datatype 'a t =
  | Thread_testSavedClosure (* backend *)
  | Thread_setSavedClosure (* backend *)
  | Thread_getSavedClosure (* backend *)
+ | ThreadId_testThreadId (* backend *)
+ | ThreadId_setThreadId (* backend *)
+ | ThreadId_getThreadId (* backend *)
  | Threadlet_jumpDown (* ssa to rssa *)
  | Threadlet_prefixAndSwitchTo (* ssa to rssa *)
  | TopLevel_getHandler (* implement exceptions *)
@@ -364,6 +367,9 @@ fun toString (n: 'a t): string =
        | Thread_testSavedClosure => "Thread_testSavedClosure"
        | Thread_setSavedClosure => "Thread_setSavedClosure"
        | Thread_getSavedClosure => "Thread_getSavedClosure"
+       | ThreadId_testThreadId => "ThreadId_testThreadId"
+       | ThreadId_setThreadId => "ThreadId_setThreadId"
+       | ThreadId_getThreadId => "ThreadId_getThreadId"
        | Threadlet_jumpDown => "Threadlet_jumpDown"
        | Threadlet_prefixAndSwitchTo => "Threadlet_prefixAndSwitchTo"
        | TopLevel_getHandler => "TopLevel_getHandler"
@@ -535,6 +541,9 @@ val equals: 'a t * 'a t -> bool =
     | (Thread_testSavedClosure, Thread_testSavedClosure) => true
     | (Thread_setSavedClosure, Thread_setSavedClosure) => true
     | (Thread_getSavedClosure, Thread_getSavedClosure) => true
+    | (ThreadId_testThreadId, ThreadId_testThreadId) => true
+    | (ThreadId_setThreadId, ThreadId_setThreadId) => true
+    | (ThreadId_getThreadId, ThreadId_getThreadId) => true
     | (Threadlet_jumpDown, Threadlet_jumpDown) => true
     | (Threadlet_prefixAndSwitchTo, Threadlet_prefixAndSwitchTo) => true
     | (TopLevel_getHandler, TopLevel_getHandler) => true
@@ -717,6 +726,9 @@ val map: 'a t * ('a -> 'b) -> 'b t =
     | Thread_testSavedClosure => Thread_testSavedClosure
     | Thread_setSavedClosure => Thread_setSavedClosure
     | Thread_getSavedClosure => Thread_getSavedClosure
+    | ThreadId_testThreadId => ThreadId_testThreadId
+    | ThreadId_setThreadId => ThreadId_setThreadId
+    | ThreadId_getThreadId => ThreadId_getThreadId
     | Threadlet_jumpDown => Threadlet_jumpDown
     | Threadlet_prefixAndSwitchTo => Threadlet_prefixAndSwitchTo
     | TopLevel_getHandler => TopLevel_getHandler
@@ -990,6 +1002,9 @@ val kind: 'a t -> Kind.t =
        | Thread_testSavedClosure => DependsOnState
        | Thread_setSavedClosure => SideEffect
        | Thread_getSavedClosure => DependsOnState
+       | ThreadId_testThreadId => DependsOnState
+       | ThreadId_setThreadId => SideEffect
+       | ThreadId_getThreadId => DependsOnState
        | Threadlet_jumpDown => SideEffect
        | Threadlet_prefixAndSwitchTo => SideEffect
        | TopLevel_getHandler => DependsOnState
@@ -1186,6 +1201,9 @@ in
        Thread_testSavedClosure,
        Thread_setSavedClosure,
        Thread_getSavedClosure,
+       ThreadId_testThreadId,
+       ThreadId_setThreadId,
+       ThreadId_getThreadId,
        Threadlet_jumpDown,
        Threadlet_prefixAndSwitchTo,
        TopLevel_getHandler,
@@ -1492,6 +1510,9 @@ fun 'a checkApp (prim: 'a t,
        | Thread_testSavedClosure => noTargs (fn () => (noArgs, bool))
        | Thread_setSavedClosure => oneTarg (fn t => (oneArg t, unit))
        | Thread_getSavedClosure => oneTarg (fn t => (noArgs, t))
+       | ThreadId_testThreadId => noTargs (fn () => (noArgs, bool))
+       | ThreadId_setThreadId => oneTarg (fn t => (oneArg t, unit))
+       | ThreadId_getThreadId => oneTarg (fn t => (noArgs, t))
        | Threadlet_jumpDown => noTargs (fn () => (oneArg cint, unit))
        | Threadlet_prefixAndSwitchTo => noTargs (fn () => (oneArg thread, unit))
        | TopLevel_getHandler => noTargs (fn () => (noArgs, arrow (exn, unit)))
@@ -1609,6 +1630,8 @@ fun ('a, 'b) extractTargs (prim: 'b t,
        | SQ_makeObject => one result
        | Thread_setSavedClosure => one (arg 0)
        | Thread_getSavedClosure => one result
+       | ThreadId_setThreadId => one (arg 0)
+       | ThreadId_getThreadId => one result
        | Vector_length => one (deVector (arg 0))
        | Vector_sub => one (deVector (arg 0))
        | Weak_canGet => one (deWeak (arg 0))
