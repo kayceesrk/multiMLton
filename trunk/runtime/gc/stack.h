@@ -45,10 +45,12 @@ typedef struct GC_stack {
    * Stacks with used == reserved are continuations.
    */
   size_t used;
+  /* The thread that points to this stack */
+  objptr thread;
   /* The next address is the bottom of the stack, and the following
    * reserved bytes hold space for the stack.
    */
-  objptr thread;
+  bool isParasitic;
 } *GC_stack;
 
 /* DanglingStack is used to represent stacks whose corresponding thread object

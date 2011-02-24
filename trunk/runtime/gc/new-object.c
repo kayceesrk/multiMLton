@@ -77,6 +77,7 @@ GC_stack newStack (GC_state s,
   stack->reserved = reserved;
   stack->used = 0;
   stack->thread = BOGUS_OBJPTR;
+  stack->isParasitic = FALSE;
   if (DEBUG_STACKS)
     fprintf (stderr, FMTPTR " = newStack (%"PRIuMAX")\n",
              (uintptr_t)stack,

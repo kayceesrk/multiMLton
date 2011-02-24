@@ -72,6 +72,7 @@ GC_thread GC_copyParasite (int startOffset) {
 
     GC_thread th = newThread (s, end-start);
     GC_stack stk = (GC_stack) objptrToPointer (th->stack, s->heap->start);
+    stk->isParasitic = TRUE;
 
     if (DEBUG_SPLICE) {
         fprintf (stderr, "\ncopyParasite [%d]\n", Proc_processorNumber (s));
@@ -167,6 +168,7 @@ GC_thread GC_extractParasite (pointer p, int startOffset) {
     s->savedThread = BOGUS_OBJPTR;
 
     GC_stack stk = (GC_stack) objptrToPointer (th->stack, s->heap->start);
+    stk->isParasitic = TRUE;
 
     /* Find the limits of async */
     oriStk = (GC_stack) objptrToPointer (oriThrd->stack, s->heap->start);

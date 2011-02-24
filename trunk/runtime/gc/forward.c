@@ -68,7 +68,7 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
     } else { /* Stack. */
       GC_stack stack = (GC_stack)p;
 
-      if (!s->forwardState.forceStackForwarding) { /* stack need not be forwarded */
+      if (!(s->forwardState.forceStackForwarding || stack->isParasitic)) { /* stack need not be forwarded */
         if (isObjptrInHeap (s, s->sharedHeap, stack->thread)) {
           if (DEBUG_DETAILED or s->controls->selectiveDebug)
             fprintf (stderr, "Not lifting GC_stack "FMTPTR". stack->thread already in sharedHeap at "FMTOBJPTR"\n",
@@ -92,8 +92,13 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
         return;
       }
       else {
-        if (DEBUG_DETAILED or s->controls->selectiveDebug)
-          fprintf (stderr, "[GC: Forwarding stack. forwardState.forceStackForwarding is TRUE]\n");
+        if (DEBUG_DETAILED or s->controls->selectiveDebug) {
+          if (s->forwardState.forceStackForwarding)
+            fprintf (stderr, "[GC: Forwarding stack. forwardState.forceStackForwarding is TRUE]\n");
+          if (stack->isParasitic)
+            fprintf (stderr, "[GC: Forwarding stack. stack is parasitic]\n");
+        }
+
         size_t reservedNew;
         bool isCurrentStack = false;
 
@@ -453,9 +458,9 @@ static inline void forwardObjptrIfInSharedHeap (GC_state s, objptr *opp) {
       fprintf (stderr, "forwardObjptrIfInSharedHeap: invariant breaking pointer opp="FMTPTR" p="FMTPTR" [%d]\n",
                (uintptr_t)opp, (uintptr_t)p, s->procId);
 
-    if (tag == STACK_TAG) {
-      //If the pointer from toSpace to local heap is a stack add a dangling
-      //pointer.
+    if (tag == STACK_TAG && ((GC_stack)p)->isParasitic == FALSE) {
+      //If the pointer from toSpace to local heap is a stack and it is not
+      //parasitic, add a dangling pointer.
       GC_stack stk = (GC_stack)p;
       pointer thread = objptrToPointer (stk->thread, r->heap->start);
       if (getHeader (thread) == GC_FORWARDED) {
@@ -470,7 +475,7 @@ static inline void forwardObjptrIfInSharedHeap (GC_state s, objptr *opp) {
       addToDanglingStackList (r, pointerToObjptr (p, r->heap->start));
     }
     else {
-      //If the pointer is not a stack, then we are completing a closure
+      //If the pointer is not a stack or if the stack is parasitic, then we are completing a closure
       //lifting. Perform the lift.
       if (DEBUG_DETAILED or s->controls->selectiveDebug)
         fprintf (stderr, "forwardObjptrIfInSharedHeap: invariant breaking pointer: finishing closure lifting [%d]\n",
