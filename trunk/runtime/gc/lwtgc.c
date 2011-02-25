@@ -358,7 +358,10 @@ void liftAllObjptrsInMoveOnWBA (GC_state s) {
   if (s->preemptOnWBASize > 0) {
     GC_sqAcquireLock (s, s->procId);
     for (int i=0; i < s->preemptOnWBASize; i++) {
-      sqEnque (s, objptrToPointer (s->preemptOnWBA[i], s->heap->start), s->procId, 0);
+      if (s->preemptOnWBA[i].kind == HOST)
+        sqEnque (s, objptrToPointer (s->preemptOnWBA[i].op, s->heap->start), s->procId, 0);
+      else //(s->preemptOnWBA[i].kind == PARASITE)
+        sqEnque (s, objptrToPointer (s->preemptOnWBA[i].op, s->heap->start), s->procId, 2);
     }
     s->preemptOnWBASize = 0;
     GC_sqReleaseLock (s, s->procId);
@@ -421,27 +424,35 @@ void GC_addToSpawnOnWBA (GC_state s, pointer p, int proc) {
 }
 
 
-void GC_addToPreemptOnWBA (GC_state s, pointer p) {
+void GC_addToPreemptOnWBA (GC_state s, pointer p, int kind) {
+  assert (kind == 0 or kind == 1);
+
   s->cumulativeStatistics->numPreemptWB++;
   s->cumulativeStatistics->numReadyPrimWB += sizeofSchedulerQueue (s, 0);
   s->cumulativeStatistics->numReadySecWB += sizeofSchedulerQueue (s, 1);
+
   objptr op = pointerToObjptr (p, s->heap->start);
   ++(s->preemptOnWBASize);
   if (s->preemptOnWBASize > s->preemptOnWBAMaxSize) {
     s->preemptOnWBAMaxSize *= 2;
-    objptr* newPreemptOnWBA =
-        (objptr*) realloc (s->preemptOnWBA, sizeof (objptr) * s->preemptOnWBAMaxSize);
+    PreemptThread* newPreemptOnWBA =
+        (PreemptThread*) realloc (s->preemptOnWBA, sizeof (PreemptThread) * s->preemptOnWBAMaxSize);
     assert (newPreemptOnWBA);
     s->preemptOnWBA = newPreemptOnWBA;
   }
-  s->preemptOnWBA[s->preemptOnWBASize - 1] = op;
+  s->preemptOnWBA[s->preemptOnWBASize - 1].op = op;
+
+  if (kind == 0)
+    s->preemptOnWBA[s->preemptOnWBASize - 1].kind = HOST;
+  else
+    s->preemptOnWBA[s->preemptOnWBASize - 1].kind = PARASITE;
 }
 
 static inline void foreachObjptrInWBAs (GC_state s, GC_state fromState, GC_foreachObjptrFun f) {
   for (int i=0; i < fromState->moveOnWBASize; i++)
     callIfIsObjptr (s, f, &(fromState->moveOnWBA [i]));
   for (int i=0; i < fromState->preemptOnWBASize; i++)
-    callIfIsObjptr (s, f, &(fromState->preemptOnWBA [i]));
+    callIfIsObjptr (s, f, &(fromState->preemptOnWBA[i].op));
   for (int i=0; i < fromState->spawnOnWBASize; i++)
     callIfIsObjptr (s, f, &((fromState->spawnOnWBA [i]).op));
 }

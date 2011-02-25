@@ -10,7 +10,7 @@ sig
   val next : unit -> runnable_host
   val nextWithCounter : int * Time.time option option -> runnable_host
   val unwrap : (runnable_host -> runnable_host) ->
-               (parasite -> runnable_host) ->
+               (int * parasite -> runnable_host) ->
                 MLtonThread.Runnable.t ->
                 MLtonThread.Runnable.t
 
@@ -24,7 +24,8 @@ sig
   val atomicSwitchToNext : ('a thread -> unit) -> 'a
   val switchToNext : ('a thread -> unit) -> 'a
 
-  val atomicSwitchForWB : (runnable_host -> runnable_host) -> unit
+  val atomicSwitchToNextHostForWB : (rdy_thread -> unit) -> unit
+  val atomicSwitchToNextParasiteForWB : (rdy_thread -> unit) -> unit
 
   (* scheduler control *)
   val deque : unit -> runnable_host option

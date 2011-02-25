@@ -82,7 +82,7 @@ struct
                 let
                   val () = debug' "SyncVar.relayMsg.NONE"
                   val rdyLst = !readyList
-                  val _ = L.releaseCmlLock lock TID.tidNum
+                  val _ = L.releaseCmlLock lock PT.getLockId
                 in
                   ignore (List.map (fn (rthrd) => (S.atomicReady (rthrd); atomicBegin())) rdyLst)
                 end
@@ -97,7 +97,7 @@ struct
       val () = debug' ( concat [name, "(1)"]) (* NonAtomic *)
       val () = Assert.assertNonAtomic (fn () => concat ["SyncVar.", name, "(1)"])
       val () = atomicBegin()
-      val () = L.getCmlLock lock TID.tidNum
+      val () = L.getCmlLock lock PT.getLockId
       val () = debug' ( concat [name, "(2)"]) (* Atomic 1 *)
       val () = Assert.assertAtomic (fn () => concat ["SyncVar.", name, "(2)"], SOME 1)
       val () =
@@ -120,7 +120,7 @@ struct
                 let
                   val () = debug' ( concat [name, "(3.2.1)"]) (* Atomic 1 *)
                   val () = Assert.assertAtomic (fn () => concat ["SyncVar.", name, "(3.2.1)"], SOME 1)
-                  val () = L.releaseCmlLock lock TID.tidNum
+                  val () = L.releaseCmlLock lock PT.getLockId
                   val () = atomicEnd ()
                   val () = debug' ( concat [name, "(3.2.2)"]) (* NonAtomic *)
                   val () = Assert.assertNonAtomic (fn () => concat ["SyncVar.", name, "(3.2.2)"])
@@ -140,7 +140,7 @@ struct
       val () = debug' ( concat [name, "(1)"]) (* NonAtomic *)
       val () = Assert.assertNonAtomic (fn () => concat ["SyncVar.", name, "(1)"])
       val () = atomicBegin()
-      val () = L.getCmlLock lock TID.tidNum
+      val () = L.getCmlLock lock PT.getLockId
       val () = debug' ( concat [name, "(2)"]) (* Atomic 1 *)
       val () = Assert.assertAtomic (fn () => concat ["SyncVar.", name, "(2)"], SOME 1)
       val msg =
@@ -152,7 +152,7 @@ struct
                   val msg =
                       S.atomicSwitchToNext
                       (fn rt => (enqueAndClean (readQ, (ref 0, rt, fn () => doSwap value));
-                                 L.releaseCmlLock lock TID.tidNum))
+                                 L.releaseCmlLock lock PT.getLockId))
                   val () = debug' ( concat [name, "(3.2.3)"]) (* NonAtomic *)
                   val () = Assert.assertNonAtomic (fn () => concat ["SyncVar.", name, "(3.2.3)"])
                 in
@@ -164,7 +164,7 @@ struct
                   val () = Assert.assertAtomic (fn () => concat ["SyncVar.", name, "(3.2.1)"], SOME 1)
                   val () = prio := 1
                   val () = doSwap value
-                  val () = L.releaseCmlLock lock TID.tidNum
+                  val () = L.releaseCmlLock lock PT.getLockId
                   val () = atomicEnd ()
                   val () = debug' ( concat [name, "(3.2.2)"]) (* NonAtomic *)
                   val () = Assert.assertNonAtomic (fn () => concat ["SyncVar.", name, "(3.2.2)"])
@@ -184,15 +184,15 @@ struct
           val () = Assert.assertAtomic (fn () => concat ["SyncVar.", name, ".doitFn"], NONE)
           val () = debug' ( concat [name, "(3.2.1)"]) (* Atomic 1 *)
           val () = Assert.assertAtomic (fn () => concat ["SyncVar.", name, "(3.2.1)"], SOME 1)
-          val () = L.getCmlLock lock TID.tidNum
+          val () = L.getCmlLock lock PT.getLockId
           val x =
             case !value of
-                  NONE => (L.releaseCmlLock lock TID.tidNum;
+                  NONE => (L.releaseCmlLock lock PT.getLockId;
                            raise RepTypes.DOIT_FAIL)
                 | SOME x => let
                               val () = prio := 1
                               val () = doSwap value
-                              val () = L.releaseCmlLock lock TID.tidNum
+                              val () = L.releaseCmlLock lock PT.getLockId
                               val () = atomicEnd ()
                             in
                               x
@@ -207,7 +207,7 @@ struct
           val () = Assert.assertAtomic (fn () => concat ["SyncVar.", name, ".blockFn"], NONE)
           val () = debug' ( concat [name, "(3.2.1)"]) (* Atomic 1 *)
           val () = Assert.assertAtomic (fn () => concat ["SyncVar.", name, "(3.2.1)"], SOME 1)
-          val () = L.getCmlLock lock TID.tidNum
+          val () = L.getCmlLock lock PT.getLockId
           val msg =
             case !value of
                 NONE => let
@@ -215,7 +215,7 @@ struct
                           val msg = S.atomicSwitchToNext
                                     (fn rt =>
                                       (enqueAndClean (readQ, (mytxid, rt, fn () => doSwap value))
-                                      ; L.releaseCmlLock lock TID.tidNum))
+                                      ; L.releaseCmlLock lock PT.getLockId))
                           val () = atomicBegin ()
                           val () = Thread.reifyCurrentIfParasite ()
                         in
@@ -232,11 +232,11 @@ struct
                           in
                             if res = 0 then
                               (prio := 1
-                              ; L.releaseCmlLock lock TID.tidNum
+                              ; L.releaseCmlLock lock PT.getLockId
                               ; Thread.reifyCurrentIfParasite ()
                               ; x)
                             else if res = 1 then matchLp ()
-                            else (L.releaseCmlLock lock TID.tidNum
+                            else (L.releaseCmlLock lock PT.getLockId
                                   ; S.atomicSwitchToNext (fn _ => ()))
                           end
                       in
@@ -271,7 +271,7 @@ struct
       val () = debug' ( concat [name, "(1)"]) (* NonAtomic *)
       val () = Assert.assertNonAtomic (fn () => concat ["SyncVar.", name, "(1)"])
       val () = atomicBegin()
-      val () = L.getCmlLock lock TID.tidNum
+      val () = L.getCmlLock lock PT.getLockId
       val () = debug' ( concat [name, "(2)"]) (* Atomic 1 *)
       val () = Assert.assertAtomic (fn () => concat ["SyncVar.", name, "(2)"], SOME 1)
       val msg =
@@ -283,7 +283,7 @@ struct
                   val msg = NONE
                   val () = debug' ( concat [name, "(3.1.2)"]) (* Atomic 1 *)
                   val () = Assert.assertAtomic (fn () => concat ["SyncVar.", name, "(3.2.2)"], SOME 1)
-                  val () = L.releaseCmlLock lock TID.tidNum
+                  val () = L.releaseCmlLock lock PT.getLockId
                   val () = atomicEnd ()
                   val () = debug' ( concat [name, "(3.1.3)"]) (* NonAtomic *)
                   val () = Assert.assertNonAtomic (fn () => concat ["SyncVar.", name, "(3.2.3)"])
@@ -296,7 +296,7 @@ struct
                   val () = Assert.assertAtomic (fn () => concat ["SyncVar.", name, "(3.2.1)"], SOME 1)
                   val () = prio := 1
                   val () = doSwap value
-                  val () = L.releaseCmlLock lock TID.tidNum
+                  val () = L.releaseCmlLock lock PT.getLockId
                   val () = atomicEnd ()
                   val () = debug' ( concat [name, "(3.2.2)"]) (* NonAtomic *)
                   val () = Assert.assertNonAtomic (fn () => concat ["SyncVar.", name, "(3.2.2)"])

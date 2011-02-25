@@ -41,7 +41,7 @@ struct
     let
       val _ = PacmlFFI.maybeWaitForGC ()
     in
-      case SQ.deque (RepTypes.PRI) of
+      case SQ.dequeHost (RepTypes.PRI) of
            NONE => (PacmlFFI.wait (); loop procNum)
          | SOME (t) =>
              let

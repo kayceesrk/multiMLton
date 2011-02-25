@@ -15,6 +15,8 @@ struct
 
   type thread_id = ThreadID.thread_id
   type parasite = RepTypes.parasite
+  type lock_id = int
+
   datatype thread = datatype RepTypes.thread
   datatype rdy_thread = datatype RepTypes.rdy_thread
   datatype thread_type = datatype RepTypes.thread_type
@@ -23,14 +25,16 @@ struct
 
 
   (* Continuation management *)
-  fun prepend (H_THRD (tid, t), f) = H_THRD (tid, MT.prepend (t, f))
-    | prepend (P_THRD (par : parasite, g : (unit -> 'a) -> unit), f : 'b -> 'a) = P_THRD (par, fn h => g (f o h))
+  fun prepend (H_THRD (tid, t), f) =
+        H_THRD (tid, MT.prepend (t, f))
+    | prepend (P_THRD (lockId: int, par : parasite, g : (unit -> 'a) -> unit), f : 'b -> 'a) =
+        P_THRD (lockId, par, fn h => g (f o h))
 
   fun prep (H_THRD (tid, t)) = H_RTHRD (RHOST (tid, MT.prepare (t, ())))
-    | prep (P_THRD (par, g)) = (g (fn () => ()); P_RTHRD (par))
+    | prep (P_THRD (lockId, par, g)) = (g (fn () => ()); P_RTHRD (lockId, par))
 
   fun prepVal (H_THRD (tid, t), v) = H_RTHRD (RHOST((tid, MT.prepare (t,v))))
-    | prepVal (P_THRD (par, g), v) = (g (fn () => v); P_RTHRD (par))
+    | prepVal (P_THRD (lockId, par, g), v) = (g (fn () => v); P_RTHRD (lockId, par))
 
   fun prepFn (H_THRD (tid, t), f) = H_RTHRD (RHOST ((tid, MT.prepare (MT.prepend (t,f), ()))))
     | prepFn (p, f) = prep (prepend (p, f))
@@ -64,6 +68,7 @@ struct
                                   (offset, tid) => (Assert.assert' ("PT.getParasiteBottom", fn () => (tid = TID.tidNum ()));
                                                     offset)
   fun getNumPenaltySpawns () = getProp (#numPenaltySpawns)
+  fun getLockId () = getProp (#lockId)
 
   fun setThreadType (t) =
     let
@@ -72,7 +77,8 @@ struct
     in
       pstate := PSTATE {threadType = t,
                         parasiteBottom = #parasiteBottom ps,
-                        numPenaltySpawns = #numPenaltySpawns ps}
+                        numPenaltySpawns = #numPenaltySpawns ps,
+                        lockId = #lockId ps}
     end
 
   fun setParasiteBottom (pb) =
@@ -82,7 +88,8 @@ struct
     in
       pstate := PSTATE {threadType = #threadType ps,
                         parasiteBottom = (pb, TID.tidNum ()),
-                        numPenaltySpawns = #numPenaltySpawns ps}
+                        numPenaltySpawns = #numPenaltySpawns ps,
+                        lockId = #lockId ps}
     end
 
   fun setNumPenaltySpawns (n) =
@@ -92,8 +99,21 @@ struct
     in
       pstate := PSTATE {threadType = #threadType ps,
                         parasiteBottom = #parasiteBottom ps,
-                        numPenaltySpawns = n}
+                        numPenaltySpawns = n,
+                        lockId = #lockId ps}
     end
+
+  fun setLockId (n) =
+    let
+      val TID.TID {pstate, ...} = TID.getCurThreadId ()
+      val PSTATE (ps) = !pstate
+    in
+      pstate := PSTATE {threadType = #threadType ps,
+                        parasiteBottom = #parasiteBottom ps,
+                        numPenaltySpawns = #numPenaltySpawns ps,
+                        lockId = n}
+    end
+
 
   fun disableParasitePreemption () =
   let
@@ -132,7 +152,7 @@ struct
 
   datatype prefix_kind = datatype RepTypes.prefix_kind
 
-  fun atomicPrefixAndSwitchToHelper (thlet, kind) =
+  fun atomicPrefixAndSwitchToHelper (lockId, thlet, kind) =
   let
     val () = Assert.assertAtomic' ("ProtoThread.atomicPrefixAndSwitchToHelper", NONE)
     val () = TID.mark (TID.getCurThreadId ())
@@ -144,6 +164,7 @@ struct
     let
       val offset = getFrameBottomAsOffset ()
       val _ = setParasiteBottom (offset)
+      val _ = setLockId (lockId)
       val _ = prefixAndSwitchTo (thlet) (* Implicit atomic End *)
       val _ = disableParasitePreemption ()
     in
@@ -164,11 +185,11 @@ struct
     ()
   end
 
-  fun atomicPrefixAndSwitchTo (thlet) = atomicPrefixAndSwitchToHelper (thlet, PREFIX_REGULAR)
+  fun atomicPrefixAndSwitchTo (lockId, thlet) = atomicPrefixAndSwitchToHelper (lockId, thlet, PREFIX_REGULAR)
   (* Special version does not set the thread type to parasite. Used when reifying a host thread
     * from a parasite.
     *)
-  fun atomicPrefixAndSwitchToSpecial (thlet) = atomicPrefixAndSwitchToHelper (thlet, PREFIX_SPECIAL)
+  fun atomicPrefixAndSwitchToSpecial (lockId, thlet) = atomicPrefixAndSwitchToHelper (lockId, thlet, PREFIX_SPECIAL)
 
   fun getRunnableHost (rthrd) = case rthrd of
                                      H_RTHRD rhost => rhost
@@ -197,6 +218,7 @@ struct
       val offset = getFrameBottomAsOffset ()
       val _ = setParasiteBottom (offset)
       val _ = setNumPenaltySpawns (0)
+      val _ = setLockId (TID.nextLockId ())
       val _ = atomicEnd ()
       val _ = f () handle e => case e of
                                   RepTypes.DOIT_FAIL => (debug' "DOIT_FAIL. Letting though";

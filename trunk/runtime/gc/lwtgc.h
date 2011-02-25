@@ -8,7 +8,6 @@
 
 #if (defined (MLTON_GC_INTERNAL_TYPES))
 
-
 #endif /* (defined (MLTON_GC_INTERNAL_TYPES)) */
 
 #if (defined (MLTON_GC_INTERNAL_BASIS))
@@ -17,7 +16,9 @@ PRIVATE pointer GC_move (GC_state s, pointer object,
                          bool forceStackForwarding,
                          bool skipFixForwardingPointers);
 PRIVATE void GC_addToMoveOnWBA (GC_state s, pointer p);
-PRIVATE void GC_addToPreemptOnWBA (GC_state s, pointer p);
+
+//Kind is 0 -- HOST or 1 -- PARASITE
+PRIVATE void GC_addToPreemptOnWBA (GC_state s, pointer p, int kind);
 PRIVATE bool GC_isInSharedOrForwarded (GC_state s, pointer p);
 PRIVATE void GC_addToSpawnOnWBA (GC_state s, pointer p, int proc);
 

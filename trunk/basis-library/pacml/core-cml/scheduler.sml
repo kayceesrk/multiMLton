@@ -25,11 +25,11 @@ struct
 
   fun enque1 thrd =
    (Assert.assertAtomic' ("Scheduler.enque1", NONE)
-    ; SQ.enque (thrd, R.PRI))
+    ; SQ.enqueHost (thrd, R.PRI))
 
   fun enque2 thrd =
    (Assert.assertAtomic' ("Scheduler.enque2", NONE)
-    ; SQ.enque (thrd, R.SEC))
+    ; SQ.enqueHost (thrd, R.SEC))
 
   fun enque (thrd as R.RHOST (tid, _)) =
     if TID.isMarked (tid) then
@@ -39,11 +39,11 @@ struct
 
   fun deque1 () =
    (Assert.assertAtomic' ("Scheduler.deque1", NONE)
-    ; SQ.deque (R.ANY))
+    ; SQ.dequeHost (R.ANY))
 
   fun deque2 () =
    (Assert.assertAtomic' ("Scheduler.deque2", NONE)
-   ; SQ.deque (R.SEC))
+   ; SQ.dequeHost (R.SEC))
 
   val deque = deque1
 
@@ -56,13 +56,13 @@ struct
   fun atomicReady (rt : rdy_thread) =
     (Assert.assertAtomic' ("Scheduler.atomicReady(1)[tid:"^(TID.tidMsg())^"]", SOME 1)
     ; case rt of
-      H_RTHRD (rhost) => (SQ.enque (rhost, R.PRI); atomicEnd ())
-    | P_RTHRD (par) => PT.atomicPrefixAndSwitchTo (par) (* Implicit atomic end *)
+      H_RTHRD (rhost) => (SQ.enqueHost (rhost, R.PRI); atomicEnd ())
+    | P_RTHRD (lockId, par) => PT.atomicPrefixAndSwitchTo (lockId, par) (* Implicit atomic end *)
     ; Assert.assertNonAtomic (fn () => "Scheduler.atomicReady(2)[tid:"^(TID.tidMsg())^"]"))
 
   fun atomicReadyHost (rhost: runnable_host) =
     (Assert.assertAtomic' ("Scheduler.atomicReadyHost(1)[tid:"^(TID.tidMsg())^"]", SOME 1)
-    ; SQ.enque (rhost, R.PRI)
+    ; SQ.enqueHost (rhost, R.PRI)
     ; Assert.assertAtomic' ("Scheduler.atomicReadyHost(2)[tid:"^(TID.tidMsg())^"]", SOME 1))
 
 
@@ -80,8 +80,15 @@ struct
     ; enque1 t)
 
 
+  fun canPreemptParasite () =
+  let
+    val pBottom = PT.getParasiteBottom ()
+  in
+    not ((pBottom=0) orelse (not (PT.toPreemptParasite ())))
+  end
 
-  fun unwrap (f : runnable_host -> runnable_host) (reify : parasite -> runnable_host) (host: MT.Runnable.t) : MT.Runnable.t =
+
+  fun unwrap (f : runnable_host -> runnable_host) (reify : (int * parasite) -> runnable_host) (host: MT.Runnable.t) : MT.Runnable.t =
     let
       val () = debug' (fn () => "Scheduler.unwrap")
       val () = Assert.assertAtomic' ("Scheduler.unwrap", NONE)
@@ -90,7 +97,9 @@ struct
       val primHost = MT.toPrimitive host
       val host = MT.fromPrimitive primHost
       val host' = case thrdType of
-                    PARASITE => if ((not (PT.proceedToExtractParasite (primHost, pBottom))) orelse (pBottom=0) orelse (not (PT.toPreemptParasite ()))) then
+                    PARASITE => if ((not (PT.proceedToExtractParasite (primHost, pBottom)))
+                                     orelse (pBottom=0)
+                                     orelse (not (PT.toPreemptParasite ()))) then
                                   let
                                     val _ = debug' (fn () => "Scheduler.unwrap.PARASITE(1)")
                                     val tid = TID.getCurThreadId ()
@@ -103,8 +112,9 @@ struct
                                   let
                                     val _ = debug' (fn () => "Scheduler.unwrap.PARASITE(2)")
                                     val host' = MT.toPrimitive host
+                                    val lockId = PT.getLockId ()
                                     val thlet = PT.extractParasiteFromHost (host', pBottom)
-                                    val newHost = reify (thlet)
+                                    val newHost = reify (lockId, thlet)
                                     val _ = readyForSpawn newHost
                                     val host'' = MT.fromPrimitive host'
                                     val _ = PT.disableParasitePreemption ()
@@ -126,8 +136,25 @@ struct
     end
 
   fun nextWithCounter (iter, to) =
-    if SQ.empty () then
-      (!SH.pauseHook(iter, to))
+    if SQ.emptyHostQ () then
+      (* Now check the parasitic queue *)
+      (if SQ.emptyParasiteQ () then
+        (!SH.pauseHook(iter, to))
+       else
+         let (* run the parasite on this host *)
+           val (lockId, par) = SQ.dequeParasite ()
+
+           (* save atomic state *)
+           val atomicState = getAtomicState ()
+           val () = setAtomicState (1)
+
+           val () = PT.atomicPrefixAndSwitchTo (lockId, par)
+
+           (* restore atomic state *)
+           val () = setAtomicState (atomicState)
+         in
+           nextWithCounter (iter, to)
+         end)
     else
       (let
         val () = Assert.assertAtomic' ("Scheduler.nextWithCounter", NONE)
@@ -178,7 +205,8 @@ struct
                val _ = TID.mark tid
                val bottom = PT.getParasiteBottom ()
                val parasite = PT.copyParasite (bottom)
-               val thrd = P_THRD (parasite, fn x => r := x)
+               val lockId = PT.getLockId ()
+               val thrd = P_THRD (lockId, parasite, fn x => r := x)
                val rt = f (thrd)
                val () = Assert.assert' ("atomicSwitchAux : state corrupted. Unintended inflation??",
                                         fn () => case PT.getThreadType () of
@@ -214,7 +242,8 @@ struct
                val _ = TID.mark tid
                val bottom = PT.getParasiteBottom ()
                val parasite = PT.copyParasite (bottom)
-               val thrd = P_THRD (parasite, fn x => r := x)
+               val lockId = PT.getLockId ()
+               val thrd = P_THRD (lockId, parasite, fn x => r := x)
                val () = f (thrd)
                val () = Assert.assert' ("atomicSwitchToNext : state corrupted. Unintended inflation??",
                                         fn () => case PT.getThreadType () of
@@ -232,18 +261,47 @@ struct
            end)
 
   fun switchToNext (f : 'a thread -> unit) = (atomicBegin (); atomicSwitchToNext (f))
-  fun atomicSwitchForWB f =
-    MT.atomicSwitchForWB (fn (t: MT.Runnable.t) =>
+
+  fun atomicSwitchToNextHostForWB f =
+    MT.atomicSwitchForWB
+    (fn (t: MT.Runnable.t) =>
+      let
+        val _ = MT.threadStatus t
+        (* val _ = print "WHY?" *)
+        val tid = TID.getCurThreadId ()
+        val _ = TID.mark tid
+        val RHOST (tid', t') = (ignore (f (H_RTHRD (RHOST (tid, t)))); next ())
+        val _ = MT.threadStatus t'
+      in
+        (t', fn () => TID.setCurThreadId (tid'))
+      end)
+
+  fun atomicSwitchToNextParasiteForWB f =
     let
-      val _ = MT.threadStatus t
-      (* val _ = print "WHY?" *)
-      val tid = TID.getCurThreadId ()
-      val _ = TID.mark tid
-      val RHOST (tid', t') = f (RHOST (tid, t))
-      val _ = MT.threadStatus t'
+      val _ = debug' (fn () => "Scheduler.atomicSwitchToNext on "^(PT.getThreadTypeString ()))
+      fun dummyFrame () =
+      let
+        val tid = TID.getCurThreadId ()
+        val _ = TID.mark tid
+        val bottom = PT.getParasiteBottom ()
+        val parasite = PT.copyParasite (bottom)
+        val lockId = PT.getLockId ()
+        val thrd = P_RTHRD (lockId, parasite)
+        val () = f (thrd)
+        val () = Assert.assert' ("atomicSwitchToNext : state corrupted. Unintended inflation??",
+                                fn () => case PT.getThreadType () of
+                                              HOST => false
+                                            | _ => true)
+        val _ = PT.disableParasitePreemption ()
+        val _ = PT.jumpDown (bottom) (* Implicit atomic end *)
+      in
+        print "Should not see this\n"
+      end
+      val _ = Primitive.dontInline (dummyFrame)
+      val _ = (atomicBegin (); atomicEnd ())
     in
-      (t', fn () => TID.setCurThreadIdSpl (tid'))
-    end)
+      ()
+    end
 
   fun preemptOnWriteBarrier () =
   let
@@ -252,13 +310,18 @@ struct
     val () = TID.mark tid
     val atomicState = getAtomicState ()
     val () = setAtomicState (1)
-    val () = atomicSwitchForWB
-              (fn rt =>
-                let
-                  val _ = PacmlPrim.addToPreemptOnWBA (rt)
-                in
-                  next ()
-                end)
+    val () = case PT.getThreadType () of
+                  PARASITE =>
+                  let
+                    val pbottom = PT.getParasiteBottom ()
+                  in
+                    (if canPreemptParasite () then
+                      atomicSwitchToNextParasiteForWB (fn rt => PacmlPrim.addToPreemptOnWBA (rt, PARASITE))
+                    else
+                      atomicSwitchToNextHostForWB (fn rt => PacmlPrim.addToPreemptOnWBA (rt, HOST)))
+                  end
+                | HOST => atomicSwitchToNextHostForWB (fn rt => PacmlPrim.addToPreemptOnWBA (rt, HOST))
+
     val () = setAtomicState (atomicState)
     val tid' = TID.getCurThreadId ()
     val _ = Assert.assert' ("preemptOnWriteBarreier: TIDs dont match ("

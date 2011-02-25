@@ -1,13 +1,19 @@
 structure PacmlPrim =
 struct
-  type runnable_host = RepTypes.runnable_host
+
+  type rdy_thread = RepTypes.rdy_thread
+  datatype thread_type = datatype RepTypes.thread_type
 
   fun move (x, forceStackLifting, skipFixingForwaringPointers) =
     Primitive.MLton.move (x, forceStackLifting, skipFixingForwaringPointers)
   fun initRefUpdate f = Primitive.Ref.preemptFn := f
-  fun addToPreemptOnWBA (t : runnable_host) =
-    Primitive.Lwtgc.addToPreemptOnWBA (t)
-  fun addToSpawnOnWBA (t : runnable_host, proc) =
+
+  fun addToPreemptOnWBA (t : rdy_thread, threadType) =
+    case threadType of
+         HOST =>Primitive.Lwtgc.addToPreemptOnWBA (t, 0)
+       | PARASITE => Primitive.Lwtgc.addToPreemptOnWBA (t, 1)
+
+  fun addToSpawnOnWBA (t : rdy_thread, proc) =
     Primitive.Lwtgc.addToSpawnOnWBA (t, proc)
 
   structure SchedulerQueue =
@@ -15,9 +21,9 @@ struct
     structure PrimSQ = Primitive.MLton.SchedulerQueue
     open PrimSQ
 
-    fun enque (t: runnable_host, proc: int, prio: int) =
+    fun enque (t: rdy_thread, proc: int, prio: int) =
       PrimSQ.enque (t, proc, prio)
-    fun deque (prio: int) : runnable_host option =
+    fun deque (prio: int) : rdy_thread option =
       PrimSQ.deque (prio)
 
   end

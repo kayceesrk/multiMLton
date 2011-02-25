@@ -9,6 +9,8 @@ sig
   type runnable_host = RepTypes.runnable_host
   type parasite_state = RepTypes.parasite_state
 
+  type lock_id = int
+
   (* Thread management *)
   val new : (unit -> unit) -> unit MLtonThread.t
   (* Continuation management *)
@@ -26,6 +28,8 @@ sig
   val setParasiteBottom : int -> unit
   val getNumPenaltySpawns : unit -> int
   val setNumPenaltySpawns : int -> unit
+  val getLockId : unit -> int
+  val setLockId : lock_id -> unit
 
   val enableParasitePreemption : unit -> unit
   val disableParasitePreemption : unit -> unit
@@ -37,8 +41,8 @@ sig
   val toPreemptParasite : unit -> bool
   val proceedToExtractParasite : RepTypes.primHost * int -> bool
   val extractParasiteFromHost : RepTypes.primHost * int -> RepTypes.parasite
-  val atomicPrefixAndSwitchToSpecial : RepTypes.parasite -> unit
-  val atomicPrefixAndSwitchTo : RepTypes.parasite -> unit
+  val atomicPrefixAndSwitchToSpecial : lock_id * RepTypes.parasite -> unit
+  val atomicPrefixAndSwitchTo : lock_id * RepTypes.parasite -> unit
   val spawnParasite : (unit -> unit) -> unit
 
   val getRunnableHost : rdy_thread -> runnable_host

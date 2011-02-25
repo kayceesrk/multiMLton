@@ -45,7 +45,11 @@ structure RepTypes =
                  parasiteBottom : (int * int), (* First int is offset, second is tidNum *)
                  (* This parameter is used to penalize a thread for
                  *  compute intensive parasites*)
-                 numPenaltySpawns : int}
+                 numPenaltySpawns : int,
+                 (* This integer is used to obtain locks. This id is unique across
+                  * hosts and parasites*)
+                 lockId : int
+                 }
 
       (** thread IDs --- see thread-id.sml and threads.sml **)
       and thread_id =
@@ -70,18 +74,18 @@ structure RepTypes =
 
       (* Need to be prepared with a value to run -- -1 *)
       and 'a thread = H_THRD of (thread_id * 'a MLtonThread.t)
-                    | P_THRD of (parasite * ((unit -> 'a) -> unit))
+                    | P_THRD of (int (*lockId*) * parasite * ((unit -> 'a) -> unit))
 
       and runnable_host = RHOST of (thread_id * MLtonThread.Runnable.t)
 
      and cmlLock = LOCK of {state: int ref,
-                            tid: int ref,
+                            lockId: int ref,
                             count: int ref,
-                            que: runnable_host CirQueue.t}
+                            que: rdy_thread CirQueue.t}
 
       (* Ready to run -- 0 *)
       and rdy_thread = H_RTHRD of runnable_host
-                    |  P_RTHRD of parasite
+                    |  P_RTHRD of (int (* lockId *) * parasite)
 
       (** events --- see events.sml **)
       datatype 'a status =
