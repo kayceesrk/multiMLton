@@ -11,7 +11,7 @@ struct
   val sz = 32768
   val workChunk = 16
   val maxCount = 2048
-  (* fun print s = () *)
+  fun print s = ()
 
   val delta = side / (real sz)
   fun work init =

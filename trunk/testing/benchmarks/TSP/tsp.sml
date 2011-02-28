@@ -10,7 +10,7 @@
 
 structure Tree =
   struct
-    open CML
+    open MLton.Pacml
     datatype tree
       = NULL
       | ND of {
@@ -58,7 +58,7 @@ structure Tree =
 structure TSP = struct
 
     structure T = Tree
-    open CML
+    open MLton.Pacml
 
     fun setPrev (T.ND{prev, ...}, x) = prev := x
     fun setNext (T.ND{next, ...}, x) = next := x
@@ -217,14 +217,15 @@ structure TSP = struct
             t
           end (* merge *)
 
-    fun combine(ch1, ch2, t) =
-      select [wrap(recvEvt ch1, fn(res1)=> (res1, sync (recvEvt ch2), t)),
-              wrap(recvEvt ch2, fn(res2)=> (sync (recvEvt ch1), res2, t))]
+    fun combine(ch1, ch2, t) = (recv ch1, recv ch2, t)
+      (* select [wrap(recvEvt ch1, fn(res1)=> (res1, sSync (recvEvt ch2), t)),
+              wrap(recvEvt ch2, fn(res2)=> (sSync (recvEvt ch1), res2, t))] *)
 
     (* Compute TSP for the tree t -- use conquer for problems <= sz * *)
     fun tsp (t, sz) =
     let
       val ch = channel()
+      (* val _ = print (concat [Int.toString sz, "\n"]) *)
       fun work () =
         (let
           val returnTree =
@@ -310,7 +311,7 @@ signature RAND =
 
 structure Rand : RAND =
   struct
-    open CML
+    open MLton.Pacml
     type rand = Word.word
     type rand' = Int.int  (* internal representation *)
 
@@ -382,7 +383,7 @@ structure BuildTree : sig
   end = struct
 
     structure T = Tree
-    open CML
+    open MLton.Pacml
     val m_e     = 2.7182818284590452354
     val m_e2    = 7.3890560989306502274
     val m_e3    = 20.08553692318766774179
@@ -451,13 +452,13 @@ structure Main : sig
     val dumpPS : TextIO.outstream -> unit
 
   end = struct
-    open CML
+    open MLton.Pacml
     val name = "TSP"
 
     val print = TextIO.print
     val output = TextIO.output
 
-    val problemSz = ref 209715
+    val problemSz = ref 1000000
     val divideSz = ref 150
 
     fun printLength (outS, Tree.NULL) = print "(* 0 points *)\n"
@@ -514,15 +515,13 @@ structure Main : sig
     fun doit () = (doit' (!problemSz); ())
     (*let  val _ = (testit(TextIO.stdOut)) in () end*)
 
-    val doit =
-       fn n =>
-       let
-          fun loop n =
-             if n = 0
-                then ()
-             else (RunCML.doit(doit,NONE);
-                   loop(n-1))
-       in loop n
-       end
-    (* n = 4 *)
+    val doit = fn _ => ignore (MLton.Pacml.run(doit))
   end
+
+val ts = Time.now ()
+val _ = Main.doit 0
+val te = Time.now ()
+val d = Time.-(te, ts)
+val _ = TextIO.print (concat ["Time start: ", Time.toString ts, "\n"])
+val _ = TextIO.print (concat ["Time end:   ", Time.toString te, "\n"])
+val _ = TextIO.print (concat ["Time diff:  ", LargeInt.toString (Time.toMilliseconds d), "ms\n"])
