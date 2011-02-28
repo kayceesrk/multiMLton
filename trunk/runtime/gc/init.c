@@ -431,6 +431,9 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->controls->ratios.stackShrink = 0.5;
   s->controls->summary = SUMMARY_NONE;
   s->controls->selectiveDebug = FALSE;
+
+  s->forwardState.liftingObject = BOGUS_OBJPTR;
+
   s->cumulativeStatistics = (struct GC_cumulativeStatistics*)initCumulativeStatistics ();
   s->lastMajorStatistics = (struct GC_lastMajorStatistics*)initLastMajorStatistics ();
   s->lastSharedMajorStatistics = (struct GC_lastSharedMajorStatistics*)initLastSharedMajorStatistics ();
@@ -603,6 +606,8 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->weaks = s->weaks;
   d->copiedSize = s->copiedSize;
   d->saveWorldStatus = s->saveWorldStatus;
+
+  d->forwardState.liftingObject = BOGUS_OBJPTR;
 
   d->schedulerLocks = NULL;
   d->schedulerQueue = NULL;
