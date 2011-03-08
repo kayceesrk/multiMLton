@@ -12,7 +12,7 @@ structure Main =
   struct
     open MLton.Pacml
     val print = TextIO.print
-    val numSlaves = 4
+    val numSlaves = 16
 
     fun map f [] = []
       | map f (a::x) = f a :: map f x
@@ -250,7 +250,7 @@ structure Main =
 
     fun testit strm = (show (fn c => TextIO.output (strm, c)) (nthgen genB 50))
 
-    fun foo () = (show (fn _ => ()) (nthgen_cml gun 25000))
+    fun foo () = (show print (nthgen_cml genB 50))
                 (* Original implementation *)
                 (*(show (fn _ => ()) (nthgen_cml gun 25000))*)
 

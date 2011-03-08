@@ -458,7 +458,7 @@ structure Main : sig
     val print = TextIO.print
     val output = TextIO.output
 
-    val problemSz = ref 1000000
+    val problemSz = ref 10000000
     val divideSz = ref 150
 
     fun printLength (outS, Tree.NULL) = print "(* 0 points *)\n"

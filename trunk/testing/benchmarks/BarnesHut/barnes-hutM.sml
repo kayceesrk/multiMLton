@@ -1173,9 +1173,10 @@ val count = ref 0
         } = let
           val step = stepSystem output
           fun loop (nstep, tnow) = if (*(tnow < tstop + (0.1 * dtime))*)!count < 25
-                then (count := !count + 1; loop (step {
-                    plist = bodies, dtime = dtime, eps = eps, nstep = nstep,
-                    rmin = rmin, rsize = rsize, tnow = tnow, tol = tol
+                then (count := !count + 1;
+                      print (concat ["Count=", Int.toString (!count), "\n"]);
+                      loop (step { plist = bodies, dtime = dtime, eps = eps, nstep = nstep,
+                                   rmin = rmin, rsize = rsize, tnow = tnow, tol = tol
                   }))
                 else ()
         in
@@ -1332,3 +1333,11 @@ structure Main : BMARK =
 
 end;
 
+val ts = Time.now ()
+val _ = TextIO.print (concat ["\nStarting main"])
+val _ = Main.doit 0
+val te = Time.now ()
+val d = Time.-(te, ts)
+val _ = TextIO.print (concat ["Time start: ", Time.toString ts, "\n"])
+val _ = TextIO.print (concat ["Time end:   ", Time.toString te, "\n"])
+val _ = TextIO.print (concat ["Time diff:  ", LargeInt.toString (Time.toMilliseconds d), "ms\n"])

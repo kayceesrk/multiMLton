@@ -22,6 +22,6 @@ fun stabilize () =
 
 fun pr msg = print ("test: " ^ msg ^ "\n")
 
-fun run(f) = MLton.RunPCML.doit(f, NONE)
+fun run(f) = MLton.Pacml.run (f)
 
 fun error msg = (pr msg; OS.Process.exit OS.Process.success)

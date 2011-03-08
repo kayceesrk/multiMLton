@@ -61,8 +61,8 @@ struct
                        val m' = Int.toString m
                        fun loop' j =
                           if j > m then ()
-                          else ((*print (m' ^ "\n")
-                                ;*) loop' (j + 1))
+                          else (print (m' ^ "\n")
+                                ; loop' (j + 1))
                     in
                        loop' m
                        ; loop (i + 1)
