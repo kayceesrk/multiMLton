@@ -10,6 +10,8 @@ MORE :=
 SRCS := $(wildcard *.sml)
 SRC_RULS := $(subst .sml,-amd64,$(SRCS))
 
+MULTIMLTON := ../../build/bin/mlton
+
 %-amd64 : $(SRCS)
 	$(MULTIMLTON) $(MORE) -debug $(DEBUG) -profile $(PROFILE) -profile-stack $(STACK) -profile-branch $(BRANCH) -output $@ "$(subst -amd64,,$@).sml"
 

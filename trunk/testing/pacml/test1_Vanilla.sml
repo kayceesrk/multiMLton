@@ -1,10 +1,6 @@
 structure Main =
 struct
-  structure T = MLton.Pacml
-
-  val channel = T.channel
-  val send = T.send
-  val recv = T.recv
+  open MLton.Pacml
 
   fun ping ch n =
     if n=0 then ()
@@ -22,11 +18,11 @@ struct
   let
     val ch = channel ()
   in
-    T.run
+    run
     (fn () =>
     let
-      val _ = T.spawnHost (fn () => pong ch n)
-      val _ = T.spawnHost (fn () => ping ch n)
+      val _ = spawnHost (fn () => pong ch n)
+      val _ = spawnHost (fn () => ping ch n)
     in
       ()
     end)

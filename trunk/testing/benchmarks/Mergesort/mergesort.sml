@@ -69,7 +69,7 @@ struct
                                         loop'(n-1)))
     fun loop () = case (recv sor) of
                         NONE => shutdown OS.Process.success
-                      | SOME x => (print((Int.toString(x))^" ");loop())
+                      | SOME x => ( (*print((Int.toString(x))^" "); *)loop())
   in
     loop'(n); print "Getting results\n"; loop()
   end
