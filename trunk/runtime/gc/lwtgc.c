@@ -408,6 +408,10 @@ void GC_addToMoveOnWBA (GC_state s, pointer p) {
 }
 
 void GC_addToSpawnOnWBA (GC_state s, pointer p, int proc) {
+  if (proc == (int)s->procId) {
+    GC_sqEnque (s, p, proc, 0);
+    return;
+  }
   ++(s->spawnOnWBASize);
   if (s->spawnOnWBASize > s->spawnOnWBAMaxSize) {
     s->spawnOnWBAMaxSize *= 2;

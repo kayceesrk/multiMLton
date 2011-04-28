@@ -8,7 +8,7 @@ struct
   structure PrimSQ = PacmlPrim.SchedulerQueue
 
   structure Assert = LocalAssert(val assert = false)
-  structure Debug = LocalDebug(val debug = true)
+  structure Debug = LocalDebug(val debug = false)
 
   datatype runnable_host = datatype RepTypes.runnable_host
   type queue_prio = RepTypes.queue_prio
@@ -26,6 +26,7 @@ struct
   fun enque (rthrd as RHOST (tid, t), prio) =
   let
     val _ = atomicBegin ()
+    val _ = ThreadID.tidToString tid (* DO NOT REMOVE *)
     val _ = (MLtonThread.threadStatus t) (* DO NOT REMOVE *)
     val targetProc = ThreadID.getProcId (tid)
     (* val _ = PrimSQ.acquireLock targetProc *)
@@ -53,8 +54,9 @@ struct
                                  | NONE => PrimSQ.deque (sec)
     val _ = case rthrd of
                  NONE => "NONE"
-               | SOME (RHOST (_, t)) =>
-                   MLtonThread.threadStatus t (* DO NOT REMOVE *)
+               | SOME (RHOST (tid, t)) =>
+                   (ThreadID.tidToString tid;
+                   MLtonThread.threadStatus t) (* DO NOT REMOVE *)
     (* val _ = PrimSQ.releaseLock proc *)
     val _ = atomicEnd ()
   in

@@ -2,7 +2,7 @@ structure Thread : THREAD_EXTRA =
 struct
 
   structure Assert = LocalAssert(val assert = false)
-  structure Debug = LocalDebug(val debug = true)
+  structure Debug = LocalDebug(val debug = false)
 
   open Critical
   open ThreadID
@@ -215,7 +215,8 @@ struct
     val thrd = H_THRD (tid, PT.new thrdFun)
     val rhost = PT.getRunnableHost (PT.prep (thrd))
     val _ = case rhost of
-                 RHOST (_, t) => MLtonThread.threadStatus (t)
+                 RHOST (tid, t) => (TID.tidToString tid;
+                                    MLtonThread.threadStatus t)
     val proc = TID.getProcId (tid)
     val _ = Config.incrementNumLiveThreads ()
     val _ = PacmlPrim.addToSpawnOnWBA (rhost, proc)

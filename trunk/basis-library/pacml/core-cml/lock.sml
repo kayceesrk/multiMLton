@@ -5,7 +5,7 @@ struct
   structure TID = ThreadID
 
   structure Assert = LocalAssert(val assert = false)
-  structure Debug = LocalDebug(val debug = true)
+  structure Debug = LocalDebug(val debug = false)
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
   fun debug' msg = debug (fn () => (msg())^" : "^Int.toString(PacmlFFI.processorNumber()))

@@ -83,6 +83,7 @@ static inline SchedulerQueue* newSchedulerQueue (void) {
 }
 
 static inline CircularBuffer* getSubQ (SchedulerQueue* sq, int i) {
+  assert (i == 0 || i == 1);
   if (i==0)
     return sq->primary;
   return sq->secondary;
@@ -129,7 +130,26 @@ void GC_sqEnque (GC_state s, pointer p, int proc, int i) {
   GC_sqReleaseLock (s, proc);
 }
 
+
+/* i == 0 -- deque from primary
+   i == 1 -- deque from secondary
+   i == -1 -- deque from (primary or secondary)
+*/
+
 pointer GC_sqDeque (GC_state s, int i) {
+  if (i == -1) {
+    if (!GC_sqIsEmptyPrio (0)) {
+      return GC_sqDeque (s, 0);
+    }
+    else if (!GC_sqIsEmptyPrio (1)) {
+      return GC_sqDeque (s, 1);
+    }
+    else {
+      assert (0 and "GC_sqDeque: All queues empty");
+      die ("GC_sqDeque: All queues empty");
+    }
+  }
+
   GC_sqAcquireLock (s, s->procId);
 
   CircularBuffer* cq = getSubQ (s->schedulerQueue, i);
