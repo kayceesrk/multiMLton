@@ -8,11 +8,14 @@ struct
   structure PrimSQ = PacmlPrim.SchedulerQueue
 
   structure Assert = LocalAssert(val assert = false)
-  structure Debug = LocalDebug(val debug = false)
+  structure Debug = LocalDebug(val debug = true)
 
   datatype runnable_host = datatype RepTypes.runnable_host
+  datatype rdy_thread = datatype RepTypes.rdy_thread
+
   type queue_prio = RepTypes.queue_prio
   type thread_id = RepTypes.thread_id
+  type parasite = RepTypes.parasite
 
   fun debug msg = Debug.sayDebug ([], (msg))
   fun debug' msg = debug (fn () => msg^"."^(ProtoThread.getThreadTypeString())
@@ -23,47 +26,68 @@ struct
 
   val _ = PrimSQ.createQueues ()
 
-  fun enque (rthrd as RHOST (tid, t), prio) =
+  fun enqueHost (rthrd as RHOST (tid, t), prio) =
   let
-    val _ = atomicBegin ()
-    val _ = ThreadID.tidToString tid (* DO NOT REMOVE *)
+    val _ = Assert.assertAtomic (fn () => "enqueHost", NONE)
     val _ = (MLtonThread.threadStatus t) (* DO NOT REMOVE *)
     val targetProc = ThreadID.getProcId (tid)
-    (* val _ = PrimSQ.acquireLock targetProc *)
     val q = case prio of
                  R.PRI => pri
                | _ => sec
-    val _ = PrimSQ.enque (rthrd, targetProc, q)
-    (* val _ = PrimSQ.releaseLock targetProc *)
+    val _ = PrimSQ.enque (H_RTHRD (rthrd), targetProc, q)
     val _ = PacmlFFI.wakeUp (targetProc, 1)
-    val _ = atomicEnd ()
   in
     ()
   end
 
-  fun deque (prio) =
+  fun enqueParasite (lockId, par) =
   let
+    val _ = Assert.assertAtomic (fn () => "enqueParasite", NONE)
+    val _ = PrimSQ.enque (P_RTHRD (lockId, par),
+                          PacmlFFI.processorNumber (),
+                          2)
+  in
+    ()
+  end
+
+
+  fun dequeHost (prio) =
+  let
+    val _ = Assert.assertAtomic (fn () => "dequeHost", NONE)
     val proc = PacmlFFI.processorNumber ()
-    val _ = atomicBegin ()
-    (* val _ = PrimSQ.acquireLock proc *)
     val rthrd = case prio of
                      R.PRI => PrimSQ.deque (pri)
                    | R.SEC => PrimSQ.deque (sec)
                    | R.ANY => case PrimSQ.deque (pri) of
                                    SOME t => SOME t
                                  | NONE => PrimSQ.deque (sec)
-    val _ = case rthrd of
-                 NONE => "NONE"
-               | SOME (RHOST (tid, t)) =>
-                   (ThreadID.tidToString tid;
-                   MLtonThread.threadStatus t) (* DO NOT REMOVE *)
-    (* val _ = PrimSQ.releaseLock proc *)
-    val _ = atomicEnd ()
+    val rhost = case rthrd of
+                 NONE => NONE
+               | SOME (H_RTHRD (RHOST (tid, t))) =>
+                   (ignore (MLtonThread.threadStatus t) (* DO NOT REMOVE *)
+                   ; SOME (RHOST (tid, t)))
+               | _ => (print "dequeHost: Impossible\n";
+                       raise Fail "dequeHost: Impossible")
   in
-    rthrd
+    rhost
   end
 
-  val empty = PrimSQ.isEmpty
+  fun dequeParasite () =
+  let
+    val _ = Assert.assertAtomic (fn () => "dequeHost", NONE)
+    val (lockId, par) = case PrimSQ.deque (2) of
+                             NONE => (print "dequeParasite is NONE";
+                                      raise Fail "dequeParasite is NONE")
+                           | SOME (P_RTHRD (lockId, par)) => (lockId, par)
+                           | SOME (H_RTHRD (_)) => (print "dequeParasite: Impossible";
+                                                   raise Fail "dequeParasite")
+  in
+    (lockId, par)
+  end
+
+
+  val emptyHostQ = PrimSQ.isEmpty
+  fun emptyParasiteQ () = PrimSQ.isEmptyPrio (2)
   val clean =  PrimSQ.clean
 
   fun dequeAny () = raise Fail "ml-scheduler-queue: dequeAny not implemented"

@@ -392,10 +392,6 @@ int GC_init (GC_state s, int argc, char **argv) {
 
   assert (s->alignment >= GC_MODEL_MINALIGN);
   assert (isAligned (sizeof (struct GC_stack), s->alignment));
-  // While the following asserts are manifestly true,
-  // they check the asserts in sizeofThread and sizeofWeak.
-  assert (sizeofThread (s) == sizeofThread (s));
-  assert (sizeofWeak (s) == sizeofWeak (s));
 
   s->amInGC = TRUE;
   s->amOriginal = TRUE;
@@ -431,8 +427,12 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->controls->ratios.stackShrink = 0.5;
   s->controls->summary = SUMMARY_NONE;
   s->controls->selectiveDebug = FALSE;
-
   s->forwardState.liftingObject = BOGUS_OBJPTR;
+
+  // While the following asserts are manifestly true,
+  // they check the asserts in sizeofThread and sizeofWeak.
+  assert (sizeofThread (s) == sizeofThread (s));
+  assert (sizeofWeak (s) == sizeofWeak (s));
 
   s->cumulativeStatistics = (struct GC_cumulativeStatistics*)initCumulativeStatistics ();
   s->lastMajorStatistics = (struct GC_lastMajorStatistics*)initLastMajorStatistics ();
@@ -487,7 +487,7 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->moveOnWBASize = 0;
   s->moveOnWBAMaxSize = BUFFER_SIZE;
 
-  s->preemptOnWBA = (objptr*) malloc (sizeof (objptr) * BUFFER_SIZE);
+  s->preemptOnWBA = (PreemptThread*) malloc (sizeof (PreemptThread) * BUFFER_SIZE);
   s->preemptOnWBASize = 0;
   s->preemptOnWBAMaxSize = BUFFER_SIZE;
 
@@ -617,7 +617,7 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->danglingStackList = (objptr*) malloc (sizeof (objptr) * BUFFER_SIZE);
   d->danglingStackListSize = 0;
   d->danglingStackListMaxSize = BUFFER_SIZE;
-  d->preemptOnWBA = (objptr*) malloc (sizeof (objptr) * BUFFER_SIZE);
+  d->preemptOnWBA = (PreemptThread*) malloc (sizeof (PreemptThread) * BUFFER_SIZE);
   d->preemptOnWBASize = 0;
   d->preemptOnWBAMaxSize = BUFFER_SIZE;
   d->spawnOnWBA = (SpawnThread*) malloc (sizeof (SpawnThread) * BUFFER_SIZE);

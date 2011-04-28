@@ -25,10 +25,11 @@ sig
   include THREAD_ID where type thread_id = thread_id'
 
   val setCurThreadId : thread_id -> unit
-  val setCurThreadIdSpl : thread_id -> unit
 
   val new : unit -> thread_id
   val newOnProc : int -> thread_id
+  val newWithTid : int -> thread_id
+
   val bogus : string -> int -> thread_id
 
   val mark     : thread_id -> unit
@@ -36,5 +37,8 @@ sig
   val isMarked : thread_id -> bool
 
   val reset : unit -> unit
+  val nextLockId : unit -> int
+
+  val getLockId : unit -> int
 
 end

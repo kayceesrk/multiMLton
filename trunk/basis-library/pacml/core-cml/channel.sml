@@ -71,7 +71,7 @@ struct
       val () = Assert.assertNonAtomic' "channel.send(1)"
       val () = debug' "channel.send(1)"
       val () = atomicBegin ()
-      val () = L.getCmlLock lock TID.tidNum
+      val () = L.getCmlLock lock PT.getLockId
       val () = Assert.assertAtomic' ("channel.send(2)", SOME 1)
       val () = debug' "channel.send(2)"
       fun tryLp () =
@@ -87,7 +87,7 @@ struct
                       if res = 0 then
                         (let (* WAITING -- we got it *)
                           val _ = prio := 1
-                          val () = L.releaseCmlLock lock TID.tidNum
+                          val () = L.releaseCmlLock lock PT.getLockId
                           val rthrd = PT.prepVal (rt, msg)
                           (* rthrd should not be used after atomicReady *)
                         in
@@ -101,7 +101,7 @@ struct
                 end) (* SOME ends *)
             | NONE =>
                 S.atomicSwitchToNext (fn st => (cleanAndEnque (outQ, (mkTxId (), (msg, st)))
-                                               ; L.releaseCmlLock lock TID.tidNum
+                                               ; L.releaseCmlLock lock PT.getLockId
                                                ; debug' ("Channel.send.NONE")))
                 (* tryLp ends *)
       val () = tryLp ()
@@ -126,7 +126,7 @@ struct
           val () = Assert.assertAtomic' ("Channel.sendEvt.doitFn", NONE)
           val () = debug' "Channel.sendEvt(3.1.1)" (* Atomic 1 *)
           val () = Assert.assertAtomic' ("Channel.sendEvt(3.1.1)", SOME 1)
-          val () = L.getCmlLock lock TID.tidNum
+          val () = L.getCmlLock lock PT.getLockId
           fun tryLp () =
             case cleanAndDeque (inQ) of
                   SOME (rtxid, rt) =>
@@ -140,7 +140,7 @@ struct
                           if res = 0 then
                             (let (* WAITING -- we got it *)
                               val _ = prio := 1
-                              val () = L.releaseCmlLock lock TID.tidNum
+                              val () = L.releaseCmlLock lock PT.getLockId
                               val rthrd = PT.prepVal (rt, msg)
                               (* rthrd should not be used after atomicReady *)
                             in
@@ -152,7 +152,7 @@ struct
                     in
                       matchLp ()
                     end) (* SOME ends *)
-                | NONE => (L.releaseCmlLock lock TID.tidNum;
+                | NONE => (L.releaseCmlLock lock PT.getLockId;
                            raise RepTypes.DOIT_FAIL)
           (* tryLp ends *)
           val () = tryLp ()
@@ -164,7 +164,7 @@ struct
           val () = Assert.assertAtomic' ("Channel.sendEvt.blockFn", NONE)
           val () = debug' "Channel.sendEvt(3.2.1)" (* Atomic 1 *)
           val () = Assert.assertAtomic' ("Channel.sendEvt(3.2.1)", SOME 1)
-          val () = L.getCmlLock lock TID.tidNum
+          val () = L.getCmlLock lock PT.getLockId
           fun tryLp () =
             case cleanAndDeque (inQ) of
                   SOME (v as (rtxid, rt)) =>
@@ -184,7 +184,7 @@ struct
                                 (let (* WAITING -- we got it *)
                                   val _ = prio := 1
                                   val _ = mytxid := 2
-                                  val () = L.releaseCmlLock lock TID.tidNum
+                                  val () = L.releaseCmlLock lock PT.getLockId
                                   val rthrd = PT.prepVal (rt, msg)
                                   val () = T.reifyCurrentIfParasite () (* XXX KC temp fix for exceptions *)
                                 in
@@ -196,7 +196,7 @@ struct
                             end
                           else if res = 1 then matchLp () (* CLAIMED *) (* In timeEvt *)
                           else (Q.undeque (inQ, v);
-                                L.releaseCmlLock lock TID.tidNum ;
+                                L.releaseCmlLock lock PT.getLockId ;
                                 S.atomicSwitchToNext (fn _ => ()))
                         end (* matchLp ends *)
                     in
@@ -205,7 +205,7 @@ struct
                 | NONE =>
                     let
                       val msg = S.atomicSwitchToNext (fn st => (cleanAndEnque (outQ, (mytxid, (msg, st)))
-                                                  ; L.releaseCmlLock lock TID.tidNum
+                                                  ; L.releaseCmlLock lock PT.getLockId
                                                   ; debug' ("Channel.sendEvt.NONE")))
                       (* XXX KC temp fix for exceptions *)
                       val () = atomicBegin ()
@@ -223,9 +223,9 @@ struct
         val () = Assert.assertAtomic' ("Channel.sendEvt.pollFn", NONE)
         val () = debug' "Channel.sendEvt(2)" (* Atomic 1 *)
         val () = Assert.assertAtomic' ("Channel.sendEvt(2)", SOME 1)
-        val () = L.getCmlLock lock TID.tidNum
+        val () = L.getCmlLock lock PT.getLockId
         val v = cleanAndChk (prio, inQ)
-        val () = L.releaseCmlLock lock TID.tidNum
+        val () = L.releaseCmlLock lock PT.getLockId
         val () = debug' "Channel.sendEvt(3)" (* Atomic 1 *)
       in
         case v of
@@ -245,7 +245,7 @@ struct
       val () = Assert.assertNonAtomic' "channel.sendPoll(1)"
       val () = debug' "channel.sendPoll(1)"
       val () = atomicBegin ()
-      val () = L.getCmlLock lock TID.tidNum
+      val () = L.getCmlLock lock PT.getLockId
       val () = Assert.assertAtomic' ("channel.sendPoll(2)", SOME 1)
       val () = debug' "channel.sendPoll(2)"
       fun tryLp () =
@@ -259,7 +259,7 @@ struct
                       if res = 0 then
                         (let (* WAITING -- we got it *)
                           val _ = prio := 1
-                          val () = L.releaseCmlLock lock TID.tidNum
+                          val () = L.releaseCmlLock lock PT.getLockId
                           val rthrd = PT.prepVal (rt, msg)
                           val _ = S.atomicReady (rthrd) (* Implicit atomic end *)
                         in
@@ -285,7 +285,7 @@ struct
           val () = Assert.assertAtomic' ("Channel.recvEvt.doitFn", NONE)
           val () = debug' "Channel.recvEvt(3.1.1)" (* Atomic 1 *)
           val () = Assert.assertAtomic' ("Channel.recvEvt(3.1.1)", SOME 1)
-          val () = L.getCmlLock lock TID.tidNum
+          val () = L.getCmlLock lock PT.getLockId
           fun tryLp () =
             case cleanAndDeque (outQ) of
                   SOME (stxid, (msg, st)) =>
@@ -299,7 +299,7 @@ struct
                           if res = 0 then
                             (let (* WAITING -- we got it *)
                               val _ = prio := 1
-                              val () = L.releaseCmlLock lock TID.tidNum
+                              val () = L.releaseCmlLock lock PT.getLockId
                               val rthrd = PT.prep (st)
                               val _ = S.atomicReady (rthrd) (* Implicit atomic end *)
                             in
@@ -311,7 +311,7 @@ struct
                     in
                       matchLp ()
                     end) (* SOME ends *)
-                | NONE => (L.releaseCmlLock lock TID.tidNum;
+                | NONE => (L.releaseCmlLock lock PT.getLockId;
                            raise RepTypes.DOIT_FAIL)
           (* tryLp ends *)
         in
@@ -322,7 +322,7 @@ struct
           val () = Assert.assertAtomic' ("Channel.recvEvt.blockFn", NONE)
           val () = debug' "Channel.recvEvt(3.2.1)" (* Atomic 1 *)
           val () = Assert.assertAtomic' ("Channel.recvEvt(3.2.1)", SOME 1)
-          val () = L.getCmlLock lock TID.tidNum
+          val () = L.getCmlLock lock PT.getLockId
           fun tryLp () =
             case cleanAndDeque (outQ) of
                   SOME (v as (stxid, (msg, st))) =>
@@ -342,7 +342,7 @@ struct
                                 (let (* WAITING -- we got it *)
                                   val _ = prio := 1
                                   val _ = mytxid := 2
-                                  val () = L.releaseCmlLock lock TID.tidNum
+                                  val () = L.releaseCmlLock lock PT.getLockId
                                   val rthrd = PT.prep (st)
                                   val () = T.reifyCurrentIfParasite () (* XXX KC temp fix for exceptions *)
                                   val _ = S.ready (rthrd) (* Implicit atomic end *)
@@ -355,7 +355,7 @@ struct
                             end
                           else if res = 1 then matchLp () (* CLAIMED *)
                           else (Q.undeque (outQ, v);
-                                L.releaseCmlLock lock TID.tidNum;
+                                L.releaseCmlLock lock PT.getLockId;
                                 S.atomicSwitchToNext (fn _ => ()))
                         end (* matchLp ends *)
                     in
@@ -364,7 +364,7 @@ struct
                 | NONE =>
                     let
                       val msg = S.atomicSwitchToNext (fn rt => (cleanAndEnque (inQ, (mytxid, rt))
-                                                  ; L.releaseCmlLock lock TID.tidNum
+                                                  ; L.releaseCmlLock lock PT.getLockId
                                                   ; debug' ("Channel.recvEvt.NONE")))
                       (* XXX KC temp fix for exceptions *)
                       val () = atomicBegin ()
@@ -382,9 +382,9 @@ struct
         val () = Assert.assertAtomic' ("Channel.recvEvt.pollFn", NONE)
         val () = debug' "Channel.recvEvt(2)" (* Atomic 1 *)
         val () = Assert.assertAtomic' ("Channel.recvEvt(2)", SOME 1)
-        val () = L.getCmlLock lock TID.tidNum
+        val () = L.getCmlLock lock PT.getLockId
         val v = cleanAndChk (prio, outQ)
-        val () = L.releaseCmlLock lock TID.tidNum
+        val () = L.releaseCmlLock lock PT.getLockId
         val () = debug' "Channel.recvEvt(3)" (* Atomic 1 *)
       in
         case v of
@@ -403,7 +403,7 @@ struct
       val () = Assert.assertNonAtomic' "channel.recv(1)"
       val () = debug' "channel.recv(1)"
       val () = atomicBegin ()
-      val () = L.getCmlLock lock TID.tidNum
+      val () = L.getCmlLock lock PT.getLockId
       val () = Assert.assertAtomic' ("channel.recv(2)", SOME 1)
       val () = debug' "channel.recv(2)"
       fun tryLp () =
@@ -419,7 +419,7 @@ struct
                     if res = 0 then
                       (let (* WAITING -- we got it *)
                         val _ = prio := 1
-                        val _ = L.releaseCmlLock lock TID.tidNum
+                        val _ = L.releaseCmlLock lock PT.getLockId
                         val rthrd = PT.prep (st)
                         (* rthrd should not be used after atomic ready *)
                         val _ = S.atomicReady (rthrd)
@@ -434,7 +434,7 @@ struct
               end)
           | NONE =>
               S.atomicSwitchToNext (fn rt => (cleanAndEnque (inQ, (mkTxId (), rt))
-                                              ; L.releaseCmlLock lock TID.tidNum
+                                              ; L.releaseCmlLock lock PT.getLockId
                                               ; debug' ("Channel.recv.NONE")))
           (* tryLp ends *)
     in
@@ -447,7 +447,7 @@ struct
       val () = Assert.assertNonAtomic' "channel.recvPoll(1)"
       val () = debug' "channel.recvPoll(1)"
       val () = atomicBegin ()
-      val () = L.getCmlLock lock TID.tidNum
+      val () = L.getCmlLock lock PT.getLockId
       val () = Assert.assertAtomic' ("channel.recvPoll(2)", SOME 1)
       val () = debug' "channel.recvPoll(2)"
       fun tryLp () =
@@ -461,7 +461,7 @@ struct
                     if res = 0 then
                       (let (* WAITING -- we got it *)
                         val _ = prio := 1
-                        val _ = L.releaseCmlLock lock TID.tidNum
+                        val _ = L.releaseCmlLock lock PT.getLockId
                         val rthrd = PT.prep (st)
                         (* rthrd should not be used after atomicReady *)
                         val _ = S.atomicReady (rthrd)

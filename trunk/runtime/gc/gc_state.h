@@ -29,7 +29,7 @@ struct GC_state {
   int32_t moveOnWBASize;
   int32_t moveOnWBAMaxSize;
 
-  objptr* preemptOnWBA;
+  PreemptThread* preemptOnWBA;
   int32_t preemptOnWBASize;
   int32_t preemptOnWBAMaxSize;
 

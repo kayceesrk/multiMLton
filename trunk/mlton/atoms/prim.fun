@@ -1446,7 +1446,7 @@ fun 'a checkApp (prim: 'a t,
        | Lwtgc_needPreemption => oneTarg (fn t => (twoArgs (reff t, t), bool))
        | Lwtgc_addToSpawnOnWBA => oneTarg (fn t => (twoArgs (t, cint), unit))
        | Lwtgc_addToMoveOnWBA => oneTarg (fn t => (oneArg t, unit))
-       | Lwtgc_addToPreemptOnWBA => oneTarg (fn t => (oneArg t, unit))
+       | Lwtgc_addToPreemptOnWBA => oneTarg (fn t => (twoArgs (t, cint), unit))
        | Lwtgc_isObjptr => oneTarg (fn t => (oneArg t, bool))
        | Lwtgc_isObjptrInLocalHeap => oneTarg (fn t => (oneArg t, bool))
        | Lwtgc_isObjptrInSharedHeap => oneTarg (fn t => (oneArg t, bool))

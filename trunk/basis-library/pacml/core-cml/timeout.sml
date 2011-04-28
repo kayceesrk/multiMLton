@@ -53,7 +53,8 @@ struct
       fun inflateAndReady (t) =
       let
         val rt = case t of
-                      RepTypes.P_RTHRD (parasite) => RepTypes.H_RTHRD (Thread.reifyHostFromParasite (parasite))
+                      RepTypes.P_RTHRD (lockId, parasite) =>
+                        RepTypes.H_RTHRD (Thread.reifyHostFromParasite (lockId, parasite))
                     | _ => t
         val rhost = case rt of
                          RepTypes.H_RTHRD (rhost) => rhost

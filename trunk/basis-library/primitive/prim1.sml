@@ -69,7 +69,7 @@ structure Option =
 
 structure Lwtgc =
 struct
-  val addToPreemptOnWBA = _prim "Lwtgc_addToPreemptOnWBA": 'a -> unit;
+  val addToPreemptOnWBA = _prim "Lwtgc_addToPreemptOnWBA": 'a * Int32.int -> unit;
   val addToMoveOnWBA = _prim "Lwtgc_addToMoveOnWBA": 'a -> unit;
   val addToSpawnOnWBA = _prim "Lwtgc_addToSpawnOnWBA": 'a * Int32.int -> unit;
   val isObjptrInLocalHeap = _prim "Lwtgc_isObjptrInLocalHeap": 'a -> bool;

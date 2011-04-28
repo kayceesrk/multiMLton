@@ -25,37 +25,49 @@ struct
   val defaultExnHandler = ref exnHandler
 
   fun new' (n, procNum) =
-      TID {id = n,
-          alert = ref false,
-          done_comm = ref false,
-          exnHandler = ref (!defaultExnHandler),
-          props = ref [],
-          dead = CVar.new (),
-          preemptParasite = ref true,
-          pstate = ref (PSTATE {parasiteBottom = (0, n), threadType = HOST, numPenaltySpawns = 0}),
-          processorId = procNum}
+    TID {id = n,
+         alert = ref false,
+         done_comm = ref false,
+         exnHandler = ref (!defaultExnHandler),
+         props = ref [],
+         dead = CVar.new (),
+         preemptParasite = ref true,
+         pstate = ref (PSTATE {parasiteBottom = (0, n),
+                               threadType = HOST,
+                               numPenaltySpawns = 0,
+                               lockId = n}),
+         processorId = procNum}
 
   local
       val tidCounter = ref 0
   in
       fun new () =
-        let
-            val _ = Assert.assertAtomic' ("ThreadID.newTid(1)", NONE)
-            val n = PacmlFFI.fetchAndAdd(tidCounter, 1)
-        in
-          new' (n, n mod PacmlFFI.numComputeProcessors)
-        end
+      let
+        val _ = Assert.assertAtomic' ("ThreadID.newTid(1)", NONE)
+        val n = PacmlFFI.fetchAndAdd(tidCounter, 1)
+      in
+        new' (n, n mod PacmlFFI.numComputeProcessors)
+      end
 
       fun newOnProc (p) =
-        let
-            val _ = Assert.assertAtomic' ("ThreadID.newTid(2)", NONE)
-            val n = PacmlFFI.fetchAndAdd(tidCounter, 1)
-        in
-          new' (n, p)
-        end
+      let
+        val _ = Assert.assertAtomic' ("ThreadID.newTid(2)", NONE)
+        val n = PacmlFFI.fetchAndAdd(tidCounter, 1)
+      in
+        new' (n, p)
+      end
+
+      fun newWithTid (n) =
+      let
+        val _ = Assert.assertAtomic' ("ThreadID.newTid(3)", NONE)
+      in
+        new' (n, n mod PacmlFFI.numComputeProcessors)
+      end
 
 
       fun reset () = tidCounter := 0
+
+      fun nextLockId () = PacmlFFI.fetchAndAdd (tidCounter, 1)
   end
 
   fun bogus s procId=
@@ -97,14 +109,14 @@ struct
   fun debug msg = Debug.sayDebug ([atomicMsg, tidMsg], msg)
   fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
 
-  fun setCurThreadId (tid as TID {processorId, ...}) = setCurThreadIdSpl (tid)
-  (* let
+  (* fun setCurThreadId (tid as TID {processorId, ...}) =
+  let
     val procNum = PacmlFFI.processorNumber ()
     val () = Array.update (curTid, PacmlFFI.processorNumber (), tid)
   in ()
   end *)
 
-  and setCurThreadIdSpl (tid as TID {processorId, ...}) =
+  and setCurThreadId (tid as TID {processorId, ...}) =
   let
     val procNum = PacmlFFI.processorNumber ()
     val tid = PacmlPrim.move (tid, false, true)
@@ -114,4 +126,11 @@ struct
 
   fun tidNum () = tidToInt (getCurThreadId ())
 
+  fun getLockId () =
+  let
+    val TID {pstate, ...} = getCurThreadId ()
+    val PSTATE {lockId, ...} = !pstate
+  in
+    lockId
+  end
 end

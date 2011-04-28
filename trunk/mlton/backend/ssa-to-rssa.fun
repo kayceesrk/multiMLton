@@ -328,14 +328,15 @@ structure CFunction =
             writesStackTop = false}
 
       fun addToPreemptOnWBA t =
-         T {args = Vector.new2 (Type.gcState (), t),
+         T {args = Vector.new3 (Type.gcState (), t, Type.cint ()),
             bytesNeeded = NONE,
             convention = Cdecl,
             ensuresBytesFree = false,
             mayGC = false,
             maySwitchThreads = false,
             modifiesFrontier = false,
-            prototype = (Vector.new2 (CType.gcState, CType.cpointer), NONE),
+            prototype = (Vector.new3 (CType.gcState, CType.cpointer, CType.cint ()),
+                         NONE),
             readsStackTop = false,
             return = Type.unit,
             symbolScope = Private,

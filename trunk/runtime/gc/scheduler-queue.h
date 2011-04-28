@@ -21,6 +21,7 @@ typedef struct {
 typedef struct {
   CircularBuffer* primary;
   CircularBuffer* secondary;
+  CircularBuffer* parasites;
 } SchedulerQueue;
 
 typedef struct {
@@ -32,6 +33,16 @@ typedef struct {
   objptr op;
   int proc;
 } SpawnThread;
+
+typedef enum {
+  HOST,
+  PARASITE,
+} ThreadKind;
+
+typedef struct {
+  objptr op;
+  ThreadKind kind;
+} PreemptThread;
 
 #endif /* (defined (MLTON_GC_INTERNAL_TYPES)) */
 

@@ -79,14 +79,22 @@ static inline SchedulerQueue* newSchedulerQueue (void) {
   SchedulerQueue* sq = (SchedulerQueue*) malloc (sizeof (SchedulerQueue));
   CircularBufferInit (&sq->primary, BUFFER_SIZE);
   CircularBufferInit (&sq->secondary, BUFFER_SIZE);
+  CircularBufferInit (&sq->parasites, BUFFER_SIZE);
   return sq;
 }
 
 static inline CircularBuffer* getSubQ (SchedulerQueue* sq, int i) {
-  assert (i == 0 || i == 1);
-  if (i==0)
-    return sq->primary;
-  return sq->secondary;
+  switch (i) {
+    case 0:
+      return sq->primary;
+    case 1:
+      return sq->secondary;
+    case 2:
+      return sq->parasites;
+    default:
+      assert (0 or "getSubQ: i > 2");
+      die ("getSubQ: i > 2");
+  }
 }
 
 void GC_sqCreateQueues (GC_state s) {
@@ -115,8 +123,11 @@ void sqEnque (GC_state s, pointer p, int proc, int i) {
   if (CircularBufferIsFull(cq)) {
     if (i == 0)
       fromProc->schedulerQueue->primary = growCircularBuffer (cq);
-    else
+    else if (i == 1)
       fromProc->schedulerQueue->secondary = growCircularBuffer (cq);
+    else
+      fromProc->schedulerQueue->parasites = growCircularBuffer (cq);
+
     cq = getSubQ (fromProc->schedulerQueue, i);
   }
   assert (!CircularBufferIsFull(cq));
@@ -194,17 +205,19 @@ static inline void moveAllThreadsFromSecToPrim (GC_state s) {
 
 bool GC_sqIsEmpty (GC_state s) {
   Parallel_maybeWaitForGC ();
-  bool resPrim = CircularBufferIsEmpty (s->schedulerQueue->primary);
-  bool resSec = CircularBufferIsEmpty (s->schedulerQueue->secondary);
-  if (resPrim && resSec && (s->preemptOnWBASize != 0 || s->spawnOnWBASize != 0)) {
+  bool primEmpty = CircularBufferIsEmpty (s->schedulerQueue->primary);
+  bool secEmpty = CircularBufferIsEmpty (s->schedulerQueue->secondary);
+
+  if (primEmpty && secEmpty && (s->preemptOnWBASize != 0 || s->spawnOnWBASize != 0)) {
     /* Force a GC if we find that the primary scheduler queue is empty and
      * preemptOnWBA is not */
     forceLocalGC (s);
-    if (!resSec && FALSE)
+    if (!secEmpty && FALSE)
       moveAllThreadsFromSecToPrim (s);
-    resPrim = FALSE;
+    primEmpty = FALSE;
   }
-  return (resPrim && resSec);
+
+  return (primEmpty && secEmpty);
 }
 
 void GC_sqClean (GC_state s) {
@@ -212,6 +225,7 @@ void GC_sqClean (GC_state s) {
   for (int proc=0; proc < s->numberOfProcs; proc++) {
     CircularBufferClean (s->schedulerQueue->primary);
     CircularBufferClean (s->schedulerQueue->secondary);
+    CircularBufferClean (s->schedulerQueue->parasites);
   }
 }
 
@@ -261,7 +275,7 @@ void foreachObjptrInSQ (GC_state s, SchedulerQueue* sq, GC_foreachObjptrFun f) {
   if (!sq)
     return;
   GC_sqAcquireLock (s, s->procId);
-  for (int i=0; i<2; i++) {
+  for (int i=0; i<3; i++) {
     CircularBuffer* cq = getSubQ (sq, i);
     uint32_t rp = cq->readPointer;
     uint32_t wp = cq->writePointer;

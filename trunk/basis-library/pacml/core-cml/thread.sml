@@ -91,11 +91,11 @@ struct
   (* This will be assigned by Timeout *)
   val timeoutCleanup = ref (fn () => raise Fail "Thread.timeoutCleanUp not set")
 
-  fun reifyHostFromParasite (parasite) =
+  fun reifyHostFromParasite (lockId, parasite) =
   let
     val _ = Assert.assertAtomic' ("Scheduler.reifyHostFromParasite", SOME 1)
     val wf = wrapFunction
-    val tid = TID.new ()
+    val tid = TID.newWithTid (lockId)
     val _ = debug' (fn () => "Reifying host from parasite. "^
                       "NumThreads = "^(Int.toString(!Config.numLiveThreads))^
                       ". curtid = "^(Int.toString(TID.tidNum()))^
@@ -105,7 +105,7 @@ struct
     fun container () =
     let
       val _ = atomicBegin ()
-      val _ = PT.atomicPrefixAndSwitchToSpecial (parasite)
+      val _ = PT.atomicPrefixAndSwitchToSpecial (lockId, parasite)
     in
       PacmlFFI.noop ()
     end
@@ -129,10 +129,10 @@ struct
     (fn t =>
         let
           val rt = PT.prep t
-          val par = case rt of
-                         P_RTHRD (p) => p
+          val (lockId, par) = case rt of
+                         P_RTHRD (lockId, p) => (lockId, p)
                        | _ => raise Fail "Thread.reifyCurrent: Impossible"
-          val rhost = reifyHostFromParasite (par)
+          val rhost = reifyHostFromParasite (lockId, par)
         in
           S.readyForSpawn (rhost)
         end)
@@ -219,7 +219,7 @@ struct
                                     MLtonThread.threadStatus t)
     val proc = TID.getProcId (tid)
     val _ = Config.incrementNumLiveThreads ()
-    val _ = PacmlPrim.addToSpawnOnWBA (rhost, proc)
+    val _ = PacmlPrim.addToSpawnOnWBA (H_RTHRD rhost, proc)
 
     (* If this thread was spawned on an IO processor, then decrement the
     * numLiveThreads as the IO worker threads never die *)
