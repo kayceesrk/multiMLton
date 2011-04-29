@@ -8,7 +8,7 @@ sig
   val preempt : runnable_host -> unit
   val reset : bool -> unit
   val next : unit -> runnable_host
-  val nextWithCounter : int -> runnable_host
+  val nextWithCounter : int * Time.time option option -> runnable_host
   val unwrap : (runnable_host -> runnable_host) ->
                (parasite -> runnable_host) ->
                 MLtonThread.Runnable.t ->

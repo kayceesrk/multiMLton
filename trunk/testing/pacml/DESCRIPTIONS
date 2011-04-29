@@ -35,3 +35,10 @@ test23 - Non-blocking(1)
 test24 - Multicast
 test25 - yield
 test26 - Non-blocking(2)
+
+test27 - Time.toString test for thread safety
+
+test28 - Choice parasite
+test29 - Choice host
+
+test30 - ChooseAll

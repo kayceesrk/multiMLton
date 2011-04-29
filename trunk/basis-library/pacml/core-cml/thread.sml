@@ -50,7 +50,7 @@ struct
         let
           val _ = debug' "Quiting"
           val _ = PacmlFFI.disablePreemption ()
-          val _ = SH.pauseHook := (fn _ => (ignore (SH.deathTrap ()); !SH.pauseHook(0)))
+          val _ = SH.pauseHook := (fn _ => (ignore (SH.deathTrap ()); !SH.pauseHook(0, NONE)))
         in
           PT.getRunnableHost (PT.prepFn (!SH.shutdownHook, fn () => OS.Process.success))
         end)

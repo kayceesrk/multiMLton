@@ -8,13 +8,12 @@ struct
   open Critical
 
   fun debug msg = Debug.sayDebug ([atomicMsg, ThreadID.tidMsg], msg)
-  fun debug' msg = debug (fn () => msg^" : "
-                                ^Int.toString(PacmlFFI.processorNumber()))
+  fun debug' msg = debug (fn () => msg^" : " ^Int.toString(PacmlFFI.processorNumber()))
 
- 
+
   type proc = ((unit -> exn) * exn chan) chan
 
-  val inputChan : ((unit -> exn) * exn chan) chan = channel ()
+  val inputChan : ((unit -> exn) * exn chan option) chan = channel ()
 
   val compareAndSwap = PacmlFFI.compareAndSwap
   val fetchAndAdd = PacmlFFI.fetchAndAdd
@@ -33,18 +32,14 @@ struct
 
   fun main () =
   let
-    val _ = debug' ("Executing Main")
     val pn = processorNumber ()
-    val _ = debug' ("I think I am on proc num: " ^ Int.toString(pn) ^ "requesting channel num: " ^ Int.toString(pn - numComputeProcessors))
-    val myDedicatedChan = Array.sub (dedicatedChannels, pn - numComputeProcessors)
+    val myDedicatedChan = Array.unsafeSub (dedicatedChannels, pn - numComputeProcessors)
     val myDedStr = Int.toString (pn - numComputeProcessors)
     fun loop () =
     let
       val iChan = if pn < (numComputeProcessors + !numDedicated)
-                  then (debug' ("choosing dedicated chan"^myDedStr)
-                        ; myDedicatedChan)
-                  else (debug' ("choosing global inputChan"^(Int.toString (pn - numComputeProcessors)))
-                        ; inputChan)
+                  then myDedicatedChan
+                  else inputChan
       val (f, outputChan) = recv (iChan)
       val _ = debug' "NB.mainLoop : got task. Executing..."
       val res = f () handle x =>  x
@@ -72,7 +67,9 @@ struct
       end
 
 
-  fun executeOn ch f =
+  datatype exec_type = RESULT | SPAWN
+
+  fun executionHelper ch f et =
   let
       val _ = if numIOProcessors = 0 then raise Fail "NonBlocking.execute : no io-threads" else ()
       val _ = if sameChannel (ch, inputChan) andalso !numDedicated = numIOProcessors then
@@ -85,19 +82,23 @@ struct
       in
         R (res)
       end
-      val outputChan : exn chan = channel ()
-      val _ = debug' "NB send"
-      val _ = send (ch, (fn () => executeAndWrap (f), outputChan))
-      val _ = debug' "NB post send"
-      val r = recv (outputChan)
-      val _ = debug' "NB post recv"
+      val outputChan : exn chan option = case et of
+                                              RESULT => SOME (channel ())
+                                            | _ => NONE
+      val _ = aSend (ch, (fn () => executeAndWrap (f), outputChan))
     in
-      case r of
-          R (res) => res
-        | x => raise x
+      case et of
+           RESULT => (case recv (valOf outputChan) of
+                          R (res) => SOME (res)
+                        | x => raise x)
+         | SPAWN => NONE
     end
 
-  fun execute f = executeOn inputChan f
+  fun executeOn ch f = valOf (executionHelper ch f RESULT)
+
+  fun execute f = valOf (executionHelper inputChan f RESULT)
+
+  fun spawnOn ch f = ignore (executionHelper ch f SPAWN)
 
   fun createProcessor () : proc option =
   let
@@ -108,7 +109,7 @@ struct
   in
     if myChannelIdx < numIOProcessors then
       (ignore (List.tabulate (5, fn _ => Thread.spawnOnProc (main, numComputeProcessors + myChannelIdx)));
-      SOME (Array.sub (dedicatedChannels, myChannelIdx)))
+      SOME (Array.unsafeSub (dedicatedChannels, myChannelIdx)))
     else
       NONE
   end

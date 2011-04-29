@@ -50,10 +50,10 @@ struct
     ()
   end
 
-  fun dequeFromProc (prio, fromProc) =
+  fun dequeFromProc (prio, fromProc, lockProc) =
   let
     val _ = atomicBegin ()
-    val _ = acquireQlock fromProc
+    val _ = acquireQlock lockProc
     val (pri, sec) = A.unsafeSub (threadQs, fromProc)
     val rthrd = case prio of
                      R.PRI => Q.deque (pri)
@@ -61,7 +61,7 @@ struct
                    | R.ANY => case Q.deque (pri) of
                                    SOME t => SOME t
                                  | NONE => Q.deque (sec)
-    val _ = releaseQlock fromProc
+    val _ = releaseQlock lockProc
     val _ = atomicEnd ()
   in
     rthrd
@@ -71,7 +71,7 @@ struct
   let
     val fromProc = PacmlFFI.processorNumber ()
   in
-    dequeFromProc (prio, fromProc)
+    dequeFromProc (prio, fromProc, fromProc)
   end
 
   fun emptyProc (proc) =
@@ -94,15 +94,25 @@ struct
     val _ = PacmlFFI.maybeWaitForGC ()
     val procNum = PacmlFFI.processorNumber ()
     val numComp = PacmlFFI.numComputeProcessors
-    fun loop (n) =
-      if n = numComp then NONE
-      else if emptyProc ((n + procNum) mod numComp) then
-        loop (n+1)
-      else (case dequeFromProc (R.ANY, (n + procNum) mod numComp) of
-                 NONE => loop (n+1)
-               | v => v)
   in
-    loop (0)
+    (* the io processors do not steal *)
+    if (procNum >= numComp) then
+      (if emptyProc (procNum) then
+        NONE
+      else
+        dequeFromProc (R.ANY, procNum, procNum))
+    else (* Try to steal from someone else's queue, starting from yours *)
+      (let
+        fun loop (n) =
+          if n = numComp then NONE
+          else if emptyProc ((n + procNum) mod numComp) then
+            loop (n+1)
+          else (case dequeFromProc (R.ANY, (n + procNum) mod numComp, procNum) of
+                    NONE => loop (n+1)
+                  | v => v)
+      in
+        loop (0)
+      end)
   end
 
 

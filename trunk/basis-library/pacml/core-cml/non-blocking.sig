@@ -6,7 +6,8 @@ sig
     val createProcessor : unit -> proc option
 
     val executeOn : proc -> (unit -> 'a) -> 'a
-    val execute: (unit -> 'a) -> 'a
+    val execute : (unit -> 'a) -> 'a
+    val spawnOn : proc -> (unit -> unit) -> unit
 end
 
 signature NON_BLOCKING_EXTRA =

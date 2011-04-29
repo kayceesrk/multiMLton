@@ -296,11 +296,8 @@ struct
                   val () = Assert.assertAtomic (fn () => concat ["SyncVar.", name, "(3.2.1)"], SOME 1)
                   val () = prio := 1
                   val () = doSwap value
-                  (* XXX KC : Don't we need to propagate the msg here *)
                   val () = L.releaseCmlLock lock (TID.tidNum ())
                   val () = atomicEnd ()
-                  (* yield *)
-                  (*val () = S.readyAndSwitchToNext (fn ()=>())*)
                   val () = debug' ( concat [name, "(3.2.2)"]) (* NonAtomic *)
                   val () = Assert.assertNonAtomic (fn () => concat ["SyncVar.", name, "(3.2.2)"])
                 in

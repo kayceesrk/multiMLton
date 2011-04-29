@@ -22,8 +22,8 @@ struct
     run
     (fn () =>
     let
-      val _ = spawnParasite (fn () => pong ch n)
-      val _ = spawnParasite (fn () => ping ch n)
+      val _ = spawn (fn () => pong ch n)
+      val _ = spawn (fn () => ping ch n)
     in
       ()
     end)

@@ -6,7 +6,7 @@ sig
     (* this hook gets invoked when the scheduler has nothing else to do;
       * it is invoked in an atomic region
       *)
-    val pauseHook : (int -> runnable_host) ref
+    val pauseHook : (int * Time.time option option -> runnable_host) ref
 
     (* this hook points to a thread that gets invoked when
       * the system is otherwise deadlocked.  It takes two arguments:
