@@ -7,3 +7,9 @@ sig
   val releaseCmlLock : cmlLock -> (unit->int) -> unit
 
 end
+
+signature LOCK_EXTRA =
+sig
+  include LOCK
+  val yieldForSpin : (unit -> unit) ref
+end

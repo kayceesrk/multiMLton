@@ -18,6 +18,5 @@ sig
   val createHost : (unit->unit) -> RepTypes.runnable_host
   val reifyHostFromParasite : (int * RepTypes.parasite) -> RepTypes.runnable_host
   val reifyCurrent : unit -> unit
-  (* XXX this should be used sparingly, and certainly not as much as being used in channel.sml *)
   val reifyCurrentIfParasite : unit -> unit
 end

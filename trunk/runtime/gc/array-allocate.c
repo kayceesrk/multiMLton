@@ -56,7 +56,7 @@ pointer GC_arrayAllocate (GC_state s,
     s->syncReason = SYNC_OLD_GEN_ARRAY;
     ENTER_LOCAL0 (s);
     if (not hasHeapBytesFree (s, s->heap, arraySizeAligned, ensureBytesFree)) {
-      performGC (s, arraySizeAligned, ensureBytesFree, FALSE, TRUE);
+      performGC (s, arraySizeAligned, ensureBytesFree, FALSE, TRUE, 0);
     }
     assert (hasHeapBytesFree (s, s->heap, arraySizeAligned, ensureBytesFree));
     frontier = s->heap->start + s->heap->oldGenSize;
@@ -78,7 +78,7 @@ pointer GC_arrayAllocate (GC_state s,
       /* Local alloc may still require getting the lock, but we will release
          it before initialization. */
       ensureHasHeapBytesFreeAndOrInvariantForMutator (s, FALSE, FALSE, FALSE,
-                                                      0, bytesRequested, FALSE, FALSE);
+                                                      0, bytesRequested, FALSE, 0);
     }
     assert (hasHeapBytesFree (s, s->heap, 0, bytesRequested));
     frontier = s->frontier;

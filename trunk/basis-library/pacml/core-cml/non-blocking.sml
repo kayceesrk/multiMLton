@@ -8,7 +8,7 @@ struct
   open Critical
 
   fun debug msg = Debug.sayDebug ([atomicMsg, ThreadID.tidMsg], msg)
-  fun debug' msg = debug (fn () => msg^" : " ^Int.toString(PacmlFFI.processorNumber()))
+  fun debug' msg = debug (fn () => (msg())^" : " ^Int.toString(PacmlFFI.processorNumber()))
 
   type proc = ((unit -> exn) * exn chan option) chan
 
@@ -40,7 +40,7 @@ struct
                   then myDedicatedChan
                   else inputChan
       val (f, outputChan) = recv (iChan)
-      val res = f () handle x => (debug' "got exception";x)
+      val res = f () handle x => (debug' (fn () => "got exception");x)
       val _ = case outputChan of
                    SOME c => send (c, res)
                  | NONE => ()
@@ -61,7 +61,7 @@ struct
         val p = (r mod numIOProcessors) + numComputeProcessors
         (* attempt to increment counter. If we fail, someone else will fix it *)
         val _ = compareAndSwap(curIOProc, r+1, (r+1) mod numIOProcessors)
-        val _ = debug' ("Spawning NB Thread on "^(Int.toString(p)))
+        val _ = debug' (fn () => "Spawning NB Thread on "^(Int.toString(p)))
       in
         ignore (Thread.spawnOnProc (main, p))
       end
@@ -71,7 +71,7 @@ struct
 
   fun executionHelper ch f et =
   let
-    val _ = debug' "executionHelper"
+    val _ = debug' (fn () => "executionHelper")
     val _ = if numIOProcessors = 0 then raise Fail "NonBlocking.execute : no io-threads" else ()
     val _ = if sameChannel (ch, inputChan) andalso !numDedicated = numIOProcessors then
               raise Fail "NonBlocking.execute : All io threads have been grabbed by createProcessor ()s"
@@ -93,11 +93,11 @@ struct
   in
     case et of
          RESULT => (case recv (valOf outputChan) of
-                         R (res) => (debug' "executionHelper: got result";
+                         R (res) => (debug' (fn () => "executionHelper: got result");
                                      SOME (res))
-                       | x => (debug' "executionHelper: got exception";
+                       | x => (debug' (fn () => "executionHelper: got exception");
                                raise x))
-       | SPAWN => (debug' "executionHelper: SPAWN exiting";
+       | SPAWN => (debug' (fn () => "executionHelper: SPAWN exiting");
                    NONE)
   end
 
@@ -109,16 +109,16 @@ struct
 
   fun createProcessor () : proc option =
   let
-    val _ = debug' "createProcessor"
+    val _ = debug' (fn () => "createProcessor")
     val _ = if numIOProcessors = 0 then raise Fail "NonBlocking.execute : no io-threads" else ()
     val myChannelIdx = fetchAndAdd (numDedicated, 1)
   in
     if myChannelIdx < numIOProcessors then
       (ignore (List.tabulate (5, fn _ => Thread.spawnOnProc (main, numComputeProcessors + myChannelIdx)));
-      debug' "createProcessor: created new processor";
+      debug' (fn () => "createProcessor: created new processor");
       SOME (Array.unsafeSub (dedicatedChannels, myChannelIdx)))
     else
-      (debug' "createProcessor: could not create new processor";
+      (debug' (fn () => "createProcessor: could not create new processor");
       NONE)
   end
 

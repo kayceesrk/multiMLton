@@ -509,10 +509,11 @@ structure StackOffset =
       open StackOffset
 
       fun toString (T {offset, ty}): string =
-         concat ["S", C.args [Type.toC ty, C.bytes offset]]
+          concat ["S", C.args [Type.toC ty, C.bytes offset]]
    end
 
-fun contents (ty, z) = concat ["C", C.args [Type.toC ty, z]]
+fun contents (ty, z) =
+  concat ["C", C.args [Type.toC ty, z]]
 
 fun declareFFI (Chunk.T {blocks, ...}, {print: string -> unit}) =
    let
@@ -681,16 +682,25 @@ fun output {program as Machine.Program.T {chunks,
             concat [dst, " = ", src, ";\n"]
       local
          datatype z = datatype Operand.t
-         fun toString (z: Operand.t): string =
+         fun toString (z: Operand.t, isDest: bool): string =
             case z of
                ArrayOffset {base, index, offset, scale, ty} =>
-                  concat ["X", C.args [Type.toC ty,
-                                       toString base,
-                                       toString index,
+                  if (not isDest andalso
+                      Type.isObjptr ty andalso
+                      (not (!Control.serialExec))) then
+                  (concat ["X_RB", C.args [Type.toC ty,
+                                       toString (base, false),
+                                       toString (index, false),
                                        Scale.toString scale,
-                                       C.bytes offset]]
-             | Cast (z, ty) => concat ["(", Type.toC ty, ")", toString z]
-             | Contents {oper, ty} => contents (ty, toString oper)
+                                       C.bytes offset]])
+                  else
+                  (concat ["X", C.args [Type.toC ty,
+                                       toString (base, false),
+                                       toString (index, false),
+                                       Scale.toString scale,
+                                       C.bytes offset]])
+             | Cast (z, ty) => concat ["(", Type.toC ty, ")", toString (z, isDest)]
+             | Contents {oper, ty} => contents (ty, toString (oper, false))
              | File => "(CPointer)(__FILE__)"
              | Frontier => "Frontier"
              | GCState => "GCState"
@@ -704,14 +714,21 @@ fun output {program as Machine.Program.T {chunks,
              | Line => "__LINE__"
              | Null => "NULL"
              | Offset {base, offset, ty} =>
-                  concat ["O", C.args [Type.toC ty,
-                                       toString base,
-                                       C.bytes offset]]
+                 if (not isDest andalso
+                     Type.isObjptr ty andalso
+                     (not (!Control.serialExec))) then
+                  (concat ["O_RB", C.args [Type.toC ty,
+                                       toString (base, false),
+                                       C.bytes offset]])
+                 else
+                  (concat ["O", C.args [Type.toC ty,
+                                       toString (base, false),
+                                       C.bytes offset]])
              | Real r => RealX.toC r
              | Register r =>
                   concat [Type.name (Register.ty r), "_",
                           Int.toString (Register.index r)]
-             | StackOffset s => StackOffset.toString s
+             | StackOffset s => StackOffset.toString (s)
              | StackTop => "StackTop"
              | Word w => WordX.toC w
       in
@@ -719,9 +736,9 @@ fun output {program as Machine.Program.T {chunks,
       end
       fun fetchOperand (z: Operand.t): string =
          if handleMisaligned (Operand.ty z) andalso Operand.isMem z then
-            fetch (operandToString z, Operand.ty z)
+            fetch (operandToString (z, false), Operand.ty z)
          else
-            operandToString z
+            operandToString (z, false)
       fun outputStatement (s, print) =
          let
             datatype z = datatype Statement.t
@@ -733,9 +750,9 @@ fun output {program as Machine.Program.T {chunks,
                    ; (case s of
                          Move {dst, src} =>
                             print
-                            (move {dst = operandToString dst,
+                            (move {dst = operandToString (dst, true),
                                    dstIsMem = Operand.isMem dst,
-                                   src = operandToString src,
+                                   src = operandToString (src, false),
                                    srcIsMem = Operand.isMem src,
                                    ty = Operand.ty dst})
                        | Noop => ()
@@ -762,7 +779,7 @@ fun output {program as Machine.Program.T {chunks,
                                   NONE => (print (app ())
                                            ; print ";\n")
                                 | SOME dst =>
-                                     print (move {dst = operandToString dst,
+                                     print (move {dst = operandToString (dst, true),
                                                   dstIsMem = Operand.isMem dst,
                                                   src = app (),
                                                   srcIsMem = false,
@@ -846,7 +863,7 @@ fun output {program as Machine.Program.T {chunks,
                                        {offset = Bytes.- (size, Runtime.labelSize ()),
                                         ty = Type.label return})),
                                dstIsMem = true,
-                               src = operandToString (Operand.Label return),
+                               src = operandToString (Operand.Label return, false),
                                srcIsMem = false,
                                ty = Type.label return})
                 ; C.push (size, print)
@@ -957,7 +974,7 @@ fun output {program as Machine.Program.T {chunks,
                                    print
                                    (concat
                                     ["\t",
-                                     move {dst = operandToString x,
+                                     move {dst = operandToString (x, true),
                                            dstIsMem = Operand.isMem x,
                                            src = creturn ty,
                                            srcIsMem = false,
@@ -1025,8 +1042,8 @@ fun output {program as Machine.Program.T {chunks,
                         in
                            print "\t"
                            ; C.call (prim,
-                                     operandToString dst
-                                     :: (Vector.toListMap (args, operandToString)
+                                     operandToString (dst, true)
+                                     :: (Vector.toListMap (args, fn a => operandToString (a, false))
                                          @ [Label.toString overflow]),
                                      print)
                            ; gotoLabel success
@@ -1123,12 +1140,12 @@ fun output {program as Machine.Program.T {chunks,
                    | Switch switch =>
                         let
                            fun bool (test: Operand.t, t, f) =
-                              iff (operandToString test, t, f)
+                              iff (operandToString (test, false), t, f)
                            fun doit {cases: (string * Label.t) vector,
                                      default: Label.t option,
                                      test: Operand.t}: unit =
                               let
-                                 val test = operandToString test
+                                 val test = operandToString (test, false)
                                  fun switch (cases: (string * Label.t) vector,
                                              default: Label.t): unit =
                                     (print "switch ("

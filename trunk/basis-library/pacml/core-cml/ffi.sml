@@ -1,11 +1,13 @@
 structure PacmlFFI =
 struct
 
+  val commEvent = _import "GC_commEvent": unit -> unit;
   val compareAndSwap = _import "Parallel_compareAndSwap": Int32.int ref * Int32.int * Int32.int -> bool;
   val disablePreemption = _import "Parallel_disablePreemption": unit -> unit;
   val enablePreemption = _import "Parallel_enablePreemption": unit -> unit;
   val fetchAndAdd = _import "Parallel_fetchAndAdd": Int32.int ref * Int32.int -> Int32.int;
   val ffiPrint = _import "GC_print": Int32.int -> unit;
+  val parasiteCreatedEvent = _import "GC_parasiteCreatedEvent": unit -> unit;
   val maybeWaitForGC = _import "Parallel_maybeWaitForGC": unit -> unit;
   val noop = _import "GC_noop": unit -> unit;
   val numberOfProcessors = Int32.toInt ((_import "Parallel_numberOfProcessors": unit -> Int32.int;) ())

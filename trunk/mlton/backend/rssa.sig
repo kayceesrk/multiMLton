@@ -8,7 +8,7 @@
 
 type word = Word.t
 
-signature RSSA_STRUCTS = 
+signature RSSA_STRUCTS =
    sig
       include ATOMS
 
@@ -29,7 +29,7 @@ signature RSSA_STRUCTS =
       sharing Scale = Type.Scale
    end
 
-signature RSSA = 
+signature RSSA =
    sig
       include RSSA_STRUCTS
 
@@ -135,7 +135,7 @@ signature RSSA =
                         return: Return.t}
              | Goto of {args: Operand.t vector,
                         dst: Label.t}
-             (* Raise implicitly raises to the caller.  
+             (* Raise implicitly raises to the caller.
               * I.E. the local handler stack must be empty.
               *)
              | Raise of Operand.t vector

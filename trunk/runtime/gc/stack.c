@@ -273,3 +273,11 @@ bool updateStackIfDangling (GC_state s, objptr old, objptr new) {
   }
   return FALSE;
 }
+
+bool isInDanglingStackList (GC_state s, objptr p) {
+  for (int i=0; i < s->danglingStackListSize; i++) {
+    if (s->danglingStackList[i] == p)
+      return TRUE;
+  }
+  return FALSE;
+}

@@ -59,6 +59,7 @@ GC_thread GC_copyParasite (int startOffset) {
     /* TODO : Avoid this computation and subtract fixed offset
      * from stackTop to get end pointer */
     GC_state s = pthread_getspecific (gcstate_key);
+    s->cumulativeStatistics->numParasitesReified++;
 
     assert (startOffset >=0);
 
@@ -74,6 +75,13 @@ GC_thread GC_copyParasite (int startOffset) {
     GC_stack stk = (GC_stack) objptrToPointer (th->stack, s->heap->start);
     stk->isParasitic = TRUE;
 
+    //Save the exception stack offset relative to parasite bottom. This will be
+    //used to get to the correct exception state when the parasite is prefixed
+    //to a host.
+    th->exnStack = s->exnStack - (size_t)startOffset;
+    //All parasites have a default handler. Assert his indirectly
+    assert (s->exnStack > (size_t)startOffset);
+
     if (DEBUG_SPLICE) {
         fprintf (stderr, "\ncopyParasite [%d]\n", Proc_processorNumber (s));
     }
@@ -83,6 +91,8 @@ GC_thread GC_copyParasite (int startOffset) {
     assert (start < end);
 
     long int numBytes = end-start;
+    s->cumulativeStatistics->bytesParasiteStack += numBytes;
+
     s->copiedSize = numBytes;
     if (DEBUG_SPLICE) {
         fprintf (stderr, "\tnumBytes = %ld\n", numBytes);
@@ -96,6 +106,11 @@ GC_thread GC_copyParasite (int startOffset) {
     s->amInGC = TRUE; //For profiler safety
     memcpy (dest, start, numBytes);
     s->amInGC = FALSE;
+
+    if (MEASURE_PARASITE_CLOSURE) {
+      s->cumulativeStatistics->bytesParasiteClosure +=
+        GC_sizeInLocalHeap (s, (pointer)th);
+    }
 
     return th;
 }
@@ -212,8 +227,18 @@ void GC_prefixAndSwitchTo (GC_state s, pointer p) {
 
     GC_stack stk = (GC_stack) objptrToPointer (thrd->stack, s->heap->start);
 
+    //Fix forwarding pointers in the stack you are bringing in. This way stack will not have
+    //forwarding pointers
+    foreachObjptrInObject (s, (pointer)stk, fixFwdObjptr, TRUE);
+
+    /* if (s->stackLimit < s->stackTop) {
+      s->cumulativeStatistics->bytesThreadUsed += (s->stackLimit - s->stackTop);
+      s->cumulativeStatistics->countThreadUsed++;
+    } */
+
     int i=0;
-    while (s->stackLimit <= s->stackTop + stk->used) {
+    while (s->stackLimit < s->stackTop + stk->used) {
+        s->cumulativeStatistics->numForceStackGrowth++;
         if (DEBUG_SPLICE) {
             fprintf (stderr, "\tGrowingStack\n");
             fprintf (stderr, "\t\tstackTop = "FMTPTR"\n", (uintptr_t)s->stackTop);
@@ -225,7 +250,27 @@ void GC_prefixAndSwitchTo (GC_state s, pointer p) {
          * sufficiently large enough that target stack's reserved space is not
          * enough
          */
-        if (i>0) { break; }
+        if (i>0) {
+          fprintf (stderr, "PREMATURE BREAKING\n");
+          break;
+        }
+
+        /* sort of copied from sizeofStackGrowReserved */
+        size_t reservedNew =
+            (s->stackTop - s->stackBottom) //Currently used
+            + stk->used //Parasite size
+            + sizeofStackSlop (s); //Space for slop
+        {
+            const size_t RESERVED_MAX = (SIZE_MAX >> 2);
+            double reservedD = (double)reservedNew;
+            double reservedGrowD =
+                (double)s->controls->ratios.stackCurrentGrow * reservedD;
+            size_t reservedGrow =
+                reservedGrowD > (double)RESERVED_MAX ?
+                RESERVED_MAX : (size_t)reservedGrowD;
+            reservedNew = alignStackReserved (s, reservedGrow);
+            assert (isStackReservedAligned (s, reservedNew));
+        }
 
         /* grow stack if needed */
         getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
@@ -236,7 +281,7 @@ void GC_prefixAndSwitchTo (GC_state s, pointer p) {
         s->savedThread = pointerToObjptr((pointer)thrd - offsetofThread (s), s->heap->start);
         ensureHasHeapBytesFreeAndOrInvariantForMutator (s, FALSE,
                                                         TRUE, TRUE,
-                                                        0, 0, FALSE, TRUE);
+                                                        0, 0, FALSE, reservedNew);
 
         thrd = (GC_thread)(objptrToPointer(s->savedThread, s->heap->start) + offsetofThread (s));
         s->savedThread = BOGUS_OBJPTR;
@@ -254,6 +299,12 @@ void GC_prefixAndSwitchTo (GC_state s, pointer p) {
     s->amInGC = FALSE;
 
     s->stackTop = start + stk->used;
+
+    GC_thread curThread = getThreadCurrent (s);
+    //Restore exception state
+    curThread->exnStack = (start - s->stackBottom) + thrd->exnStack;
+    s->exnStack = curThread->exnStack;
+
     if (DEBUG_SPLICE) {
         fprintf (stderr, "\tprefixing frame of size %ld\n", stk->used);
         fprintf (stderr, "\tnewStackTop = "FMTPTR"\n", (uintptr_t) s->stackTop);
@@ -263,4 +314,9 @@ void GC_prefixAndSwitchTo (GC_state s, pointer p) {
 
     s->atomicState --;
     return;
+}
+
+void GC_parasiteCreatedEvent (void) {
+  GC_state s = pthread_getspecific (gcstate_key);
+  s->cumulativeStatistics->numParasitesCreated++;
 }

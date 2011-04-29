@@ -75,9 +75,9 @@ struct
         else (debug' (fn () => "Scheduler.reset false"))
       ; SQ.clean ())
 
-  fun readyForSpawn (t : runnable_host) =
+  fun readyForSpawn (t as RHOST (tid, rt) : runnable_host) =
     (ignore (Config.incrementNumLiveThreads ())
-    ; enque1 t)
+    ; SQ.enque (t, R.PRI))
 
 
   fun canPreemptParasite () =

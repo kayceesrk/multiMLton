@@ -27,7 +27,7 @@ pointer objptrToPointer (objptr O, pointer B) {
 
   P_ = ((O_ << S_) + B_);
   P = (pointer)P_;
-  if (DEBUG_OBJPTR) 
+  if (DEBUG_OBJPTR)
     fprintf (stderr, "objptrToPointer ("FMTOBJPTR") = "FMTPTR"\n", O, (uintptr_t)P);
 
   return P;
@@ -48,7 +48,7 @@ objptr pointerToObjptr (pointer P, pointer B) {
 
   O_ = ((P_ - B_) >> S_);
   O = (objptr)O_;
-  if (DEBUG_OBJPTR) 
+  if (DEBUG_OBJPTR)
     fprintf (stderr, "pointerToObjptr ("FMTPTR") = "FMTOBJPTR"\n", (uintptr_t)P, O);
 
   return O;
@@ -63,7 +63,8 @@ objptr pointerToObjptr (pointer P, pointer B) {
  * runtime in a manner which is agnostic to the actual objptr
  * representation.
  */
-pointer fetchObjptrToPointer (pointer OP, pointer B) {
+pointer fetchObjptrToPointer (GC_state s, pointer OP, pointer B) {
+  fixFwdObjptr (s, (objptr*)OP);
   return objptrToPointer (*((objptr*)OP), B);
 }
 void storeObjptrFromPointer (pointer OP, pointer P, pointer B) {

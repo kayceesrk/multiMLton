@@ -49,7 +49,7 @@ void GC_switchToThread (GC_state s, pointer p, size_t ensureBytesFree) {
     //switchToSignalHandlerThreadIfNonAtomicAndSignalPending (s);
     ensureHasHeapBytesFreeAndOrInvariantForMutator (s, FALSE,
                                                     TRUE, TRUE,
-                                                    0, 0, FALSE, FALSE);
+                                                    0, 0, FALSE, 0);
 
     endAtomic (s);
     assert (invariantForMutatorFrontier(s));
@@ -70,7 +70,7 @@ void GC_switchToThread (GC_state s, pointer p, size_t ensureBytesFree) {
     if (not (invariantForMutatorFrontier(s))
         or not (invariantForMutatorStack(s))) {
       /* This GC will grow the stack, if necessary. */
-      performGC (s, 0, getThreadCurrent(s)->bytesNeeded, FALSE, TRUE);
+      performGC (s, 0, getThreadCurrent(s)->bytesNeeded, FALSE, TRUE, 0);
     }
     /* END: ensureInvariantForMutator */
     /* BEGIN: leave(s); */

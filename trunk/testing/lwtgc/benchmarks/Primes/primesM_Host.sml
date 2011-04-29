@@ -1,18 +1,14 @@
 
 structure Main =
 struct
-   open CML
+  open MLton.Pacml
 
    fun makeNatStream c =
       let
          val ch = channel ()
          fun count i = (send(ch, i)
                         ; count(i+1))
-         val _ = spawn (fn () =>
-                        (print (concat ["makeNatStream: ",
-                                        tidToString (getTid ()),
-                                        "\n"])
-                         ; count c))
+         val _ = spawn (fn () => count c)
       in
          ch
       end
@@ -22,10 +18,10 @@ struct
          val outCh = channel ()
          fun loop () =
             let
-               val i = sync (recvEvt inCh)
+               val i = (recv inCh)
             in
                if ((i mod p) <> 0)
-                  then sync (sendEvt (outCh, i))
+                  then (send (outCh, i))
                   else ()
                ; loop ()
             end
@@ -43,11 +39,7 @@ struct
                send(primes, p)
                ; head (makeFilter (p, ch))
             end
-         val _ = spawn (fn () =>
-                        (print (concat ["makePrimes: ",
-                                        tidToString (getTid ()),
-                                        "\n"])
-                         ; head (makeNatStream 2)))
+         val _ = spawn (fn () => head (makeNatStream 2))
       in
          primes
       end
@@ -55,37 +47,32 @@ struct
    fun makeNatPrinter ch n =
       let
          fun loop i =
-            if i > n then RunCML.shutdown OS.Process.success
+            if i > n then shutdown OS.Process.success
                else let
                        val m = recv ch
-                       val m' = Int.toString m
+                       (* val m' = Int.toString m *)
                        fun loop' j =
                           if j > m then ()
-                          else ((*print (m' ^ "\n")
-                                ;*) loop' (j + 1))
+                          else ((* print (m' ^ "\n")
+                                ; *) loop' (j + 1))
                     in
                        loop' m
                        ; loop (i + 1)
                     end
-         val _ = spawn (fn () =>
-                        (print (concat ["makeNatPrinter: ",
-                                        tidToString (getTid ()),
-                                        "\n"])
-                         ; loop 0))
+         val _ = spawn (fn () => loop 0)
       in
          ()
       end
 
    fun doit' n =
-      RunCML.doit
+     run
       (fn () =>
        let
           val ch = makePrimes ()
           val _ = makeNatPrinter ch n
        in
           ()
-       end,
-       SOME (Time.fromMilliseconds 10))
+       end)
 
    fun doit n =
       let
@@ -94,3 +81,19 @@ struct
          x
       end
 end
+
+val n =
+   case CommandLine.arguments () of
+      [] => 100
+    | s::_ => (case Int.fromString s of
+                  NONE => 100
+                | SOME n => n)
+
+val ts = Time.now ()
+val _ = TextIO.print "\nStarting main"
+val _ = Main.doit n
+val te = Time.now ()
+val d = Time.-(te, ts)
+val _ = TextIO.print (concat ["Time start: ", Time.toString ts, "\n"])
+val _ = TextIO.print (concat ["Time end:   ", Time.toString te, "\n"])
+val _ = TextIO.print (concat ["Time diff:  ", LargeInt.toString (Time.toMilliseconds d), "ms\n"])

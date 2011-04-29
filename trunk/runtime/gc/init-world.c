@@ -118,13 +118,13 @@ void initVectors (GC_state s) {
     *((GC_header*)(frontier)) = buildHeaderFromTypeIndex (typeIndex);
     frontier = frontier + GC_HEADER_SIZE;
     s->globals[inits[i].globalIndex] = pointerToObjptr(frontier, s->heap->start);
-    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+    if (DEBUG_DETAILED or FALSE)
       fprintf (stderr, "allocated vector at "FMTPTR"\n",
                (uintptr_t)(s->globals[inits[i].globalIndex]));
     memcpy (frontier, inits[i].bytes, dataBytes);
     frontier += objectSize - GC_ARRAY_HEADER_SIZE;
   }
-  if (DEBUG_DETAILED or s->controls->selectiveDebug)
+  if (DEBUG_DETAILED or FALSE)
     fprintf (stderr, "frontier after string allocation is "FMTPTR"\n",
              (uintptr_t)frontier);
   GC_profileAllocInc (s, (size_t)(frontier - s->frontier));
@@ -161,7 +161,7 @@ void initWorld (GC_state s) {
   setGCStateCurrentLocalHeap (s, 0, 0);
 
   //set up shared heap
-  createHeap (s, s->sharedHeap, 1024 * 1024 * 10, 1024 * 1024 * 10);
+  createHeap (s, s->sharedHeap, sizeofHeapDesired (s, s->heap->oldGenSize, 0) , s->heap->oldGenSize);
   start = alignFrontier (s, s->sharedHeap->start);
   s->sharedStart = s->sharedFrontier = start;
   s->sharedLimitPlusSlop = s->sharedHeap->start + s->sharedHeap->size - GC_BONUS_SLOP;
@@ -181,7 +181,7 @@ void duplicateWorld (GC_state d, GC_state s) {
   //set up local heap
   d->heap = (GC_heap) malloc (sizeof (struct GC_heap));
   initHeap (d, d->heap, LOCAL_HEAP);
-  createHeap (d, d->heap, 1024 * 128, 1024 * 128);
+  createHeap (d, d->heap, sizeofHeapDesired (s, s->heap->oldGenSize, 0), 0);
   start = alignFrontier (d, d->heap->start);
   d->start = d->frontier = start;
   d->limitPlusSlop = d->heap->start + d->heap->size - GC_BONUS_SLOP;
@@ -195,11 +195,11 @@ void duplicateWorld (GC_state d, GC_state s) {
   initHeap (d, d->secondaryLocalHeap, LOCAL_HEAP);
 
   /* Use the original to allocate */
-  //XXX KC SPH does this violate GC invariants
   thread = newThread (d, sizeofStackInitialReserved (d));
 
-  /* Now copy stats, heap data from original */
-  d->cumulativeStatistics->maxHeapSize = s->cumulativeStatistics->maxHeapSize;
+  d->cumulativeStatistics->maxHeapSize = d->heap->size;
+  d->cumulativeStatistics->maxSharedHeapSize =
+    s->cumulativeStatistics->maxSharedHeapSize;
   d->sharedHeap = s->sharedHeap;
   d->secondarySharedHeap = s->secondarySharedHeap;
 

@@ -49,7 +49,7 @@ bool Proc_isInitialized (GC_state s) {
   return Proc_initialized == s->numberOfProcs;
 }
 
-struct timeval tv_rt;
+struct timeval tv_serial;
 struct timeval tv_sync;
 
 
@@ -75,7 +75,7 @@ void Proc_beginCriticalSection (GC_state s) {
       /* We are the last to syncronize */
       if (needGCTime (s)) {
         stopWallTiming (&tv_sync, &s->cumulativeStatistics->tv_sync);
-        startWallTiming (&tv_rt);
+        startWallTiming (&tv_serial);
       }
       Proc_criticalTicket = 0;
     }
@@ -95,7 +95,7 @@ void Proc_endCriticalSection (__attribute__ ((unused)) GC_state s) {
       /* We are the last to finish */
 
       if (needGCTime (s))
-        stopWallTiming (&tv_rt, &s->cumulativeStatistics->tv_rt);
+        stopWallTiming (&tv_serial, &s->cumulativeStatistics->tv_serial);
 
       Proc_criticalCount = 0;
       Proc_criticalTicket = -1;

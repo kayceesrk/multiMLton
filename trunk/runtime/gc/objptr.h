@@ -29,7 +29,7 @@ COMPILE_TIME_ASSERT(sizeof_voidStar__gte__sizeof_objptr,
 static inline bool isObjptr (objptr p);
 static inline pointer objptrToPointer (objptr O, pointer B);
 static inline objptr pointerToObjptr (pointer P, pointer B);
-static inline pointer fetchObjptrToPointer (pointer OP, pointer B);
+static inline pointer fetchObjptrToPointer (GC_state s, pointer OP, pointer B);
 static inline void storeObjptrFromPointer (pointer OP, pointer P, pointer B);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

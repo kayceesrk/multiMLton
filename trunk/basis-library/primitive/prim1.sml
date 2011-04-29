@@ -88,17 +88,19 @@ structure Ref =
       val refAssign = _prim "Ref_assign": 'a ref * 'a -> unit;
       val eq = _prim "MLton_eq": 'a * 'a -> bool;
 
-      fun writeBarrier (r, v) =
-      let
+      fun writeBarrier (r, v) = v
+      (* let
         val preemptFn = deref preemptFn
-        val v' = if (Lwtgc.isObjptr v) andalso (Lwtgc.isObjptrInLocalHeap v) andalso (Lwtgc.isObjptrInSharedHeap r) then
+        val v' = if (Lwtgc.isObjptr v) andalso
+                    (Lwtgc.isObjptrInLocalHeap v) andalso
+                    (Lwtgc.isObjptrInSharedHeap r) then
                   (Lwtgc.addToMoveOnWBA (v);
                    preemptFn ();
                    v)
                 else v
       in
         v'
-      end
+      end *)
 
       fun assign (r, v) =
       let

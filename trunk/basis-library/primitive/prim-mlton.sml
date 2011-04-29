@@ -350,6 +350,16 @@ struct
       SOME (prim_deque i)
   end
 
+  fun dequeAny () =
+  let
+    val prim_deque = _prim "SQ_deque": C_Int.t -> 'a;
+  in
+    if ((isEmptyPrio 0) andalso (isEmptyPrio 1)) then
+      NONE
+    else
+      SOME (prim_deque ~1)
+  end
+
 
 end
 

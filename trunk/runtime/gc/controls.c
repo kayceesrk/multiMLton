@@ -15,5 +15,6 @@ bool needGCTime (GC_state s) {
     DEBUG
     or s->controls->summary
     or s->controls->messages
-    or s->controls->rusageMeasureGC;
+    or s->controls->rusageMeasureGC
+    or TRUE;
 }

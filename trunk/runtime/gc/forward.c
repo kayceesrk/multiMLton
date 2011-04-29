@@ -6,10 +6,10 @@
  * See the file MLton-LICENSE for details.
  */
 
-  bool isPointerInToSpace (GC_state s, pointer p) {
-    return (not (isPointer (p))
-            or (s->forwardState.toStart <= p and p < s->forwardState.toLimit));
-  }
+bool isPointerInToSpace (GC_state s, pointer p) {
+  return (not (isPointer (p))
+          or (s->forwardState.toStart <= p and p < s->forwardState.toLimit));
+}
 
 bool isObjptrInToSpace (GC_state s, objptr op) {
   pointer p;
@@ -32,7 +32,7 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
 
   op = *opp;
   p = objptrToPointer (op, s->heap->start);
-  if (DEBUG_DETAILED or s->controls->selectiveDebug)
+  if (DEBUG_DETAILED or FALSE)
     fprintf (stderr,
              "forwardObjptrToSharedHeap  opp = "FMTPTR"  op = "FMTOBJPTR"  p = "FMTPTR" [%d]\n",
              (uintptr_t)opp, op, (uintptr_t)p, s->procId);
@@ -65,14 +65,17 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
       objectBytes = sizeofArrayNoHeader (s, getArrayLength (p),
                                          bytesNonObjptrs, numObjptrs);
       skip = 0;
-    } else { /* Stack. */
+    } else { /* Stack. */ //XXX KC refactor
       GC_stack stack = (GC_stack)p;
 
       if (!(s->forwardState.forceStackForwarding || stack->isParasitic)) { /* stack need not be forwarded */
+        //XXX KC refactor
         if (isObjptrInHeap (s, s->sharedHeap, stack->thread)) {
-          if (DEBUG_DETAILED or s->controls->selectiveDebug)
+          if (DEBUG_DETAILED or FALSE)
             fprintf (stderr, "Not lifting GC_stack "FMTPTR". stack->thread already in sharedHeap at "FMTOBJPTR"\n",
                      (uintptr_t)p, stack->thread);
+          if (!isInDanglingStackList (s, pointerToObjptr ((pointer)stack, s->heap->start)))
+            addToDanglingStackList (s, pointerToObjptr ((pointer)stack, s->heap->start));
           return;
         }
         skip = headerBytes = objectBytes = 0;
@@ -86,39 +89,21 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
         assert (getHeader (thrd) == GC_FORWARDED);
         stack->thread = *(objptr*)thrd;
         thrd = objptrToPointer (stack->thread, s->sharedHeap->start);
-        if (DEBUG_DETAILED or s->controls->selectiveDebug)
+        if (DEBUG_DETAILED or FALSE)
           fprintf (stderr, "Not lifting GC_stack "FMTPTR". stack->thread is "FMTPTR"\n",
                    (uintptr_t)p, (uintptr_t)thrd);
         return;
       }
       else {
-        if (DEBUG_DETAILED or s->controls->selectiveDebug) {
+        if (DEBUG_DETAILED or FALSE) {
           if (s->forwardState.forceStackForwarding)
             fprintf (stderr, "[GC: Forwarding stack. forwardState.forceStackForwarding is TRUE]\n");
           if (stack->isParasitic)
             fprintf (stderr, "[GC: Forwarding stack. stack is parasitic]\n");
         }
-
-        size_t reservedNew;
-        bool isCurrentStack = false;
-
         assert (STACK_TAG == tag);
         headerBytes = GC_STACK_HEADER_SIZE;
         stack = (GC_stack)p;
-
-        /* Check if the pointer is the current stack of current processor. */
-        isCurrentStack |= (getStackCurrent(s) == stack && not isStackEmpty(stack));
-
-        reservedNew = sizeofStackShrinkReserved (s, stack, isCurrentStack);
-        if (reservedNew < stack->reserved) {
-          if (DEBUG_STACKS or s->controls->messages)
-            fprintf (stderr,
-                     "[GC: Shrinking stack of size %s bytes to size %s bytes, using %s bytes.]\n",
-                     uintmaxToCommaString(stack->reserved),
-                     uintmaxToCommaString(reservedNew),
-                     uintmaxToCommaString(stack->used));
-          stack->reserved = reservedNew;
-        }
         objectBytes = sizeof (struct GC_stack) + stack->used;
         skip = stack->reserved - stack->used;
 
@@ -168,7 +153,7 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
 
     /* Copy the object. */
     GC_memcpy (p - headerBytes, s->sharedFrontier, size);
-    if ((DEBUG_DETAILED or s->controls->selectiveDebug) and FALSE) {
+    if ((DEBUG_DETAILED or FALSE) and FALSE) {
       fprintf (stderr, "Zeroing out %s bytes starting at "FMTPTR"\n",
                uintmaxToCommaString (objectBytes),
                (uintptr_t)p);
@@ -184,6 +169,10 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
       if (DEBUG_WEAK)
         fprintf (stderr, "forwarding weak "FMTPTR" ",
                  (uintptr_t)w);
+      objptr wopOld = w->objptr;
+      fixFwdObjptr (s, &w->objptr);
+      if (DEBUG_WEAK && wopOld != w->objptr)
+        fprintf (stderr, "--fixFwdObjptr weak-- ");
       if (isObjptr (w->objptr)
           and (not s->forwardState.amInMinorGC
                or isObjptrInNursery (s, s->heap, w->objptr))) {
@@ -200,7 +189,7 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
     *((GC_header*)(p - GC_HEADER_SIZE)) = GC_FORWARDED;
     *((objptr*)p) = pointerToObjptr (s->forwardState.back + headerBytes,
                                      s->forwardState.toStart);
-    if (DEBUG_DETAILED or s->controls->selectiveDebug) {
+    if (DEBUG_DETAILED or FALSE) {
       fprintf (stderr, "Setting headerp ="FMTPTR" to "FMTHDR"\n",
                (uintptr_t)(p - GC_HEADER_SIZE), *((GC_header*)(p - GC_HEADER_SIZE)));
       fprintf (stderr, "Setting p="FMTPTR" to "FMTOBJPTR"\n",
@@ -213,13 +202,13 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
     s->forwardState.back = s->sharedFrontier;
   }
   *opp = *((objptr*)p);
-  if (DEBUG_DETAILED or s->controls->selectiveDebug)
+  if (DEBUG_DETAILED or FALSE)
     fprintf (stderr,
              "forwardObjptr --> *opp = "FMTPTR"\n",
              (uintptr_t)*opp);
   while (isObjptrInHeap (s, s->heap, *opp)) {
     /* This can happen in the presence of read barriers */
-    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+    if (DEBUG_DETAILED or FALSE)
       fprintf (stderr, "Recursive forwarding "FMTPTR"\n",
                (uintptr_t)*opp);
     forwardObjptrToSharedHeap (s, opp);
@@ -239,7 +228,7 @@ void forwardObjptr (GC_state s, objptr *opp) {
 
   op = *opp;
   p = objptrToPointer (op, s->heap->start);
-  if (DEBUG_DETAILED or s->controls->selectiveDebug)
+  if (DEBUG_DETAILED or FALSE)
     fprintf (stderr,
              "forwardObjptr  opp = "FMTPTR"  op = "FMTOBJPTR"  p = "FMTPTR"\n",
              (uintptr_t)opp, op, (uintptr_t)p);
@@ -300,14 +289,14 @@ void forwardObjptr (GC_state s, objptr *opp) {
         stack->thread = *(objptr*)thrd;
       }
 
-      if (DEBUG_DETAILED or s->controls->selectiveDebug)
+      if (DEBUG_DETAILED or FALSE)
         fprintf (stderr, "[GC: Forwarding stack. stack->thread is "FMTOBJPTR"\n", stack->thread);
     }
     size = headerBytes + objectBytes;
     assert (s->forwardState.back + size + skip <= s->forwardState.toLimit);
     /* Copy the object. */
     GC_memcpy (p - headerBytes, s->forwardState.back, size);
-    if (FALSE and (DEBUG_DETAILED or s->controls->selectiveDebug)) {
+    if (FALSE and (DEBUG_DETAILED or FALSE)) {
       fprintf (stderr, "Zeroing out %s bytes starting at "FMTPTR"\n",
                uintmaxToCommaString (objectBytes),
                (uintptr_t)p);
@@ -339,7 +328,7 @@ void forwardObjptr (GC_state s, objptr *opp) {
     *((GC_header*)(p - GC_HEADER_SIZE)) = GC_FORWARDED;
     *((objptr*)p) = pointerToObjptr (s->forwardState.back + headerBytes,
                                      s->forwardState.toStart);
-    if (DEBUG_DETAILED or s->controls->selectiveDebug) {
+    if (DEBUG_DETAILED or FALSE) {
       fprintf (stderr, "Setting headerp ="FMTPTR" to "FMTHDR"\n",
                (uintptr_t)(p - GC_HEADER_SIZE), *((GC_header*)(p - GC_HEADER_SIZE)));
       fprintf (stderr, "Setting p="FMTPTR" to "FMTOBJPTR"\n",
@@ -351,13 +340,13 @@ void forwardObjptr (GC_state s, objptr *opp) {
                        s->alignment));
   }
   *opp = *((objptr*)p);
-  if (DEBUG_DETAILED or s->controls->selectiveDebug)
+  if (DEBUG_DETAILED or FALSE)
     fprintf (stderr,
              "forwardObjptr --> *opp = "FMTPTR"\n",
              (uintptr_t)*opp);
-  while (isObjptrInHeap (s, s->heap, *opp)) {
+  while (isObjptrInFromSpace (s, s->heap, *opp)) {
     /* This can happen in the presence of read barriers */
-    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+    if (DEBUG_DETAILED or FALSE)
       fprintf (stderr, "Recursive forwarding "FMTPTR"\n",
                (uintptr_t)*opp);
     forwardObjptr (s, opp);
@@ -372,7 +361,7 @@ void forwardObjptrIfInNursery (GC_state s, objptr *opp) {
 
   op = *opp;
   p = objptrToPointer (op, s->heap->start);
-  if (p < s->heap->nursery)
+  if (p < s->heap->nursery or isPointerInHeap (s, s->sharedHeap, p))
     return;
   if (DEBUG_GENERATIONAL)
     fprintf (stderr,
@@ -421,7 +410,7 @@ static inline void forwardObjptrIfInSharedHeap (GC_state s, objptr *opp) {
   }
   if (isPointerInHeap (s, s->sharedHeap, p)) {
 
-    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+    if (DEBUG_DETAILED or FALSE)
       fprintf (stderr,
                "forwardObjptrIfInSharedHeap  opp = "FMTPTR"  op = "FMTOBJPTR"  p = "FMTPTR"\n",
                (uintptr_t)opp, op, (uintptr_t)p);
@@ -432,7 +421,7 @@ static inline void forwardObjptrIfInSharedHeap (GC_state s, objptr *opp) {
     if (header != GC_FORWARDED)
       *headerp = header & (~(LIFT_MASK));
 
-    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+    if (DEBUG_DETAILED or FALSE)
       fprintf (stderr,
                "forwardObjptrIfInSharedHeap: removed header bit headerp="FMTPTR" header=("FMTHDR") [%d]\n",
                (uintptr_t)headerp, *headerp, s->procId);
@@ -443,7 +432,7 @@ static inline void forwardObjptrIfInSharedHeap (GC_state s, objptr *opp) {
     header = getHeader (objptrToPointer (*opp, s->sharedHeap->start));
     *headerp = header | LIFT_MASK;
 
-    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+    if (DEBUG_DETAILED or FALSE)
       fprintf (stderr,
                "forwardObjptrIfInSharedHeap: added header bit headerp="FMTPTR" header=("FMTHDR") [%d]\n",
                (uintptr_t)headerp, *headerp, s->procId);
@@ -454,7 +443,7 @@ static inline void forwardObjptrIfInSharedHeap (GC_state s, objptr *opp) {
     GC_objectTypeTag tag;
     splitHeader (r, getHeader (p), getHeaderp (p), &tag, NULL, NULL, NULL);
 
-    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+    if (DEBUG_DETAILED or FALSE)
       fprintf (stderr, "forwardObjptrIfInSharedHeap: invariant breaking pointer opp="FMTPTR" p="FMTPTR" [%d]\n",
                (uintptr_t)opp, (uintptr_t)p, s->procId);
 
@@ -468,7 +457,7 @@ static inline void forwardObjptrIfInSharedHeap (GC_state s, objptr *opp) {
       }
       assert (isObjptrInToSpace (s, stk->thread));
 
-      if (DEBUG_DETAILED or s->controls->selectiveDebug)
+      if (DEBUG_DETAILED or FALSE)
         fprintf (stderr, "forwardObjptrIfInSharedHeap: invariant breaking pointer is stack. Stack->thread="FMTOBJPTR" [%d]\n",
                  ((GC_stack)p)->thread, s->procId);
 
@@ -477,10 +466,13 @@ static inline void forwardObjptrIfInSharedHeap (GC_state s, objptr *opp) {
     else {
       //If the pointer is not a stack or if the stack is parasitic, then we are completing a closure
       //lifting. Perform the lift.
-      if (DEBUG_DETAILED or s->controls->selectiveDebug)
+      if (DEBUG_DETAILED or FALSE)
         fprintf (stderr, "forwardObjptrIfInSharedHeap: invariant breaking pointer: finishing closure lifting [%d]\n",
                  s->procId);
+      pointer origBack = s->forwardState.back;
       forwardObjptr (s, opp);
+      pointer newBack = s->forwardState.back;
+      s->cumulativeStatistics->bytesLifted += (newBack - origBack);
       GC_header* headerp = getHeaderp (objptrToPointer (*opp, s->sharedHeap->start));
       GC_header header = getHeader (objptrToPointer (*opp, s->sharedHeap->start));
       *headerp = header | LIFT_MASK;
@@ -579,19 +571,24 @@ void restoreForwardState (GC_state s, struct GC_forwardState* fwd) {
 }
 
 void fixFwdObjptr (GC_state s, objptr* opp) {
-  if (isObjptr (*opp)) {
+  if (isObjptr (*opp) && !(*opp == 0)) {
     pointer p = objptrToPointer (*opp, s->heap->start);
     while (isObjptr (*opp) && getHeader (p) == GC_FORWARDED) {
-      if (DEBUG_DETAILED or s->controls->selectiveDebug)
+      if (DEBUG_DETAILED or FALSE)
         fprintf (stderr,
                  "fixFwdObjptr  opp = "FMTPTR"  op = "FMTOBJPTR"  p = "FMTPTR"\n",
                  (uintptr_t)opp, *opp, (uintptr_t)p);
       *opp = *(objptr*)p;
       p = objptrToPointer (*opp, s->heap->start);
-      if (DEBUG_DETAILED or s->controls->selectiveDebug)
+      if (DEBUG_DETAILED or FALSE)
         fprintf (stderr,
                  "fixFwdObjptr --> *opp = "FMTPTR"\n",
                  (uintptr_t)*opp);
     }
   }
+}
+
+objptr fixFwdObjptrAndFetch (GC_state s, objptr *opp) {
+  fixFwdObjptr (s, opp);
+  return *opp;
 }

@@ -359,6 +359,22 @@ structure CFunction =
             target = Direct "GC_move",
             writesStackTop = true}
 
+      fun isInSharedOrForwarded t =
+         T {args = Vector.new2 (Type.gcState (), t),
+            bytesNeeded = NONE,
+            convention = Cdecl,
+            ensuresBytesFree = false,
+            mayGC = false,
+            maySwitchThreads = false,
+            modifiesFrontier = false,
+            prototype = (Vector.new2 (CType.gcState, CType.cpointer),
+                         SOME CType.bool),
+            readsStackTop = false,
+            return = Type.bool,
+            symbolScope = Private,
+            target = Direct "GC_isInSharedOrForwarded",
+            writesStackTop = false}
+
       fun sqAcquireLock () =
          T {args = Vector.new2 (Type.gcState (), Type.cint ()),
             bytesNeeded = NONE,
@@ -1355,13 +1371,12 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                     in
                       (stmts, cond)
                     end
-
                   in
                      case s of
                         S.Statement.Profile e => add (Statement.Profile e)
                       | S.Statement.Update {base, offset, value} =>
                           let
-                            fun updateCard (lhsAddr: Operand.t, rhsAddr: Operand.t, continue: Label.t, returnTy):
+                            fun updateCard (lhsAddr: Operand.t, rhsAddr: Operand.t, continue: Label.t, returnTy, baseTy):
                                            (Statement.t list * Transfer.t) =
                               let
                                   val index = Var.newNoname ()
@@ -1384,12 +1399,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                                   ty = Type.word cardElemSize}),
                                           src = Operand.word (WordX.one cardElemSize)}]
 
-                                val (stmts1, cond1) = addressInSharedHeap (lhsAddr)
                                 val (stmts2, cond2) = addressInLocalHeap (rhsAddr)
-                                val (stmts3, cond3) = addressInSharedHeap (rhsAddr)
-
-                                val cReturnVar = Var.newNoname ()
-                                val cReturnOp = Operand.Var {var = cReturnVar, ty = returnTy}
 
                                 val origContinue =
                                   newBlock
@@ -1399,6 +1409,9 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                    transfer =
                                    Goto {args = Vector.new1 (rhsAddr),
                                          dst = continue}}
+
+                                val cReturnVar = Var.newNoname ()
+                                val cReturnOp = Operand.Var {var = cReturnVar, ty = returnTy}
 
                                 val returnFromHandler =
                                   newBlock
@@ -1421,12 +1434,11 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                                          Operand.bool false),
                                     func = CFunction.move returnTy,
                                     return = SOME returnFromHandler}}
-
                                 val maybeMoveBlock =
                                   newBlock
                                   {args = Vector.new0 (),
                                    kind = Kind.Jump,
-                                   statements = Vector.fromList stmts2,
+                                   statements = Vector.new0 (),
                                    transfer =
                                     Transfer.ifBool
                                     (Operand.Var {var = cond2, ty = Type.bool},
@@ -1445,19 +1457,40 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                   newBlock
                                   {args = Vector.new0 (),
                                    kind = Kind.Jump,
-                                   statements = Vector.fromList stmts3,
+                                   statements = Vector.new0 (),
                                    transfer =
                                     Transfer.ifBool
-                                    (Operand.Var {var = cond3, ty = Type.bool},
-                                     {truee = origContinue,
-                                      falsee = cardMarkBlock})}
+                                    (Operand.Var {var = cond2, ty = Type.bool},
+                                     {truee = cardMarkBlock,
+                                      falsee = origContinue})}
+
+                                val cReturnVar2 = Var.newNoname ()
+                                val cReturnOp2 = Operand.Var {var = cReturnVar2, ty = Type.bool}
+
+                                val returnFromHandler2 =
+                                  newBlock
+                                  {args = Vector.new1 (cReturnVar2, Type.bool),
+                                   kind = Kind.CReturn {func = CFunction.isInSharedOrForwarded baseTy},
+                                   statements = Vector.new0 (),
+                                   transfer =
+                                    Transfer.ifBool
+                                    (cReturnOp2,
+                                      {truee = maybeMoveBlock,
+                                      falsee = if (!Control.markCards) then maybeCardMarkBlock else origContinue})}
+                                val isInSharedOrForwardedBlock =
+                                  newBlock
+                                  {args = Vector.new0 (),
+                                   kind = Kind.Jump,
+                                   statements = Vector.new0 (),
+                                   transfer =
+                                    Transfer.CCall
+                                    {args = Vector.new2 (GCState,
+                                                         lhsAddr),
+                                    func = CFunction.isInSharedOrForwarded baseTy,
+                                    return = SOME returnFromHandler2}}
 
                               in
-                                (stmts1,
-                                 Transfer.ifBool
-                                 (Operand.Var {var = cond1, ty = Type.bool},
-                                  {truee = maybeMoveBlock,
-                                   falsee = if (!Control.markCards) then maybeCardMarkBlock else origContinue}))
+                                (stmts2, Transfer.Goto {args = Vector.new0 (), dst = isInSharedOrForwardedBlock})
                               end
                           in
                            (case toRtype (varType value) of
@@ -1468,6 +1501,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                      val valueOp = varOp value
                                      val newValueVar = Var.newNoname ()
                                      val newValueOp = Operand.Var {var = newValueVar, ty = ty}
+                                     val baseTy = Option.valOf (toRtype (varType (Base.object base)))
                                      val ss' =
                                         update
                                         {base = baseOp,
@@ -1483,7 +1517,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                   in
                                     if (Type.isObjptr ty) then
                                       split (Vector.new1 (newValueVar, ty), Kind.Jump, ss' @ ss,
-                                              fn l => updateCard (Base.object baseOp, valueOp, l, ty))
+                                              fn l => updateCard (Base.object baseOp, valueOp, l, ty, baseTy))
                                     else
                                       adds ss''
                                   end)
@@ -1779,7 +1813,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                             (CFunction.sqEnque (Operand.ty (a 0))))
                                | SQ_deque =>
                                    (case toRtype ty of
-                                        NONE => Error.bug "SQ_deque saw unit"
+                                        NONE => none ()
                                       | SOME t => simpleCCallWithGCState (CFunction.sqDeque t))
                                | Thread_testSavedClosure =>
                                    simpleCCallWithGCState (CFunction.testSavedClosure ())

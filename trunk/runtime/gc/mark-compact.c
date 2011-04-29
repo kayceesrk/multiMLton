@@ -51,13 +51,24 @@ void threadInternalObjptr (GC_state s, objptr *opp) {
 
   opop = pointerToObjptr ((pointer)opp, s->heap->start);
   p = objptrToPointer (*opp, s->heap->start);
-  if (FALSE)
+  if (DEBUG_MARK_COMPACT)
     fprintf (stderr,
              "threadInternal opp = "FMTPTR"  p = "FMTPTR"  header = "FMTHDR"\n",
              (uintptr_t)opp, (uintptr_t)p, getHeader (p));
   headerp = getHeaderp (p);
   copyForThreadInternal ((pointer)(opp), (pointer)(headerp));
   copyForThreadInternal ((pointer)(headerp), (pointer)(&opop));
+}
+
+void threadInternalObjptrIfInLocalHeap (GC_state s, objptr *opp) {
+  fixFwdObjptr (s, opp);
+  pointer p = objptrToPointer (*opp, s->heap->start);
+  if (isPointerInHeap (s, s->heap, p))
+    threadInternalObjptr (s, opp);
+  else if (DEBUG_MARK_COMPACT)
+    fprintf (stderr,
+             "threadInternal skipped. opp="FMTPTR" p="FMTPTR"\n",
+             (uintptr_t)opp, (uintptr_t)p);
 }
 
 /* If the object pointer is valid, and points to an unmarked object,
@@ -127,6 +138,20 @@ thread:
       uint16_t bytesNonObjptrs, numObjptrs;
 
       assert (header == getHeader (p));
+
+      if (header == GC_FORWARDED) {
+        /* forwarded object. Object resides in the shared heap. Hence skip */
+        size = sizeofObject (s, p);
+        gap += size;
+        front += size;
+        if (DEBUG_MARK_COMPACT) {
+          fprintf (stderr, "updateForwardPointers: threading saw forwarded object.\n");
+          fprintf (stderr, "\tp="FMTPTR" of size=%ld. New gap=%ld. New front="FMTPTR"\n",
+                   (uintptr_t)p, size, gap, (uintptr_t)front);
+        }
+        goto updateObject;
+      }
+
       splitHeader(s, header, getHeaderp (p), &tag, NULL, &bytesNonObjptrs, &numObjptrs);
 
       /* Compute the space taken by the header and object body. */
@@ -186,7 +211,7 @@ thread:
       gap += skipGap;
       front += size + skipFront;
       endOfLastMarked = front;
-      foreachObjptrInObject (s, p, threadInternalObjptr, FALSE);
+      foreachObjptrInObject (s, p, threadInternalObjptrIfInLocalHeap, FALSE);
       goto updateObject;
     } else {
       /* It's not marked. */
@@ -263,6 +288,19 @@ unmark:
       uint16_t bytesNonObjptrs, numObjptrs;
 
       assert (header == getHeader (p));
+
+      if (header == GC_FORWARDED) {
+        /* forwarded object. Object resides in the shared heap. Hence skip */
+        size = sizeofObject (s, p);
+        gap += size;
+        front += size;
+        if (DEBUG_MARK_COMPACT) {
+          fprintf (stderr, "updateBackwardPointers: threading saw forwarded object.\n");
+          fprintf (stderr, "\tp="FMTPTR" of size=%ld. New gap=%ld. New front="FMTPTR"\n",
+                   (uintptr_t)p, size, gap, (uintptr_t)front);
+        }
+        goto updateObject;
+      }
       splitHeader(s, header, getHeaderp (p), &tag, NULL, &bytesNonObjptrs, &numObjptrs);
 
       /* Compute the space taken by the header and object body. */
@@ -301,6 +339,14 @@ unmark:
         objectBytes = sizeof (struct GC_stack) + stack->used;
         skipFront = reservedOld - stack->used;
         skipGap = reservedOld - reservedNew;
+
+        pointer thrd = objptrToPointer (stack->thread, s->heap->start);
+        if (getHeader(thrd) == GC_FORWARDED) {
+          stack->thread = *(objptr*)thrd;
+        }
+
+        if (DEBUG_DETAILED)
+          fprintf (stderr, "[GC: Sliding stack. stack->thread is "FMTOBJPTR"]\n", stack->thread);
       }
       size = headerBytes + objectBytes;
       /* unmark */
@@ -388,7 +434,7 @@ void majorMarkCompactGC (GC_state s) {
     foreachGlobalObjptrInScope (s, dfsMarkWithoutHashConsWithLinkWeaks);
   }
   updateWeaksForMarkCompact (s);
-  foreachGlobalObjptrInScope (s, threadInternalObjptr);
+  foreachGlobalObjptrInScope (s, threadInternalObjptrIfInLocalHeap);
   updateForwardPointersForMarkCompact (s, currentStack);
   updateBackwardPointersAndSlideForMarkCompact (s, currentStack);
   bytesHashConsed = s->lastMajorStatistics->bytesHashConsed;

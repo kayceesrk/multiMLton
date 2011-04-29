@@ -14,7 +14,7 @@ typedef objptr KeyType;
 typedef struct {
     uint32_t writePointer; /**< write pointer */
     uint32_t readPointer;  /**< read pointer */
-    uintptr_t size;         /**< size of circular buffer */
+    size_t size;         /**< size of circular buffer */
     KeyType keys[];    /**< Element of ciruclar buffer */
 } CircularBuffer;
 

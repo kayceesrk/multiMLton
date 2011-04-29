@@ -59,10 +59,13 @@ void setGCStateCurrentThreadAndStack (GC_state s) {
   s->stackBottom = getStackBottom (s, stack);
   s->stackTop = getStackTop (s, stack);
   s->stackLimit = getStackLimit (s, stack);
-  if (DEBUG_DETAILED or s->controls->selectiveDebug)
+  if (DEBUG_DETAILED or FALSE)
     fprintf (stderr, "setGCStateCurrentThreadAndStack: thread = "FMTPTR" stack = "FMTPTR" [%d]\n",
              (uintptr_t)thread, (uintptr_t)stack, s->procId);
   markCard (s, (pointer)stack);
+
+  //Fixing forwarding pointers in the stack
+  foreachObjptrInObject (s, (pointer)stack, fixFwdObjptr, TRUE);
 }
 
 void setGCStateCurrentLocalHeap (GC_state s,
@@ -74,7 +77,7 @@ void setGCStateCurrentLocalHeap (GC_state s,
   pointer genNursery;
   size_t genNurserySize;
 
-  if (DEBUG_DETAILED or s->controls->selectiveDebug)
+  if (DEBUG_DETAILED or FALSE)
     fprintf (stderr, "setGCStateCurrentLocalHeap(%s, %s)\n",
              uintmaxToCommaString(oldGenBytesRequested),
              uintmaxToCommaString(nurseryBytesRequested));
@@ -142,7 +145,7 @@ void setGCStateCurrentSharedHeap (GC_state s,
   pointer frontier;
   size_t bonus = GC_BONUS_SLOP * s->numberOfProcs;
 
-  if (DEBUG_DETAILED or s->controls->selectiveDebug)
+  if (DEBUG_DETAILED or FALSE)
     fprintf (stderr, "setGCStateCurrentSharedHeap(%s, %s)\n",
              uintmaxToCommaString(oldGenBytesRequested),
              uintmaxToCommaString(nurseryBytesRequested));
@@ -155,39 +158,7 @@ void setGCStateCurrentSharedHeap (GC_state s,
   nursery = limit - nurserySize;
   genNursery = alignFrontier (s, limit - (nurserySize / 2));
   genNurserySize = limit - genNursery;
-  if (FALSE /* disabling minor collection of shared heap */
-      and
-      /* The mutator marks cards. */
-      s->mutatorMarksCards
-      /* There is enough space in the generational nursery. */
-      and (nurseryBytesRequested <= genNurserySize)
-      /* The nursery is large enough to be worth it. */
-      and (((float)(h->size - s->lastMajorStatistics->bytesLive)
-            / (float)nurserySize)
-           <= s->controls->ratios.nursery)
-      and /* There is a reason to use generational GC. */
-      (
-       /* We must use it for debugging purposes. */
-       FORCE_GENERATIONAL
-       /* We just did a mark compact, so it will be advantageous to to use it. */
-       or (s->lastMajorStatistics->kind == GC_MARK_COMPACT)
-       /* The live ratio is low enough to make it worthwhile. */
-       or ((float)h->size / (float)s->lastMajorStatistics->bytesLive
-           <= (h->size < s->sysvals.ram
-               ? s->controls->ratios.copyGenerational
-               : s->controls->ratios.markCompactGenerational))
-      )) {
-    s->canMinor = TRUE;
-    nursery = genNursery;
-    nurserySize = genNurserySize;
-    clearCardMap (s);
-    /* XXX copy card map to other processors? */
-    assert (0 and "Minor collection not implemented");
-  } else {
-    unless (nurseryBytesRequested <= nurserySize)
-      die ("Out of memory.  Insufficient space in nursery.");
-    s->canMinor = FALSE;
-  }
+
   if (s->controls->restrictAvailableSize
       and
       (s->cumulativeStatistics->maxBytesLiveSinceReset > 0)) {
@@ -214,20 +185,6 @@ void setGCStateCurrentSharedHeap (GC_state s,
       nurserySize = h->availableSize - (h->oldGenSize + oldGenBytesRequested) - bonus;
       assert (isFrontierAligned (s, limit - nurserySize));
       nursery = limit - nurserySize;
-
-      if (s->canMinor) {
-        /* If we are planning for a minor collection, we must also adjust the
-           start of the nursery */
-        nursery = alignFrontier (s, limit - (nurserySize / 2));
-        nurserySize = limit - nursery;
-      }
-      if (DEBUG) {
-        fprintf (stderr,
-                 "[GC: Restricted nursery at "FMTPTR" of %s bytes (%.1f%%).]\n",
-                 (uintptr_t)nursery, uintmaxToCommaString(limit - nursery),
-                 100.0 * ((double)(limit - nursery)
-                          / (double)h->availableSize));
-      }
     }
     else {
       /* No need to limit in this round... reset availableSize. */
@@ -256,7 +213,6 @@ void setGCStateCurrentSharedHeap (GC_state s,
 
   if (not duringInit) {
     for (int proc = 0; proc < s->numberOfProcs; proc++) {
-      s->procStates[proc].canMinor = s->canMinor;
       assert (isFrontierAligned (s, frontier));
       s->procStates[proc].sharedStart = s->procStates[proc].sharedFrontier = frontier;
       s->procStates[proc].sharedLimitPlusSlop = s->procStates[proc].sharedStart +
@@ -276,7 +232,6 @@ void setGCStateCurrentSharedHeap (GC_state s,
     assert (Proc_processorNumber (s) == 0);
     /* XXX this is a lot of copy-paste */
     for (int proc = 0; proc < s->numberOfProcs; proc++) {
-      s->procStates[proc].canMinor = s->canMinor;
       assert (isFrontierAligned (s, frontier));
       s->procStates[proc].sharedStart = s->procStates[proc].sharedFrontier = frontier;
       s->procStates[proc].sharedLimitPlusSlop = s->procStates[proc].sharedStart +
@@ -471,23 +426,20 @@ void GC_print (int i) {
   printf ("GC_print (%d)[%d]\n", i, s->procId);
 }
 
-pointer GC_forwardBase (GC_state s, pointer p) {
-  if (DEBUG_READ_BARRIER && (DEBUG_DETAILED or s->controls->selectiveDebug) && FALSE)
-    fprintf (stderr, "GC_forwardBase: "FMTPTR" [%d]\n",
-             (uintptr_t)p, s->procId);
-  if (p == (pointer)s->generationalMaps.cardMapAbsolute)
-      return p;
-  else if (p == 0) {
-    if (DEBUG_READ_BARRIER)
-      fprintf (stderr, "GC_forwardBase saw NULL [%d]\n", s->procId);
+pointer GC_forwardBase (const GC_state s, const pointer p) {
+  if (!isPointer (p) || p == (pointer)s->generationalMaps.cardMapAbsolute)
     return p;
-  }
-  while (*(GC_header*)(p - GC_HEADER_SIZE) == GC_FORWARDED) {
+
+  if (*(GC_header*)(p - GC_HEADER_SIZE) == GC_FORWARDED) {
     if (DEBUG_READ_BARRIER)
       fprintf (stderr, "GC_forwardBase: forwarding "FMTPTR" to "FMTPTR" [%d]\n",
                (uintptr_t)p, (uintptr_t)*(pointer*)p, s->procId);
-    p = *(pointer*)p;
-    assert (isPointerInAnyLocalHeap (s, p) or isPointerInHeap (s, s->sharedHeap, p));
+    return *(pointer*)p;
   }
   return p;
+}
+
+void GC_commEvent (void) {
+  GC_state s = pthread_getspecific (gcstate_key);
+  s->cumulativeStatistics->numComms++;
 }

@@ -48,7 +48,9 @@ struct GC_cumulativeStatistics {
   uintmax_t bytesLifted;
 
   size_t maxBytesLive;
+  size_t maxSharedBytesLive;
   size_t maxHeapSize;
+  size_t maxSharedHeapSize;
   uintmax_t maxPauseTime;
   size_t maxStackSize;
 
@@ -61,7 +63,14 @@ struct GC_cumulativeStatistics {
   uintmax_t numHashConsGCs;
   uintmax_t numMarkCompactGCs;
   uintmax_t numMinorGCs;
+
   uintmax_t numThreadsCreated;
+  uintmax_t numForceStackGrowth;
+
+  uintmax_t bytesThreadReserved;
+  uintmax_t countThreadReserved;
+  uintmax_t bytesThreadUsed;
+  uintmax_t countThreadUsed;
 
   struct timeval ru_gc; /* total resource usage in gc. */
   struct rusage ru_gcCopying; /* resource usage in major copying gcs. */
@@ -75,7 +84,8 @@ struct GC_cumulativeStatistics {
   struct rusage ru_thread; /* total resource for thread operations */
 
   /* use wall clock instead of rusage */
-  struct timeval tv_rt; /* total time "inside" runtime (not incl. synch.) */
+  struct timeval tv_rt;
+  struct timeval tv_serial; /* total time all threads are waiting on a barrier (not incl. synch.) */
   struct timeval tv_sync; /* time waiting to synchronize in runtime */
 
   uintmax_t syncForOldGenArray;
@@ -94,6 +104,13 @@ struct GC_cumulativeStatistics {
   uintmax_t numPreemptGC; /* # threads preempted on write barrier array before GC */
   uintmax_t numReadyPrimGC; /* # ready threads on prim scheduler Q before GC */
   uintmax_t numReadySecGC; /* # ready threads on sec scheduler Q before GC */
+
+  uintmax_t bytesParasiteStack;
+  uintmax_t bytesParasiteClosure;
+  uintmax_t numParasitesReified;
+  uintmax_t numParasitesCreated;
+
+  uintmax_t numComms;
 };
 
 struct GC_lastMajorStatistics {

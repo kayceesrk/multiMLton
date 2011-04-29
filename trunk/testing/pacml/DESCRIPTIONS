@@ -37,3 +37,6 @@ test25 - yield
 test26 - Non-blocking(2)
 
 test27 - Time.toString test for thread safety
+test28 - exception
+
+test29 - zipf distributed producer consumer

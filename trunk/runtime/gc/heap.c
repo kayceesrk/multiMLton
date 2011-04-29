@@ -101,9 +101,11 @@ size_t sizeofHeapDesired (GC_state s, size_t liveSize, size_t currentSize) {
       res = s->controls->fixedHeap;
     else
       res = s->controls->fixedHeap / 2;
-    if (res < liveSize)
+    if (res < liveSize) {
+      assert (0 and "Out of memory with fixed heap.");
       die ("Out of memory with fixed heap size %s.",
            uintmaxToCommaString(s->controls->fixedHeap));
+    }
   } else if (s->controls->maxHeap > 0) {
     if (res > s->controls->maxHeap)
       res = s->controls->maxHeap;
@@ -176,6 +178,12 @@ bool createHeap (GC_state s, GC_heap h,
   size_t backoff;
   size_t newSize;
   size_t newWithMapsSize;
+  bool isShared;
+
+  if (h == s->sharedHeap || h == s->secondarySharedHeap)
+    isShared = TRUE;
+  else
+    isShared = FALSE;
 
   if (DEBUG_MEM)
     fprintf (stderr, "createHeap  desired size = %s  min size = %s\n",
@@ -207,7 +215,7 @@ bool createHeap (GC_state s, GC_heap h,
     const size_t address_end = (size_t)0x1 << ADDRESS_BITS;
 #endif
 
-    static bool direction = TRUE;
+    bool direction = TRUE;
     unsigned int i;
 
     newWithMapsSize = newSize + sizeofCardMapAndCrossMap (s, newSize);
@@ -231,8 +239,10 @@ bool createHeap (GC_state s, GC_heap h,
         h->start = newStart;
         h->size = newSize;
         h->withMapsSize = newWithMapsSize;
-        if (h->size > s->cumulativeStatistics->maxHeapSize)
+        if (!isShared && h->size > s->cumulativeStatistics->maxHeapSize)
           s->cumulativeStatistics->maxHeapSize = h->size;
+        if (isShared && h->size > s->cumulativeStatistics->maxSharedHeapSize)
+          s->cumulativeStatistics->maxSharedHeapSize = h->size;
         assert (minSize <= h->size and h->size <= desiredSize);
         if (DEBUG or s->controls->messages)
           fprintf (stderr,
@@ -289,6 +299,10 @@ bool remapHeap (GC_state s, GC_heap h,
   size_t newWithMapsSize;
   size_t origSize;
   size_t origWithMapsSize;
+  bool isShared;
+
+  if (h == s->sharedHeap || h == s->secondarySharedHeap)
+    isShared = TRUE;
 
 #if not HAS_REMAP
   return FALSE;
@@ -320,8 +334,10 @@ bool remapHeap (GC_state s, GC_heap h,
       h->start = newStart;
       h->size = newSize;
       h->withMapsSize = newWithMapsSize;
-      if (h->size > s->cumulativeStatistics->maxHeapSize)
+      if (!isShared && h->size > s->cumulativeStatistics->maxHeapSize)
         s->cumulativeStatistics->maxHeapSize = h->size;
+      if (isShared && h->size > s->cumulativeStatistics->maxSharedHeapSize)
+        s->cumulativeStatistics->maxSharedHeapSize = h->size;
       assert (minSize <= h->size and h->size <= desiredSize);
       if (DEBUG or s->controls->messages)
         fprintf (stderr,

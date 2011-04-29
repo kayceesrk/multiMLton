@@ -12,7 +12,7 @@ structure Main =
   struct
     open MLton.Pacml
     val print = TextIO.print
-    val numSlaves = 4
+    val numSlaves = 16
 
     fun map f [] = []
       | map f (a::x) = f a :: map f x
@@ -163,27 +163,32 @@ structure Main =
     val genB = mkgen(glider at (2,2) @ bail at (2,12)
                      @ rotate (barberpole 4) at (5,20))
 
-    fun slave s e min max= let
-      val ch = channel()
-      fun work () = let
-        val gen = recv ch
-        val u_ngen = mk_nextgen_fn neighbours gen
-        val maxInt = case Int.maxInt of
-                                        NONE => 9999
-                                      | SOME(x) => x
-        val minInt = case Int.minInt of
-                                        NONE => (0-9999)
-                                      | SOME(x) => x
+    fun slave () : ((generation * int * int * int * int) option chan * generation chan)= let
+      val ch1 = channel()
+      val ch2 : generation chan = channel()
+      fun work () =
+        case recv ch1 of
+             NONE => ()
+           | SOME (gen, s, e, min, max) =>
+                let
+                  val u_ngen = mk_nextgen_fn neighbours gen
+                  val maxInt = case Int.maxInt of
+                                    NONE => 9999
+                                  | SOME(x) => x
+                  val minInt = case Int.minInt of
+                                    NONE => (0-9999)
+                                  | SOME(x) => x
 
-        val s = if s=min then minInt else s
-        val e = if e=max then maxInt else e
-        val f_ngen = filterRows s e u_ngen
-      in
-        send(ch, f_ngen)
-      end
+                  val s = if s=min then minInt else s
+                  val e = if e=max then maxInt else e
+                  val f_ngen = filterRows s e u_ngen
+                  val _ = send (ch2, f_ngen)
+                in
+                  work ()
+                end
     in
       spawn work;
-      ch
+      (ch1, ch2)
     end
 
     fun printGen gen = let
@@ -198,24 +203,24 @@ structure Main =
       (List.map printPoint living; print "\n")
     end
 
-   fun master gen = let
+   fun master gen sl =
+   let
      val (min,max) = getMinMaxX gen
      val size = (max-min+1) div numSlaves
      val r = ref ((max-min+1) mod numSlaves)
      val pos = ref min
      (* Creates a slave, assigns work to it and returns channel *)
-     fun assign pos r=
+     fun assign pos r ch =
       let
         (* must have 1 row extra at the top and bottom *)
         val s = !pos
         val e = if (!r)>0 then (!pos + size) else (!pos + size -1)
         val _ = if (!r)>0 then (r := !r -1; pos := !pos +1) else ()
         val g = filterRows (s-1) (e+1) gen
-        val ch = slave s e min max
-        val _ = send(ch, g)
+        val _ = send (ch, SOME (g, s, e, min, max))
         val _ = pos := !pos + size
       in
-        ch
+        ()
       end
      fun collate(a,b) = let
        val alist = alive a
@@ -223,17 +228,30 @@ structure Main =
      in
        mkgen(alist @ blist)
      end
-     val channelList = List.tabulate(numSlaves, fn(x)=>(assign pos r))
-     val resultList = List.map (fn(ch)=>(recv ch)) channelList
+     val _ = List.tabulate (numSlaves, fn i =>
+                                           let
+                                             val (ch, _) = Vector.sub (sl, i)
+                                           in
+                                             assign pos r ch
+                                           end)
+     val resultList = List.tabulate (numSlaves, fn i =>
+                                                  let
+                                                    val (_, ch) = Vector.sub (sl, i)
+                                                  in
+                                                    recv ch
+                                                  end)
      val result = List.foldr collate (mkgen []) resultList
    in
      result
    end
 
 
-   fun nthgen_cml g 0 = ((*print "0 : ";printGen g; print "\n\n";*) g)
-     | nthgen_cml g i = ((*print  (Int.toString(i)^": ");
-                     printGen g;*)nthgen_cml (master g) (i-1))
+
+   fun nthgen_cml g 0 sl =
+                     ((*print "0 : ";printGen g; print "\n\n";*) g)
+     | nthgen_cml g i sl =
+                    ((*print  (Int.toString(i)^": "); printGen g;*) nthgen_cml (master g sl) (i-1) sl)
+
    fun nthgen g 0 = ((*print "0 : ";printGen g; print "\n\n";*) g)
      | nthgen g i = ((*print  (Int.toString(i)^": ");
                      printGen g;*)nthgen (mk_nextgen_fn neighbours g) (i-1))
@@ -250,9 +268,20 @@ structure Main =
 
     fun testit strm = (show (fn c => TextIO.output (strm, c)) (nthgen genB 50))
 
-    fun foo () = (show (fn _ => ()) (nthgen_cml gun 25000))
-                (* Original implementation *)
-                (*(show (fn _ => ()) (nthgen_cml gun 25000))*)
+    val alGenB = alive genB
+    val genC = mkgen (alGenB at (2,2) @
+                      alive(gun) at (4, 4) @
+                      glider at (8, 2) @
+                      alGenB at (10, 1))
+
+    fun foo () =
+      let
+        val sl = Vector.tabulate (numSlaves, fn _ => slave ())
+        val g = (nthgen_cml genC 25000 sl)
+      in
+        (show print g;
+        shutdown OS.Process.success)
+      end
 
     fun doit n =
         run (foo)

@@ -6,26 +6,80 @@
  * See the file MLton-LICENSE for details.
  */
 
+int saveArray (void* a, size_t elSize, int32_t aSize, int32_t aMaxSize, FILE* f) {
+  if (fwrite (&aSize, sizeof(int32_t), 1, f) != 1) return -1;
+  if (fwrite (&aMaxSize, sizeof(int32_t), 1, f) != 1) return -1;
+  if (fwrite (a, elSize, aMaxSize, f) != (size_t)aMaxSize) return -1;
+  return 0;
+}
+
+int saveCircularBuffer (CircularBuffer* que, FILE* f) {
+  size_t sz = que->size * sizeof (KeyType) + sizeof (CircularBuffer);
+  if (fwrite (&sz, sizeof(size_t), 1, f) != 1) return -1;
+  if (fwrite (que, 1, sz, f) != sz) return -1;
+  return 0;
+}
+
+void loadArray (void* a, size_t elSize, int32_t* aSize, int32_t* aMaxSize, FILE* f) {
+  *aSize = readInt32 (f);
+  *aMaxSize = readInt32 (f);
+  fread_safe (a, elSize, *aMaxSize, f);
+}
+
+void loadCircularBuffer (CircularBuffer* que, FILE* f) {
+  size_t sz = readSize (f);
+  fread_safe (que, 1, sz, f);
+}
+
 void loadWorldFromFILE (GC_state s, FILE *f) {
   uint32_t magic;
-  pointer start;
+  pointer start, sharedStart;
 
   if (DEBUG_WORLD)
     fprintf (stderr, "loadWorldFromFILE\n");
-  until (readChar (f) == '\000') ;
+  until (readChar (f) == '\000');
   magic = readUint32 (f);
   unless (s->magic == magic)
     die ("Invalid world: wrong magic number.");
   start = readPointer (f);
   s->heap->oldGenSize = readSize (f);
+  sharedStart = readPointer (f);
+  s->sharedHeap->oldGenSize = readSize (f);
   s->atomicState = readUint32 (f);
   s->callFromCHandlerThread = readObjptr (f);
   s->currentThread = readObjptr (f);
   s->signalHandlerThread = readObjptr (f);
+  s->savedClosure = readObjptr (f);
+  s->pacmlThreadId = readObjptr (f);
+
+  loadArray (s->danglingStackList, sizeof (objptr),
+             &s->danglingStackListSize,
+             &s->danglingStackListMaxSize, f);
+  loadArray (s->moveOnWBA, sizeof (objptr),
+             &s->moveOnWBASize,
+             &s->moveOnWBAMaxSize, f);
+  loadArray (s->preemptOnWBA, sizeof (objptr),
+             &s->preemptOnWBASize,
+             &s->preemptOnWBAMaxSize, f);
+  loadArray (s->spawnOnWBA, sizeof (SpawnThread),
+             &s->spawnOnWBASize,
+             &s->spawnOnWBAMaxSize, f);
+
+  loadCircularBuffer (s->schedulerQueue->primary, f);
+  loadCircularBuffer (s->schedulerQueue->secondary, f);
+
   createHeap (s, s->heap,
               sizeofHeapDesired (s, s->heap->oldGenSize, 0),
               s->heap->oldGenSize);
   setCardMapAndCrossMap (s);
+  if (s->sharedHeap->oldGenSize == 0) {
+    createHeap (s, s->sharedHeap, 1024, 1024);
+  }
+  else {
+    createHeap (s, s->sharedHeap,
+                sizeofHeapDesired (s, s->sharedHeap->oldGenSize, 0),
+                s->sharedHeap->oldGenSize);
+  }
   fread_safe (s->heap->start, 1, s->heap->oldGenSize, f);
   if ((*(s->loadGlobals)) (f) != 0) diee("couldn't load globals");
   // unless (EOF == fgetc (file))
@@ -34,7 +88,9 @@ void loadWorldFromFILE (GC_state s, FILE *f) {
    * since it changes pointers in all of them.
    */
   translateHeap (s, start, s->heap->start, s->heap->oldGenSize);
+  translateSharedHeap (s, sharedStart, s->sharedHeap->start, s->sharedHeap->oldGenSize);
   setGCStateCurrentLocalHeap (s, 0, 0);
+  setGCStateCurrentSharedHeap (s, 0, 0, FALSE);
   setGCStateCurrentThreadAndStack (s);
 }
 
@@ -58,7 +114,7 @@ int saveWorldToFILE (GC_state s, FILE *f) {
   if (DEBUG_WORLD)
     fprintf (stderr, "saveWorldToFILE\n");
   /* Compact the heap. */
-  performGC (s, 0, 0, TRUE, TRUE);
+  performSharedGC (s, 0);
   snprintf (buf, cardof(buf),
             "Heap file created by MLton.\nheap->start = "FMTPTR"\nbytesLive = %"PRIuMAX"\n",
             (uintptr_t)s->heap->start,
@@ -69,6 +125,8 @@ int saveWorldToFILE (GC_state s, FILE *f) {
   if (fwrite (&s->magic, sizeof(uint32_t), 1, f) != 1) return -1;
   if (fwrite (&s->heap->start, sizeof(uintptr_t), 1, f) != 1) return -1;
   if (fwrite (&s->heap->oldGenSize, sizeof(size_t), 1, f) != 1) return -1;
+  if (fwrite (&s->sharedHeap->start, sizeof(uintptr_t), 1, f) != 1) return -1;
+  if (fwrite (&s->sharedHeap->oldGenSize, sizeof(size_t), 1, f) != 1) return -1;
 
   /* atomicState must be saved in the heap, because the saveWorld may
    * be run in the context of a critical section, which will expect to
@@ -78,8 +136,30 @@ int saveWorldToFILE (GC_state s, FILE *f) {
   if (fwrite (&s->callFromCHandlerThread, sizeof(objptr), 1, f) != 1) return -1;
   if (fwrite (&s->currentThread, sizeof(objptr), 1, f) != 1) return -1;
   if (fwrite (&s->signalHandlerThread, sizeof(objptr), 1, f) != 1) return -1;
+  if (fwrite (&s->savedClosure, sizeof(objptr), 1, f) != 1) return -1;
+  if (fwrite (&s->pacmlThreadId, sizeof(objptr), 1, f) != 1) return -1;
+
+  if (saveArray (s->danglingStackList, sizeof (objptr),
+                 s->danglingStackListSize,
+                 s->danglingStackListMaxSize, f) == -1) return -1;
+  if (saveArray (s->moveOnWBA, sizeof (objptr),
+                 s->moveOnWBASize,
+                 s->moveOnWBAMaxSize, f) == -1) return -1;
+  if (saveArray (s->preemptOnWBA, sizeof (objptr),
+                 s->preemptOnWBASize,
+                 s->preemptOnWBAMaxSize, f) == -1) return -1;
+  if (saveArray (s->spawnOnWBA, sizeof (SpawnThread),
+                 s->spawnOnWBASize,
+                 s->spawnOnWBAMaxSize, f) == -1) return -1;
+
+  if (saveCircularBuffer (s->schedulerQueue->primary, f) == -1)
+    return -1;
+  if (saveCircularBuffer (s->schedulerQueue->secondary, f) == -1)
+    return -1;
 
   if (fwrite (s->heap->start, 1, s->heap->oldGenSize, f) != s->heap->oldGenSize)
+    return -1;
+  if (fwrite (s->sharedHeap->start, 1, s->sharedHeap->oldGenSize, f) != s->sharedHeap->oldGenSize)
     return -1;
   if ((*(s->saveGlobals)) (f) != 0)
     return -1;
@@ -88,6 +168,7 @@ int saveWorldToFILE (GC_state s, FILE *f) {
 
 void GC_saveWorld (GC_state s, NullString8_t fileName) {
   FILE *f;
+  assert (s->numberOfProcs == 1);
   s->syncReason = SYNC_SAVE_WORLD;
   /* XXX is fileName heap allocated? */
   ENTER0 (s);

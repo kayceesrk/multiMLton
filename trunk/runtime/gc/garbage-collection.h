@@ -10,14 +10,15 @@
 
 static void minorGC (GC_state s);
 static void majorGC (GC_state s, size_t bytesRequested, bool mayResize, bool liftWBAs);
-static inline void growStackCurrent (GC_state s, bool allocInOldGen, bool allocInSharedHeap);
+static inline void growStackCurrent (GC_state s, bool allocInOldGen, size_t reservedNew);
 static inline void enterGC (GC_state s);
 static inline void leaveGC (GC_state s);
 static void performGC (GC_state s,
                        size_t oldGenBytesRequested,
                        size_t nurseryBytesRequested,
                        bool forceMajor,
-                       bool mayResize);
+                       bool mayResize,
+                       size_t forceStackGrowthBytes);
 static void performSharedGC (GC_state s, size_t bytesRequested);
 static size_t fillGap (GC_state s, pointer start, pointer end);
 static void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s,
@@ -26,8 +27,8 @@ static void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s,
                                                             bool ensureStack,
                                                             size_t oldGenBytesRequested,
                                                             size_t nurseryBytesRequested,
-                                                            bool handlesSignals,
-                                                            bool forceStackGrowth);
+                                                            bool fromGCCollect,
+                                                            size_t forceStackGrowthBytes);
 static bool allocChunkInSharedHeap (GC_state s,
                                     size_t nurseryBytesRequested);
 static void fixForwardingPointers (GC_state s, bool mayResize);

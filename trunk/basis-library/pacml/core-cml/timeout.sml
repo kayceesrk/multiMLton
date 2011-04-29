@@ -13,7 +13,7 @@ struct
   structure TID = ThreadID
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
-  fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
+  fun debug' msg = debug (fn () => (msg())^" : "^Int.toString(PacmlFFI.processorNumber()))
 
   (* this holds an approximation of the current time of day.  It is
     * cleared at each pre-emption, and initialized on demand (by getTime).
@@ -96,12 +96,12 @@ struct
   let
     fun blockFn (txid) =
       let
-        val () = debug' "timeOutEvt(3.2.1)" (* Atomic 1 *)
+        val () = debug' (fn () => "timeOutEvt(3.2.1)") (* Atomic 1 *)
         val () = Assert.assertAtomic' ("TimeOut.timeOutEvt(3.2.1)", SOME 1)
         val () =
           S.atomicSwitchToNext
             (fn t => timeWait (Time.+(time, getTime ()), txid, PT.prep t))
-        val () = debug' "timeOutEvt(3.2.3)" (* NonAtomic *)
+        val () = debug' (fn () => "timeOutEvt(3.2.3)") (* NonAtomic *)
         val () = Assert.assertNonAtomic' "TimeOut.timeOutEvt(3.2.3)"
       in
         ()
@@ -109,14 +109,14 @@ struct
     fun pollFn () =
       let
         val () = Assert.assertAtomic' ("TimeOut.timeOutEvt.pollFn", NONE)
-        val () = debug' "timeOutEvt(2)" (* Atomic 1 *)
+        val () = debug' (fn () => "timeOutEvt(2)") (* Atomic 1 *)
         val () = Assert.assertAtomic' ("TimeOut.timeOutEvt(2)", SOME 1)
       in
        (* (print (concat ["Timeout: time = ", LargeInt.toString (Time.toSeconds (time)),
                         "zeroTime = ", LargeInt.toString (Time.toSeconds (Time.zeroTime)),
                         "\n"]); *)
         if Time.<=(time, Time.zeroTime) then
-          E.enabled {prio = ~1, doitFn = fn () => (debug' "timeOutEvt(3.1)"; atomicEnd ())}
+          E.enabled {prio = ~1, doitFn = fn () => (debug' (fn () => "timeOutEvt(3.1)"); atomicEnd ())}
         else E.blocked blockFn
       end
   in
@@ -127,7 +127,7 @@ struct
     let
       fun doitFn () =
         let
-          val () = debug' "atTimeEvt(3.1.1)" (* Atomic 1 *)
+          val () = debug' (fn () => "atTimeEvt(3.1.1)") (* Atomic 1 *)
           val () = Assert.assertAtomic' ("TimeOut.atTimeEvt(3.2.1)", SOME 1)
           val () = atomicEnd ()
         in
@@ -135,18 +135,18 @@ struct
         end
       fun blockFn (txid) =
         let
-          val () = debug' "atTimeEvt(3.2.1)" (* Atomic 1 *)
+          val () = debug' (fn () => "atTimeEvt(3.2.1)") (* Atomic 1 *)
           val () = Assert.assertAtomic' ("TimeOut.atTimeEvt(3.2.1)", SOME 1)
           val () =
               S.atomicSwitchToNext (fn t => (timeWait (time, txid, PT.prep t)))
-          val () = debug' "atTimeEvt(3.2.3)" (* NonAtomic *)
+          val () = debug' (fn () => "atTimeEvt(3.2.3)") (* NonAtomic *)
           val () = Assert.assertNonAtomic' "TimeOut.atTimeEvt(3.2.3)"
         in
           ()
         end
       fun pollFn () =
           let
-            val () = debug' "atTimeEvt(2)" (* Atomic 1 *)
+            val () = debug' (fn () => "atTimeEvt(2)") (* Atomic 1 *)
             val () = Assert.assertAtomic' ("TimeOut.atTimeEvt(2)", SOME 1)
           in
             if Time.<=(time, getTime())

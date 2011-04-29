@@ -1,7 +1,7 @@
 
 structure Main =
 struct
-   open MLton.PCML
+   open MLton.Pacml
    structure MC = Multicast
 
    val print = TextIO.print
@@ -26,7 +26,7 @@ struct
          val outMCh = MC.mChannel ()
          fun loop () =
             let
-               val i = sync (MC.recvEvt inP)
+               val i = (MC.recv inP)
             in
                if ((i mod p) <> 0)
                   then MC.multicast(outMCh, i)
@@ -61,14 +61,14 @@ struct
       let
          val p = MC.port mch
          fun loop i =
-            if i > n then MLton.RunPCML.shutdown OS.Process.success
+            if i > n then MLton.Pacml.shutdown OS.Process.success
                else let
                        val m = MC.recv p
                        val m' = Int.toString m
                        fun loop' j =
                           if j > m then ()
-                          else ((*print (m' ^ "\n")
-                                ;*) loop' (j + 1))
+                          else (print (m' ^ "\n")
+                                ; loop' (j + 1))
                     in
                        loop' m
                        ; loop (i + 1)
@@ -83,15 +83,14 @@ struct
       end
 
    fun doit' n =
-      MLton.RunPCML.doit
+     run
       (fn () =>
        let
           val mch = makePrimes ()
           val _ = makeNatPrinter mch n
        in
           ()
-       end,
-       SOME (Time.fromMilliseconds 10))
+       end)
 
    fun doit n =
       let

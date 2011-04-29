@@ -680,6 +680,9 @@ fun makeOptions {usage} =
         boolRef profileVal),
        (Normal, "runtime", " <arg>", "pass arg to runtime via @MLton",
         SpaceString (fn s => List.push (runtimeArgs, s))),
+       (Normal, "serial-exec", " {false|true}",
+        "specialize the executable for serial execution (No parallel execution)",
+        boolRef serialExec),
        (Expert, "show", " {anns|path-map}", "print specified data and stop",
         SpaceString
         (fn s =>

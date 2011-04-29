@@ -63,7 +63,7 @@ static inline void liftObjptrAndFillOrig (GC_state s, objptr *opp) {
   if (isPointerInHeap (s, s->sharedHeap, new_p)) {
     size_t objSize = sizeofObject (s, new_p);
     old_p -= sizeofObjectHeader (s, getHeader (new_p));
-    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+    if (DEBUG_DETAILED or FALSE)
       fprintf (stderr, "\t filling Gap between "FMTPTR" and "FMTPTR" of size %ld [%d]\n",
                (uintptr_t)old_p, (uintptr_t)(old_p + objSize), objSize, s->procId);
     fillGap (s, old_p, old_p + objSize);
@@ -75,16 +75,31 @@ static inline void liftObjptrAndFillOrig (GC_state s, objptr *opp) {
 
 static inline void assertLiftedObjptr (GC_state s, objptr *opp) {
   objptr op = *opp;
-  bool res = isObjptrInHeap (s, s->sharedHeap, op);
+  bool stackType = FALSE;
+
+  if (DEBUG_DETAILED or FALSE)
+    fprintf (stderr, "assertLiftedObjptr ("FMTOBJPTR") [%d]\n", *opp, s->procId);
+
   GC_header h = getHeader (objptrToPointer (op, s->heap->start));
-  GC_header* hp = getHeaderp (objptrToPointer (op, s->heap->start));
-  GC_objectTypeTag tag;
-  if (DEBUG_DETAILED or s->controls->selectiveDebug)
-    fprintf (stderr, "assertLiftedObjptr ("FMTOBJPTR")\n", *opp);
-  splitHeader (s, h, hp, &tag, NULL, NULL, NULL);
-  bool stackType = (tag == STACK_TAG);
+  if (h == GC_FORWARDED) {
+    if (DEBUG_DETAILED or FALSE)
+      fprintf (stderr, "assertLiftedObjptr: forwarding [%d]\n", s->procId);
+    fixFwdObjptr (s, opp);
+    op = *opp;
+  }
+
+  bool res = isObjptrInHeap (s, s->sharedHeap, op);
+  if (!res) {
+    GC_header* hp = getHeaderp (objptrToPointer (op, s->heap->start));
+    GC_objectTypeTag tag;
+    splitHeader (s, h, hp, &tag, NULL, NULL, NULL);
+    stackType = (tag == STACK_TAG);
+  }
+
+  //To keep gcc unused check happy
   res = !(!res);
   stackType = !(!stackType);
+
   assert (res || stackType);
 }
 
@@ -133,7 +148,7 @@ void liftAllObjectsDuringInit (GC_state s) {
   if (DEBUG_LWTGC)
     fprintf (stderr, "liftAllObjectsDuringInit: foreachGlobalObjptr\n");
   for (unsigned int i = 0; i < s->globalsLength; ++i) {
-    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+    if (DEBUG_DETAILED or FALSE)
       fprintf (stderr, "foreachGlobal %u [%d]\n", i, s->procId);
     callIfIsObjptr (s, liftObjptr, &s->globals [i]);
   }
@@ -172,7 +187,11 @@ void liftAllObjectsDuringInit (GC_state s) {
 void moveTransitiveClosure (GC_state s, objptr* opp,
                             bool forceStackForwarding,
                             bool fillOrig) {
-  bool done = false;
+  struct timeval tv_rt;
+  volatile bool statValid = TRUE;
+  bool done = FALSE;
+
+  startWallTiming (&tv_rt);
   s->forwardState.liftingObject = *opp;
 
   while (!done) {
@@ -201,6 +220,7 @@ void moveTransitiveClosure (GC_state s, objptr* opp,
       if (DEBUG_LWTGC)
         fprintf (stderr, "retry with "FMTPTR" [%d]\n",
                  (uintptr_t)s->forwardState.liftingObject, s->procId);
+      statValid = FALSE;
     }
   }
 
@@ -212,6 +232,10 @@ void moveTransitiveClosure (GC_state s, objptr* opp,
   s->forwardState.liftingObject = BOGUS_OBJPTR;
   assert (!s->forwardState.rangeListFirst);
   assert (!s->forwardState.rangeListLast);
+
+  if (statValid && needGCTime (s))
+    stopWallTiming (&tv_rt, &s->cumulativeStatistics->tv_rt);
+
 }
 
 pointer GC_move (GC_state s, pointer p,
@@ -252,7 +276,12 @@ pointer GC_move (GC_state s, pointer p,
 
   assert (isObjptrInHeap (s, s->sharedHeap, op));
 
-  if (!skipFixForwardingPointers) {
+  if (skipFixForwardingPointers) {
+    getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
+    getThreadCurrent(s)->exnStack = s->exnStack;
+    foreachObjptrInObject (s, (pointer)getStackCurrent(s), fixFwdObjptr, TRUE);
+  }
+  else {
     /* Force a garbage collection. Essential to fix the forwarding pointers from
      * the previous step.
      * NOTE: Major GC needs to be forced only if moving objects from the major heap. */
@@ -273,17 +302,17 @@ pointer GC_move (GC_state s, pointer p,
   return res;
 }
 
-void forceLocalGC (GC_state s) {
-  if (DEBUG_LWTGC)
-    fprintf (stderr, "forceLocalGC [%d]\n", s->procId);
+  void forceLocalGC (GC_state s) {
+    if (DEBUG_LWTGC)
+      fprintf (stderr, "forceLocalGC [%d]\n", s->procId);
 
-  s->syncReason = SYNC_FORCE;
-  ENTER_LOCAL0 (s);
+    s->syncReason = SYNC_FORCE;
+    ENTER_LOCAL0 (s);
 
-  fixForwardingPointers (s, TRUE);
+    fixForwardingPointers (s, TRUE);
 
-  LEAVE_LOCAL0 (s);
-}
+    LEAVE_LOCAL0 (s);
+  }
 
 void moveEachObjptrInObject (GC_state s, pointer p) {
   assert (p != BOGUS_POINTER);
@@ -308,7 +337,7 @@ void moveEachObjptrInObject (GC_state s, pointer p) {
   s->forwardState.forceStackForwarding = FALSE;
 
   /* Forward objptrs in the given object to sharedHeap */
-  foreachObjptrInObject (s, p, liftObjptr, TRUE); //XXX KC need to handle liftObject here
+  foreachObjptrInObject (s, p, liftObjptr, TRUE);
   foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, liftObjptr, TRUE);
   s->forwardState.amInMinorGC = FALSE;
   s->forwardState.liftingObject = BOGUS_OBJPTR;
@@ -350,6 +379,9 @@ void liftAllObjptrsInMoveOnWBA (GC_state s) {
     moveTransitiveClosure (s, &op, FALSE, FALSE);
   }
   s->moveOnWBASize = 0;
+  for (int32_t i=0; i < s->spawnOnWBASize; i++) {
+    moveTransitiveClosure (s, &(s->spawnOnWBA[i].op), FALSE, FALSE);
+  }
 
   /* move the threads from preemptOnWBA to scheduler queue */
   if (DEBUG_LWTGC)
@@ -379,7 +411,7 @@ void liftAllObjptrsInMoveOnWBA (GC_state s) {
       if (DEBUG_SQ)
         fprintf (stderr, "moving closure to shared heap[%d]\n",
                  s->procId);
-      moveTransitiveClosure (s, &op, FALSE, FALSE);
+      moveTransitiveClosure (s, &op, FALSE, TRUE);
       if (DEBUG_SQ)
         fprintf (stderr, "moving closure to shared heap done. "FMTOBJPTR" [%d]\n",
                  op, s->procId);
@@ -469,6 +501,6 @@ void jumpToReturnLocation (GC_state s) {
 
 bool GC_isInSharedOrForwarded (GC_state s, pointer p) {
   if (getHeader (p) == GC_FORWARDED || isPointerInHeap (s, s->sharedHeap,p))
-    return true;
-  return false;
+    return TRUE;
+  return FALSE;
 }

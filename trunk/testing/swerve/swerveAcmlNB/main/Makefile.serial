@@ -1,0 +1,12 @@
+#!/bin/bash
+
+CFLAGS = -std=gnu99 -g -DASSERT=1 -fno-strict-aliasing -fomit-frame-pointer -w -m64
+INCLUDES = -I/home/chandras/git/trunk/build/lib/self/include \
+					 -I/home/chandras/git/trunk/build/lib/include
+LIBS = -L/home/chandras/git/trunk/build/lib/self -lmlton-gdb -lgdtoa-gdb \
+			 -lm -lgmp -m64 -lplpa_included -pthread -lrt
+
+SRC := $(wildcard *.c)
+
+main: $(SRC)
+	gcc -o $@ $^ $(CFLAGS) $(INCLUDES) $(LIBS)

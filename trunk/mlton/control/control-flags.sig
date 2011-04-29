@@ -320,6 +320,8 @@ signature CONTROL_FLAGS =
 
       val profileVal: bool ref
 
+      val serialExec : bool ref
+
       (* Show the basis library. *)
       val showBasis: File.t option ref
 

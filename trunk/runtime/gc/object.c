@@ -50,7 +50,7 @@ GC_header buildHeaderFromTypeIndex (uint32_t t) {
   return 1 | (t << 1);
 }
 
-void splitHeader(GC_state s, GC_header header, GC_header* headerp,
+void splitHeader(GC_state s, GC_header header, __attribute__((unused)) GC_header* headerpunused,
                  GC_objectTypeTag *tagRet, bool *hasIdentityRet,
                  uint16_t *bytesNonObjptrsRet, uint16_t *numObjptrsRet) {
   unsigned int objectTypeIndex;
@@ -58,10 +58,12 @@ void splitHeader(GC_state s, GC_header header, GC_header* headerp,
   GC_objectTypeTag tag;
   bool hasIdentity;
   uint16_t bytesNonObjptrs, numObjptrs;
+  GC_header* headerp = NULL;
 
+  assert (header != GC_FORWARDED);
   header &= ~(LIFT_MASK);
 
-  if (DEBUG_DETAILED or s->controls->selectiveDebug)
+  if (DEBUG_DETAILED or FALSE)
       fprintf (stderr, "splitHeader p="FMTPTR" ("FMTHDR") [%d]\n", (uintptr_t)headerp, header, s->procId);
   assert (1 == (header & GC_VALID_HEADER_MASK));
   objectTypeIndex = (header & TYPE_INDEX_MASK) >> TYPE_INDEX_SHIFT;
@@ -74,7 +76,7 @@ void splitHeader(GC_state s, GC_header header, GC_header* headerp,
   bytesNonObjptrs = objectType->bytesNonObjptrs;
   numObjptrs = objectType->numObjptrs;
 
-  if (DEBUG_DETAILED or s->controls->selectiveDebug)
+  if (DEBUG_DETAILED or FALSE)
     fprintf (stderr,
              "splitHeader ("FMTHDR")"
              "  objectTypeIndex = %u"
@@ -116,7 +118,7 @@ pointer advanceToObjectData (__attribute__ ((unused)) GC_state s, pointer p) {
     /* Looking at a header word. */
     res = p + GC_NORMAL_HEADER_SIZE;
   assert (isAligned ((uintptr_t)res, s->alignment));
-  if (DEBUG_DETAILED or s->controls->selectiveDebug)
+  if (DEBUG_DETAILED or FALSE)
     fprintf (stderr, FMTPTR" = advanceToObjectData ("FMTPTR")\n",
              (uintptr_t)res, (uintptr_t)p);
   return res;

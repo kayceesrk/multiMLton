@@ -379,6 +379,7 @@ in
 			../pacml/util/critical.sml
 			../pacml/util/assert.sig
 			../pacml/util/assert.sml
+			../pacml/util/stat.sml
 			../pacml/util/local-assert.fun
 			../pacml/util/debug.sig
 			../pacml/util/debug.sml

@@ -46,11 +46,13 @@ static void summaryWrite (GC_state s,
   uintmax_t syncTime;
   //uintmax_t threadTime;
   uintmax_t rtTime;
+  uintmax_t serialTime;
   //uintmax_t lockTime;
 
   gcTime = timevalTime (&cumul->ru_gc);
   syncTime = timevalTime (&cumul->tv_sync);
   //threadTime = rusageTime (&cumul->ru_thread);
+  serialTime = timevalTime (&cumul->tv_serial);
   rtTime = timevalTime (&cumul->tv_rt);
   /* lockTime = rusageTime (&cumul->ru_lock); */
   fprintf (out, "GC type\t\ttime ms\t number\t\t  bytes\t      bytes/sec\n");
@@ -91,11 +93,23 @@ static void summaryWrite (GC_state s,
                uintmaxToCommaString (realTime), str);
   fprintf (out, "total time: %s ms %s\n",
            uintmaxToCommaString (totalTime), str);
+
+
+  fprintf (out, "\nLOCAL GC STATS\n");
+  fprintf (out, "--------------\n");
   fprintf (out, "total GC time: %s ms (%.1f%%)\n",
            uintmaxToCommaString (gcTime),
            (0 == totalTime)
            ? 0.0
            : 100.0 * ((double) gcTime) / (double)totalTime);
+  fprintf (out, "total lift time: %s ms (%.1f%%)\n",
+           uintmaxToCommaString (rtTime),
+           (0 == totalTime)
+           ? 0.0
+           : 100.0 * ((double) rtTime) / (double)totalTime);
+
+  fprintf (out, "\nGLOBAL GC STATS\n");
+  fprintf (out, "---------------\n");
   fprintf (out, "total sync time: %s ms (%.1f%%)\n",
            uintmaxToCommaString (syncTime),
            (0 == totalTime)
@@ -108,11 +122,11 @@ static void summaryWrite (GC_state s,
      ? 0.0
      : 100.0 * ((double) threadTime) / (double)totalTime);
    */
-  fprintf (out, "total rt time: %s ms (%.1f%%) [All threads sync'ed]\n",
-           uintmaxToCommaString (rtTime),
-           (0 == totalTime)
+  fprintf (out, "total serial time: %s ms (%.1f%%) [All threads sync'ed]\n",
+           uintmaxToCommaString (serialTime),
+           (0 == realTime)
            ? 0.0
-           : 100.0 * ((double) rtTime) / (double)realTime);
+           : 100.0 * ((double) serialTime) / (double)realTime);
   /*
      fprintf (out, "total lock time: %s ms (%.1f%%)\n",
      uintmaxToCommaString (lockTime),
@@ -131,10 +145,14 @@ static void summaryWrite (GC_state s,
            uintmaxToCommaString (cumul->bytesLifted));
   fprintf (out, "total bytes filled: %s bytes\n",
            uintmaxToCommaString (cumul->bytesFilled));
-  fprintf (out, "max bytes live: %s bytes\n",
+  fprintf (out, "max bytes live in some local heap: %s bytes\n",
            uintmaxToCommaString (cumul->maxBytesLive));
-  fprintf (out, "max heap size: %s bytes\n",
+  fprintf (out, "max bytes live in shared heap: %s bytes\n",
+           uintmaxToCommaString (cumul->maxSharedBytesLive));
+  fprintf (out, "max local heap size: %s bytes\n",
            uintmaxToCommaString (cumul->maxHeapSize));
+  fprintf (out, "max shared heap size: %s bytes\n",
+           uintmaxToCommaString (cumul->maxSharedHeapSize));
   fprintf (out, "max stack size: %s bytes\n",
            uintmaxToCommaString (cumul->maxStackSize));
   fprintf (out, "num cards marked: %s\n",
@@ -160,11 +178,9 @@ static void summaryWrite (GC_state s,
   fprintf (out, "num lift transitive closure but no gc: %s\n",
            uintmaxToCommaString (cumul->syncMisc));
 
-  fprintf (out, "\n");
-  fprintf (out, "num threads created: %s\n",
-           uintmaxToCommaString (cumul->numThreadsCreated));
 
-  fprintf (out, "\n");
+  fprintf (out, "\nWRITE BARRIER\n");
+  fprintf (out, "-------------\n");
   fprintf (out, "num preempt on WB: %s\n",
            uintmaxToCommaString (cumul->numPreemptWB));
   fprintf (out, "num ideal preempt on WB: %s\n",
@@ -182,7 +198,8 @@ static void summaryWrite (GC_state s,
   fprintf (out, "\tavg # threads on primQ on WB: %f\n", avgAvailPrim);
   fprintf (out, "\tavg # threads on secQ on WB: %f\n", avgAvailSec);
 
-  fprintf (out, "\n");
+  fprintf (out, "\nTHREADS\n");
+  fprintf (out, "-------\n");
   uintmax_t numGCs = cumul->numCopyingGCs + cumul->numMarkCompactGCs;
   avgAvailPrim =
       (numGCs > 0)
@@ -197,14 +214,50 @@ static void summaryWrite (GC_state s,
       (numGCs > 0)
       ? ((float)cumul->numPreemptGC/numGCs)
       : 0.0f;
+  float avgThreadBytesReserved =
+      (cumul->countThreadReserved > 0)
+      ? ((float)cumul->bytesThreadReserved/cumul->countThreadReserved)
+      : 0.0f;
+  float avgThreadBytesUsed =
+      (cumul->countThreadUsed > 0)
+      ? ((float)cumul->bytesThreadUsed/cumul->countThreadUsed)
+      : 0.0f;
 
+  fprintf (out, "num threads created: %s\n",
+           uintmaxToCommaString (cumul->numThreadsCreated));
+  fprintf (out, "avg thread reserved bytes: %f\n", avgThreadBytesReserved);
+  fprintf (out, "avg thread used bytes: %f\n", avgThreadBytesUsed);
   fprintf (out, "avg # threads ready before GC: %f\n", avgAvail);
   fprintf (out, "\tavg # threads on primQ before GC: %f\n", avgAvailPrim);
   fprintf (out, "\tavg # threads on secQ before GC: %f\n", avgAvailSec);
   fprintf (out, "avg # threads on preemptedOnWBQ before GC: %f\n", avgPreempt);
+
+  float avgParasiteStackSize =
+    (cumul->numParasitesReified > 0)
+    ? ((float)cumul->bytesParasiteStack/cumul->numParasitesReified)
+    : 0.0f;
+
+  float avgParasiteClosureSize =
+    (cumul->numParasitesReified > 0)
+    ? ((float)cumul->bytesParasiteClosure/cumul->numParasitesReified)
+    : 0.0f;
+
+  fprintf (out, "\nPARASITES\n");
+  fprintf (out, "---------\n");
+  fprintf (out, "num Parasites created: %s\n", uintmaxToCommaString (cumul->numParasitesCreated));
+  fprintf (out, "avg parasite stack size: %f\n", avgParasiteStackSize);
+  fprintf (out, "avg parasite closure size: %f\n", avgParasiteClosureSize);
+  fprintf (out, "num Parasites reified: %s\n", uintmaxToCommaString (cumul->numParasitesReified));
+  fprintf (out, "num force stack growth: %s\n", uintmaxToCommaString (cumul->numForceStackGrowth));
+
+  fprintf (out, "\nCOMMUNICATIONS\n");
+  fprintf (out, "----------------\n");
+  fprintf (out, "num Communication actions: %s\n", uintmaxToCommaString (cumul->numComms));
+
 }
 
 static inline void initStat (struct GC_cumulativeStatistics* cumul) {
+  cumul->numForceStackGrowth = 0;
   cumul->bytesAllocated = 0;
   cumul->bytesFilled = 0;
   cumul->bytesCopied = 0;
@@ -215,8 +268,10 @@ static inline void initStat (struct GC_cumulativeStatistics* cumul) {
   cumul->bytesScannedMinor = 0;
   cumul->bytesLifted = 0;
   cumul->maxBytesLive = 0;
+  cumul->maxSharedBytesLive = 0;
   cumul->maxBytesLiveSinceReset = 0;
   cumul->maxHeapSize = 0;
+  cumul->maxSharedHeapSize = 0;
   cumul->maxPauseTime = 0;
   cumul->maxStackSize = 0;
   cumul->numCardsMarked = 0;
@@ -235,6 +290,11 @@ static inline void initStat (struct GC_cumulativeStatistics* cumul) {
   cumul->numMinorGCs = 0;
   cumul->numThreadsCreated = 0;
 
+  cumul->bytesThreadReserved = 0;
+  cumul->countThreadReserved = 0;
+  cumul->bytesThreadUsed = 0;
+  cumul->countThreadUsed = 0;
+
   cumul->numPreemptWB = 0;
   cumul->numMoveWB = 0;
   cumul->numReadyPrimWB = 0;
@@ -244,6 +304,13 @@ static inline void initStat (struct GC_cumulativeStatistics* cumul) {
   cumul->numReadyPrimGC = 0;
   cumul->numReadySecGC = 0;
 
+  cumul->bytesParasiteStack = 0;
+  cumul->bytesParasiteClosure = 0;
+  cumul->numParasitesReified =0;
+  cumul->numParasitesCreated =0;
+
+  cumul->numComms = 0;
+
   timevalZero (&cumul->ru_gc);
   rusageZero (&cumul->ru_gcCopying);
   rusageZero (&cumul->ru_gcCopyingShared);
@@ -251,6 +318,7 @@ static inline void initStat (struct GC_cumulativeStatistics* cumul) {
   rusageZero (&cumul->ru_gcMinor);
   timevalZero (&cumul->tv_sync);
   rusageZero (&cumul->ru_thread);
+  timevalZero (&cumul->tv_serial);
   timevalZero (&cumul->tv_rt);
 }
 
@@ -274,6 +342,7 @@ void GC_summaryWrite (void) {
     for (int proc=0; proc < s->numberOfProcs; proc++) {
       struct GC_cumulativeStatistics* d =
         s->procStates[proc].cumulativeStatistics;
+      cumul.numForceStackGrowth += d->numForceStackGrowth;
       cumul.bytesAllocated += d->bytesAllocated;
       cumul.bytesFilled += d->bytesFilled;
       cumul.bytesCopied += d->bytesCopied;
@@ -287,6 +356,10 @@ void GC_summaryWrite (void) {
         (d->maxBytesLive > cumul.maxBytesLive)
         ? d->maxBytesLive
         : cumul.maxBytesLive;
+      cumul.maxSharedBytesLive =
+        (d->maxSharedBytesLive > cumul.maxSharedBytesLive)
+        ? d->maxSharedBytesLive
+        : cumul.maxSharedBytesLive;
       cumul.maxBytesLiveSinceReset =
         (d->maxBytesLiveSinceReset > cumul.maxBytesLiveSinceReset)
         ? d->maxBytesLiveSinceReset
@@ -295,6 +368,10 @@ void GC_summaryWrite (void) {
         (d->maxHeapSize > cumul.maxHeapSize)
         ? d->maxHeapSize
         : cumul.maxHeapSize;
+      cumul.maxSharedHeapSize =
+        (d->maxSharedHeapSize > cumul.maxSharedHeapSize)
+        ? d->maxSharedHeapSize
+        : cumul.maxSharedHeapSize;
       cumul.maxPauseTime =
         (d->maxPauseTime > cumul.maxPauseTime)
         ? d->maxPauseTime
@@ -320,6 +397,11 @@ void GC_summaryWrite (void) {
       cumul.numMinorGCs += d->numMinorGCs;
       cumul.numThreadsCreated += d->numThreadsCreated;
 
+      cumul.bytesThreadReserved += d->bytesThreadReserved;
+      cumul.countThreadReserved += d->countThreadReserved;
+      cumul.bytesThreadUsed += d->bytesThreadUsed;
+      cumul.countThreadUsed += d->countThreadUsed;
+
       cumul.numPreemptWB += d->numPreemptWB;
       cumul.numMoveWB += d->numMoveWB;
       cumul.numReadyPrimWB += d->numReadyPrimWB;
@@ -328,6 +410,14 @@ void GC_summaryWrite (void) {
       cumul.numPreemptGC += d->numPreemptGC;
       cumul.numReadyPrimGC += d->numReadyPrimGC;
       cumul.numReadySecGC += d->numReadySecGC;
+
+
+      cumul.bytesParasiteStack += d->bytesParasiteStack;
+      cumul.bytesParasiteClosure += d->bytesParasiteClosure;
+      cumul.numParasitesReified += d->numParasitesReified;
+      cumul.numParasitesCreated += d->numParasitesCreated;
+
+      cumul.numComms += d->numComms;
 
       timevalPlusMax (&cumul.ru_gc, &d->ru_gc, &cumul.ru_gc);
       rusagePlusMax (&cumul.ru_gcCopying,
@@ -346,6 +436,7 @@ void GC_summaryWrite (void) {
       rusagePlusMax (&cumul.ru_thread,
                      &d->ru_thread,
                      &cumul.ru_thread);
+      timevalPlusMax (&cumul.tv_serial, &d->tv_serial, &cumul.tv_serial);
       timevalPlusMax (&cumul.tv_rt, &d->tv_rt, &cumul.tv_rt);
     }
 
@@ -357,7 +448,8 @@ void GC_summaryWrite (void) {
 }
 
 void GC_done (GC_state s) {
-  minorGC (s);
+  //XXX KC this gc causes segfault
+  //minorGC (s);
   GC_summaryWrite ();
 
   releaseHeap (s, s->heap);

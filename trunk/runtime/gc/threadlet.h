@@ -27,4 +27,7 @@ int GC_getCopiedSize (void);
 PRIVATE void GC_jumpDown (GC_state s, int offset);
 PRIVATE void GC_prefixAndSwitchTo (GC_state s, pointer p);
 
+/* Measurement */
+void GC_parasiteCreatedEvent (void);
+
 #endif /* (defined (MLTON_GC_INTERNAL_BASIS)) */

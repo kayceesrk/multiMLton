@@ -66,6 +66,7 @@ static inline void forwardObjptrIfInSharedHeap (GC_state s, objptr *opp);
 static inline void forwardInterGenerationalObjptrs (GC_state s);
 
 static inline void fixFwdObjptr (GC_state s, objptr *opp);
+static inline objptr fixFwdObjptrAndFetch (GC_state s, objptr *opp);
 
 static inline void saveForwardState (GC_state s, struct GC_forwardState* fwd);
 static inline void restoreForwardState (GC_state s, struct GC_forwardState* fwd);

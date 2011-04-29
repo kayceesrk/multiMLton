@@ -18,6 +18,12 @@ static inline size_t readSize (FILE *f) {
   return res;
 }
 
+static inline int32_t readInt32 (FILE *f) {
+  int32_t res;
+  fread_safe (&res, sizeof(int32_t), 1, f);
+  return res;
+}
+
 static inline uint32_t readUint32 (FILE *f) {
   uint32_t res;
   fread_safe (&res, sizeof(uint32_t), 1, f);
@@ -36,6 +42,10 @@ static inline void writeChar (FILE *f, char c) {
 
 static inline void writeSize (FILE *f, size_t z) {
   fwrite_safe (&z, sizeof(size_t), 1, f);
+}
+
+static inline void writeInt32 (FILE *f, uint32_t i) {
+  fwrite_safe (&i, sizeof(int32_t), 1, f);
 }
 
 static inline void writeUint32 (FILE *f, uint32_t u) {

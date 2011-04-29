@@ -181,8 +181,8 @@ void run (void *arg) {                                                  \
         uint32_t num = Proc_processorNumber (s)                         \
                 * s->controls->affinityStride                           \
                 + s->controls->affinityBase;                            \
-         if (s->numberOfProcs != 1)                                     \
-            set_cpu_affinity(num);                                      \
+         int numCompute = s->numberOfProcs - s->numIOThreads;           \
+         set_cpu_affinity(num);                                         \
                                                                         \
         /* Save our state locally */                                    \
         pthread_setspecific (gcstate_key, s);                           \

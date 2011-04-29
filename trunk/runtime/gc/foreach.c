@@ -18,11 +18,11 @@ void callIfIsObjptr (GC_state s, GC_foreachObjptrFun f, objptr *opp) {
  */
 void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f) {
   for (unsigned int i = 0; i < s->globalsLength; ++i) {
-    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+    if (DEBUG_DETAILED or FALSE)
       fprintf (stderr, "foreachGlobal %u [%d]\n", i, s->procId);
     callIfIsObjptr (s, f, &s->globals [i]);
   }
-  if (DEBUG_DETAILED or s->controls->selectiveDebug)
+  if (DEBUG_DETAILED or FALSE)
     fprintf (stderr, "foreachGlobal threads [%d]\n", s->procId);
   if (s->procStates) {
     for (int proc = 0; proc < s->numberOfProcs; proc++) {
@@ -40,19 +40,29 @@ void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f) {
       }
 
       for (int i=0; i < s->procStates[proc].danglingStackListSize; i++) {
-        if (DEBUG_DETAILED or s->controls->selectiveDebug)
-          fprintf (stderr, "foreachDanlingStack(1) i=%d stack="FMTPTR" [%d]\n",
-                   i, (uintptr_t)s->procStates[proc].danglingStackList[i], s->procId);
-
-        callIfIsObjptr (s, f, &(s->procStates[proc].danglingStackList[i]));
-        if (DEBUG_DETAILED or s->controls->selectiveDebug)
-          fprintf (stderr, "foreachDanlingStack(2) "FMTOBJPTR" i=%d [%d]\n",
-                   s->procStates[proc].danglingStackList[i], i, s->procId);
         GC_stack stk = (GC_stack) objptrToPointer (s->procStates[proc].danglingStackList[i],
                                                    s->heap->start);
-        callIfIsObjptr (s, f, &stk->thread);
-        GC_thread thrd = (GC_thread) objptrToPointer (stk->thread, s->sharedHeap->start);
-        if (DEBUG_DETAILED or s->controls->selectiveDebug)
+        GC_thread thrd = NULL;
+
+        //If we are NOT in the middle of a heap translation, then stk will
+        //point to the correct object only after it has been translated.
+        if (s->translateState.from == BOGUS_POINTER)
+          thrd = (GC_thread) objptrToPointer (stk->thread, s->sharedHeap->start);
+
+        if (DEBUG_DETAILED or FALSE)
+          fprintf (stderr, "foreachDanlingStack(1) i=%d stack="FMTPTR" [%d]\n",
+                   i, (uintptr_t)s->procStates[proc].danglingStackList[i], s->procId);
+        callIfIsObjptr (s, f, &(s->procStates[proc].danglingStackList[i]));
+
+        //If we are in the middle of a heap translation, then stk will point to
+        //the correct object only now.
+        if (s->translateState.from != BOGUS_POINTER) {
+          stk = (GC_stack) objptrToPointer (s->procStates[proc].danglingStackList[i], s->heap->start);
+          thrd = (GC_thread) objptrToPointer (stk->thread, s->sharedHeap->start);
+        }
+
+
+        if (DEBUG_DETAILED or FALSE)
           fprintf (stderr, "foreachDanlingStack(2) thrd="FMTPTR" i=%d [%d]\n",
                    (uintptr_t)thrd, i, s->procId);
 
@@ -75,11 +85,11 @@ void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f) {
  */
 void foreachGlobalObjptrInScope (GC_state s, GC_foreachObjptrFun f) {
   for (unsigned int i = 0; i < s->globalsLength; ++i) {
-    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+    if (DEBUG_DETAILED or FALSE)
       fprintf (stderr, "foreachGlobal %u\n", i);
     callIfIsObjptr (s, f, &s->globals [i]);
   }
-  if (DEBUG_DETAILED or s->controls->selectiveDebug)
+  if (DEBUG_DETAILED or FALSE)
     fprintf (stderr, "foreachGlobal threads\n");
   callIfIsObjptr (s, f, &s->callFromCHandlerThread);
   callIfIsObjptr (s, f, &s->currentThread);
@@ -94,31 +104,35 @@ void foreachGlobalObjptrInScope (GC_state s, GC_foreachObjptrFun f) {
   }
 
   for (int i=0; i < s->danglingStackListSize; i++) {
-    if (DEBUG_DETAILED or s->controls->selectiveDebug)
-      fprintf (stderr, "foreachDanlingStack(1) i=%d stack="FMTPTR" [%d]\n",
-               i, (uintptr_t)s->danglingStackList[i], s->procId);
-
-    callIfIsObjptr (s, f, &s->danglingStackList[i]);
-    if (DEBUG_DETAILED or s->controls->selectiveDebug)
-      fprintf (stderr, "foreachDanlingStack(2) "FMTOBJPTR" i=%d [%d]\n",
-               s->danglingStackList[i], i, s->procId);
-
     GC_stack stk = (GC_stack) objptrToPointer (s->danglingStackList[i],
                                                s->heap->start);
 
-    callIfIsObjptr (s, f, &stk->thread);
-    GC_thread thrd = (GC_thread) objptrToPointer (stk->thread, s->sharedHeap->start);
+    GC_thread thrd = NULL;
 
-    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+    //If we are NOT in the middle of a heap translation, then stk will point to
+    //the correct object only now.
+    if (s->translateState.from == BOGUS_POINTER)
+      thrd = (GC_thread) objptrToPointer (stk->thread, s->sharedHeap->start);
+
+    if (DEBUG_DETAILED or FALSE)
+      fprintf (stderr, "foreachDanlingStack(1) i=%d stack="FMTPTR" [%d]\n",
+               i, (uintptr_t)s->danglingStackList[i], s->procId);
+    callIfIsObjptr (s, f, &s->danglingStackList[i]);
+
+
+    //If we are in the middle of a heap translation, then stk will point to
+    //the correct object only now.
+    if (s->translateState.from != BOGUS_POINTER) {
+      stk = (GC_stack) objptrToPointer (s->danglingStackList[i], s->heap->start);
+      thrd = (GC_thread) objptrToPointer (stk->thread, s->sharedHeap->start);
+    }
+
+    if (DEBUG_DETAILED or FALSE)
       fprintf (stderr, "foreachDanlingStack(2) thrd="FMTPTR" i=%d [%d]\n",
                (uintptr_t)thrd, i, s->procId);
 
     assert (isPointerInToSpace (s, (pointer)thrd) or isPointerInHeap (s, s->sharedHeap, (pointer) thrd));
     callIfIsObjptr (s, f, &thrd->stack);
-
-    if (DEBUG_DETAILED or s->controls->selectiveDebug)
-      fprintf (stderr, "foreachDanlingStack(2) thrd="FMTPTR" i=%d [%d]\n",
-               (uintptr_t)thrd, i, s->procId);
   }
   foreachObjptrInWBAs (s, s, f);
   foreachObjptrInSQ (s, s->schedulerQueue, f);
@@ -141,7 +155,7 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
 
   header = getHeader (p);
   splitHeader(s, header, getHeaderp (p), &tag, NULL, &bytesNonObjptrs, &numObjptrs);
-  if (DEBUG_DETAILED or s->controls->selectiveDebug)
+  if (DEBUG_DETAILED or FALSE)
     fprintf (stderr,
              "foreachObjptrInObject ("FMTPTR")"
              "  header = "FMTHDR
@@ -155,7 +169,7 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
     pointer max = p + (numObjptrs * OBJPTR_SIZE);
     /* Apply f to all internal pointers. */
     for ( ; p < max; p += OBJPTR_SIZE) {
-      if (DEBUG_DETAILED or s->controls->selectiveDebug)
+      if (DEBUG_DETAILED or FALSE)
         fprintf (stderr,
                  "  p = "FMTPTR"  *p = "FMTOBJPTR"\n",
                  (uintptr_t)p, *(objptr*)p);
@@ -190,7 +204,7 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
       if (0 == bytesNonObjptrs)
         /* Array with only pointers. */
         for ( ; p < last; p += OBJPTR_SIZE) {
-          if (DEBUG_DETAILED or s->controls->selectiveDebug)
+          if (DEBUG_DETAILED or FALSE)
             fprintf (stderr,
                      "  p = "FMTPTR"  *p = "FMTOBJPTR"\n",
                      (uintptr_t)p, *(objptr*)p);
@@ -211,7 +225,7 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
           next = p + bytesObjptrs;
           /* For each internal pointer. */
           for ( ; p < next; p += OBJPTR_SIZE) {
-            if (DEBUG_DETAILED or s->controls->selectiveDebug)
+            if (DEBUG_DETAILED or FALSE)
               fprintf (stderr,
                        "  p = "FMTPTR"  *p = "FMTOBJPTR"\n",
                        (uintptr_t)p, *(objptr*)p);
@@ -234,15 +248,22 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
     stack = (GC_stack)p;
     bottom = getStackBottom (s, stack);
     top = getStackTop (s, stack);
-    if (DEBUG_DETAILED or s->controls->selectiveDebug) {
+
+    //For stack->thread
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "  &stack->thread="FMTPTR"\n", (uintptr_t)&stack->thread);
+    callIfIsObjptr (s, f, (objptr*)&(stack->thread));
+
+    if (DEBUG_DETAILED or FALSE) {
       fprintf (stderr, "  bottom = "FMTPTR"  top = "FMTPTR"\n",
                (uintptr_t)bottom, (uintptr_t)top);
     }
     assert (stack->used <= stack->reserved);
+
     while (top > bottom) {
       /* Invariant: top points just past a "return address". */
       returnAddress = *((GC_returnAddress*)(top - GC_RETURNADDRESS_SIZE));
-      if (DEBUG_DETAILED or s->controls->selectiveDebug) {
+      if (DEBUG_DETAILED or FALSE) {
         fprintf (stderr, "  top = "FMTPTR"  return address = "FMTRA"\n",
                  (uintptr_t)top, returnAddress);
       }
@@ -250,7 +271,7 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
       frameOffsets = frameLayout->offsets;
       top -= frameLayout->size;
       for (i = 0 ; i < frameOffsets[0] ; ++i) {
-        if (DEBUG_DETAILED or s->controls->selectiveDebug)
+        if (DEBUG_DETAILED or FALSE)
           fprintf(stderr, "  offset %"PRIx16"  address "FMTOBJPTR"\n",
                   frameOffsets[i + 1], *(objptr*)(top + frameOffsets[i + 1]));
         callIfIsObjptr (s, f, (objptr*)(top + frameOffsets[i + 1]));
@@ -295,7 +316,7 @@ pointer foreachObjptrInRangeWithFill (GC_state s, pointer front, pointer *back,
   pointer b;
 
   assert (isFrontierAligned (s, front));
-  if (DEBUG_DETAILED or s->controls->selectiveDebug)
+  if (DEBUG_DETAILED or FALSE)
     fprintf (stderr,
              "foreachObjptrInRange  front = "FMTPTR"  *back = "FMTPTR" [%d]\n",
              (uintptr_t)front, (uintptr_t)(*back), s->procId);
@@ -313,7 +334,7 @@ pointer foreachObjptrInRangeWithFill (GC_state s, pointer front, pointer *back,
           s->forwardState.rangeListLast = NULL;
       }
       assert (isAligned ((size_t)front, GC_MODEL_MINALIGN));
-      if (DEBUG_DETAILED or s->controls->selectiveDebug)
+      if (DEBUG_DETAILED or FALSE)
         fprintf (stderr,
                  "  front = "FMTPTR"  *back = "FMTPTR" [%d]\n",
                  (uintptr_t)front, (uintptr_t)(*back), s->procId);

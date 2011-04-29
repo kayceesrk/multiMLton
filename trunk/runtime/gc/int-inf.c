@@ -87,7 +87,7 @@ void fillIntInfArg (GC_state s, objptr arg, __mpz_struct *res,
           or (res->_mp_d[(res->_mp_size < 0
                           ? - res->_mp_size
                           : res->_mp_size) - 1] != 0));
-  if (DEBUG_INT_INF_DETAILED or s->controls->selectiveDebug)
+  if (DEBUG_INT_INF_DETAILED or FALSE)
     fprintf (stderr, "arg --> %s\n",
              mpz_get_str (NULL, 10, res));
 }
@@ -134,7 +134,7 @@ objptr finiIntInfRes (GC_state s, __mpz_struct *res, size_t bytes) {
   if (DEBUG_INT_INF)
     fprintf (stderr, "finiIntInfRes ("FMTPTR", %"PRIuMAX")\n",
              (uintptr_t)res, (uintmax_t)bytes);
-  if (DEBUG_INT_INF_DETAILED or s->controls->selectiveDebug)
+  if (DEBUG_INT_INF_DETAILED or FALSE)
     fprintf (stderr, "res --> %s\n",
              mpz_get_str (NULL, 10, res));
   bp = (GC_intInf)((pointer)res->_mp_d - offsetof(struct GC_intInf, obj.body.limbs));

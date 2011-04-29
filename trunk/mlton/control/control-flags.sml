@@ -951,6 +951,10 @@ val profileVal = control {name = "profile val",
                           default = false,
                           toString = Bool.toString}
 
+val serialExec = control {name = "serial executable",
+                          default = false,
+                          toString = Bool.toString}
+
 val showBasis = control {name = "show basis",
                          default = NONE,
                          toString = Option.toString File.toString}

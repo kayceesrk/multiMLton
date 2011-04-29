@@ -10,7 +10,7 @@ struct
   structure TID = ThreadID
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
-  fun debug' msg = debug (fn () => msg^"."^(PT.getThreadTypeString())
+  fun debug' msg = debug (fn () => (msg())^"."^(PT.getThreadTypeString())
                                    ^" : "^Int.toString(PacmlFFI.processorNumber()))
 
   datatype status = datatype RepTypes.status
@@ -51,10 +51,10 @@ struct
       fun doitFn () =
           let
             val () = Assert.assertAtomic' ("Event.alwaysEvt.doitFn", NONE)
-            val () = debug' "alwaysEvt(3.1)" (* Atomic 1 *)
+            val () = debug' (fn () => "alwaysEvt(3.1)") (* Atomic 1 *)
             val () = Assert.assertAtomic' ("Event.alwaysEvt(3.1)", SOME 1)
             val () = atomicEnd ()
-            val () = debug' "alwaysEvt(3.2)" (* NonAtomic *)
+            val () = debug' (fn () => "alwaysEvt(3.2)") (* NonAtomic *)
             val () = Assert.assertNonAtomic' "Event.alwaysEvt(3.2)"
           in
             v
@@ -62,7 +62,7 @@ struct
       fun pollFn () =
           let
             val () = Assert.assertAtomic' ("Event.alwaysEvt.pollFn", NONE)
-            val () = debug' "alwaysEvt(2)" (* Atomic 1 *)
+            val () = debug' (fn () => "alwaysEvt(2)") (* Atomic 1 *)
             val () = Assert.assertAtomic' ("Event.alwaysEvt(2)", SOME 1)
           in
             enabled {prio = ~1, doitFn = doitFn}
@@ -133,7 +133,7 @@ struct
   fun choose (evts : 'a sevt list) : 'a sevt =
     let
       val () = Assert.assertNonAtomic' "Event.choose"
-      val () = debug' "choose(1)" (* NonAtomic *)
+      val () = debug' (fn ()=> "choose(1)") (* NonAtomic *)
       val () = Assert.assertNonAtomic' "Event.choose(1)"
       fun gatherBEvts (evts, bevts') =
           case (evts, bevts') of
@@ -170,7 +170,7 @@ struct
   fun selectDoitFn (doitFns : {prio : int, doitFn : 'a} list) : 'a =
       let
         val () = Assert.assertAtomic' ("Event.selectDoitFn", NONE)
-        val () = debug' "selectDoitFn(2)" (* Atomic 1 *)
+        val () = debug' (fn () => "selectDoitFn(2)") (* Atomic 1 *)
         val () = Assert.assertAtomic' ("Event.selectDoitFn(2)", SOME 1)
       in
         case doitFns of
@@ -225,10 +225,10 @@ struct
   fun syncOnBEvt (pollFn : 'a base, et : event_type) : 'a option=
     let
       val () = Assert.assertNonAtomic' "Event.syncOnBEvt"
-      val () = debug' ("syncOnBEvt(1): SyncType : "^(syncTypeToString(et))) (* NonAtomic *)
+      val () = debug' (fn () => "syncOnBEvt(1): SyncType : "^(syncTypeToString(et))) (* NonAtomic *)
       val () = Assert.assertNonAtomic' "Event.syncOnBEvt(1)"
       val () = atomicBegin ()
-      val () = debug' "syncOnBEvt(2)" (* Atomic 1 *)
+      val () = debug' (fn () => "syncOnBEvt(2)") (* Atomic 1 *)
       val () = Assert.assertAtomic' ("Event.syncOnBEvt(2)", SOME 1)
       fun get () =
           case pollFn () of
@@ -253,7 +253,7 @@ struct
                                   NONE))
                 end
       val x = get ()
-      val () = debug' "syncOnBEvt(4)" (* NonAtomic *)
+      val () = debug' (fn () => "syncOnBEvt(4)") (* NonAtomic *)
       val () = Assert.assertNonAtomic' "Event.syncOnBEvt(4)"
     in
       x
@@ -266,17 +266,17 @@ struct
   fun syncOnBEvts (bevts' : 'a base list, et : event_type) : 'a option =
     let
       val () = Assert.assertNonAtomic' "Event.syncOnBEvts"
-      val () = debug' ("syncOnBEvts(1) : SyncType : "^(syncTypeToString (et))) (* NonAtomic *)
+      val () = debug' (fn () => "syncOnBEvts(1) : SyncType : "^(syncTypeToString (et))) (* NonAtomic *)
       val () = Assert.assertNonAtomic' "Event.syncOnBEvts(1)"
       fun ext (bevts, blockFns) =
           let
-            val () = debug' "syncOnBEvts(2).ext" (* Atomic 1 *)
+            val () = debug' (fn () => "syncOnBEvts(2).ext") (* Atomic 1 *)
             val () = Assert.assertAtomic' ("Event.syncOnBEvts(2).ext", SOME 1)
           in
             case bevts of
                 [] =>
                 let
-                  val () = debug' "syncOnBEvts(2).ext([])" (* Atomic 1 *)
+                  val () = debug' (fn () => "syncOnBEvts(2).ext([])") (* Atomic 1 *)
                   val () = Assert.assertAtomic' ("Event.syncOnBEvts(2).ext([])", SOME 1)
                   val transId = ref 0
                   fun blockHelper () =
@@ -295,7 +295,7 @@ struct
                                                                 val _ = atomicBegin ()
                                                                 val x = blockFn(transId)
                                                                 val _ = Assert.assertNonAtomic (fn () => "Event.syncOnBEvts.blockFn returned")
-                                                                val _ = debug' "Event.syncOnBEvts.blockFn returned"
+                                                                val _ = debug' (fn () => "Event.syncOnBEvts.blockFn returned")
                                                               in
                                                                 case et of
                                                                      ASYNC => ()
@@ -320,13 +320,12 @@ struct
           end
       and extRdy (bevts, doitFns) =
           let
-            val () = debug' "syncOnBEvts(2).extRdy" (* Atomic 1*)
+            val () = debug' (fn () => "syncOnBEvts(2).extRdy") (* Atomic 1*)
             val () = Assert.assertAtomic' ("Event.syncOnBEvts(2).extRdy", SOME 1)
           in
             case bevts of
                 [] =>
                   let
-                    (* XXX KC *)
                     (* Checks every doitFn for satisfiability. If such a function is
                       * not found in the list, sync From Beginning. This is inefficient.
                       * We should have blocked in this case. But since we do not have blockFn
@@ -381,7 +380,7 @@ struct
             [] => S.switchToNext (fn _ => ())
           | [bevt] => syncOnBEvt (bevt, et)
           | bevts => (atomicBegin (); ext (bevts, []))
-      val () = debug' "syncOnBEvts(4)" (* NonAtomic *)
+      val () = debug' (fn () => "syncOnBEvts(4)") (* NonAtomic *)
       val () = Assert.assertNonAtomic' "Event.syncOnBEvts(4)"
     in
       x
@@ -420,7 +419,7 @@ struct
         fun sync (con_evt : ('a,'b) cevt) : 'a =
           let
               val () = Assert.assertNonAtomic' "Event.sync"
-              val () = debug' ("sync(1) : EventType : "^(eventTypeToString (con_evt))) (* NonAtomic *)
+              val () = debug' (fn () => "sync(1) : EventType : "^(eventTypeToString (con_evt))) (* NonAtomic *)
               val () = Assert.assertNonAtomic' "Event.sync(1)"
               val x = case con_evt of
                         SEVT evt => forceHelper (evt, SYNC)
@@ -430,7 +429,7 @@ struct
                           in
                             forceHelper (syncHalf, SYNC)
                           end
-              val () = debug' "sync(4)" (* NonAtomic *)
+              val () = debug' (fn () => "sync(4)") (* NonAtomic *)
               val () = Assert.assertNonAtomic' "Event.sync(4)"
           in
             valOf (x)
@@ -442,12 +441,12 @@ struct
         fun select (evts : 'a sevt list) : 'a =
           let
               val () = Assert.assertNonAtomic' "Event.select"
-              val () = debug' "select(1)" (* NonAtomic *)
+              val () = debug' (fn () => "select(1)") (* NonAtomic *)
               val () = Assert.assertNonAtomic' "Event.select(1)"
               val x =
                 case forceBL (evts, []) of
                     BASE bevts => syncOnBEvts (bevts, SYNC)
-              val () = debug' "select(4)" (* NonAtomic *)
+              val () = debug' (fn () => "select(4)") (* NonAtomic *)
               val () = Assert.assertNonAtomic' "Event.select(4)"
           in
             valOf (x)

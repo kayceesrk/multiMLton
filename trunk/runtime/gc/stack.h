@@ -78,6 +78,7 @@ static inline size_t sizeofStackSlop (GC_state s);
 static inline void clearDanglingStackList (GC_state s);
 static inline void addToDanglingStackList (GC_state s, objptr stack);
 static inline bool updateStackIfDangling (GC_state s, objptr oldOp, objptr newOp);
+static inline bool isInDanglingStackList (GC_state s, objptr p);
 
 static inline pointer getStackBottom (GC_state s, GC_stack stack);
 static inline pointer getStackTop (GC_state s, GC_stack stack);

@@ -2,6 +2,7 @@
 #if (defined (MLTON_GC_INTERNAL_BASIS))
 
 void Parallel_init (void);
+void Parallel_initResources (GC_state s);
 
 void Parallel_lock (Int32);
 void Parallel_unlock (Int32);
@@ -17,6 +18,7 @@ bool Parallel_compareAndSwap (pointer p, Int32 old, Int32 new);
 Int32 Parallel_vCompareAndSwap (pointer p, Int32 old, Int32 new);
 
 void Parallel_maybeWaitForGC (void);
+void maybeWaitForGC (GC_state s);
 
 void Parallel_disablePreemption (void);
 void Parallel_enablePreemption (void);

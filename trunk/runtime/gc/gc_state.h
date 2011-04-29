@@ -20,6 +20,7 @@ struct GC_state {
   pointer localHeapStart;
   pointer sharedHeapStart;
   pointer sharedHeapEnd;
+  struct GC_generationalMaps generationalMaps; /* generational maps for this heap */
 
   /* ML arrays and queues */
   SchedulerQueue* schedulerQueue;
@@ -65,7 +66,6 @@ struct GC_state {
   pointer ffiOpArgsResPtr;
   GC_frameLayout frameLayouts; /* Array of frame layouts. */
   uint32_t frameLayoutsLength; /* Cardinality of frameLayouts array. */
-  struct GC_generationalMaps generationalMaps; /* generational maps for this heap */
   /* Currently only used to hold raise operands. XXX at least i think so */
   Pointer *globalObjptrNonRoot;
   /* Ordinary globals */
@@ -79,7 +79,6 @@ struct GC_state {
   struct GC_lastSharedMajorStatistics *lastSharedMajorStatistics;
   pointer limitPlusSlop; /* limit + GC_HEAP_LIMIT_SLOP */
   pointer sharedLimitPlusSlop;
-  //XXX SPH -- This should not be needed for local heaps
   pointer start; /* Like heap->nursery but per processor.  nursery <= start <= frontier */
   pointer sharedStart;
   int (*loadGlobals)(FILE *f); /* loads the globals from the file. */
@@ -176,7 +175,7 @@ PRIVATE void GC_setSavedThread (GC_state *gs, pointer p);
 PRIVATE void GC_setSignalHandlerThread (GC_state *gs, pointer p);
 
 PRIVATE void GC_print (int);
-PRIVATE inline pointer GC_forwardBase (GC_state s, pointer p);
+PRIVATE inline pointer GC_forwardBase (const GC_state s, const pointer p);
 
 #endif /* (defined (MLTON_GC_INTERNAL_BASIS)) */
 
@@ -188,3 +187,4 @@ PRIVATE void GC_setGCSignalHandled (GC_state *gs, bool b);
 PRIVATE bool GC_getGCSignalPending (GC_state *gs);
 PRIVATE void GC_setGCSignalPending (GC_state *gs, bool b);
 PRIVATE sigset_t* GC_getSignalsSet (GC_state *gs);
+PRIVATE void GC_commEvent (void);

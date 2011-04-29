@@ -331,8 +331,10 @@ static inline void* initCumulativeStatistics (void) {
   cumul->bytesMarkCompacted = 0;
   cumul->bytesScannedMinor = 0;
   cumul->maxBytesLive = 0;
+  cumul->maxSharedBytesLive = 0;
   cumul->maxBytesLiveSinceReset = 0;
   cumul->maxHeapSize = 0;
+  cumul->maxSharedHeapSize = 0;
   cumul->maxPauseTime = 0;
   cumul->maxStackSize = 0;
   cumul->numCardsMarked = 0;
@@ -351,6 +353,11 @@ static inline void* initCumulativeStatistics (void) {
   cumul->numMarkCompactGCs = 0;
   cumul->numMinorGCs = 0;
   cumul->numThreadsCreated = 0;
+  cumul->bytesThreadReserved = 0;
+  cumul->countThreadReserved = 0;
+  cumul->bytesThreadUsed = 0;
+  cumul->countThreadUsed = 0;
+  cumul->numForceStackGrowth = 0;
   cumul->numPreemptWB = 0;
   cumul->numMoveWB = 0;
   cumul->numReadyPrimWB = 0;
@@ -358,6 +365,14 @@ static inline void* initCumulativeStatistics (void) {
   cumul->numPreemptGC  = 0;
   cumul->numReadyPrimGC = 0;
   cumul->numReadySecGC = 0;
+
+  cumul->bytesParasiteStack = 0;
+  cumul->bytesParasiteClosure = 0;
+  cumul->numParasitesReified = 0;
+  cumul->numParasitesCreated = 0;
+
+  cumul->numComms = 0;
+
   timevalZero (&cumul->ru_gc);
   rusageZero (&cumul->ru_gcCopying);
   rusageZero (&cumul->ru_gcCopyingShared);
@@ -365,6 +380,7 @@ static inline void* initCumulativeStatistics (void) {
   rusageZero (&cumul->ru_gcMinor);
   timevalZero (&cumul->tv_sync);
   rusageZero (&cumul->ru_thread);
+  timevalZero (&cumul->tv_serial);
   timevalZero (&cumul->tv_rt);
   return (void*)cumul;
 }
@@ -515,6 +531,9 @@ int GC_init (GC_state s, int argc, char **argv) {
   unless (s->controls->ratios.stackCurrentPermitReserved
           <= s->controls->ratios.stackCurrentMaxReserved)
     die ("Ratios must satisfy stack-current-permit-reserved <= stack-current-max-reserved.");
+
+  Parallel_initResources (s);
+  GC_sqCreateQueues (s);
   /* We align s->ram by pageSize so that we can test whether or not we
    * we are using mark-compact by comparing heap size to ram size.  If
    * we didn't round, the size might be slightly off.
@@ -577,6 +596,7 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->callFromCHandlerThread = BOGUS_OBJPTR;
   d->controls = s->controls;
   d->cumulativeStatistics = initCumulativeStatistics ();
+  d->forwardState.liftingObject = BOGUS_OBJPTR;
   d->lastMajorStatistics = initLastMajorStatistics ();
   d->lastSharedMajorStatistics = s->lastSharedMajorStatistics;
   d->currentThread = BOGUS_OBJPTR;

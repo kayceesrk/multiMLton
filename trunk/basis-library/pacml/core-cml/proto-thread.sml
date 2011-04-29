@@ -197,7 +197,7 @@ struct
 
   fun spawnParasite f =
   let
-
+    val _ = Statistics.doit (PacmlFFI.parasiteCreatedEvent)
     val _ = atomicBegin ()
     val state = getThreadState () (* Save state on stack *)
     val () = TID.mark (TID.getCurThreadId ())

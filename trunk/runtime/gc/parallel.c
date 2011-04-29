@@ -9,16 +9,25 @@ pthread_mutex_t *waitMutex;
 pthread_cond_t *waitCondVar;
 bool* dataInMutatorQ;
 
+void Parallel_initResources (GC_state s) {
+  Parallel_mutexes = (int32_t *) malloc (s->numberOfProcs * sizeof (int32_t));
+  waitMutex = (pthread_mutex_t*) malloc (s->numberOfProcs * sizeof (pthread_mutex_t));
+  waitCondVar = (pthread_cond_t*) malloc (s->numberOfProcs * sizeof (pthread_cond_t));
+  dataInMutatorQ = (bool*) malloc (s->numberOfProcs * sizeof(bool));
+  for (int proc = 0; proc < s->numberOfProcs; proc++) {
+    Parallel_mutexes[proc] = -1;
+    pthread_mutex_init (&waitMutex[proc], NULL);
+    pthread_cond_init (&waitCondVar[proc], NULL);
+    /* To be on the safe side initialize dataInMutatorQ with true. This will be cleared
+     * on the first iteration if it is a false positive */
+    dataInMutatorQ[proc] = TRUE;
+  }
+}
+
 void Parallel_init (void) {
   GC_state s = pthread_getspecific (gcstate_key);
 
   if (!Proc_isInitialized (s)) {
-    Parallel_mutexes = (int32_t *) malloc (s->numberOfProcs * sizeof (int32_t));
-    waitMutex = (pthread_mutex_t*) malloc (s->numberOfProcs * sizeof (pthread_mutex_t));
-    waitCondVar = (pthread_cond_t*) malloc (s->numberOfProcs * sizeof (pthread_cond_t));
-    dataInMutatorQ = (bool*) malloc (s->numberOfProcs * sizeof(bool));
-
-
     /* Move the object pointers in call-from-c-handler stack to the shared heap in
      * preparation for copying this stack to each processor */
     {
@@ -27,28 +36,18 @@ void Parallel_init (void) {
       moveEachObjptrInObject (s, stk);
     }
 
-
     /* Set up call-back state in each worker thread */
     /* XXX hack copy the call-from-c-handler into the worker threads
        assumes this is called by the primary thread */
-    for (int proc = 0; proc < s->numberOfProcs; proc++) {
+    for (int proc = 0; proc < s->numberOfProcs; proc++)
       s->procStates[proc].callFromCHandlerThread =
         pointerToObjptr (copyThreadTo (s, &s->procStates[proc],
-                                       objptrToPointer(s->callFromCHandlerThread,
-                                                       s->heap->start)),
-                         s->heap->start);
-
-      Parallel_mutexes[proc] = -1;
-      pthread_mutex_init (&waitMutex[proc], NULL);
-      pthread_cond_init (&waitCondVar[proc], NULL);
-      /* To be on the safe side initialize dataInMutatorQ with true. This will be cleared
-       * on the first iteration if it is a false positive */
-      dataInMutatorQ[proc] = TRUE;
-    }
+                                       objptrToPointer(s->callFromCHandlerThread, s->heap->start)), s->heap->start);
 
     /* Lift all objects from local heap of processor 0 to the shared heap. This
      * must come before waking up the processors */
-    liftAllObjectsDuringInit (s);
+    if (s->numberOfProcs != 1)
+      liftAllObjectsDuringInit (s);
 
     /* Now wake them up! */
     Proc_signalInitialization (s);
@@ -86,6 +85,14 @@ void Parallel_maybeWaitForGC (void) {
   if (Proc_threadInSection (s)) {
     //fprintf (stderr, "waiting for gc [%d]\n", Proc_processorNumber (s));
 
+    s->syncReason = SYNC_HELP;
+    ENTER0 (s);
+    LEAVE0 (s);
+  }
+}
+
+void maybeWaitForGC (GC_state s) {
+  if (Proc_threadInSection (s)) {
     s->syncReason = SYNC_HELP;
     ENTER0 (s);
     LEAVE0 (s);

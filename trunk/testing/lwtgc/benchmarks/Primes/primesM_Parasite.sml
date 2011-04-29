@@ -8,11 +8,7 @@ struct
          val ch = channel ()
          fun count i = (send(ch, i)
                         ; count(i+1))
-         val _ = spawn (fn () =>
-                        (print (concat ["makeNatStream: ",
-                                        tidToString (getTid ()),
-                                        "\n"])
-                         ; count c))
+         val _ = spawn (fn () => count c)
       in
          ch
       end
@@ -25,7 +21,7 @@ struct
                val i = (recv inCh)
             in
                if ((i mod p) <> 0)
-                  then (send (outCh, i))
+                  then (aSend (outCh, i))
                   else ()
                ; loop ()
             end
@@ -40,14 +36,10 @@ struct
          fun head ch =
             let val p = recv ch
             in
-               send(primes, p)
+               aSend(primes, p)
                ; head (makeFilter (p, ch))
             end
-         val _ = spawn (fn () =>
-                        (print (concat ["makePrimes: ",
-                                        tidToString (getTid ()),
-                                        "\n"])
-                         ; head (makeNatStream 2)))
+         val _ = spawn (fn () => head (makeNatStream 2))
       in
          primes
       end
@@ -61,17 +53,13 @@ struct
                        val m' = Int.toString m
                        fun loop' j =
                           if j > m then ()
-                          else ((*print (m' ^ "\n")
-                                ;*) loop' (j + 1))
+                          else (print (m' ^ "\n")
+                                ; loop' (j + 1))
                     in
                        loop' m
                        ; loop (i + 1)
                     end
-         val _ = spawn (fn () =>
-                        (print (concat ["makeNatPrinter: ",
-                                        tidToString (getTid ()),
-                                        "\n"])
-                         ; loop 0))
+         val _ = spawn (fn () => loop 0)
       in
          ()
       end
@@ -80,7 +68,6 @@ struct
      run
       (fn () =>
        let
-          val () = print "doit'\n"
           val ch = makePrimes ()
           val _ = makeNatPrinter ch n
        in

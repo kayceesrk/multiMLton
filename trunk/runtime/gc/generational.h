@@ -58,7 +58,7 @@ struct GC_generationalMaps {
 
 #if (defined (MLTON_GC_INTERNAL_FUNCS))
 
-static void displayGenerationalMaps (GC_state s,
+static void displayGenerationalMaps (__attribute__((unused)) GC_state s,
                                      struct GC_generationalMaps *generational,
                                      FILE *stream);
 

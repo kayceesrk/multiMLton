@@ -459,7 +459,7 @@ structure Main : sig
     val output = TextIO.output
 
     val problemSz = ref 1000000
-    val divideSz = ref 150
+    val divideSz = ref 500
 
     fun printLength (outS, Tree.NULL) = print "(* 0 points *)\n"
       | printLength (outS, start as Tree.ND{next, x, y, ...}) = let
@@ -494,9 +494,11 @@ structure Main : sig
             min_y=0.0, max_y=1.0
           }
 
+    val tree = mkTree (!problemSz)
+
     fun doit' n =
     let
-      val ch = TSP.tsp (mkTree n, !divideSz)
+      val ch = TSP.tsp (tree, !divideSz)
     in
       recv ch
     end

@@ -31,7 +31,7 @@ pointer newObject (GC_state s,
   }
   else if (allocInSharedHeap) {
     allocChunkInSharedHeap (s, bytesRequested);
-    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+    if (DEBUG_DETAILED or FALSE)
       fprintf (stderr, "sharedFrontier changed from "FMTPTR" to "FMTPTR"\n",
                (uintptr_t)s->sharedFrontier,
                (uintptr_t)(s->sharedFrontier + bytesRequested));
@@ -39,7 +39,7 @@ pointer newObject (GC_state s,
     s->sharedFrontier += bytesRequested;
   }
   else {
-    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+    if (DEBUG_DETAILED or FALSE)
       fprintf (stderr, "frontier changed from "FMTPTR" to "FMTPTR"\n",
                (uintptr_t)s->frontier,
                (uintptr_t)(s->frontier + bytesRequested));
@@ -71,6 +71,13 @@ GC_stack newStack (GC_state s,
   /* XXX unsafe concurrent access */
   if (reserved > s->cumulativeStatistics->maxStackSize)
     s->cumulativeStatistics->maxStackSize = reserved;
+
+  /* Statistics */
+  s->cumulativeStatistics->bytesThreadReserved += reserved;
+  s->cumulativeStatistics->countThreadReserved++;
+  s->cumulativeStatistics->bytesThreadUsed += reserved;
+  s->cumulativeStatistics->countThreadUsed++;
+
   stack = (GC_stack)(newObject (s, GC_STACK_HEADER,
                                 sizeofStackWithHeader (s, reserved),
                                 allocInOldGen, allocInSharedHeap));
@@ -91,7 +98,10 @@ GC_thread newThread (GC_state s, size_t reserved) {
   pointer res;
 
   assert (isStackReservedAligned (s, reserved));
-  ensureHasHeapBytesFreeAndOrInvariantForMutator (s, FALSE, FALSE, FALSE, 0, sizeofStackWithHeader (s, alignStackReserved (s, reserved)) + sizeofThread (s), FALSE, FALSE);
+  ensureHasHeapBytesFreeAndOrInvariantForMutator
+    (s, FALSE, FALSE, FALSE, 0,
+     sizeofStackWithHeader (s, alignStackReserved (s, reserved)) + sizeofThread (s),
+     FALSE, 0);
   stack = newStack (s, reserved, FALSE, FALSE);
   res = newObject (s, GC_THREAD_HEADER,
                    sizeofThread (s),

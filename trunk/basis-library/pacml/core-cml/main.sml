@@ -106,8 +106,26 @@ struct
 
   val numIOThreads = PacmlFFI.numIOProcessors
 
+  fun shutdown status =
+    if (!Config.isRunning)
+      then S.switch (fn _ => PT.getRunnableHost(PT.prepVal (!SH.shutdownHook, status)))
+      else raise Fail "CML is not running"
+
+  fun runtimeInit () =
+  let
+    val () = PacmlPrim.initRefUpdate (S.preemptOnWriteBarrier)
+    (* init MUST come after waitForWorkLoop has been exported *)
+    val () = Primitive.MLton.parallelInit ()
+    (* Install handler for processor 0*)
+    val _ = MLtonSignal.setHandler (Posix.Signal.usr2, h)
+  in
+    ()
+  end
+
   fun run (initialProc : unit -> unit) =
   let
+    (* DO NOT REMOVE *)
+    val _ = runtimeInit ()
     val installAlrmHandler = fn (h) => MLtonSignal.setHandler (Posix.Signal.alrm, h)
     val status =
         S.switchToNext
@@ -144,24 +162,5 @@ struct
     in
       status
     end
-
-   fun shutdown status =
-         if (!Config.isRunning)
-            then S.switch (fn _ => PT.getRunnableHost(PT.prepVal (!SH.shutdownHook, status)))
-            else raise Fail "CML is not running"
-
-  fun runtimeInit () =
-  let
-    val () = PacmlPrim.initRefUpdate (S.preemptOnWriteBarrier)
-    (* init MUST come after waitForWorkLoop has been exported *)
-    val () = Primitive.MLton.parallelInit ()
-    (* Install handler for processor 0*)
-    val _ = MLtonSignal.setHandler (Posix.Signal.usr2, h)
-  in
-    ()
-  end
-
-  (* DO NOT REMOVE *)
-  val _ = runtimeInit ()
 
 end

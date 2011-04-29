@@ -11,6 +11,10 @@
 static void loadWorldFromFILE (GC_state s, FILE *f);
 static void loadWorldFromFileName (GC_state s, const char *fileName);
 static int saveWorldToFILE (GC_state s, FILE *f);
+static int saveArray (void* a, size_t elSize, int32_t aSize, int32_t aMaxSize, FILE* f);
+static int saveCircularBuffer (CircularBuffer* que, FILE* f);
+static void loadArray (void* a, size_t elSize, int32_t* aSize, int32_t* aMaxSize, FILE* f);
+static void loadCircularBuffer (CircularBuffer* que, FILE* f);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */
 

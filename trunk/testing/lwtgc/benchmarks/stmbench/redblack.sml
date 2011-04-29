@@ -9,7 +9,7 @@
 
 signature DICT =
 sig
-  type key = string
+  type key = int
   type 'a entry = key * 'a
 
   type 'a dict
@@ -21,7 +21,7 @@ end
 
 (* Unbalanced binary search tree implementation. *)
 structure BinarySearchTree :> DICT = struct
-  type key = string
+  type key = int
   type 'a entry = key * 'a
 
   (* Rep invariant: 'a tree is a binary search tree *)
@@ -34,14 +34,14 @@ structure BinarySearchTree :> DICT = struct
 
   fun insert (Empty, entry) = Node (Empty, entry, Empty)
     | insert (n as Node (l, e as (k,_), r), e' as (k',_)) =
-      (case String.compare (k, k')
+      (case Int.compare (k, k')
          of LESS => Node (insert (l, e'), e, r)
           | GREATER => Node (l, e, insert (r, e'))
           | EQUAL => n)
 
   fun lookup (Empty) k = raise (Lookup k)
     | lookup (Node (l, (k, v), r)) k' =
-      (case String.compare (k, k')
+      (case Int.compare (k, k')
          of EQUAL => v
           | LESS => lookup l k'
           | GREATER => lookup r k')
@@ -50,8 +50,8 @@ end
 
 structure RedBlackTree :> DICT =
 struct
-  type key = string
-  type 'a entry = string * 'a
+  type key = int
+  type 'a entry = int * 'a
 
   (* Representation invariant: binary search tree + red-black conditions *)
   datatype 'a dict =
@@ -69,7 +69,7 @@ struct
 	| lk (Red tree) = lk' tree
         | lk (Black tree) = lk' tree
       and lk' ((key1, datum1), left, right) =
-	    (case String.compare(key,key1)
+	    (case Int.compare(key,key1)
 	       of EQUAL => datum1
 	        | LESS => lk left
 		| GREATER => lk right)
@@ -97,12 +97,12 @@ struct
       (* ins preserves black height *)
       fun ins (Empty) = Red (entry, Empty, Empty)
 	| ins (Red (entry1 as (key1, datum1), left, right)) =
-	  (case String.compare (key, key1)
+	  (case Int.compare (key, key1)
 	     of EQUAL => Red (entry, left, right)
 	      | LESS => Red (entry1, ins left, right)
 	      | GREATER => Red (entry1, left, ins right))
         | ins (Black (entry1 as (key1, datum1), left, right)) =
-	  (case String.compare (key, key1)
+	  (case Int.compare (key, key1)
 	     of EQUAL => Black (entry, left, right)
 	      | LESS => restoreLeft (Black (entry1, ins left, right))
 	      | GREATER => restoreRight (Black (entry1, left, ins right)))

@@ -15,10 +15,16 @@ void updateWeaksForCheneyCopy (GC_state s) {
   GC_weak w;
 
   for (w = s->weaks; w != NULL; w = w->link) {
-    assert (BOGUS_OBJPTR != w->objptr);
 
     if (DEBUG_WEAK)
       fprintf (stderr, "updateWeaksForCheneyCopy  w = "FMTPTR"  ", (uintptr_t)w);
+
+    if (BOGUS_OBJPTR == w->objptr) {
+      if (DEBUG_WEAK)
+        fprintf (stderr, "already cleared\n");
+      continue;
+    }
+
     p = objptrToPointer (w->objptr, s->heap->start);
     if (GC_FORWARDED == getHeader (p)) {
       if (DEBUG_WEAK)
@@ -146,19 +152,22 @@ void majorCheneyCopySharedGC (GC_state s) {
     //clear remembered stacks
     clearDanglingStackList (r);
 
-    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+    if (DEBUG_DETAILED or FALSE)
       fprintf (stderr, "majorCheneyCopySharedGC: fixingForwardingPointers (1) [%d]\n", proc);
 
     objptr op = r->forwardState.liftingObject;
     if (op != BOGUS_OBJPTR) {
       //Fix forwarding pointers in local heaps
-      foreachObjptrInRange (r, r->heap->start, &r->frontier, fixFwdObjptr, TRUE);
+      pointer end = r->heap->start + r->heap->oldGenSize;
+      foreachObjptrInRange (r, r->heap->start, &end, fixFwdObjptr, TRUE); //OldGen
+      foreachObjptrInRange (r, r->heap->nursery, &r->frontier, fixFwdObjptr, TRUE); //Nursery
+
       //Fix forwarding pointers in forwarded range -- NOTE: Because of the
       //following walk, range list will be cleared
       foreachObjptrInRange (r, r->forwardState.toStart, &r->forwardState.back, fixFwdObjptr, TRUE);
     }
 
-    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+    if (DEBUG_DETAILED or FALSE)
       fprintf (stderr, "majorCheneyCopySharedGC: fixingForwardingPointers (2) [%d]\n", proc);
   }
 
@@ -180,13 +189,13 @@ void majorCheneyCopySharedGC (GC_state s) {
   // Walk the local heaps and forward objptrs
   for (int proc=0; proc < s->numberOfProcs; proc++) {
     GC_state r = &(s->procStates[proc]);
-    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+    if (DEBUG_DETAILED or FALSE)
       fprintf (stderr, "majorCheneyCopySharedGC: walking local heaps (1) [%d]\n",
                proc);
-    foreachObjptrInRangeWithFill (r, r->heap->start,
-                                  &(r->frontier), forwardObjptrIfInSharedHeap,
-                                  TRUE, TRUE);
-    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+    pointer end = r->heap->start + r->heap->oldGenSize;
+    foreachObjptrInRangeWithFill (r, r->heap->start, &end, forwardObjptrIfInSharedHeap, TRUE, TRUE); //OldGen
+    foreachObjptrInRangeWithFill (r, r->heap->nursery, &r->frontier, forwardObjptrIfInSharedHeap, TRUE, TRUE); //Nursery
+    if (DEBUG_DETAILED or FALSE)
       fprintf (stderr, "majorCheneyCopySharedGC: walking local heaps (2) [%d]\n",
                proc);
     callIfIsObjptr (r, forwardObjptrIfInSharedHeap, &r->forwardState.liftingObject);
@@ -198,16 +207,15 @@ void majorCheneyCopySharedGC (GC_state s) {
   //Forward Globals -- must come after walking local heaps for correct forwarding state
   foreachGlobalObjptr (s, forwardObjptrIfInSharedHeap);
 
-  if (DEBUG_DETAILED or s->controls->selectiveDebug)
+  if (DEBUG_DETAILED or FALSE)
     fprintf (stderr, "majorCheneyCopySharedGC: walking to space (1) [%d]\n",
               s->procId);
   foreachObjptrInRange (s, toStart, &s->forwardState.back, forwardObjptrIfInSharedHeap, TRUE);
-  if (DEBUG_DETAILED or s->controls->selectiveDebug)
+  if (DEBUG_DETAILED or FALSE)
     fprintf (stderr, "majorCheneyCopySharedGC: walking to space (2) [%d]\n",
               s->procId);
 
-  //XXX KC todo -- weak pointers
-  //updateWeaksForCheneyCopy (s);
+  updateWeaksForCheneyCopy (s);
   s->secondarySharedHeap->oldGenSize = s->forwardState.back - s->secondarySharedHeap->start;
   bytesCopied = s->secondarySharedHeap->oldGenSize;
   s->cumulativeStatistics->bytesCopiedShared += bytesCopied;
@@ -232,7 +240,9 @@ void majorCheneyCopySharedGC (GC_state s) {
       fprintf (stderr, "Starting local heap %d check [%d]\n", proc, s->procId);
 
     GC_state r = &s->procStates[proc];
-    foreachObjptrInRange (r, r->heap->start, &r->frontier, assertIsObjptrInFromSpaceOrLifted, TRUE);
+    end = r->heap->start + r->heap->oldGenSize;
+    foreachObjptrInRange (r, r->heap->start, &end, assertIsObjptrInFromSpaceOrLifted, TRUE);
+    foreachObjptrInRange (r, r->heap->nursery, &r->frontier, assertIsObjptrInFromSpaceOrLifted, TRUE);
 
     if (DEBUG)
       fprintf (stderr, "Ending local heap %d check [%d]\n", proc, s->procId);
@@ -260,13 +270,7 @@ void minorCheneyCopyGC (GC_state s) {
     fprintf (stderr, "minorGC  nursery = "FMTPTR"  frontier = "FMTPTR"\n",
              (uintptr_t)s->heap->nursery, (uintptr_t)s->frontier);
 
-  /* The invariant does not hold for the GC invoked after object has been
-   * explicitly moved due to unresolved forwarding pointers.
-   */
-   //assert (invariantForGC (s));
-
-  /* XXX spoons not accurate if this doesn't account for gaps */
-  bytesAllocated = s->heap->frontier - s->heap->nursery;
+  bytesAllocated = s->frontier - s->heap->nursery;
   if (bytesAllocated == 0)
     return;
   if (not s->canMinor) {

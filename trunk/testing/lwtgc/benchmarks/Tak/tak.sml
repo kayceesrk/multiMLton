@@ -17,7 +17,7 @@ struct
               send(ch, (recv ch4))
             end
     in
-      print (concat [Int.toString x, " ", Int.toString y, " ", Int.toString z, "\n"]);
+      (* print (concat [Int.toString x, " ", Int.toString y, " ", Int.toString z, "\n"]); *)
       spawn worker;
       ch
     end
@@ -27,7 +27,7 @@ struct
     fun doit n =
       run (fn()=>
       let
-        val ch = tak(15, 10, 5)
+        val ch = tak(25, 10, 5)
         val x = recv ch
         val _ = print (Int.toString(x)^"\n")
       in

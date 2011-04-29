@@ -99,7 +99,7 @@ markNext:
   assert (nextHeaderp == getHeaderp (next));
   assert (nextHeader == getHeader (next));
   // assert (*(pointer*) todo == next);
-  assert (fetchObjptrToPointer (todo, s->heap->start) == next);
+  assert (fetchObjptrToPointer (s, todo, s->heap->start) == next);
   headerp = nextHeaderp;
   header = nextHeader;
   // *(pointer*)todo = prev;
@@ -146,8 +146,8 @@ markInNormal:
       fprintf (stderr, "markInNormal  objptrIndex = %"PRIu32"\n", objptrIndex);
     assert (objptrIndex < numObjptrs);
     // next = *(pointer*)todo;
-    next = fetchObjptrToPointer (todo, s->heap->start);
-    if (not isPointer (next)) {
+    next = fetchObjptrToPointer (s, todo, s->heap->start);
+    if (not isPointer (next) || not (isPointerInHeap (s, s->heap, next))) {
 markNextInNormal:
       assert (objptrIndex < numObjptrs);
       objptrIndex++;
@@ -222,8 +222,8 @@ markInArray:
     assert (objptrIndex < numObjptrs);
     assert (todo == indexArrayAtObjptrIndex (s, cur, arrayIndex, objptrIndex));
     // next = *(pointer*)todo;
-    next = fetchObjptrToPointer (todo, s->heap->start);
-    if (not (isPointer(next))) {
+    next = fetchObjptrToPointer (s, todo, s->heap->start);
+    if (not (isPointer(next)) || not (isPointerInHeap (s, s->heap, next))) {
 markNextInArray:
       assert (arrayIndex < getArrayLength (cur));
       assert (objptrIndex < numObjptrs);
@@ -280,13 +280,13 @@ markInFrame:
     }
     todo = top - frameLayout->size + frameOffsets [objptrIndex + 1];
     // next = *(pointer*)todo;
-    next = fetchObjptrToPointer (todo, s->heap->start);
+    next = fetchObjptrToPointer (s, todo, s->heap->start);
     if (DEBUG_DFS_MARK)
       fprintf (stderr,
                "    offset %u  todo "FMTPTR"  next = "FMTPTR"\n",
                frameOffsets [objptrIndex + 1],
                (uintptr_t)todo, (uintptr_t)next);
-    if (not isPointer (next)) {
+    if (not isPointer (next) || not isPointerInHeap (s, s->heap, next)) {
       objptrIndex++;
       goto markInFrame;
     }
@@ -327,7 +327,7 @@ ret:
     objptrIndex = (header & COUNTER_MASK) >> COUNTER_SHIFT;
     todo += objptrIndex * OBJPTR_SIZE;
     // prev = *(pointer*)todo;
-    prev = fetchObjptrToPointer (todo, s->heap->start);
+    prev = fetchObjptrToPointer (s, todo, s->heap->start);
     // *(pointer*)todo = next;
     storeObjptrFromPointer (todo, next, s->heap->start);
     if (shouldHashCons)
@@ -339,7 +339,7 @@ ret:
     objptrIndex = (header & COUNTER_MASK) >> COUNTER_SHIFT;
     todo += bytesNonObjptrs + objptrIndex * OBJPTR_SIZE;
     // prev = *(pointer*)todo;
-    prev = fetchObjptrToPointer (todo, s->heap->start);
+    prev = fetchObjptrToPointer (s, todo, s->heap->start);
     // *(pointer*)todo = next;
     storeObjptrFromPointer (todo, next, s->heap->start);
     if (shouldHashCons)
@@ -355,7 +355,7 @@ ret:
     frameOffsets = frameLayout->offsets;
     todo = top - frameLayout->size + frameOffsets [objptrIndex + 1];
     // prev = *(pointer*)todo;
-    prev = fetchObjptrToPointer (todo, s->heap->start);
+    prev = fetchObjptrToPointer (s, todo, s->heap->start);
     // *(pointer*)todo = next;
     storeObjptrFromPointer (todo, next, s->heap->start);
     if (shouldHashCons)
