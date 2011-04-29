@@ -31,6 +31,7 @@ test21_Vanilla - Host thread creation time
 test22_Parasite - Parasitic thread creation + work
 test22_Vanilla - Host thread creation + work
 
-test23 - Non-blocking
+test23 - Non-blocking(1)
 test24 - Multicast
 test25 - yield
+test26 - Non-blocking(2)

@@ -116,19 +116,26 @@ struct
         S.switchToNext
         (fn thrd =>
         let
-          fun wait(n) =
-            if n = 0
-            then ()
-            else wait(n-1)
-          (*val _ = List.tabulate (numIOThreads * 5, fn _ => NonBlocking.mkNBThread ())*)
+          fun lateInit () =
+          let
+            val () = Config.isRunning := true
+            (* Spawn the Non-blocking worker threads *)
+            val _ = List.tabulate (numIOThreads * 5, fn _ => NonBlocking.mkNBThread ())
+            val _ = List.tabulate (numIOThreads, fn i => PacmlFFI.wakeUp (PacmlFFI.numComputeProcessors + i, 1))
+          in
+            ()
+          end
+          val () = debug' (concat ["numberOfProcessors = ", Int.toString (PacmlFFI.numberOfProcessors)])
+          val () = debug' (concat ["numComputeProcessors = ", Int.toString (PacmlFFI.numComputeProcessors)])
+          val () = debug' (concat ["numIOProcessors = ", Int.toString (PacmlFFI.numIOProcessors)])
           val () = reset true
           val () = SH.shutdownHook := PT.prepend (thrd, fn arg => (atomicBegin (); arg))
           val () = SH.pauseHook := pauseHook
-          val () = ignore (Thread.spawnHost (fn ()=> (Config.isRunning := true; initialProc ())))
+          val () = ignore (Thread.spawnHost (fn ()=> (lateInit ();initialProc ())))
           val handler = MLtonSignal.Handler.handler (S.unwrap alrmHandler Thread.reifyHostFromParasite)
           val () = installAlrmHandler handler
           (* Spawn the Non-blocking worker threads *)
-          val _ = List.tabulate (numIOThreads * 5, fn _ => NonBlocking.mkNBThread ())
+          (*val _ = List.tabulate (numIOThreads * 5, fn _ => NonBlocking.mkNBThread ())*)
         in
             ()
         end)

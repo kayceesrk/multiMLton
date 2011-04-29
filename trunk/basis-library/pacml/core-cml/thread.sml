@@ -194,7 +194,7 @@ struct
 
     (* If this thread was spawned on an IO processor, then decrement the
     * numLiveThreads as the IO worker threads never die *)
-    val _ = if (n > (PacmlFFI.numberOfProcessors - PacmlFFI.numIOProcessors - 1)) then Config.decrementNumLiveThreads () else false
+    val _ = if (n > (PacmlFFI.numComputeProcessors - 1)) then Config.decrementNumLiveThreads () else false
 
     val () = atomicEnd ()
   in

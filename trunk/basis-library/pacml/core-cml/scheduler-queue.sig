@@ -6,6 +6,9 @@ sig
 
   val enque : runnable_host * queue_prio -> unit
   val deque : queue_prio -> runnable_host option
+
+  (* Polls every processor starting from current processor for availability *)
+  val dequeAny : unit -> runnable_host option
   val empty : unit -> bool
   val clean : unit -> unit
 end
