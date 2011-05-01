@@ -1,8 +1,8 @@
 structure Scheduler : SCHEDULER =
 struct
 
-  structure Assert = LocalAssert(val assert = false)
-  structure Debug = LocalDebug(val debug = false)
+  structure Assert = LocalAssert(val assert = true)
+  structure Debug = LocalDebug(val debug = true)
 
   open Critical
 
@@ -77,7 +77,7 @@ struct
 
   fun readyForSpawn (t as RHOST (tid, rt) : runnable_host) =
     (ignore (Config.incrementNumLiveThreads ())
-    ; SQ.enque (t, R.PRI))
+    ; SQ.enqueHost (t, R.PRI))
 
 
   fun canPreemptParasite () =
@@ -307,9 +307,9 @@ struct
   let
     val () = debug' (fn () => "preemptOnWriteBarrier")
     val tid = TID.getCurThreadId ()
-    val () = TID.mark tid
     val atomicState = getAtomicState ()
     val () = setAtomicState (1)
+    val () = TID.mark tid
     val () = case PT.getThreadType () of
                   PARASITE =>
                   let

@@ -442,7 +442,6 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->controls->ratios.stackMaxReserved = 8.0;
   s->controls->ratios.stackShrink = 0.5;
   s->controls->summary = SUMMARY_NONE;
-  s->controls->selectiveDebug = FALSE;
   s->forwardState.liftingObject = BOGUS_OBJPTR;
 
   // While the following asserts are manifestly true,

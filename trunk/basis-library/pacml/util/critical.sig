@@ -8,7 +8,7 @@
    val atomicBegin : unit -> unit
    val atomicEnd : unit -> unit
    val atomicMsg : unit -> string
-   val doAtomic : (unit -> unit) -> unit
+   val doAtomic : (unit -> 'a) -> 'a
    val getAtomicState : (unit -> int)
    val setAtomicState : (int -> unit)
 

@@ -98,13 +98,20 @@ static inline CircularBuffer* getSubQ (SchedulerQueue* sq, int i) {
 }
 
 void GC_sqCreateQueues (GC_state s) {
-  assert (s->procStates);
   Lock* schedulerLocks = (Lock*) malloc (sizeof(Lock) * s->numberOfProcs);
   for (int proc=0; proc < s->numberOfProcs; proc++) {
     schedulerLocks[proc].id = -1;
     schedulerLocks[proc].count = 0;
-    s->procStates[proc].schedulerQueue = newSchedulerQueue ();
-    s->procStates[proc].schedulerLocks = schedulerLocks;
+  }
+  if (s->procStates) {
+    for (int proc=0; proc < s->numberOfProcs; proc++) {
+      s->procStates[proc].schedulerQueue = newSchedulerQueue ();
+      s->procStates[proc].schedulerLocks = schedulerLocks;
+    }
+  }
+  else {
+    s->schedulerQueue = newSchedulerQueue ();
+    s->schedulerLocks = schedulerLocks;
   }
 }
 
@@ -280,7 +287,7 @@ void foreachObjptrInSQ (GC_state s, SchedulerQueue* sq, GC_foreachObjptrFun f) {
     uint32_t rp = cq->readPointer;
     uint32_t wp = cq->writePointer;
 
-    if (DEBUG_DETAILED or s->controls->selectiveDebug)
+    if (DEBUG_DETAILED)
       fprintf (stderr, "foreachObjptrInSQ sq="FMTPTR" q=%d rp=%d wp=%d [%d]\n",
                 (uintptr_t)sq, i, rp, wp, s->procId);
     while (rp != wp) {

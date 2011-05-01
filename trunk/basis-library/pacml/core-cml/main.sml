@@ -11,8 +11,8 @@ struct
   structure MT = MLtonThread
   structure PT = ProtoThread
 
-  structure Assert = LocalAssert(val assert = false)
-  structure Debug = LocalDebug(val debug = false)
+  structure Assert = LocalAssert(val assert = true)
+  structure Debug = LocalDebug(val debug = true)
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
   fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
@@ -37,11 +37,22 @@ struct
     val _ = MLtonProfile.init ()
     val _ = PacmlFFI.disablePreemption ()
     val _ = MLtonSignal.setHandler (Posix.Signal.usr2, h)
+
+    fun wait () =
+      if !Config.isRunning then
+        ()
+      else
+        (PacmlFFI.maybeWaitForGC ();
+         PacmlFFI.wait ();
+         wait ())
+
+    val _ = wait ()
+
     fun loop procNum =
     let
       val _ = PacmlFFI.maybeWaitForGC ()
     in
-      case SQ.dequeHost (RepTypes.PRI) of
+      case doAtomic (fn () => SQ.dequeHost (RepTypes.PRI)) of
            NONE => (PacmlFFI.wait (); loop procNum)
          | SOME (t) =>
              let
