@@ -63,9 +63,6 @@ void setGCStateCurrentThreadAndStack (GC_state s) {
     fprintf (stderr, "setGCStateCurrentThreadAndStack: thread = "FMTPTR" stack = "FMTPTR" [%d]\n",
              (uintptr_t)thread, (uintptr_t)stack, s->procId);
   markCard (s, (pointer)stack);
-
-  //Fixing forwarding pointers in the stack
-  foreachObjptrInObject (s, (pointer)stack, fixFwdObjptr, TRUE);
 }
 
 void setGCStateCurrentLocalHeap (GC_state s,

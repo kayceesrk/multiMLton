@@ -276,20 +276,8 @@ pointer GC_move (GC_state s, pointer p,
 
   assert (isObjptrInHeap (s, s->sharedHeap, op));
 
-  if (skipFixForwardingPointers) {
-    getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
-    getThreadCurrent(s)->exnStack = s->exnStack;
-    foreachObjptrInObject (s, (pointer)getStackCurrent(s), fixFwdObjptr, TRUE);
-  }
-  else {
-    /* Force a garbage collection. Essential to fix the forwarding pointers from
-     * the previous step.
-     * NOTE: Major GC needs to be forced only if moving objects from the major heap. */
-    if (not s->canMinor || TRUE /* Force Major */)
-      fixForwardingPointers (s, TRUE);
-    else
-      fixForwardingPointers (s, TRUE);
-  }
+  if (!skipFixForwardingPointers)
+    fixForwardingPointers (s, TRUE);
 
   LEAVE_LOCAL0 (s);
 

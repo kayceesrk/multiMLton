@@ -145,30 +145,10 @@ void majorCheneyCopySharedGC (GC_state s) {
     }
   }
 
-  //Fix up just the forwarding pointers
-  foreachGlobalObjptr (s, fixFwdObjptr);
   for (int proc=0; proc < s->numberOfProcs; proc++) {
     GC_state r = &s->procStates[proc];
     //clear remembered stacks
     clearDanglingStackList (r);
-
-    if (DEBUG_DETAILED or FALSE)
-      fprintf (stderr, "majorCheneyCopySharedGC: fixingForwardingPointers (1) [%d]\n", proc);
-
-    objptr op = r->forwardState.liftingObject;
-    if (op != BOGUS_OBJPTR) {
-      //Fix forwarding pointers in local heaps
-      pointer end = r->heap->start + r->heap->oldGenSize;
-      foreachObjptrInRange (r, r->heap->start, &end, fixFwdObjptr, TRUE); //OldGen
-      foreachObjptrInRange (r, r->heap->nursery, &r->frontier, fixFwdObjptr, TRUE); //Nursery
-
-      //Fix forwarding pointers in forwarded range -- NOTE: Because of the
-      //following walk, range list will be cleared
-      foreachObjptrInRange (r, r->forwardState.toStart, &r->forwardState.back, fixFwdObjptr, TRUE);
-    }
-
-    if (DEBUG_DETAILED or FALSE)
-      fprintf (stderr, "majorCheneyCopySharedGC: fixingForwardingPointers (2) [%d]\n", proc);
   }
 
   //Set up forwarding state

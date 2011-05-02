@@ -227,15 +227,6 @@ void GC_prefixAndSwitchTo (GC_state s, pointer p) {
 
     GC_stack stk = (GC_stack) objptrToPointer (thrd->stack, s->heap->start);
 
-    //Fix forwarding pointers in the stack you are bringing in. This way stack will not have
-    //forwarding pointers
-    foreachObjptrInObject (s, (pointer)stk, fixFwdObjptr, TRUE);
-
-    /* if (s->stackLimit < s->stackTop) {
-      s->cumulativeStatistics->bytesThreadUsed += (s->stackLimit - s->stackTop);
-      s->cumulativeStatistics->countThreadUsed++;
-    } */
-
     int i=0;
     while (s->stackLimit < s->stackTop + stk->used) {
         s->cumulativeStatistics->numForceStackGrowth++;
