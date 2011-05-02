@@ -685,7 +685,7 @@ fun output {program as Machine.Program.T {chunks,
          fun toString (z: Operand.t, isDest: bool): string =
             case z of
                ArrayOffset {base, index, offset, scale, ty} =>
-                  if (not isDest andalso
+                  (* if (not isDest andalso
                       Type.isObjptr ty andalso
                       (not (!Control.serialExec))) then
                   (concat ["X_RB", C.args [Type.toC ty,
@@ -693,7 +693,7 @@ fun output {program as Machine.Program.T {chunks,
                                        toString (index, false),
                                        Scale.toString scale,
                                        C.bytes offset]])
-                  else
+                  else *)
                   (concat ["X", C.args [Type.toC ty,
                                        toString (base, false),
                                        toString (index, false),
@@ -714,13 +714,13 @@ fun output {program as Machine.Program.T {chunks,
              | Line => "__LINE__"
              | Null => "NULL"
              | Offset {base, offset, ty} =>
-                 if (not isDest andalso
+                 (* if (not isDest andalso
                      Type.isObjptr ty andalso
                      (not (!Control.serialExec))) then
                   (concat ["O_RB", C.args [Type.toC ty,
                                        toString (base, false),
                                        C.bytes offset]])
-                 else
+                 else *)
                   (concat ["O", C.args [Type.toC ty,
                                        toString (base, false),
                                        C.bytes offset]])

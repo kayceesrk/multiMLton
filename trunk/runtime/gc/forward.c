@@ -169,10 +169,6 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
       if (DEBUG_WEAK)
         fprintf (stderr, "forwarding weak "FMTPTR" ",
                  (uintptr_t)w);
-      objptr wopOld = w->objptr;
-      fixFwdObjptr (s, &w->objptr);
-      if (DEBUG_WEAK && wopOld != w->objptr)
-        fprintf (stderr, "--fixFwdObjptr weak-- ");
       if (isObjptr (w->objptr)
           and (not s->forwardState.amInMinorGC
                or isObjptrInNursery (s, s->heap, w->objptr))) {
@@ -574,13 +570,13 @@ void fixFwdObjptr (GC_state s, objptr* opp) {
   if (isObjptr (*opp) && !(*opp == 0)) {
     pointer p = objptrToPointer (*opp, s->heap->start);
     while (isObjptr (*opp) && getHeader (p) == GC_FORWARDED) {
-      if (DEBUG_DETAILED or FALSE)
+      if (DEBUG_DETAILED or DEBUG_READ_BARRIER)
         fprintf (stderr,
                  "fixFwdObjptr  opp = "FMTPTR"  op = "FMTOBJPTR"  p = "FMTPTR"\n",
                  (uintptr_t)opp, *opp, (uintptr_t)p);
       *opp = *(objptr*)p;
       p = objptrToPointer (*opp, s->heap->start);
-      if (DEBUG_DETAILED or FALSE)
+      if (DEBUG_DETAILED or DEBUG_READ_BARRIER)
         fprintf (stderr,
                  "fixFwdObjptr --> *opp = "FMTPTR"\n",
                  (uintptr_t)*opp);

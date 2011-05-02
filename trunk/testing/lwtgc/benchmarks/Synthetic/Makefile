@@ -6,6 +6,8 @@ STACK := false
 BRANCH := false
 MORE :=
 
+MULTIMLTON := ../../../../build/bin/mlton
+
 SRCS := $(wildcard *.sml)
 SRC_RULS := $(subst .sml,-amd64,$(SRCS))
 
