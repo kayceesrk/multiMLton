@@ -11,7 +11,7 @@ struct
   exception ThreadCasting of string
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
-  fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
+  fun debug' msg = debug (fn () => (msg())^" : "^Int.toString(PacmlFFI.processorNumber()))
 
   type thread_id = ThreadID.thread_id
   type parasite = RepTypes.parasite
@@ -66,6 +66,7 @@ struct
   fun getThreadType () = getProp (#threadType)
   fun getParasiteBottom () = case getProp (#parasiteBottom) of
                                   (offset, tid) => (Assert.assert' ("PT.getParasiteBottom", fn () => (tid = TID.tidNum ()));
+                                                    debug' (fn () => ("PT.getParasiteBottom = "^(Int.toString offset)));
                                                     offset)
   fun getNumPenaltySpawns () = getProp (#numPenaltySpawns)
   fun getLockId () = getProp (#lockId)
@@ -75,10 +76,11 @@ struct
       val TID.TID {pstate, ...} = TID.getCurThreadId ()
       val PSTATE (ps) = !pstate
     in
-      pstate := PSTATE {threadType = t,
-                        parasiteBottom = #parasiteBottom ps,
-                        numPenaltySpawns = #numPenaltySpawns ps,
-                        lockId = #lockId ps}
+      PacmlPrim.unsafeAssign
+        (pstate, PSTATE {threadType = t,
+                         parasiteBottom = #parasiteBottom ps,
+                         numPenaltySpawns = #numPenaltySpawns ps,
+                         lockId = #lockId ps})
     end
 
   fun setParasiteBottom (pb) =
@@ -86,10 +88,11 @@ struct
       val TID.TID {pstate, ...} = TID.getCurThreadId ()
       val PSTATE (ps) = !pstate
     in
-      pstate := PSTATE {threadType = #threadType ps,
-                        parasiteBottom = (pb, TID.tidNum ()),
-                        numPenaltySpawns = #numPenaltySpawns ps,
-                        lockId = #lockId ps}
+      PacmlPrim.unsafeAssign
+        (pstate, PSTATE {threadType = #threadType ps,
+                         parasiteBottom = (pb, TID.tidNum ()),
+                         numPenaltySpawns = #numPenaltySpawns ps,
+                         lockId = #lockId ps})
     end
 
   fun setNumPenaltySpawns (n) =
@@ -97,10 +100,11 @@ struct
       val TID.TID {pstate, ...} = TID.getCurThreadId ()
       val PSTATE (ps) = !pstate
     in
-      pstate := PSTATE {threadType = #threadType ps,
-                        parasiteBottom = #parasiteBottom ps,
-                        numPenaltySpawns = n,
-                        lockId = #lockId ps}
+      PacmlPrim.unsafeAssign
+        (pstate, PSTATE {threadType = #threadType ps,
+                         parasiteBottom = #parasiteBottom ps,
+                         numPenaltySpawns = n,
+                         lockId = #lockId ps})
     end
 
   fun setLockId (n) =
@@ -108,18 +112,32 @@ struct
       val TID.TID {pstate, ...} = TID.getCurThreadId ()
       val PSTATE (ps) = !pstate
     in
-      pstate := PSTATE {threadType = #threadType ps,
-                        parasiteBottom = #parasiteBottom ps,
-                        numPenaltySpawns = #numPenaltySpawns ps,
-                        lockId = n}
+      PacmlPrim.unsafeAssign
+        (pstate, PSTATE {threadType = #threadType ps,
+                         parasiteBottom = #parasiteBottom ps,
+                         numPenaltySpawns = #numPenaltySpawns ps,
+                         lockId = n})
     end
+
+  fun setParasiteState (tt, pb, nps, lid) =
+    let
+      val TID.TID {pstate, ...} = TID.getCurThreadId ()
+      val PSTATE (ps) = !pstate
+      val newSt = PSTATE {threadType = tt,
+                          parasiteBottom = (pb, TID.tidNum ()),
+                          numPenaltySpawns = nps,
+                          lockId = lid}
+    in
+      PacmlPrim.unsafeAssign (pstate, newSt)
+    end
+
 
 
   fun disableParasitePreemption () =
   let
     val TID.TID {preemptParasite, ...} = TID.getCurThreadId ()
   in
-    preemptParasite := false
+    PacmlPrim.unsafeAssign (preemptParasite, false)
   end
 
   fun enableParasitePreemption () =
@@ -155,16 +173,19 @@ struct
   fun atomicPrefixAndSwitchToHelper (lockId, thlet, kind) =
   let
     val () = Assert.assertAtomic' ("ProtoThread.atomicPrefixAndSwitchToHelper", NONE)
+    val () = debug' (fn () => "ProtoThread.atomicPrefixAndSwitchToHelper")
     val () = TID.mark (TID.getCurThreadId ())
     val state = getThreadState ()
-    val _ = case kind of
-                  PREFIX_REGULAR => setThreadType (PARASITE)
-                | _ => ()
+    val () = debug' (fn () => "WBPar(2)")
     fun doit () =
     let
-      val offset = getFrameBottomAsOffset ()
-      val _ = setParasiteBottom (offset)
-      val _ = setLockId (lockId)
+      val () = debug' (fn () => "WBPar(3)")
+      val pb = getFrameBottomAsOffset ()
+      val tt = case kind of
+                  PREFIX_REGULAR => PARASITE
+                | _ => getThreadType ()
+      val nps = getNumPenaltySpawns ()
+      val () = setParasiteState (tt, pb, nps, lockId)
       val _ = prefixAndSwitchTo (thlet) (* Implicit atomic End *)
       val _ = disableParasitePreemption ()
     in
@@ -206,7 +227,7 @@ struct
     let
       val _ = Assert.assert' ("ProtoThread.atomicPrefixAndSwitchToHelper: Preemption enabled!",
                               fn () => (toPreemptParasite () = false))
-      val _ = debug' "ProtoThread.spawnParasite.resetting thread state"
+      val _ = debug' (fn () => "ProtoThread.spawnParasite.resetting thread state")
       val _ = setThreadState (state)
       val _ = enableParasitePreemption ()
     in
@@ -221,11 +242,11 @@ struct
       val _ = setLockId (TID.nextLockId ())
       val _ = atomicEnd ()
       val _ = f () handle e => case e of
-                                  RepTypes.DOIT_FAIL => (debug' "DOIT_FAIL. Letting though";
+                                  RepTypes.DOIT_FAIL => (debug' (fn () => "DOIT_FAIL. Letting though");
                                                           disableParasitePreemption ();
                                                           cleanUp ();
                                                           raise e)
-                                | _ => (debug' (concat["SpawnParasite: parasite threw an exception -- Exn: ", exnName e, " Msg: ", exnMessage e]);
+                                | _ => (debug' (fn () => concat["SpawnParasite: parasite threw an exception -- Exn: ", exnName e, " Msg: ", exnMessage e]);
                                         ignore (OS.Process.exit OS.Process.failure))
       val _ = disableParasitePreemption ()
     in

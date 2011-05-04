@@ -108,6 +108,9 @@ structure Ref =
       in
         refAssign (r, v')
       end
+
+     val unsafeAssign = refAssign
+
    end
 
 

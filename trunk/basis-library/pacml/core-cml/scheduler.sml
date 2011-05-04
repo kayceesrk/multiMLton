@@ -278,7 +278,7 @@ struct
 
   fun atomicSwitchToNextParasiteForWB f =
     let
-      val _ = debug' (fn () => "Scheduler.atomicSwitchToNext on "^(PT.getThreadTypeString ()))
+      val _ = debug' (fn () => "Scheduler.atomicSwitchToNextParasiteForWB on "^(PT.getThreadTypeString ()))
       fun dummyFrame () =
       let
         val tid = TID.getCurThreadId ()
@@ -293,6 +293,7 @@ struct
                                               HOST => false
                                             | _ => true)
         val _ = PT.disableParasitePreemption ()
+        val _ = debug' (fn () => "WBPar(1)")
         val _ = PT.jumpDown (bottom) (* Implicit atomic end *)
       in
         print "Should not see this\n"

@@ -28,4 +28,6 @@ struct
 
   end
 
+  val unsafeAssign = Primitive.Ref.unsafeAssign
+
 end

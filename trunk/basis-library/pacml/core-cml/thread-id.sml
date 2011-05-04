@@ -81,10 +81,10 @@ struct
 
   fun mark (TID{done_comm, ...}) =
       (Assert.assertAtomic' ("ThreadID.mark", NONE)
-      ; done_comm := true)
+      ; PacmlPrim.unsafeAssign (done_comm, true))
   fun unmark (TID{done_comm, ...}) =
       (Assert.assertAtomic' ("ThreadID.unmark", NONE)
-      ; done_comm := false)
+      ; PacmlPrim.unsafeAssign (done_comm, false))
   fun isMarked (TID{done_comm, ...}) = !done_comm
 
   fun getProcId (TID {processorId, ...}) = processorId

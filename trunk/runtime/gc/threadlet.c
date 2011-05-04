@@ -78,9 +78,9 @@ GC_thread GC_copyParasite (int startOffset) {
     //Save the exception stack offset relative to parasite bottom. This will be
     //used to get to the correct exception state when the parasite is prefixed
     //to a host.
-    th->exnStack = s->exnStack - (size_t)startOffset;
-    //All parasites have a default handler. Assert his indirectly
-    assert (s->exnStack > (size_t)startOffset);
+    //th->exnStack = s->exnStack - (size_t)startOffset;
+    //All parasites have a default handler. Assert this indirectly
+    //assert (s->exnStack > (size_t)startOffset);
 
     if (DEBUG_SPLICE) {
         fprintf (stderr, "\ncopyParasite [%d]\n", Proc_processorNumber (s));
@@ -293,8 +293,8 @@ void GC_prefixAndSwitchTo (GC_state s, pointer p) {
 
     GC_thread curThread = getThreadCurrent (s);
     //Restore exception state
-    curThread->exnStack = (start - s->stackBottom) + thrd->exnStack;
-    s->exnStack = curThread->exnStack;
+    //curThread->exnStack = (start - s->stackBottom) + thrd->exnStack;
+    //s->exnStack = curThread->exnStack;
 
     if (DEBUG_SPLICE) {
         fprintf (stderr, "\tprefixing frame of size %ld\n", stk->used);
@@ -303,7 +303,7 @@ void GC_prefixAndSwitchTo (GC_state s, pointer p) {
     }
 
 
-    s->atomicState --;
+    s->atomicState--;
     return;
 }
 
