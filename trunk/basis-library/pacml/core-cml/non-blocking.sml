@@ -2,7 +2,7 @@ structure NonBlocking =
 struct
 
   structure Assert = LocalAssert(val assert = true)
-  structure Debug = LocalDebug(val debug = true)
+  structure Debug = LocalDebug(val debug = false)
 
   open Channel
   open Critical

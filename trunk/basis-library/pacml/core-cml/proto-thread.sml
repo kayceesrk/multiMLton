@@ -2,7 +2,7 @@ structure ProtoThread : PROTO_THREAD =
 struct
 
   structure Assert = LocalAssert(val assert = true)
-  structure Debug = LocalDebug(val debug = true)
+  structure Debug = LocalDebug(val debug = false)
 
   open Critical
   structure TID = ThreadID
@@ -176,10 +176,8 @@ struct
     val () = debug' (fn () => "ProtoThread.atomicPrefixAndSwitchToHelper")
     val () = TID.mark (TID.getCurThreadId ())
     val state = getThreadState ()
-    val () = debug' (fn () => "WBPar(2)")
     fun doit () =
     let
-      val () = debug' (fn () => "WBPar(3)")
       val pb = getFrameBottomAsOffset ()
       val tt = case kind of
                   PREFIX_REGULAR => PARASITE

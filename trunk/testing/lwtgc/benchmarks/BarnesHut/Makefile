@@ -18,3 +18,27 @@ all: $(SRC_RULS)
 
 clean:
 	rm -rf $(SRC_RULS) *~ op *.out *.c *ssa *ssa2 *xml *-ml *machine
+
+MMPATH = $(HOME)/temp/multiMLton
+
+FLAGS = -std=gnu99 -c -g -DASSERT=1 -I$(MMPATH)/trunk/build/lib/self/include \
+				-I$(MMPATH)/trunk/build/lib/include -O1 -fno-common -fno-strict-aliasing \
+				-fomit-frame-pointer -w -m64
+
+DEBUG_LIBS = -L$(MMPATH)/trunk/build/lib/self -lmlton-gdb -lgdtoa-gdb \
+			 -lm -lgmp -m64 -lplpa_included -pthread -lrt
+
+LIBS = -L$(MMPATH)/trunk/build/lib/self -lmlton -lgdtoa \
+			 -lm -lgmp -m64 -lplpa_included -pthread -lrt
+
+%.o: %.c
+	gcc $(FLAGS) -o $@ $<
+
+.SECONDEXPANSION:
+%-c : $$(subst .c,.o,$$(wildcard $$(subst -c,,$$@).*.c))
+	gcc -o $(subst -c,,$@) $^ $(LIBS)
+
+
+.SECONDEXPANSION:
+%-cdebug : $$(subst .c,.o,$$(wildcard $$(subst -cdebug,,$$@).*.c))
+	gcc -o $(subst -cdebug,,$@) $^ $(DEBUG_LIBS)

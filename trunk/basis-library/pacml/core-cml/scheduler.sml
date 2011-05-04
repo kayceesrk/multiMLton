@@ -2,7 +2,7 @@ structure Scheduler : SCHEDULER =
 struct
 
   structure Assert = LocalAssert(val assert = true)
-  structure Debug = LocalDebug(val debug = true)
+  structure Debug = LocalDebug(val debug = false)
 
   open Critical
 
@@ -293,7 +293,6 @@ struct
                                               HOST => false
                                             | _ => true)
         val _ = PT.disableParasitePreemption ()
-        val _ = debug' (fn () => "WBPar(1)")
         val _ = PT.jumpDown (bottom) (* Implicit atomic end *)
       in
         print "Should not see this\n"

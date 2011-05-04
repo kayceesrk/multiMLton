@@ -2,7 +2,7 @@ structure Thread : THREAD_EXTRA =
 struct
 
   structure Assert = LocalAssert(val assert = true)
-  structure Debug = LocalDebug(val debug = true)
+  structure Debug = LocalDebug(val debug = false)
 
   open Critical
   open ThreadID
@@ -214,9 +214,13 @@ struct
                      generalExit (SOME tid, false))
     val thrd = H_THRD (tid, PT.new thrdFun)
     val rhost = PT.getRunnableHost (PT.prep (thrd))
+    (* XXX dummy *)
     val _ = case rhost of
-                 RHOST (tid, t) => (TID.tidToString tid;
-                                    MLtonThread.threadStatus t)
+                 RHOST (tid, t) => let
+                                     val _ = TID.tidToString tid
+                                   in
+                                    MLtonThread.threadStatus t
+                                   end
     val proc = TID.getProcId (tid)
     val _ = Config.incrementNumLiveThreads ()
     val _ = PacmlPrim.addToSpawnOnWBA (H_RTHRD rhost, proc)
@@ -265,7 +269,7 @@ struct
           val _ = PT.spawnParasite f
           val te = Time.now ()
           val d = Time.toMicroseconds (Time.-(te, ts))
-          val _ = if LargeInt.>(d, Config.maxTime) then
+          val _ = if LargeInt.>(d, Config.maxTime) then (* XXX Should take into account that parasites can be suspended *)
                     PT.setNumPenaltySpawns (Config.penalty)
                   else ()
         in
