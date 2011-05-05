@@ -2,7 +2,7 @@ structure Thread : THREAD_EXTRA =
 struct
 
   structure Assert = LocalAssert(val assert = true)
-  structure Debug = LocalDebug(val debug = false)
+  structure Debug = LocalDebug(val debug = true)
 
   open Critical
   open ThreadID
@@ -178,6 +178,12 @@ struct
     val tid = case ps of
                    ANY_PROC => TID.new ()
                  | ON_PROC n => TID.newOnProc (n)
+
+    (* XXX dummy *)
+    val _ = if Primitive.MLton.equal (tid, TID.getCurThreadId ()) then
+              print "I should not see this\n"
+            else ()
+
     fun thrdFun () = ((f ()) handle ex => doHandler (tid, ex);
                      generalExit (SOME tid, false))
     val thrd = H_THRD (tid, PT.new thrdFun)
@@ -210,6 +216,12 @@ struct
     val tid = case ps of
                    ANY_PROC => TID.new ()
                  | ON_PROC n => TID.newOnProc (n)
+
+    (* XXX dummy *)
+    val _ = if Primitive.MLton.equal (tid, TID.getCurThreadId ()) then
+              print "I should not see this\n"
+            else ()
+
     fun thrdFun () = ((f ()) handle ex => doHandler (tid, ex);
                      generalExit (SOME tid, false))
     val thrd = H_THRD (tid, PT.new thrdFun)

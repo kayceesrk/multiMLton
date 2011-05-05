@@ -1,7 +1,7 @@
 structure ThreadID : THREAD_ID_EXTRA =
 struct
   structure Assert = LocalAssert(val assert = true)
-  structure Debug = LocalDebug(val debug = false)
+  structure Debug = LocalDebug(val debug = true)
 
   open Critical
   structure R = RepTypes
@@ -95,22 +95,30 @@ struct
     else p1 = p2
 
 
-  val curTid : thread_id array = Array.tabulate(PacmlFFI.numberOfProcessors, fn i => dummyTid i)
+  val curTid : thread_id vector = Vector.tabulate(PacmlFFI.numberOfProcessors, fn i => dummyTid i)
+
+  structure PrimTID = Primitive.MLton.ThreadId
 
   fun getCurThreadId () =
+    if PrimTID.testThreadId () then
+      Primitive.dontInline (PrimTID.getThreadId)
+    else
+      Vector.sub (curTid, PacmlFFI.processorNumber ())
+
+  (* fun getCurThreadId () =
     let
       val tid as TID {processorId, ...} = Array.unsafeSub (curTid, PacmlFFI.processorNumber ())
       val _ = print ("getCurThreadId "^tidToString (tid)^"\n")
     in
       tid
-    end
+    end *)
 
   fun tidMsg () = tidToString (getCurThreadId ())
 
   fun debug msg = Debug.sayDebug ([atomicMsg, tidMsg], msg)
   fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
 
-  and setCurThreadId (tid as TID {processorId, ...}) =
+  (* and setCurThreadId (tid as TID {processorId, ...}) =
   let
     val procNum = PacmlFFI.processorNumber ()
     val _ = tidToString tid (* XXX dummy *)
@@ -120,7 +128,10 @@ struct
     val _ = tidToString tid (* XXX dummy *)
     val () = Array.update (curTid, PacmlFFI.processorNumber (), tid)
   in ()
-  end
+  end *)
+
+  fun setCurThreadId (tid : thread_id) =
+    Primitive.dontInline (fn () => PrimTID.setThreadId tid)
 
   fun tidNum () = tidToInt (getCurThreadId ())
 

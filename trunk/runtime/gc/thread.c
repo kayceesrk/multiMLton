@@ -73,5 +73,6 @@ pointer GC_getThreadId (GC_state s) {
 }
 
 void GC_setThreadId (GC_state s, pointer p) {
+  fprintf (stderr, "GC_setThreadId "FMTPTR"\n", (uintptr_t)p);
   s->pacmlThreadId = pointerToObjptr (p, s->heap->start);
 }
