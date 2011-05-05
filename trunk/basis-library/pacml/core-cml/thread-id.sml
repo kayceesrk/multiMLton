@@ -100,6 +100,7 @@ struct
   fun getCurThreadId () =
     let
       val tid as TID {processorId, ...} = Array.unsafeSub (curTid, PacmlFFI.processorNumber ())
+      val _ = print ("getCurThreadId "^tidToString (tid)^"\n")
     in
       tid
     end
@@ -109,17 +110,14 @@ struct
   fun debug msg = Debug.sayDebug ([atomicMsg, tidMsg], msg)
   fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
 
-  (* fun setCurThreadId (tid as TID {processorId, ...}) =
-  let
-    val procNum = PacmlFFI.processorNumber ()
-    val () = Array.update (curTid, PacmlFFI.processorNumber (), tid)
-  in ()
-  end *)
-
   and setCurThreadId (tid as TID {processorId, ...}) =
   let
     val procNum = PacmlFFI.processorNumber ()
+    val _ = tidToString tid (* XXX dummy *)
+    val _ = print ("setCurThreadId(1) "^tidToString (tid)^"\n")
     val tid = PacmlPrim.move (tid, false, true)
+    val _ = print ("setCurThreadId(2) "^tidToString (tid)^"\n")
+    val _ = tidToString tid (* XXX dummy *)
     val () = Array.update (curTid, PacmlFFI.processorNumber (), tid)
   in ()
   end

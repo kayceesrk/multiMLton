@@ -1,11 +1,12 @@
 structure PacmlPrim =
 struct
 
-  type rdy_thread = RepTypes.rdy_thread
+  datatype rdy_thread = datatype RepTypes.rdy_thread
   datatype thread_type = datatype RepTypes.thread_type
 
   fun move (x, forceStackLifting, skipFixingForwaringPointers) =
     Primitive.MLton.move (x, forceStackLifting, skipFixingForwaringPointers)
+
   fun initRefUpdate f = Primitive.Ref.preemptFn := f
 
   fun addToPreemptOnWBA (t : rdy_thread, threadType) =
@@ -21,10 +22,12 @@ struct
     structure PrimSQ = Primitive.MLton.SchedulerQueue
     open PrimSQ
 
+    (* XXX dummy *)
     fun enque (t: rdy_thread, proc: int, prio: int) =
-      PrimSQ.enque (t, proc, prio)
+      Primitive.dontInline (fn () => PrimSQ.enque (t, proc, prio))
+
     fun deque (prio: int) : rdy_thread option =
-      PrimSQ.deque (prio)
+      Primitive.dontInline (fn () => PrimSQ.deque (prio))
 
   end
 
