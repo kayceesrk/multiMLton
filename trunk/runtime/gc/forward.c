@@ -338,8 +338,8 @@ void forwardObjptr (GC_state s, objptr *opp) {
   *opp = *((objptr*)p);
   if (DEBUG_DETAILED or FALSE)
     fprintf (stderr,
-             "forwardObjptr --> *opp = "FMTPTR"\n",
-             (uintptr_t)*opp);
+             "forwardObjptr --> *opp = "FMTPTR" [%d]\n",
+             (uintptr_t)*opp, s->procId);
   while (isObjptrInFromSpace (s, s->heap, *opp)) {
     /* This can happen in the presence of read barriers */
     if (DEBUG_DETAILED or FALSE)

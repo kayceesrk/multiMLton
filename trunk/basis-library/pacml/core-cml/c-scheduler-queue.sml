@@ -29,7 +29,7 @@ struct
   fun enqueHost (rthrd as RHOST (tid, t), prio) =
   let
     val _ = Assert.assertAtomic (fn () => "enqueHost", NONE)
-    val _ = (MLtonThread.threadStatus t) (* DO NOT REMOVE *)
+    val _ = (MLtonThread.threadStatus t) (* XXX dummy *)
     val targetProc = ThreadID.getProcId (tid)
     val q = case prio of
                  R.PRI => pri
@@ -64,7 +64,7 @@ struct
     val rhost = case rthrd of
                  NONE => NONE
                | SOME (H_RTHRD (RHOST (tid, t))) =>
-                   (ignore (MLtonThread.threadStatus t) (* DO NOT REMOVE *)
+                   (ignore (MLtonThread.threadStatus t) (* XXX dummy *)
                    ; SOME (RHOST (tid, t)))
                | _ => (print "dequeHost: Impossible\n";
                        raise Fail "dequeHost: Impossible")

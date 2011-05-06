@@ -428,14 +428,22 @@ pointer GC_forwardBase (const GC_state s, const pointer p) {
     return p;
 
   if (*(GC_header*)(p - GC_HEADER_SIZE) == GC_FORWARDED) {
+      fprintf (stderr, "GC_forwardBase: forwarding "FMTPTR" to "FMTPTR" [%d]\n",
+               (uintptr_t)p, (uintptr_t)*(pointer*)p, s->procId);
+    return *(pointer*)p;
+  }
+  return p;
+}
+
+pointer GC_forwardBaseWorking (const GC_state s, const pointer p) {
+  if (!isPointer (p) || p == (pointer)s->generationalMaps.cardMapAbsolute)
+    return p;
+
+  if (*(GC_header*)(p - GC_HEADER_SIZE) == GC_FORWARDED) {
     if (DEBUG_READ_BARRIER)
       fprintf (stderr, "GC_forwardBase: forwarding "FMTPTR" to "FMTPTR" [%d]\n",
                (uintptr_t)p, (uintptr_t)*(pointer*)p, s->procId);
-    /* Disabling fixing read barrier XXX This functions should be removed when
-     * the write barrier port is complete.
-     */
-    //return *(pointer*)p;
-    return p;
+    return *(pointer*)p;
   }
   return p;
 }

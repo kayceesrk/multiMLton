@@ -176,6 +176,7 @@ PRIVATE void GC_setSignalHandlerThread (GC_state *gs, pointer p);
 
 PRIVATE void GC_print (int);
 PRIVATE inline pointer GC_forwardBase (const GC_state s, const pointer p);
+PRIVATE inline pointer GC_forwardBaseWorking (const GC_state s, const pointer p);
 
 #endif /* (defined (MLTON_GC_INTERNAL_BASIS)) */
 

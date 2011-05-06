@@ -84,7 +84,7 @@ void translateObjptrShared (GC_state s, objptr* opp) {
   pointer oldP = p;
 
   if (DEBUG_DETAILED || DEBUG_TRANSLATE)
-    fprintf (stderr, "translateObjptrShared(1)\n");
+    fprintf (stderr, "translateObjptrShared(1) "FMTPTR"\n", (uintptr_t)p);
   //Only translate the pointers that are in the fromSpace
   if (p >= s->translateState.from and
         p < (s->translateState.from + s->translateState.size)) {

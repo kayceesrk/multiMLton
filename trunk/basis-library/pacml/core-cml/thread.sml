@@ -226,6 +226,7 @@ struct
                      generalExit (SOME tid, false))
     val thrd = H_THRD (tid, PT.new thrdFun)
     val rhost = PT.getRunnableHost (PT.prep (thrd))
+
     (* XXX dummy *)
     val _ = case rhost of
                  RHOST (tid, t) => let
@@ -233,6 +234,7 @@ struct
                                    in
                                     MLtonThread.threadStatus t
                                    end
+
     val proc = TID.getProcId (tid)
     val _ = Config.incrementNumLiveThreads ()
     val _ = PacmlPrim.addToSpawnOnWBA (H_RTHRD rhost, proc)
