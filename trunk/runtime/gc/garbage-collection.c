@@ -205,10 +205,12 @@ void performSharedGC (GC_state s,
     if (DEBUG)
       fprintf (stderr, "performSharedGC: starting local GC [%d]\n", s->procId);
 
+    ENTER_LOCAL0 (s);
     minorCheneyCopyGC (s);
     majorGC (s, GC_HEAP_LIMIT_SLOP, TRUE, FALSE);
     setGCStateCurrentLocalHeap (s, 0, GC_HEAP_LIMIT_SLOP);
     setGCStateCurrentThreadAndStack (s);
+    LEAVE_LOCAL0 (s);
 
     if (DEBUG)
       fprintf (stderr, "performSharedGC: finished local GC [%d]\n", s->procId);
