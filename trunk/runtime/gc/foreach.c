@@ -6,6 +6,8 @@
  * See the file MLton-LICENSE for details.
  */
 
+bool skipStackToThreadTracing;
+
 void callIfIsObjptr (GC_state s, GC_foreachObjptrFun f, objptr *opp) {
   if (isObjptr (*opp)) {
     f (s, opp);
@@ -250,9 +252,19 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
     top = getStackTop (s, stack);
 
     //For stack->thread
-    if (DEBUG_DETAILED)
-      fprintf (stderr, "  &stack->thread="FMTPTR"\n", (uintptr_t)&stack->thread);
-    callIfIsObjptr (s, f, (objptr*)&(stack->thread));
+    /* Stack->Thread pointer must be traced always except when performing a
+     * shared GC. This is to ensure that the dangling stacks will be cleared at
+     * the end of a shared heap collection. See the use of
+     * skipStackToThreadTracing variable in majorCheneyCopySharedGC for
+     * details. */
+    if (!skipStackToThreadTracing) {
+      if (DEBUG_DETAILED)
+        fprintf (stderr, "  &stack->thread="FMTPTR"\n", (uintptr_t)&stack->thread);
+      callIfIsObjptr (s, f, (objptr*)&(stack->thread));
+    }
+    else if (DEBUG_DETAILED) {
+      fprintf (stderr, "  skipping &stack->thread="FMTPTR"\n", (uintptr_t)&stack->thread);
+    }
 
     if (DEBUG_DETAILED or FALSE) {
       fprintf (stderr, "  bottom = "FMTPTR"  top = "FMTPTR"\n",

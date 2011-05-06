@@ -10,6 +10,8 @@
 /*                          Initialization                          */
 /* ---------------------------------------------------------------- */
 
+bool skipStackToThreadTracing = FALSE;
+
 static bool stringToBool (char *s) {
   if (0 == strcmp (s, "false"))
     return FALSE;

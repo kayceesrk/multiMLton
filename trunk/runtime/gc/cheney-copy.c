@@ -10,6 +10,8 @@
 /*                    Cheney Copying Collection                     */
 /* ---------------------------------------------------------------- */
 
+extern bool skipStackToThreadTracing;
+
 void updateWeaksForCheneyCopy (GC_state s) {
   pointer p;
   GC_weak w;
@@ -197,8 +199,13 @@ void majorCheneyCopySharedGC (GC_state s) {
       fprintf (stderr, "majorCheneyCopySharedGC: walking local heaps (1) [%d]\n",
                proc);
     pointer end = r->heap->start + r->heap->oldGenSize;
+
+    /* See foreachObjptrInObject():STACK for the details of skipStackToThreadTracing variable */
+    skipStackToThreadTracing = TRUE;
     foreachObjptrInRangeWithFill (r, r->heap->start, &end, forwardObjptrIfInSharedHeap, TRUE, TRUE); //OldGen
     foreachObjptrInRangeWithFill (r, r->heap->nursery, &r->frontier, forwardObjptrIfInSharedHeap, TRUE, TRUE); //Nursery
+    skipStackToThreadTracing = FALSE;
+
     if (DEBUG_DETAILED or FALSE)
       fprintf (stderr, "majorCheneyCopySharedGC: walking local heaps (2) [%d]\n",
                proc);
