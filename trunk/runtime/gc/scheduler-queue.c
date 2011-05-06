@@ -254,8 +254,7 @@ void GC_sqAcquireLock (GC_state s, int proc) {
     if (Proc_threadInSection (s) and
         !Proc_executingInSection (s) and FALSE) {
       s->syncReason = SYNC_HELP;
-      ENTER0 (s);
-      LEAVE0 (s);
+      performSharedGC (s, 0);
     }
 
     if (Proc_executingInSection (s) and lock->id >= 0)

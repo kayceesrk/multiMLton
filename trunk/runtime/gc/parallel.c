@@ -79,25 +79,20 @@ void Parallel_resetBytesLive (void) {
   s->cumulativeStatistics->maxBytesLiveSinceReset = 0;
 }
 
-
-void Parallel_maybeWaitForGC (void) {
-  GC_state s = pthread_getspecific (gcstate_key);
-  if (Proc_threadInSection (s)) {
-    //fprintf (stderr, "waiting for gc [%d]\n", Proc_processorNumber (s));
-
-    s->syncReason = SYNC_HELP;
-    ENTER0 (s);
-    LEAVE0 (s);
-  }
-}
-
 void maybeWaitForGC (GC_state s) {
   if (Proc_threadInSection (s)) {
     s->syncReason = SYNC_HELP;
-    ENTER0 (s);
-    LEAVE0 (s);
+    ENTER0(s);
+    LEAVE0(s);
   }
 }
+
+void Parallel_maybeWaitForGC (void) {
+  GC_state s = pthread_getspecific (gcstate_key);
+  maybeWaitForGC (s);
+}
+
+
 
 //struct rusage ru_lock;
 

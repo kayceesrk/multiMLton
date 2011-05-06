@@ -302,17 +302,17 @@ pointer GC_move (GC_state s, pointer p,
   return res;
 }
 
-  void forceLocalGC (GC_state s) {
-    if (DEBUG_LWTGC)
-      fprintf (stderr, "forceLocalGC [%d]\n", s->procId);
+void forceLocalGC (GC_state s) {
+  if (DEBUG_LWTGC)
+    fprintf (stderr, "forceLocalGC [%d]\n", s->procId);
 
-    s->syncReason = SYNC_FORCE;
-    ENTER_LOCAL0 (s);
+  s->syncReason = SYNC_FORCE;
+  ENTER_LOCAL0 (s);
 
-    fixForwardingPointers (s, TRUE);
+  fixForwardingPointers (s, TRUE);
 
-    LEAVE_LOCAL0 (s);
-  }
+  LEAVE_LOCAL0 (s);
+}
 
 void moveEachObjptrInObject (GC_state s, pointer p) {
   assert (p != BOGUS_POINTER);

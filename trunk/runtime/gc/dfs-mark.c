@@ -368,14 +368,14 @@ ret:
 
 void dfsMarkWithHashConsWithLinkWeaks (GC_state s, objptr *opp) {
   pointer p;
-
+  fixFwdObjptr (s, opp);
   p = objptrToPointer (*opp, s->heap->start);
   dfsMarkByMode (s, p, MARK_MODE, TRUE, TRUE);
 }
 
 void dfsMarkWithoutHashConsWithLinkWeaks (GC_state s, objptr *opp) {
   pointer p;
-
+  fixFwdObjptr (s, opp);
   p = objptrToPointer (*opp, s->heap->start);
   dfsMarkByMode (s, p, MARK_MODE, FALSE, TRUE);
 }

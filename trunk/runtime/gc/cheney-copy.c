@@ -133,6 +133,8 @@ void majorCheneyCopySharedGC (GC_state s) {
              uintmaxToCommaString(s->secondarySharedHeap->size), s->procId);
   }
 
+  #if 0
+
   //Perform localGCs
   for (int proc=0; proc < s->numberOfProcs; proc++) {
     GC_state r = &s->procStates[proc];
@@ -170,6 +172,8 @@ void majorCheneyCopySharedGC (GC_state s) {
     if (DEBUG_DETAILED or FALSE)
       fprintf (stderr, "majorCheneyCopySharedGC: fixingForwardingPointers (2) [%d]\n", proc);
   }
+
+  #endif
 
   //Set up forwarding state
   toStart = alignFrontier (s, s->secondarySharedHeap->start);
@@ -224,7 +228,7 @@ void majorCheneyCopySharedGC (GC_state s) {
   if (detailedGCTime (s))
     stopTiming (&ru_start, &s->cumulativeStatistics->ru_gcCopyingShared);
 
-  #if ASSERT
+  #if 0
   fprintf (stderr, "DEBUG MODE CHECK\n");
   if (DEBUG)
     fprintf (stderr, "Starting shared heap checks [%d]\n", s->procId);

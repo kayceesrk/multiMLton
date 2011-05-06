@@ -101,6 +101,47 @@ void leaveGC (GC_state s) {
   s->amInGC = FALSE;
 }
 
+
+#if 0
+
+void fixForwardingPointers (GC_state s, __attribute__((unused)) bool mayResize) {
+  uintmax_t gcTime;
+  struct timeval tv_start;
+
+  if (DEBUG)
+      fprintf (stderr, "Starting fixForwardingPointers[%d]\n", s->procId);
+
+  enterGC (s);
+
+  if (needGCTime (s))
+    startWallTiming (&tv_start);
+
+  //Perform the lifting that might be required
+  liftAllObjptrsInMoveOnWBA (s);
+  //Fix the forwarding pointers by walking the live objects
+  foreachGlobalObjptrInScope (s, dfsMarkWithoutHashConsWithLinkWeaks);
+  foreachGlobalObjptrInScope (s, dfsUnmark);
+
+  if (needGCTime (s)) {
+    gcTime = stopWallTiming (&tv_start, &s->cumulativeStatistics->ru_gc);
+    s->cumulativeStatistics->maxPauseTime =
+      max (s->cumulativeStatistics->maxPauseTime, gcTime);
+  } else
+    gcTime = 0;  /* Assign gcTime to quell gcc warning. */
+  setGCStateCurrentThreadAndStack (s);
+  if (DEBUG)
+    displayGCState (s, stderr);
+  assert (invariantForGC (s));
+
+  leaveGC (s);
+
+  if (DEBUG)
+      fprintf (stderr, "Finished fixForwardingPointers[%d]\n", s->procId);
+}
+
+#endif
+
+
 void fixForwardingPointers (GC_state s, bool mayResize) {
   uintmax_t gcTime;
   struct timeval tv_start;
@@ -152,10 +193,47 @@ void fixForwardingPointers (GC_state s, bool mayResize) {
       fprintf (stderr, "Finished fixForwardingPointers\n");
 }
 
-
 void performSharedGC (GC_state s,
                       size_t bytesRequested) {
   size_t bytesFilled = 0;
+
+  s->forwardState.amInMinorGC = FALSE;
+  objptr op = s->forwardState.liftingObject;
+
+  //Perform local GC before entering shared GC, if we are not in the middle of closure lifting
+  if (op == BOGUS_OBJPTR) {
+    if (DEBUG)
+      fprintf (stderr, "performSharedGC: starting local GC [%d]\n", s->procId);
+
+    minorCheneyCopyGC (s);
+    majorGC (s, GC_HEAP_LIMIT_SLOP, TRUE, FALSE);
+    setGCStateCurrentLocalHeap (s, 0, GC_HEAP_LIMIT_SLOP);
+    setGCStateCurrentThreadAndStack (s);
+
+    if (DEBUG)
+      fprintf (stderr, "performSharedGC: finished local GC [%d]\n", s->procId);
+  }
+  else {
+    if (DEBUG)
+      fprintf (stderr, "performSharedGC: starting fixing forwarding pointers [%d]\n", s->procId);
+
+    //Fix up just the forwarding pointers
+    foreachGlobalObjptrInScope (s, fixFwdObjptr);
+    //Fix forwarding pointers in local heaps
+    pointer end = s->heap->start + s->heap->oldGenSize;
+    foreachObjptrInRange (s, s->heap->start, &end, fixFwdObjptr, TRUE); //OldGen
+    foreachObjptrInRange (s, s->heap->nursery, &s->frontier, fixFwdObjptr, TRUE); //Nursery
+
+    //Fix forwarding pointers in forwarded range -- NOTE: Because of the
+    //following walk, range list will be cleared
+    foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, fixFwdObjptr, TRUE);
+
+    if (DEBUG)
+      fprintf (stderr, "performSharedGC: finished fixing forwarding pointers [%d]\n", s->procId);
+  }
+
+  //Clear remembered stacks
+  clearDanglingStackList (s);
 
   /* If we are not the last processor to sync, then someone else has to know
    * about our request */
