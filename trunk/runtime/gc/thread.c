@@ -68,6 +68,7 @@ bool GC_testThreadId (GC_state s) {
 
 pointer GC_getThreadId (GC_state s) {
   assert (s->pacmlThreadId != BOGUS_OBJPTR);
+  fixFwdObjptr (s, &s->pacmlThreadId);
   pointer p = objptrToPointer (s->pacmlThreadId, s->heap->start);
   return p;
 }
