@@ -1,7 +1,7 @@
 structure NonBlocking =
 struct
 
-  structure Assert = LocalAssert(val assert = true)
+  structure Assert = LocalAssert(val assert = false)
   structure Debug = LocalDebug(val debug = false)
 
   open Channel

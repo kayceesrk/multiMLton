@@ -200,8 +200,9 @@ void performSharedGC (GC_state s,
   s->forwardState.amInMinorGC = FALSE;
   objptr op = s->forwardState.liftingObject;
 
-  fprintf(stderr, "Before performSharedGC: numDanglingStacks=%d [%d]\n",
-          s->danglingStackListSize, s->procId);
+  if (DEBUG)
+    fprintf(stderr, "Before performSharedGC: numDanglingStacks=%d [%d]\n",
+            s->danglingStackListSize, s->procId);
 
   //Perform local GC before entering shared GC, if we are not in the middle of closure lifting
   if (op == BOGUS_OBJPTR) {
@@ -335,8 +336,9 @@ void performSharedGC (GC_state s,
   LEAVE0 (s);
   leaveGC (s);
 
-  fprintf(stderr, "After performSharedGC: numDanglingStacks=%d [%d]\n",
-          s->danglingStackListSize, s->procId);
+  if (DEBUG)
+    fprintf(stderr, "After performSharedGC: numDanglingStacks=%d [%d]\n",
+            s->danglingStackListSize, s->procId);
 }
 
 
