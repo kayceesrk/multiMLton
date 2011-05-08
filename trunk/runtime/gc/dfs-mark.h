@@ -26,6 +26,7 @@ static size_t dfsMarkByMode (GC_state s, pointer root,
                              bool ignoreSharedHeap);
 static inline void dfsMarkWithHashConsWithLinkWeaks (GC_state s, objptr *opp);
 static inline void dfsMarkWithoutHashConsWithLinkWeaks (GC_state s, objptr *opp);
+static inline void dfsMarkTraceShared (GC_state s, objptr *opp);
 static inline void dfsUnmark (GC_state s, objptr *opp);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

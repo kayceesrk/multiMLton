@@ -231,7 +231,7 @@ void majorCheneyCopySharedGC (GC_state s) {
   bytesCopied = s->secondarySharedHeap->oldGenSize;
   s->cumulativeStatistics->bytesCopiedShared += bytesCopied;
   swapHeapsForSharedCheneyCopy (s);
-  s->lastMajorStatistics->kind = GC_COPYING;
+  s->lastSharedMajorStatistics->kind = GC_COPYING;
   if (detailedGCTime (s))
     stopTiming (&ru_start, &s->cumulativeStatistics->ru_gcCopyingShared);
 

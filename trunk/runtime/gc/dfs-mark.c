@@ -383,6 +383,15 @@ void dfsMarkWithoutHashConsWithLinkWeaks (GC_state s, objptr *opp) {
   dfsMarkByMode (s, p, MARK_MODE, FALSE, TRUE, TRUE);
 }
 
+//Similar to dfsMarkWithoutHashConsWithLinkWeaksTraceShared
+void dfsMarkTraceShared (GC_state s, objptr *opp) {
+  pointer p;
+  fixFwdObjptr (s, opp);
+  p = objptrToPointer (*opp, s->heap->start);
+  dfsMarkByMode (s, p, MARK_MODE, FALSE, TRUE, FALSE);
+}
+
+
 void dfsUnmark (GC_state s, objptr *opp) {
   pointer p;
 
