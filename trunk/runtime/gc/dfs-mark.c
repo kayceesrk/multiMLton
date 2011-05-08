@@ -25,7 +25,7 @@ bool isPointerMarkedByMode (pointer p, GC_markMode m) {
   }
 }
 
-/* dfsMarkByMode (s, r, m, shc, slw)
+/* dfsMarkByMode (s, r, m, shc, slw, ish)
  *
  * Sets all the mark bits in the object graph pointed to by r.
  *
@@ -36,12 +36,15 @@ bool isPointerMarkedByMode (pointer p, GC_markMode m) {
  *
  * If slw, it links the weak objects marked.
  *
+ * If ish, then dfs will be limited to local heap.
+ *
  * It returns the total size in bytes of the objects marked.
  */
 size_t dfsMarkByMode (GC_state s, pointer root,
                       GC_markMode mode,
                       bool shouldHashCons,
-                      bool shouldLinkWeaks) {
+                      bool shouldLinkWeaks,
+                      bool ignoreSharedHeap) {
   GC_header mark; /* Used to set or clear the mark bit. */
   size_t size; /* Total number of bytes marked. */
   pointer cur; /* The current object being marked. */
@@ -66,7 +69,7 @@ size_t dfsMarkByMode (GC_state s, pointer root,
     /* Object has already been marked. */
     return 0;
 
-  if (isPointerInHeap (s, s->sharedHeap, root)) {
+  if (ignoreSharedHeap and isPointerInHeap (s, s->sharedHeap, root)) {
       /* Object resides in the shared heap. Do not collect */
       if (DEBUG_LWTGC)
           fprintf (stderr, "dfsMarkByMode p = "FMTPTR"already LIFTED\n", (uintptr_t)root);
@@ -370,19 +373,19 @@ void dfsMarkWithHashConsWithLinkWeaks (GC_state s, objptr *opp) {
   pointer p;
   fixFwdObjptr (s, opp);
   p = objptrToPointer (*opp, s->heap->start);
-  dfsMarkByMode (s, p, MARK_MODE, TRUE, TRUE);
+  dfsMarkByMode (s, p, MARK_MODE, TRUE, TRUE, TRUE);
 }
 
 void dfsMarkWithoutHashConsWithLinkWeaks (GC_state s, objptr *opp) {
   pointer p;
   fixFwdObjptr (s, opp);
   p = objptrToPointer (*opp, s->heap->start);
-  dfsMarkByMode (s, p, MARK_MODE, FALSE, TRUE);
+  dfsMarkByMode (s, p, MARK_MODE, FALSE, TRUE, TRUE);
 }
 
 void dfsUnmark (GC_state s, objptr *opp) {
   pointer p;
 
   p = objptrToPointer (*opp, s->heap->start);
-  dfsMarkByMode (s, p, UNMARK_MODE, FALSE, FALSE);
+  dfsMarkByMode (s, p, UNMARK_MODE, FALSE, FALSE, TRUE);
 }

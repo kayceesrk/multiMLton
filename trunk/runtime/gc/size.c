@@ -9,17 +9,15 @@
 size_t GC_size (GC_state s, pointer root) {
   size_t res;
 
-  //XXX KC : Is this correct?
-  //enter (s); /* update stack in heap, in case it is reached */
-  s->syncReason = SYNC_FORCE;
+  s->syncReason = SYNC_MISC;
   ENTER_LOCAL0 (s); /* update stack in heap, in case it is reached */
 
   if (DEBUG_SIZE)
     fprintf (stderr, "GC_size marking\n");
-  res = dfsMarkByMode (s, root, MARK_MODE, FALSE, FALSE);
+  res = dfsMarkByMode (s, root, MARK_MODE, FALSE, FALSE, FALSE);
   if (DEBUG_SIZE)
     fprintf (stderr, "GC_size unmarking\n");
-  dfsMarkByMode (s, root, UNMARK_MODE, FALSE, FALSE);
+  dfsMarkByMode (s, root, UNMARK_MODE, FALSE, FALSE, FALSE);
   LEAVE_LOCAL0 (s);
 
   return res;
@@ -33,10 +31,10 @@ size_t GC_sizeInLocalHeap (GC_state s, pointer root) {
 
   if (DEBUG_SIZE)
     fprintf (stderr, "GC_sizeInLocalHeap marking\n");
-  res = dfsMarkByMode (s, root, MARK_MODE, FALSE, FALSE);
+  res = dfsMarkByMode (s, root, MARK_MODE, FALSE, FALSE, TRUE);
   if (DEBUG_SIZE)
     fprintf (stderr, "GC_sizeInLocalHeap unmarking\n");
-  dfsMarkByMode (s, root, UNMARK_MODE, FALSE, FALSE);
+  dfsMarkByMode (s, root, UNMARK_MODE, FALSE, FALSE, TRUE);
 
   LEAVE_LOCAL0 (s);
   return res;
