@@ -350,11 +350,11 @@ static inline void* initCumulativeStatistics (void) {
   cumul->syncForce = 0;
   cumul->syncMisc = 0;
   cumul->numCopyingGCs = 0;
-  cumul->numSharedCopyingGCs = 0;
+  cumul->numCopyingSharedGCs = 0;
   cumul->numSharedGCs = 0;
   cumul->numHashConsGCs = 0;
   cumul->numMarkCompactGCs = 0;
-  cumul->numSharedMarkCompactGCs = 0;
+  cumul->numMarkCompactSharedGCs = 0;
   cumul->numMinorGCs = 0;
   cumul->numThreadsCreated = 0;
   cumul->bytesThreadReserved = 0;

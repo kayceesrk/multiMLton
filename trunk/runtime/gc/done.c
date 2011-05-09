@@ -65,7 +65,7 @@ static void summaryWrite (GC_state s,
   displayCollectionStats
     (out, "shared copying\t\t",
      &cumul->ru_gcCopyingShared,
-     cumul->numSharedCopyingGCs,
+     cumul->numCopyingSharedGCs,
      cumul->bytesCopiedShared);
   displayCollectionStats
     (out, "mark-compact\t",
@@ -75,7 +75,7 @@ static void summaryWrite (GC_state s,
   displayCollectionStats
     (out, "shared mark-compact\t",
      &cumul->ru_gcMarkCompactShared,
-     cumul->numSharedMarkCompactGCs,
+     cumul->numMarkCompactSharedGCs,
      cumul->bytesMarkCompactedShared);
   displayCollectionStats
     (out, "minor\t\t",
@@ -290,10 +290,10 @@ static inline void initStat (struct GC_cumulativeStatistics* cumul) {
   cumul->syncForce = 0;
   cumul->syncMisc = 0;
   cumul->numCopyingGCs = 0;
-  cumul->numSharedCopyingGCs = 0;
+  cumul->numCopyingSharedGCs = 0;
   cumul->numHashConsGCs = 0;
   cumul->numMarkCompactGCs = 0;
-  cumul->numSharedMarkCompactGCs = 0;
+  cumul->numMarkCompactSharedGCs = 0;
   cumul->numMinorGCs = 0;
   cumul->numThreadsCreated = 0;
 
@@ -399,11 +399,11 @@ void GC_summaryWrite (void) {
       cumul.syncForce += d->syncForce;
       cumul.syncMisc += d->syncMisc;
       cumul.numCopyingGCs += d->numCopyingGCs;
-      cumul.numSharedCopyingGCs += d->numSharedCopyingGCs;
+      cumul.numCopyingSharedGCs += d->numCopyingSharedGCs;
       cumul.numSharedGCs += d->numSharedGCs;
       cumul.numHashConsGCs += d->numHashConsGCs;
       cumul.numMarkCompactGCs += d->numMarkCompactGCs;
-      cumul.numSharedMarkCompactGCs += d->numSharedMarkCompactGCs;
+      cumul.numMarkCompactSharedGCs += d->numMarkCompactSharedGCs;
       cumul.numMinorGCs += d->numMinorGCs;
       cumul.numThreadsCreated += d->numThreadsCreated;
 

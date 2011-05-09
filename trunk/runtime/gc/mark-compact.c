@@ -391,7 +391,7 @@ unmark:
           stack->thread = *(objptr*)thrd;
         }
 
-        if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+        if (DEBUG_DETAILED)
           fprintf (stderr, "[GC: Sliding stack. stack->thread is "FMTOBJPTR"]\n", stack->thread);
       }
       size = headerBytes + objectBytes;
@@ -512,7 +512,7 @@ void majorMarkCompactSharedGC (GC_state s) {
 
   if (detailedGCTime (s))
     startTiming (&ru_start);
-  s->cumulativeStatistics->numSharedMarkCompactGCs++;
+  s->cumulativeStatistics->numMarkCompactSharedGCs++;
   if (DEBUG or s->controls->messages) {
     fprintf (stderr,
              "[GC: Starting shared major mark-compact] [%d]\n", s->procId);

@@ -59,8 +59,8 @@ struct GC_cumulativeStatistics {
 
   uintmax_t numGCs;
   uintmax_t numCopyingGCs;
-  uintmax_t numSharedCopyingGCs;
-  uintmax_t numSharedMarkCompactGCs;
+  uintmax_t numCopyingSharedGCs;
+  uintmax_t numMarkCompactSharedGCs;
   uintmax_t numSharedGCs;
   uintmax_t numHashConsGCs;
   uintmax_t numMarkCompactGCs;
