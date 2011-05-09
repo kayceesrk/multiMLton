@@ -223,14 +223,11 @@ void performSharedGC (GC_state s,
     if (DEBUG)
       fprintf (stderr, "performSharedGC: starting fixing forwarding pointers [%d]\n", s->procId);
 
-    s->controls->selectiveDebug = TRUE;
     //Fix up just the forwarding pointers
     foreachGlobalObjptrInScope (s, fixFwdObjptr);
     //Fix forwarding pointers in local heaps
     pointer end = s->heap->start + s->heap->oldGenSize;
-    foreachObjptrInRange (s, s->heap->start, &end, fixFwdObjptr, TRUE); //OldGen
-    foreachObjptrInRange (s, s->heap->nursery, &s->frontier, fixFwdObjptr, TRUE); //Nursery
-    s->controls->selectiveDebug = FALSE;
+    foreachObjptrInRange (s, s->heap->start, &end, fixFwdObjptr, TRUE);
 
     //Fix forwarding pointers in forwarded range -- NOTE: Because of the
     //following walk, range list will be cleared
@@ -259,7 +256,6 @@ void performSharedGC (GC_state s,
 
   /* See if a GC has already been performed */
   if (bytesRequested > availableBytes) {
-    //s->controls->selectiveDebug = TRUE;
     /* perform GC */
     bytesRequested = (s->controls->allocChunkSize + GC_BONUS_SLOP) * s->numberOfProcs;
 
@@ -333,7 +329,6 @@ void performSharedGC (GC_state s,
     resizeSharedHeapSecondary (s, s->sharedHeap->size);
     assert (s->sharedHeap->oldGenSize + bytesRequested <= s->sharedHeap->size);
     setGCStateCurrentSharedHeap (s, 0, 0, FALSE);
-    //s->controls->selectiveDebug = FALSE;
     s->cumulativeStatistics->bytesFilled += bytesFilled;
     if (DEBUG)
       fprintf (stderr, "[GC: Finished shared heap gc #%s]\n",

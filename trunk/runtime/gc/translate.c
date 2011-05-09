@@ -133,9 +133,7 @@ void translateSharedHeap (GC_state s, pointer from, pointer to, size_t size) {
   for (int proc=0; proc < s->numberOfProcs; proc++) {
     pointer end = s->procStates[proc].heap->start + s->procStates[proc].heap->oldGenSize;
     foreachObjptrInRange (s, s->procStates[proc].heap->start,
-                          &end, translateObjptrShared, FALSE); //OldGen
-    foreachObjptrInRange (s, s->procStates[proc].heap->nursery,
-                          &(s->procStates[proc].frontier), translateObjptrShared, FALSE); //Nursery
+                          &end, translateObjptrShared, FALSE);
   }
   foreachObjptrInRange (s, alignFrontier (s, to), &limit, translateObjptrShared, FALSE);
 

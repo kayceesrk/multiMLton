@@ -135,48 +135,6 @@ void majorCheneyCopySharedGC (GC_state s) {
              uintmaxToCommaString(s->secondarySharedHeap->size), s->procId);
   }
 
-  #if 0
-
-  //Perform localGCs
-  for (int proc=0; proc < s->numberOfProcs; proc++) {
-    GC_state r = &s->procStates[proc];
-    objptr op = r->forwardState.liftingObject;
-    if ((op == BOGUS_OBJPTR)) {
-      minorCheneyCopyGC (r);
-      majorGC (r, GC_HEAP_LIMIT_SLOP, TRUE, FALSE);
-      setGCStateCurrentLocalHeap (r, 0, GC_HEAP_LIMIT_SLOP);
-      setGCStateCurrentThreadAndStack (r);
-    }
-  }
-
-  //Fix up just the forwarding pointers
-  foreachGlobalObjptr (s, fixFwdObjptr);
-  for (int proc=0; proc < s->numberOfProcs; proc++) {
-    GC_state r = &s->procStates[proc];
-    //clear remembered stacks
-    clearDanglingStackList (r);
-
-    if ((DEBUG_DETAILED or s->controls->selectiveDebug))
-      fprintf (stderr, "majorCheneyCopySharedGC: fixingForwardingPointers (1) [%d]\n", proc);
-
-    objptr op = r->forwardState.liftingObject;
-    if (op != BOGUS_OBJPTR) {
-      //Fix forwarding pointers in local heaps
-      pointer end = r->heap->start + r->heap->oldGenSize;
-      foreachObjptrInRange (r, r->heap->start, &end, fixFwdObjptr, TRUE); //OldGen
-      foreachObjptrInRange (r, r->heap->nursery, &r->frontier, fixFwdObjptr, TRUE); //Nursery
-
-      //Fix forwarding pointers in forwarded range -- NOTE: Because of the
-      //following walk, range list will be cleared
-      foreachObjptrInRange (r, r->forwardState.toStart, &r->forwardState.back, fixFwdObjptr, TRUE);
-    }
-
-    if ((DEBUG_DETAILED or s->controls->selectiveDebug))
-      fprintf (stderr, "majorCheneyCopySharedGC: fixingForwardingPointers (2) [%d]\n", proc);
-  }
-
-  #endif
-
   //Set up forwarding state
   toStart = alignFrontier (s, s->secondarySharedHeap->start);
   for (int proc=0; proc < s->numberOfProcs; proc++) {
@@ -202,8 +160,7 @@ void majorCheneyCopySharedGC (GC_state s) {
 
     /* See foreachObjptrInObject():STACK for the details of skipStackToThreadTracing variable */
     skipStackToThreadTracing = TRUE;
-    foreachObjptrInRangeWithFill (r, r->heap->start, &end, forwardObjptrForSharedCheneyCopy, TRUE, TRUE); //OldGen
-    foreachObjptrInRangeWithFill (r, r->heap->nursery, &r->frontier, forwardObjptrForSharedCheneyCopy, TRUE, TRUE); //Nursery
+    foreachObjptrInRangeWithFill (r, r->heap->start, &end, forwardObjptrForSharedCheneyCopy, TRUE, TRUE);
     skipStackToThreadTracing = FALSE;
 
     if ((DEBUG_DETAILED or s->controls->selectiveDebug))
