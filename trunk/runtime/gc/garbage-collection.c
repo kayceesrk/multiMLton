@@ -306,20 +306,27 @@ void performSharedGC (GC_state s,
 
     /* This is the maximum size (over approximation) of the shared heap. We
      * will resize the heap after collection to a reasonable size. */
-    for (int proc=0; proc < s->numberOfProcs; proc++)
-      maxBytes += s->procStates[proc].lastMajorStatistics->bytesLive;
+    for (int proc=0; proc < s->numberOfProcs; proc++) {
+      GC_state r = &s->procStates[proc];
+      objptr liftOp = r->forwardState.liftingObject;
+      if (liftOp != BOGUS_OBJPTR)
+        maxBytes += GC_size (r, objptrToPointer (liftOp, r->heap->start));
+    }
 
-    size_t desiredSize = sizeofHeapDesired (s, maxBytes, 0);
-    bool success = FALSE;
-    if (s->secondarySharedHeap->size == 0)
-      success = createHeapSharedSecondary (s, desiredSize);
-    else
-      success = resizeSharedHeapSecondary (s, desiredSize);
-
-    if (success)
+    /* We are being optimistic with desired size since maxBytes is an
+     * over-approzimation of live size */
+    size_t desiredSize =
+      (maxBytes > s->controls->fixedHeap || maxBytes > s->controls->maxHeap)
+      ? maxBytes : sizeofHeapDesired (s, maxBytes, 0);
+    resizeSharedHeapSecondary (s, desiredSize);
+    if (not FORCE_MARK_COMPACT
+        and (s->secondarySharedHeap->size != 0
+             or createSharedHeapSecondary (s, desiredSize)))
       majorCheneyCopySharedGC (s);
     else {
+      s->controls->selectiveDebug = TRUE;
       majorMarkCompactSharedGC (s);
+      s->controls->selectiveDebug = FALSE;
     }
 
     s->lastSharedMajorStatistics->bytesLive = s->sharedHeap->oldGenSize;
@@ -469,14 +476,14 @@ size_t fillGap (__attribute__ ((unused)) GC_state s, pointer start, pointer end)
     return 0;
   }
 
-  if (DEBUG_DETAILED)
+  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
     fprintf (stderr, "[GC: Filling gap between "FMTPTR" and "FMTPTR" (size = %zu).]\n",
              (uintptr_t)start, (uintptr_t)end, diff);
 
   if (start) {
     /* See note in the array case of foreach.c (line 103) */
     if (diff >= GC_ARRAY_HEADER_SIZE + OBJPTR_SIZE) {
-      if (DEBUG_DETAILED)
+      if ((DEBUG_DETAILED or s->controls->selectiveDebug))
           fprintf (stderr, "[GC: Filling gap with GC_ARRAY]\n");
       assert (diff >= GC_ARRAY_HEADER_SIZE);
       /* Counter */
@@ -542,7 +549,7 @@ static bool allocChunkInSharedHeap (GC_state s,
 
     /* See if the mutator frontier invariant is already true */
     if (bytesRequested <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier)) {
-      if (DEBUG_DETAILED)
+      if ((DEBUG_DETAILED or s->controls->selectiveDebug))
         fprintf (stderr, "[GC: aborting shared alloc: satisfied.] [%d]\n", s->procId);
       return FALSE;
     }
@@ -624,7 +631,7 @@ static void maybeSatisfyAllocationRequestLocally (GC_state s,
     /* See if the mutator frontier invariant is already true */
     assert (s->limitPlusSlop >= s->frontier);
     if (nurseryBytesRequested <= (size_t)(s->limitPlusSlop - s->frontier)) {
-      if (DEBUG_DETAILED)
+      if ((DEBUG_DETAILED or s->controls->selectiveDebug))
         fprintf (stderr, "[GC: aborting local alloc: satisfied.]\n");
       return;
     }

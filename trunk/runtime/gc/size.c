@@ -6,6 +6,7 @@
  * See the file MLton-LICENSE for details.
  */
 
+//XXX unsafe executed in parallel
 size_t GC_size (GC_state s, pointer root) {
   size_t res;
 

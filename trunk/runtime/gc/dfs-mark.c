@@ -150,7 +150,8 @@ markInNormal:
     assert (objptrIndex < numObjptrs);
     // next = *(pointer*)todo;
     next = fetchObjptrToPointer (s, todo, s->heap->start);
-    if (not isPointer (next) || not (isPointerInHeap (s, s->heap, next))) {
+    if ((not isPointer (next)) or
+        (ignoreSharedHeap and isPointerInHeap (s, s->sharedHeap, next))) {
 markNextInNormal:
       assert (objptrIndex < numObjptrs);
       objptrIndex++;
@@ -226,7 +227,8 @@ markInArray:
     assert (todo == indexArrayAtObjptrIndex (s, cur, arrayIndex, objptrIndex));
     // next = *(pointer*)todo;
     next = fetchObjptrToPointer (s, todo, s->heap->start);
-    if (not (isPointer(next)) || not (isPointerInHeap (s, s->heap, next))) {
+    if ((not isPointer (next)) or
+        (ignoreSharedHeap and isPointerInHeap (s, s->sharedHeap, next))) {
 markNextInArray:
       assert (arrayIndex < getArrayLength (cur));
       assert (objptrIndex < numObjptrs);
@@ -289,7 +291,8 @@ markInFrame:
                "    offset %u  todo "FMTPTR"  next = "FMTPTR"\n",
                frameOffsets [objptrIndex + 1],
                (uintptr_t)todo, (uintptr_t)next);
-    if (not isPointer (next) || not isPointerInHeap (s, s->heap, next)) {
+    if ((not isPointer (next)) or
+        (ignoreSharedHeap and isPointerInHeap (s, s->sharedHeap, next))) {
       objptrIndex++;
       goto markInFrame;
     }
