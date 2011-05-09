@@ -156,7 +156,7 @@ void majorCheneyCopySharedGC (GC_state s) {
     //clear remembered stacks
     clearDanglingStackList (r);
 
-    if (DEBUG_DETAILED)
+    if ((DEBUG_DETAILED or s->controls->selectiveDebug))
       fprintf (stderr, "majorCheneyCopySharedGC: fixingForwardingPointers (1) [%d]\n", proc);
 
     objptr op = r->forwardState.liftingObject;
@@ -171,7 +171,7 @@ void majorCheneyCopySharedGC (GC_state s) {
       foreachObjptrInRange (r, r->forwardState.toStart, &r->forwardState.back, fixFwdObjptr, TRUE);
     }
 
-    if (DEBUG_DETAILED)
+    if ((DEBUG_DETAILED or s->controls->selectiveDebug))
       fprintf (stderr, "majorCheneyCopySharedGC: fixingForwardingPointers (2) [%d]\n", proc);
   }
 
@@ -195,7 +195,7 @@ void majorCheneyCopySharedGC (GC_state s) {
   // Walk the local heaps and forward objptrs
   for (int proc=0; proc < s->numberOfProcs; proc++) {
     GC_state r = &(s->procStates[proc]);
-    if (DEBUG_DETAILED)
+    if ((DEBUG_DETAILED or s->controls->selectiveDebug))
       fprintf (stderr, "majorCheneyCopySharedGC: walking local heaps (1) [%d]\n",
                proc);
     pointer end = r->heap->start + r->heap->oldGenSize;
@@ -206,7 +206,7 @@ void majorCheneyCopySharedGC (GC_state s) {
     foreachObjptrInRangeWithFill (r, r->heap->nursery, &r->frontier, forwardObjptrForSharedCheneyCopy, TRUE, TRUE); //Nursery
     skipStackToThreadTracing = FALSE;
 
-    if (DEBUG_DETAILED)
+    if ((DEBUG_DETAILED or s->controls->selectiveDebug))
       fprintf (stderr, "majorCheneyCopySharedGC: walking local heaps (2) [%d]\n",
                proc);
     callIfIsObjptr (r, forwardObjptrForSharedCheneyCopy, &r->forwardState.liftingObject);
@@ -218,11 +218,11 @@ void majorCheneyCopySharedGC (GC_state s) {
   //Forward Globals -- must come after walking local heaps for correct forwarding state
   foreachGlobalObjptr (s, forwardObjptrForSharedCheneyCopy);
 
-  if (DEBUG_DETAILED)
+  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
     fprintf (stderr, "majorCheneyCopySharedGC: walking to space (1) [%d]\n",
               s->procId);
   foreachObjptrInRange (s, toStart, &s->forwardState.back, forwardObjptrForSharedCheneyCopy, TRUE);
-  if (DEBUG_DETAILED)
+  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
     fprintf (stderr, "majorCheneyCopySharedGC: walking to space (2) [%d]\n",
               s->procId);
 

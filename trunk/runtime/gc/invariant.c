@@ -11,7 +11,7 @@ void assertIsObjptrInFromSpaceOrLifted (GC_state s, objptr *opp) {
 
   GC_header h = getHeader (objptrToPointer (op, s->heap->start));
   if (h == GC_FORWARDED) {
-    if (DEBUG_DETAILED)
+    if ((DEBUG_DETAILED or s->controls->selectiveDebug))
       fprintf (stderr, "assertIsObjptrInFromSpaceOrLifted: forwarding [%d]\n", s->procId);
     fixFwdObjptr (s, opp);
     op = *opp;

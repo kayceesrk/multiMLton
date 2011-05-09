@@ -391,7 +391,7 @@ unmark:
           stack->thread = *(objptr*)thrd;
         }
 
-        if (DEBUG_DETAILED)
+        if ((DEBUG_DETAILED or s->controls->selectiveDebug))
           fprintf (stderr, "[GC: Sliding stack. stack->thread is "FMTOBJPTR"]\n", stack->thread);
       }
       size = headerBytes + objectBytes;

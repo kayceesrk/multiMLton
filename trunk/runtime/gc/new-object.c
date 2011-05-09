@@ -31,7 +31,7 @@ pointer newObject (GC_state s,
   }
   else if (allocInSharedHeap) {
     allocChunkInSharedHeap (s, bytesRequested);
-    if (DEBUG_DETAILED)
+    if ((DEBUG_DETAILED or s->controls->selectiveDebug))
       fprintf (stderr, "sharedFrontier changed from "FMTPTR" to "FMTPTR"\n",
                (uintptr_t)s->sharedFrontier,
                (uintptr_t)(s->sharedFrontier + bytesRequested));
@@ -39,7 +39,7 @@ pointer newObject (GC_state s,
     s->sharedFrontier += bytesRequested;
   }
   else {
-    if (DEBUG_DETAILED)
+    if ((DEBUG_DETAILED or s->controls->selectiveDebug))
       fprintf (stderr, "frontier changed from "FMTPTR" to "FMTPTR"\n",
                (uintptr_t)s->frontier,
                (uintptr_t)(s->frontier + bytesRequested));
