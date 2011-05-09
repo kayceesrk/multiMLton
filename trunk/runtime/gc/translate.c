@@ -21,13 +21,13 @@ void translateObjptrLocal (GC_state s, objptr *opp) {
 
   /* Do not translate pointers that does not belong to your heap */
   if (isPointerInHeap (s, s->sharedHeap, p)) {
-      if (DEBUG_DETAILED or FALSE)
+      if (DEBUG_DETAILED)
           fprintf (stderr, "translateObjptrLocal: shared heap pointer "FMTPTR" translation skipped.\n",
                    (uintptr_t)p);
       return;
   }
 
-  if (DEBUG_DETAILED or FALSE)
+  if (DEBUG_DETAILED)
       fprintf (stderr, "translateObjptrLocal: Remapping pointer "FMTPTR" to "FMTPTR"\n",
                (uintptr_t)p, (uintptr_t)((p - s->translateState.from) + s->translateState.to));
   p = (p - s->translateState.from) + s->translateState.to;

@@ -13,8 +13,8 @@ static inline void threadInternalObjptr (GC_state s, objptr *opp);
 static inline void threadInternalObjptrIfInLocalHeap (GC_state s, objptr *opp);
 static inline void threadInternalObjptrIfInSharedHeap (GC_state s, objptr *opp);
 static inline void updateWeaksForMarkCompact (GC_state s);
-static void updateForwardPointersForMarkCompact (GC_state s, GC_stack currentStack, bool sharedCollection);
-static void updateBackwardPointersAndSlideForMarkCompact (GC_state s, GC_stack currentStack, bool sharedCollection);
+static void updateForwardPointersForMarkCompact (GC_state s, GC_heap h, GC_stack currentStack, bool sharedCollection);
+static void updateBackwardPointersAndSlideForMarkCompact (GC_state s, GC_heap h, GC_stack currentStack);
 static void majorMarkCompactGC (GC_state s);
 static void majorMarkCompactSharedGC (GC_state s);
 

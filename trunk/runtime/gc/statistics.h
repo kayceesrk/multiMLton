@@ -44,6 +44,7 @@ struct GC_cumulativeStatistics {
   uintmax_t bytesCopiedMinor;
   uintmax_t bytesHashConsed;
   uintmax_t bytesMarkCompacted;
+  uintmax_t bytesMarkCompactedShared;
   uintmax_t bytesScannedMinor;
   uintmax_t bytesLifted;
 
@@ -58,7 +59,8 @@ struct GC_cumulativeStatistics {
 
   uintmax_t numGCs;
   uintmax_t numCopyingGCs;
-  uintmax_t numCopyingSharedGCs;
+  uintmax_t numSharedCopyingGCs;
+  uintmax_t numSharedMarkCompactGCs;
   uintmax_t numSharedGCs;
   uintmax_t numHashConsGCs;
   uintmax_t numMarkCompactGCs;
@@ -76,6 +78,7 @@ struct GC_cumulativeStatistics {
   struct rusage ru_gcCopying; /* resource usage in major copying gcs. */
   struct rusage ru_gcCopyingShared; /* resource usage in major shared copying gcs. */
   struct rusage ru_gcMarkCompact; /* resource usage in major mark-compact gcs. */
+  struct rusage ru_gcMarkCompactShared; /* resource usage in major shared mark-compact gcs. */
   struct rusage ru_gcMinor; /* resource usage in minor copying gcs. */
 
   uintmax_t numLimitChecks;
@@ -123,6 +126,7 @@ struct GC_lastMajorStatistics {
 /* Statistics about the most recent shared heap GC */
 struct GC_lastSharedMajorStatistics {
   size_t bytesLive;
+  GC_majorKind kind;
 };
 
 

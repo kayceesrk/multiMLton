@@ -120,7 +120,7 @@ void majorCheneyCopySharedGC (GC_state s) {
   assert (s->secondarySharedHeap->size >= s->sharedHeap->oldGenSize);
   if (detailedGCTime (s))
     startTiming (&ru_start);
-  s->cumulativeStatistics->numCopyingSharedGCs++;
+  s->cumulativeStatistics->numSharedCopyingGCs++;
   s->forwardState.amInMinorGC = FALSE;
   if (DEBUG or s->controls->messages) {
     fprintf (stderr,
@@ -156,7 +156,7 @@ void majorCheneyCopySharedGC (GC_state s) {
     //clear remembered stacks
     clearDanglingStackList (r);
 
-    if (DEBUG_DETAILED or FALSE)
+    if (DEBUG_DETAILED)
       fprintf (stderr, "majorCheneyCopySharedGC: fixingForwardingPointers (1) [%d]\n", proc);
 
     objptr op = r->forwardState.liftingObject;
@@ -171,7 +171,7 @@ void majorCheneyCopySharedGC (GC_state s) {
       foreachObjptrInRange (r, r->forwardState.toStart, &r->forwardState.back, fixFwdObjptr, TRUE);
     }
 
-    if (DEBUG_DETAILED or FALSE)
+    if (DEBUG_DETAILED)
       fprintf (stderr, "majorCheneyCopySharedGC: fixingForwardingPointers (2) [%d]\n", proc);
   }
 
@@ -195,34 +195,34 @@ void majorCheneyCopySharedGC (GC_state s) {
   // Walk the local heaps and forward objptrs
   for (int proc=0; proc < s->numberOfProcs; proc++) {
     GC_state r = &(s->procStates[proc]);
-    if (DEBUG_DETAILED or FALSE)
+    if (DEBUG_DETAILED)
       fprintf (stderr, "majorCheneyCopySharedGC: walking local heaps (1) [%d]\n",
                proc);
     pointer end = r->heap->start + r->heap->oldGenSize;
 
     /* See foreachObjptrInObject():STACK for the details of skipStackToThreadTracing variable */
     skipStackToThreadTracing = TRUE;
-    foreachObjptrInRangeWithFill (r, r->heap->start, &end, forwardObjptrIfInSharedHeap, TRUE, TRUE); //OldGen
-    foreachObjptrInRangeWithFill (r, r->heap->nursery, &r->frontier, forwardObjptrIfInSharedHeap, TRUE, TRUE); //Nursery
+    foreachObjptrInRangeWithFill (r, r->heap->start, &end, forwardObjptrForSharedCheneyCopy, TRUE, TRUE); //OldGen
+    foreachObjptrInRangeWithFill (r, r->heap->nursery, &r->frontier, forwardObjptrForSharedCheneyCopy, TRUE, TRUE); //Nursery
     skipStackToThreadTracing = FALSE;
 
-    if (DEBUG_DETAILED or FALSE)
+    if (DEBUG_DETAILED)
       fprintf (stderr, "majorCheneyCopySharedGC: walking local heaps (2) [%d]\n",
                proc);
-    callIfIsObjptr (r, forwardObjptrIfInSharedHeap, &r->forwardState.liftingObject);
+    callIfIsObjptr (r, forwardObjptrForSharedCheneyCopy, &r->forwardState.liftingObject);
     pointer back = r->forwardState.back;
     for (int i=0; i < s->numberOfProcs; i++)
       s->procStates[i].forwardState.back = back;
   }
 
   //Forward Globals -- must come after walking local heaps for correct forwarding state
-  foreachGlobalObjptr (s, forwardObjptrIfInSharedHeap);
+  foreachGlobalObjptr (s, forwardObjptrForSharedCheneyCopy);
 
-  if (DEBUG_DETAILED or FALSE)
+  if (DEBUG_DETAILED)
     fprintf (stderr, "majorCheneyCopySharedGC: walking to space (1) [%d]\n",
               s->procId);
-  foreachObjptrInRange (s, toStart, &s->forwardState.back, forwardObjptrIfInSharedHeap, TRUE);
-  if (DEBUG_DETAILED or FALSE)
+  foreachObjptrInRange (s, toStart, &s->forwardState.back, forwardObjptrForSharedCheneyCopy, TRUE);
+  if (DEBUG_DETAILED)
     fprintf (stderr, "majorCheneyCopySharedGC: walking to space (2) [%d]\n",
               s->procId);
 

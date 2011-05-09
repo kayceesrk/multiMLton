@@ -37,7 +37,7 @@ size_t sizeofObject (GC_state s, pointer p) {
   header = getHeader (p);
   if (header == GC_FORWARDED) {
     //assert (0);
-    if (DEBUG_DETAILED or FALSE)
+    if (DEBUG_DETAILED)
       fprintf (stderr,
                "sizeOfObject saw forwarded object "FMTPTR" [%d]\n",
                (uintptr_t)p, s->procId);
@@ -86,7 +86,7 @@ size_t sizeofObjectNoHeader (GC_state s, pointer p) {
   header = getHeader (p);
   if (header == GC_FORWARDED) {
     //assert (0);
-    if (DEBUG_DETAILED or FALSE)
+    if (DEBUG_DETAILED)
       fprintf (stderr,
                "sizeOfObjectNoHeader saw forwarded object "FMTPTR" [%d]\n",
                (uintptr_t)p, s->procId);

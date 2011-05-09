@@ -62,7 +62,8 @@ static inline void forwardObjptr (GC_state s, objptr *opp);
 static void forwardObjptrToSharedHeap (GC_state s, objptr *opp);
 static inline void forwardObjptrIfInNursery (GC_state s, objptr *opp);
 static inline void forwardObjptrIfInLocalHeap (GC_state s, objptr *opp);
-static inline void forwardObjptrIfInSharedHeap (GC_state s, objptr *opp);
+static inline void forwardObjptrForSharedCheneyCopy (GC_state s, objptr *opp);
+static inline void forwardObjptrForSharedMarkCompact (GC_state s, objptr *opp);
 static inline void forwardInterGenerationalObjptrs (GC_state s);
 
 static inline void fixFwdObjptr (GC_state s, objptr *opp);

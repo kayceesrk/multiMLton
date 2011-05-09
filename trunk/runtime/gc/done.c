@@ -63,15 +63,20 @@ static void summaryWrite (GC_state s,
      cumul->numCopyingGCs,
      cumul->bytesCopied);
   displayCollectionStats
-    (out, "shared\t\t",
+    (out, "shared copying\t\t",
      &cumul->ru_gcCopyingShared,
-     cumul->numCopyingSharedGCs,
+     cumul->numSharedCopyingGCs,
      cumul->bytesCopiedShared);
   displayCollectionStats
     (out, "mark-compact\t",
      &cumul->ru_gcMarkCompact,
      cumul->numMarkCompactGCs,
      cumul->bytesMarkCompacted);
+  displayCollectionStats
+    (out, "shared mark-compact\t",
+     &cumul->ru_gcMarkCompactShared,
+     cumul->numSharedMarkCompactGCs,
+     cumul->bytesMarkCompactedShared);
   displayCollectionStats
     (out, "minor\t\t",
      &cumul->ru_gcMinor,
@@ -265,6 +270,7 @@ static inline void initStat (struct GC_cumulativeStatistics* cumul) {
   cumul->bytesCopiedMinor = 0;
   cumul->bytesHashConsed = 0;
   cumul->bytesMarkCompacted = 0;
+  cumul->bytesMarkCompactedShared = 0;
   cumul->bytesScannedMinor = 0;
   cumul->bytesLifted = 0;
   cumul->maxBytesLive = 0;
@@ -284,9 +290,10 @@ static inline void initStat (struct GC_cumulativeStatistics* cumul) {
   cumul->syncForce = 0;
   cumul->syncMisc = 0;
   cumul->numCopyingGCs = 0;
-  cumul->numCopyingSharedGCs = 0;
+  cumul->numSharedCopyingGCs = 0;
   cumul->numHashConsGCs = 0;
   cumul->numMarkCompactGCs = 0;
+  cumul->numSharedMarkCompactGCs = 0;
   cumul->numMinorGCs = 0;
   cumul->numThreadsCreated = 0;
 
@@ -315,6 +322,7 @@ static inline void initStat (struct GC_cumulativeStatistics* cumul) {
   rusageZero (&cumul->ru_gcCopying);
   rusageZero (&cumul->ru_gcCopyingShared);
   rusageZero (&cumul->ru_gcMarkCompact);
+  rusageZero (&cumul->ru_gcMarkCompactShared);
   rusageZero (&cumul->ru_gcMinor);
   timevalZero (&cumul->tv_sync);
   rusageZero (&cumul->ru_thread);
@@ -351,6 +359,7 @@ void GC_summaryWrite (void) {
       cumul.bytesHashConsed += d->bytesHashConsed;
       cumul.bytesLifted += d->bytesLifted;
       cumul.bytesMarkCompacted += d->bytesMarkCompacted;
+      cumul.bytesMarkCompactedShared += d->bytesMarkCompactedShared;
       cumul.bytesScannedMinor += d->bytesScannedMinor;
       cumul.maxBytesLive =
         (d->maxBytesLive > cumul.maxBytesLive)
@@ -390,10 +399,11 @@ void GC_summaryWrite (void) {
       cumul.syncForce += d->syncForce;
       cumul.syncMisc += d->syncMisc;
       cumul.numCopyingGCs += d->numCopyingGCs;
-      cumul.numCopyingSharedGCs += d->numCopyingSharedGCs;
+      cumul.numSharedCopyingGCs += d->numSharedCopyingGCs;
       cumul.numSharedGCs += d->numSharedGCs;
       cumul.numHashConsGCs += d->numHashConsGCs;
       cumul.numMarkCompactGCs += d->numMarkCompactGCs;
+      cumul.numSharedMarkCompactGCs += d->numSharedMarkCompactGCs;
       cumul.numMinorGCs += d->numMinorGCs;
       cumul.numThreadsCreated += d->numThreadsCreated;
 
@@ -429,6 +439,9 @@ void GC_summaryWrite (void) {
       rusagePlusMax (&cumul.ru_gcMarkCompact,
                      &d->ru_gcMarkCompact,
                      &cumul.ru_gcMarkCompact);
+      rusagePlusMax (&cumul.ru_gcMarkCompactShared,
+                     &d->ru_gcMarkCompactShared,
+                     &cumul.ru_gcMarkCompactShared);
       rusagePlusMax (&cumul.ru_gcMinor,
                      &d->ru_gcMinor,
                      &cumul.ru_gcMinor);

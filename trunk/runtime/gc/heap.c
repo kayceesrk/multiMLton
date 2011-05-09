@@ -555,16 +555,14 @@ void resizeLocalHeapSecondary (GC_state s) {
 
 /* resizeSharedHeapSecondary (s)
  */
-void resizeSharedHeapSecondary (GC_state s) {
-  size_t primarySize;
+bool resizeSharedHeapSecondary (GC_state s, size_t primarySize) {
   size_t secondarySize;
 
-  primarySize = s->sharedHeap->size;
   secondarySize = s->secondarySharedHeap->size;
   if (DEBUG_RESIZING)
     fprintf (stderr, "secondarySharedHeapResize\n");
   if (0 == secondarySize)
-    return;
+    return FALSE;
   if (2 * primarySize > s->sysvals.ram)
     /* Holding on to secondarySharedHeap might cause paging.  So don't. */
     releaseHeap (s, s->secondarySharedHeap);
@@ -574,5 +572,9 @@ void resizeSharedHeapSecondary (GC_state s) {
   } else if (secondarySize > primarySize)
     shrinkHeap (s, s->secondarySharedHeap, primarySize);
   assert (0 == s->secondarySharedHeap->size
-          or s->sharedHeap->size == s->secondarySharedHeap->size);
+          or primarySize == s->secondarySharedHeap->size);
+
+  if (s->secondarySharedHeap->size == 0)
+    return FALSE;
+  return TRUE;
 }

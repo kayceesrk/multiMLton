@@ -73,7 +73,7 @@ static bool remapHeap (GC_state s, GC_heap h, size_t desiredSize, size_t minSize
 static void growHeap (GC_state s, GC_heap h, size_t desiredSize, size_t minSize);
 static void resizeHeap (GC_state s, GC_heap h, size_t minSize);
 static void resizeLocalHeapSecondary (GC_state s);
-static void resizeSharedHeapSecondary (GC_state s);
+static bool resizeSharedHeapSecondary (GC_state s, size_t primarySize);
 
 
 static inline bool isObjectLifted (GC_header header);

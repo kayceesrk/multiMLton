@@ -504,6 +504,7 @@ void majorMarkCompactGC (GC_state s) {
   }
 }
 
+
 void majorMarkCompactSharedGC (GC_state s) {
   size_t bytesMarkCompacted;
   GC_stack currentStack;
@@ -511,7 +512,7 @@ void majorMarkCompactSharedGC (GC_state s) {
 
   if (detailedGCTime (s))
     startTiming (&ru_start);
-  s->cumulativeStatistics->numMarkCompactSharedGCs++;
+  s->cumulativeStatistics->numSharedMarkCompactGCs++;
   if (DEBUG or s->controls->messages) {
     fprintf (stderr,
              "[GC: Starting shared major mark-compact] [%d]\n", s->procId);
@@ -523,33 +524,36 @@ void majorMarkCompactSharedGC (GC_state s) {
 
   //Algorithm Core
   currentStack = getStackCurrent (s);
-  for (int proc=0; proc < s->numberOfProcs; proc++) {
-    GC_state r = &s->procStates[proc];
-    clearDanglingStackList (r);
-  }
+
   //Mark all live objects in all heaps
+  /* NOTE: dangling stacks are cleared, hence, we will only trace dangling
+   * stacks if they are either pointed to by global pointers (currentThread,
+   * signalHandlerThread, etc.) or if the thread is pointed to by some other
+   * live object */
   foreachGlobalObjptr (s, dfsMarkTraceShared);
+
   for (int proc=0; proc < s->numberOfProcs; proc++) {
     GC_state r = &s->procStates[proc];
     updateWeaksForMarkCompact (r);
   }
+
   foreachGlobalObjptr (s, threadInternalObjptrIfInSharedHeap);
   //Walk local heaps threading pointers to shared heap
-  for (int proc=0; proc < s->numberOfProcs; proc++)
+  for (int proc=0; proc < s->numberOfProcs; proc++) {
+    GC_state r = &s->procStates[proc];
     updateForwardPointersForMarkCompact (r, r->heap, currentStack, TRUE);
+  }
   //Walk the shared heap threading pointers. At the end of this phase, all
   //pointer from local heaps should point to the new location on the shared
   //heap.
   updateForwardPointersForMarkCompact (s, s->sharedHeap, currentStack, TRUE);
   updateBackwardPointersAndSlideForMarkCompact (s, s->sharedHeap, currentStack);
 
-  /* TODO:
-   * (1) recreate danglingStackList(s)
-   * (2) complete lifting of partially lifted closures. GC will be performed to
-   *     fix the forwarding pointers (in lwtgc.c).
-   *
-   */
-
+  s->forwardState.toStart = alignFrontier (s, s->sharedHeap->start);
+  s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
+  s->forwardState.back = s->sharedHeap->start + s->sharedHeap->oldGenSize;
+  foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, forwardObjptrForSharedMarkCompact, TRUE);
+  s->sharedHeap->oldGenSize = s->forwardState.back - s->forwardState.toStart;
 
   //Collect statistics
   bytesMarkCompacted = s->sharedHeap->oldGenSize;

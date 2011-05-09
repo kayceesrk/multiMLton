@@ -331,6 +331,7 @@ static inline void* initCumulativeStatistics (void) {
   cumul->bytesHashConsed = 0;
   cumul->bytesLifted = 0;
   cumul->bytesMarkCompacted = 0;
+  cumul->bytesMarkCompactedShared = 0;
   cumul->bytesScannedMinor = 0;
   cumul->maxBytesLive = 0;
   cumul->maxSharedBytesLive = 0;
@@ -349,10 +350,11 @@ static inline void* initCumulativeStatistics (void) {
   cumul->syncForce = 0;
   cumul->syncMisc = 0;
   cumul->numCopyingGCs = 0;
-  cumul->numCopyingSharedGCs = 0;
+  cumul->numSharedCopyingGCs = 0;
   cumul->numSharedGCs = 0;
   cumul->numHashConsGCs = 0;
   cumul->numMarkCompactGCs = 0;
+  cumul->numSharedMarkCompactGCs = 0;
   cumul->numMinorGCs = 0;
   cumul->numThreadsCreated = 0;
   cumul->bytesThreadReserved = 0;
@@ -379,6 +381,7 @@ static inline void* initCumulativeStatistics (void) {
   rusageZero (&cumul->ru_gcCopying);
   rusageZero (&cumul->ru_gcCopyingShared);
   rusageZero (&cumul->ru_gcMarkCompact);
+  rusageZero (&cumul->ru_gcMarkCompactShared);
   rusageZero (&cumul->ru_gcMinor);
   timevalZero (&cumul->tv_sync);
   rusageZero (&cumul->ru_thread);
@@ -401,6 +404,7 @@ static inline void* initLastSharedMajorStatistics (void) {
   struct GC_lastSharedMajorStatistics* cumul =
     (struct GC_lastSharedMajorStatistics*) malloc (sizeof (struct GC_lastSharedMajorStatistics));
   cumul->bytesLive = 0;
+  cumul->kind = GC_COPYING;
   return (void*)cumul;
 }
 
