@@ -290,6 +290,8 @@ void forwardObjptr (GC_state s, objptr *opp) {
     }
     size = headerBytes + objectBytes;
     assert (s->forwardState.back + size + skip <= s->forwardState.toLimit);
+    if (s->forwardState.back + size + skip > s->forwardState.toLimit)
+      die ("s->forwardState.back + size + skip > s->forwardState.toLimit");
     /* Copy the object. */
     GC_memcpy (p - headerBytes, s->forwardState.back, size);
     if (FALSE and ((DEBUG_DETAILED or s->controls->selectiveDebug))) {
@@ -413,8 +415,6 @@ void forwardObjptrForSharedMarkCompact (GC_state s, objptr *opp) {
 
     GC_header header = getHeader (p);
     GC_header* headerp = getHeaderp (p);
-    assert (MARK_MASK & header);
-    *headerp = header & ~MARK_MASK;
 
     splitHeader (r, getHeader (p), getHeaderp (p), &tag, NULL, NULL, NULL);
 
@@ -450,7 +450,8 @@ void forwardObjptrForSharedMarkCompact (GC_state s, objptr *opp) {
       s->cumulativeStatistics->bytesLifted += (newBack - origBack);
       headerp = getHeaderp (objptrToPointer (*opp, s->sharedHeap->start));
       header = getHeader (objptrToPointer (*opp, s->sharedHeap->start));
-      *headerp = header | LIFT_MASK;
+      assert (MARK_MASK & header);
+      *headerp = (header | LIFT_MASK) & ~MARK_MASK;
     }
   }
 }

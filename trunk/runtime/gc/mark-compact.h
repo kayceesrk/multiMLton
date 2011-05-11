@@ -17,5 +17,6 @@ static void updateForwardPointersForMarkCompact (GC_state s, GC_heap h, GC_stack
 static void updateBackwardPointersAndSlideForMarkCompact (GC_state s, GC_heap h, GC_stack currentStack);
 static void majorMarkCompactGC (GC_state s);
 static void majorMarkCompactSharedGC (GC_state s);
+static inline void headerCheck (GC_state s, objptr *opp);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

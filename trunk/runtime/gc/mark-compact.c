@@ -516,6 +516,14 @@ void majorMarkCompactGC (GC_state s) {
   }
 }
 
+void headerCheck (GC_state s, objptr* opp) {
+  pointer p = objptrToPointer (*opp, s->heap->start);
+  GC_header header = getHeader (p);
+  assert (not (header & MARK_MASK));
+  //assert (GC_VALID_HEADER_MASK & header);
+  header = *getHeaderp(p);
+}
+
 
 void majorMarkCompactSharedGC (GC_state s) {
   size_t bytesMarkCompacted;
@@ -561,9 +569,6 @@ void majorMarkCompactSharedGC (GC_state s) {
   updateForwardPointersForMarkCompact (s, s->sharedHeap, currentStack, TRUE);
   updateBackwardPointersAndSlideForMarkCompact (s, s->sharedHeap, currentStack);
 
-  //Now, unmark the live local heap objects
-  foreachGlobalObjptr (s, dfsUnmark);
-
   s->forwardState.toStart = alignFrontier (s, s->sharedHeap->start);
   s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
   s->forwardState.back = s->sharedHeap->start + s->sharedHeap->oldGenSize;
@@ -573,6 +578,9 @@ void majorMarkCompactSharedGC (GC_state s) {
   foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, forwardObjptrForSharedMarkCompact, TRUE);
   s->sharedHeap->oldGenSize = s->forwardState.back - s->forwardState.toStart;
 
+  //Now, unmark the live local heap objects
+  foreachGlobalObjptr (s, dfsUnmark);
+
   //Collect statistics
   bytesMarkCompacted = s->sharedHeap->oldGenSize;
   s->cumulativeStatistics->bytesMarkCompactedShared += bytesMarkCompacted;
@@ -580,6 +588,19 @@ void majorMarkCompactSharedGC (GC_state s) {
 
   if (detailedGCTime (s))
     stopTiming (&ru_start, &s->cumulativeStatistics->ru_gcMarkCompactShared);
+
+  #if 0
+  pointer end = s->sharedHeap->start + s->sharedHeap->oldGenSize;
+  foreachObjptrInRange (s, s->sharedHeap->start, &end, headerCheck, TRUE);
+  for (int proc=0; proc < s->numberOfProcs; proc++) {
+    fprintf (stderr, "Checking the headers of local heap (1) [%d]\n", s->procId);
+    GC_state r = &s->procStates[proc];
+    end = r->heap->start + r->heap->oldGenSize;
+    foreachObjptrInRange (r, r->heap->start, &end, headerCheck, TRUE);
+    fprintf (stderr, "Checking the headers of local heap (2) [%d]\n", s->procId);
+  }
+  #endif
+
   if (DEBUG or s->controls->messages)
     fprintf (stderr, "[GC: Finished shared major mark-compact.]\n");
 }

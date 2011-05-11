@@ -320,19 +320,26 @@ void performSharedGC (GC_state s,
        (s->controls->maxHeap != 0 and maxBytes > s->controls->maxHeap))
       ? maxBytes : sizeofHeapDesired (s, maxBytes, 0);
     if (DEBUG)
-      fprintf (stderr, "performSharedGC: desiredSize=%ld maxBytes=%ld\n", desiredSize, maxBytes);
+      fprintf (stderr, "performSharedGC: desiredSize=%s maxBytes=%s\n",
+               uintmaxToCommaString (desiredSize),
+               uintmaxToCommaString (maxBytes));
     resizeSharedHeapSecondary (s, desiredSize);
     if (not FORCE_MARK_COMPACT
         and (s->secondarySharedHeap->size != 0
              or createSharedHeapSecondary (s, desiredSize)))
       majorCheneyCopySharedGC (s);
     else {
+      size_t newSize = 0;
       if (s->controls->fixedHeap != 0 and desiredSize > s->controls->fixedHeap)
-        resizeHeap (s, s->sharedHeap, s->controls->fixedHeap);
+        newSize = s->controls->fixedHeap;
       else if (s->controls->maxHeap != 0 and desiredSize > s->controls->maxHeap)
-        resizeHeap (s, s->sharedHeap, s->controls->maxHeap);
+        newSize = s->controls->maxHeap;
       else if (desiredSize > s->sharedHeap->size)
-        resizeHeap (s, s->sharedHeap, desiredSize);
+        newSize = desiredSize;
+      if (newSize > 0) {
+        assert (newSize >= s->sharedHeap->oldGenSize);
+        resizeHeap (s, s->sharedHeap, newSize);
+      }
       majorMarkCompactSharedGC (s);
     }
 
@@ -345,9 +352,10 @@ void performSharedGC (GC_state s,
     setGCStateCurrentSharedHeap (s, 0, 0, FALSE);
     s->cumulativeStatistics->bytesFilled += bytesFilled;
     if (DEBUG)
-      fprintf (stderr, "[GC: Finished shared heap gc #%s]\n",
+      fprintf (stderr, "[GC: Finished shared heap gc #%s; oldGenSize is %s]\n",
                uintmaxToCommaString(s->cumulativeStatistics->numCopyingSharedGCs +
-                                    s->cumulativeStatistics->numMarkCompactSharedGCs));
+                                    s->cumulativeStatistics->numMarkCompactSharedGCs),
+               uintmaxToCommaString (s->sharedHeap->oldGenSize));
   }
   LEAVE0 (s);
   leaveGC (s);
