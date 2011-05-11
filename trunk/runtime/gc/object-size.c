@@ -47,6 +47,12 @@ size_t sizeofObject (GC_state s, pointer p) {
     header = getHeader (p);
     assert (header != GC_FORWARDED);
   }
+  while ((header & 1) == 0) {
+    if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+      fprintf (stderr, "sizeofObject saw threaded header("FMTHDR") for object "FMTPTR" [%d]\n",
+               header, (uintptr_t)p, s->procId);
+    header = *(GC_header*)header;
+  }
   splitHeader (s, header, getHeaderp (p), &tag, NULL, &bytesNonObjptrs, &numObjptrs);
   if ((NORMAL_TAG == tag) or (WEAK_TAG == tag)) {
     headerBytes = GC_NORMAL_HEADER_SIZE;
@@ -95,6 +101,12 @@ size_t sizeofObjectNoHeader (GC_state s, pointer p) {
     assert (isPointerInHeap (s, s->sharedHeap, p) or isPointerInToSpace (s, p));
     header = getHeader (p);
     assert (header != GC_FORWARDED);
+  }
+  while ((header & 1) == 0) {
+    if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+      fprintf (stderr, "sizeofObjectNoHeader saw threaded header("FMTHDR") for object "FMTPTR" [%d]\n",
+               header, (uintptr_t)p, s->procId);
+    header = *(GC_header*)header;
   }
   splitHeader (s, header, getHeaderp (p), &tag, NULL, &bytesNonObjptrs, &numObjptrs);
   if ((NORMAL_TAG == tag) or (WEAK_TAG == tag)) {

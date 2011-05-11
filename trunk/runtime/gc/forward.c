@@ -410,6 +410,12 @@ void forwardObjptrForSharedMarkCompact (GC_state s, objptr *opp) {
     //opp is in shared heap, and p is in any local heap.
     GC_state r = getGCStateFromPointer (s, p);
     GC_objectTypeTag tag;
+
+    GC_header header = getHeader (p);
+    GC_header* headerp = getHeaderp (p);
+    assert (MARK_MASK & header);
+    *headerp = header & ~MARK_MASK;
+
     splitHeader (r, getHeader (p), getHeaderp (p), &tag, NULL, NULL, NULL);
 
     if ((DEBUG_DETAILED or s->controls->selectiveDebug))
@@ -442,8 +448,8 @@ void forwardObjptrForSharedMarkCompact (GC_state s, objptr *opp) {
       forwardObjptr (s, opp);
       pointer newBack = s->forwardState.back;
       s->cumulativeStatistics->bytesLifted += (newBack - origBack);
-      GC_header* headerp = getHeaderp (objptrToPointer (*opp, s->sharedHeap->start));
-      GC_header header = getHeader (objptrToPointer (*opp, s->sharedHeap->start));
+      headerp = getHeaderp (objptrToPointer (*opp, s->sharedHeap->start));
+      header = getHeader (objptrToPointer (*opp, s->sharedHeap->start));
       *headerp = header | LIFT_MASK;
     }
   }

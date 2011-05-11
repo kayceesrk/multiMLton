@@ -219,16 +219,15 @@ void performSharedGC (GC_state s,
     if (DEBUG)
       fprintf (stderr, "performSharedGC: finished local GC [%d]\n", s->procId);
   }
-  else {
+  else { //XXX KC can the following walks be avoided, or atleast made cheaper??
     if (DEBUG)
       fprintf (stderr, "performSharedGC: starting fixing forwarding pointers [%d]\n", s->procId);
 
     //Fix up just the forwarding pointers
     foreachGlobalObjptrInScope (s, fixFwdObjptr);
-    //Fix forwarding pointers in local heaps
+    //Fix forwarding pointers in local heapsA
     pointer end = s->heap->start + s->heap->oldGenSize;
     foreachObjptrInRange (s, s->heap->start, &end, fixFwdObjptr, TRUE);
-
     //Fix forwarding pointers in forwarded range -- NOTE: Because of the
     //following walk, range list will be cleared
     foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, fixFwdObjptr, TRUE);
@@ -264,7 +263,8 @@ void performSharedGC (GC_state s,
         size_t nurseryUsed = s->sharedFrontier - s->sharedHeap->nursery;
         fprintf (stderr,
                 "[GC: Starting shared heap gc #%s; requesting %s bytes,]\n",
-                uintmaxToCommaString(s->cumulativeStatistics->numCopyingSharedGCs + 1),
+                uintmaxToCommaString(s->cumulativeStatistics->numCopyingSharedGCs +
+                                     s->cumulativeStatistics->numMarkCompactGCs + 1),
                 uintmaxToCommaString(bytesRequested));
         fprintf (stderr,
                 "[GC:\tshared heap at "FMTPTR" of size %s bytes,]\n",
@@ -316,7 +316,8 @@ void performSharedGC (GC_state s,
     /* We are being optimistic with desired size since maxBytes is an
      * over-approzimation of live size */
     size_t desiredSize =
-      (maxBytes > s->controls->fixedHeap || maxBytes > s->controls->maxHeap)
+      ((s->controls->fixedHeap != 0 and maxBytes > s->controls->fixedHeap) or
+       (s->controls->maxHeap != 0 and maxBytes > s->controls->maxHeap))
       ? maxBytes : sizeofHeapDesired (s, maxBytes, 0);
     resizeSharedHeapSecondary (s, desiredSize);
     if (not FORCE_MARK_COMPACT
@@ -324,9 +325,15 @@ void performSharedGC (GC_state s,
              or createSharedHeapSecondary (s, desiredSize)))
       majorCheneyCopySharedGC (s);
     else {
-      s->controls->selectiveDebug = TRUE;
+      if (s->controls->fixedHeap != 0 and desiredSize > s->controls->fixedHeap)
+        resizeHeap (s, s->sharedHeap, s->controls->fixedHeap);
+      else if (s->controls->maxHeap != 0 and desiredSize > s->controls->maxHeap)
+        resizeHeap (s, s->sharedHeap, s->controls->maxHeap);
+      else if (desiredSize > s->sharedHeap->size)
+        resizeHeap (s, s->sharedHeap, desiredSize);
+      else
+        s->controls->selectiveDebug = TRUE;
       majorMarkCompactSharedGC (s);
-      s->controls->selectiveDebug = FALSE;
     }
 
     s->lastSharedMajorStatistics->bytesLive = s->sharedHeap->oldGenSize;
@@ -339,7 +346,8 @@ void performSharedGC (GC_state s,
     s->cumulativeStatistics->bytesFilled += bytesFilled;
     if (DEBUG)
       fprintf (stderr, "[GC: Finished shared heap gc #%s]\n",
-               uintmaxToCommaString(s->cumulativeStatistics->numCopyingSharedGCs));
+               uintmaxToCommaString(s->cumulativeStatistics->numCopyingSharedGCs +
+                                    s->cumulativeStatistics->numMarkCompactGCs));
   }
   LEAVE0 (s);
   leaveGC (s);

@@ -163,7 +163,11 @@ thread:
       if (header == GC_FORWARDED) {
         /* forwarded object. Object resides in the shared heap. Hence skip */
         size = sizeofObject (s, p);
-        gap += size;
+        /* If we are performing sharedCollection and walking local heaps, don't
+         * consider unmarked objects as dead */
+        if ((not sharedCollection) || (h==s->sharedHeap)) {
+          gap += size;
+        }
         front += size;
         if ((DEBUG_MARK_COMPACT or s->controls->selectiveDebug)) {
           fprintf (stderr, "updateForwardPointers: threading saw forwarded object.\n");
@@ -249,18 +253,16 @@ thread:
       /* It's not marked. */
       size = sizeofObject (s, p);
       front += size;
-      gap += size;
       /* If we are performing sharedCollection and walking local heaps, don't
-       * consider unmarked objects as dead */
-      if (sharedCollection and (not (h==s->sharedHeap))) {
-        gap -= size;
-      }
+        * consider unmarked objects as dead */
+      if ((not sharedCollection) || (h==s->sharedHeap))
+        gap += size;
       goto updateObject;
     }
   } else {
     /* We should ONLY get here if we are performing local collection or we are
      * performing shared collection and walking shared heap */
-    assert ((not sharedCollection) or (h == s->sharedHeap));
+    assert ((not sharedCollection) || (h == s->sharedHeap));
 
     pointer new;
     objptr newObjptr;
@@ -549,9 +551,15 @@ void majorMarkCompactSharedGC (GC_state s) {
   updateForwardPointersForMarkCompact (s, s->sharedHeap, currentStack, TRUE);
   updateBackwardPointersAndSlideForMarkCompact (s, s->sharedHeap, currentStack);
 
+  //Now, unmark the live local heap objects
+  foreachGlobalObjptr (s, dfsUnmark);
+
   s->forwardState.toStart = alignFrontier (s, s->sharedHeap->start);
   s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
   s->forwardState.back = s->sharedHeap->start + s->sharedHeap->oldGenSize;
+  /* Walk the shared heap recreating danglingStackList and lifting partially
+   * lifted closures. This also unmarks the danglingStacks and lifted objects.
+   * */
   foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, forwardObjptrForSharedMarkCompact, TRUE);
   s->sharedHeap->oldGenSize = s->forwardState.back - s->forwardState.toStart;
 
