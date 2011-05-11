@@ -264,7 +264,7 @@ void performSharedGC (GC_state s,
         fprintf (stderr,
                 "[GC: Starting shared heap gc #%s; requesting %s bytes,]\n",
                 uintmaxToCommaString(s->cumulativeStatistics->numCopyingSharedGCs +
-                                     s->cumulativeStatistics->numMarkCompactGCs + 1),
+                                     s->cumulativeStatistics->numMarkCompactSharedGCs + 1),
                 uintmaxToCommaString(bytesRequested));
         fprintf (stderr,
                 "[GC:\tshared heap at "FMTPTR" of size %s bytes,]\n",
@@ -319,6 +319,8 @@ void performSharedGC (GC_state s,
       ((s->controls->fixedHeap != 0 and maxBytes > s->controls->fixedHeap) or
        (s->controls->maxHeap != 0 and maxBytes > s->controls->maxHeap))
       ? maxBytes : sizeofHeapDesired (s, maxBytes, 0);
+    if (DEBUG)
+      fprintf (stderr, "performSharedGC: desiredSize=%ld maxBytes=%ld\n", desiredSize, maxBytes);
     resizeSharedHeapSecondary (s, desiredSize);
     if (not FORCE_MARK_COMPACT
         and (s->secondarySharedHeap->size != 0
@@ -331,8 +333,6 @@ void performSharedGC (GC_state s,
         resizeHeap (s, s->sharedHeap, s->controls->maxHeap);
       else if (desiredSize > s->sharedHeap->size)
         resizeHeap (s, s->sharedHeap, desiredSize);
-      else
-        s->controls->selectiveDebug = TRUE;
       majorMarkCompactSharedGC (s);
     }
 
@@ -347,7 +347,7 @@ void performSharedGC (GC_state s,
     if (DEBUG)
       fprintf (stderr, "[GC: Finished shared heap gc #%s]\n",
                uintmaxToCommaString(s->cumulativeStatistics->numCopyingSharedGCs +
-                                    s->cumulativeStatistics->numMarkCompactGCs));
+                                    s->cumulativeStatistics->numMarkCompactSharedGCs));
   }
   LEAVE0 (s);
   leaveGC (s);

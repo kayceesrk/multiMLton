@@ -164,9 +164,19 @@ thread:
         /* forwarded object. Object resides in the shared heap. Hence skip */
         size = sizeofObject (s, p);
         /* If we are performing sharedCollection and walking local heaps, don't
-         * consider unmarked objects as dead */
+         * consider unmarked objects as dead. Hence, only increment gap
+         * (signifying death), if we are performing local collection or walking
+         * the shared heap during shared collection. */
         if ((not sharedCollection) || (h==s->sharedHeap)) {
           gap += size;
+        }
+        else {
+          /* We need to fill the forwarded object in the local heap during
+           * shared collection so that subsequent mark-compactions can skip
+           * this object. At this point, there will be no pointers to this
+           * objects since forwarding pointers have been fixed before entering
+           * shared GC. */
+          fillGap (s, front, front + size);
         }
         front += size;
         if ((DEBUG_MARK_COMPACT or s->controls->selectiveDebug)) {
