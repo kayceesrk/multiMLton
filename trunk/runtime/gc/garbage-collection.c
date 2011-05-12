@@ -340,7 +340,9 @@ void performSharedGC (GC_state s,
         assert (newSize >= s->sharedHeap->oldGenSize);
         resizeHeap (s, s->sharedHeap, newSize);
       }
+      //s->controls->selectiveDebug = TRUE;
       majorMarkCompactSharedGC (s);
+      //s->controls->selectiveDebug = FALSE;
     }
 
     s->lastSharedMajorStatistics->bytesLive = s->sharedHeap->oldGenSize;

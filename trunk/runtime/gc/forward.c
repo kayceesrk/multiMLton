@@ -291,7 +291,7 @@ void forwardObjptr (GC_state s, objptr *opp) {
     size = headerBytes + objectBytes;
     assert (s->forwardState.back + size + skip <= s->forwardState.toLimit);
     if (s->forwardState.back + size + skip > s->forwardState.toLimit)
-      die ("s->forwardState.back + size + skip > s->forwardState.toLimit");
+      die ("Out of memory.");
     /* Copy the object. */
     GC_memcpy (p - headerBytes, s->forwardState.back, size);
     if (FALSE and ((DEBUG_DETAILED or s->controls->selectiveDebug))) {
@@ -426,11 +426,14 @@ void forwardObjptrForSharedMarkCompact (GC_state s, objptr *opp) {
       //If the pointer from toSpace to local heap is a stack and it is not
       //parasitic, add a dangling pointer.
       GC_stack stk = (GC_stack)p;
-      pointer thread = objptrToPointer (stk->thread, r->heap->start);
-      if (getHeader (thread) == GC_FORWARDED) {
-        stk->thread = *(objptr*)thread;
-      }
+      stk->thread = (objptr)((uintptr_t)opp - (uintptr_t)offsetof (struct GC_thread, stack));
       assert (isObjptrInHeap (s, s->sharedHeap, stk->thread));
+
+      #if ASSERT
+      pointer thrd = objptrToPointer (stk->thread, s->sharedHeap->start);
+      header = getHeader (thrd);
+      assert (header == (GC_header)0x80003);
+      #endif
 
       if ((DEBUG_DETAILED or s->controls->selectiveDebug))
         fprintf (stderr, "forwardObjptrForSharedMarkCompact: invariant breaking pointer is stack. Stack->thread="FMTOBJPTR" [%d]\n",
