@@ -118,11 +118,11 @@ void updateWeaksForMarkCompact (GC_state s) {
 
 void updateForwardPointersForMarkCompact (GC_state s,
                                           GC_heap h,
-                                          GC_stack currentStack,
+                                          pointer front,
+                                          pointer back,
+                                          GC_stack* currentStack,
                                           bool sharedCollection) {
-  pointer back;
   pointer endOfLastMarked;
-  pointer front;
   size_t gap;
   GC_header header;
   GC_header *headerp;
@@ -131,8 +131,6 @@ void updateForwardPointersForMarkCompact (GC_state s,
 
   if ((DEBUG_MARK_COMPACT or s->controls->selectiveDebug))
     fprintf (stderr, "Update forward pointers.\n");
-  front = alignFrontier (s, h->start);
-  back = h->start + h->oldGenSize;
   gap = 0;
   endOfLastMarked = front;
 updateObject:
@@ -209,7 +207,14 @@ thread:
         assert (STACK_TAG == tag);
         headerBytes = GC_STACK_HEADER_SIZE;
         stack = (GC_stack)p;
-        current = currentStack == stack;
+        if (not sharedCollection)
+          current = (*currentStack) == stack;
+        else {
+          current = FALSE;
+          for (int proc = 0; proc < s->numberOfProcs; proc++)
+            current = (current || (currentStack[proc] == stack));
+        }
+
 
         if (sharedCollection and //We are performing this for a shared collection
             (not (h == s->sharedHeap))) {//Current heap is not the shared heap
@@ -229,7 +234,9 @@ thread:
       if ((DEBUG_MARK_COMPACT or s->controls->selectiveDebug))
         fprintf (stderr, "threading "FMTPTR" of size %"PRIuMAX"\n",
                  (uintptr_t)p, (uintmax_t)size);
-      if ((size_t)(front - endOfLastMarked) >= GC_ARRAY_HEADER_SIZE + OBJPTR_SIZE) {
+      if (((size_t)(front - endOfLastMarked) >= GC_ARRAY_HEADER_SIZE + OBJPTR_SIZE) and
+          //Dont compress for localHeaps during shared collection
+          (not sharedCollection || h==s->sharedHeap)) {
         pointer newArray = endOfLastMarked;
         /* Compress all of the unmarked into one vector.  We require
          * (GC_ARRAY_HEADER_SIZE + OBJPTR_SIZE) space to be available
@@ -262,11 +269,16 @@ thread:
     } else {
       /* It's not marked. */
       size = sizeofObject (s, p);
-      front += size;
+      if ((DEBUG_MARK_COMPACT or s->controls->selectiveDebug))
+        fprintf (stderr, "skipping "FMTPTR" of size %"PRIuMAX"\n",
+                 (uintptr_t)p, (uintmax_t)size);
       /* If we are performing sharedCollection and walking local heaps, don't
         * consider unmarked objects as dead */
       if ((not sharedCollection) || (h==s->sharedHeap))
         gap += size;
+      else
+        fillGap (s, front, front+size);
+      front += size;
       goto updateObject;
     }
   } else {
@@ -308,7 +320,7 @@ done:
   return;
 }
 
-void updateBackwardPointersAndSlideForMarkCompact (GC_state s, GC_heap h, GC_stack currentStack) {
+void updateBackwardPointersAndSlideForMarkCompact (GC_state s, GC_heap h, GC_stack* currentStack, bool sharedCollection) {
   pointer back;
   pointer front;
   size_t gap;
@@ -381,7 +393,13 @@ unmark:
         assert (STACK_TAG == tag);
         headerBytes = GC_STACK_HEADER_SIZE;
         stack = (GC_stack)p;
-        current = currentStack == stack;
+        if (not sharedCollection)
+          current = (*currentStack) == stack;
+        else {
+          current = FALSE;
+          for (int proc = 0; proc < s->numberOfProcs; proc++)
+            current = (current || (currentStack[proc] == stack));
+        }
 
         reservedOld = stack->reserved;
         reservedNew = sizeofStackShrinkReserved (s, stack, current);
@@ -495,8 +513,9 @@ void majorMarkCompactGC (GC_state s) {
   }
   updateWeaksForMarkCompact (s);
   foreachGlobalObjptrInScope (s, threadInternalObjptrIfInLocalHeap);
-  updateForwardPointersForMarkCompact (s, s->heap, currentStack, FALSE);
-  updateBackwardPointersAndSlideForMarkCompact (s, s->heap, currentStack);
+  updateForwardPointersForMarkCompact (s, s->heap, alignFrontier(s, s->heap->start),
+                                       s->heap->start + s->heap->oldGenSize, &currentStack, FALSE);
+  updateBackwardPointersAndSlideForMarkCompact (s, s->heap, &currentStack, FALSE);
 
   //Collect statistics
   bytesHashConsed = s->lastMajorStatistics->bytesHashConsed;
@@ -516,18 +535,30 @@ void majorMarkCompactGC (GC_state s) {
   }
 }
 
-void headerCheck (GC_state s, objptr* opp) {
+void headerCheckInternalObjptr (GC_state s, objptr* opp) {
   pointer p = objptrToPointer (*opp, s->heap->start);
   GC_header header = getHeader (p);
-  assert (not (header & MARK_MASK));
-  //assert (GC_VALID_HEADER_MASK & header);
-  header = *getHeaderp(p);
+  assert (not (header & MARK_MASK) || header==GC_FORWARDED);
+  assert (GC_VALID_HEADER_MASK & header);
+  header = header;
 }
 
+void headerCheck (GC_state s, pointer front, pointer back) {
+  while (front < back) {
+    pointer p = advanceToObjectData (s, front);
+    GC_header header = getHeader (p);
+    assert (not (header & MARK_MASK) || header==GC_FORWARDED);
+    assert (GC_VALID_HEADER_MASK & header);
+    if (not (header==GC_FORWARDED))
+      foreachObjptrInObject (s, p, headerCheckInternalObjptr, TRUE);
+    front += sizeofObject (s, p);
+    header = header;
+  }
+}
 
 void majorMarkCompactSharedGC (GC_state s) {
   size_t bytesMarkCompacted;
-  GC_stack currentStack;
+  GC_stack* currentStacks;
   struct rusage ru_start;
 
   if (detailedGCTime (s))
@@ -543,62 +574,101 @@ void majorMarkCompactSharedGC (GC_state s) {
   }
 
   //Algorithm Core
-  currentStack = getStackCurrent (s);
+  currentStacks = (GC_stack*) malloc (sizeof (GC_stack) * s->numberOfProcs);
+  for (int proc = 0; proc < s->numberOfProcs; proc++)
+    currentStacks[proc] = getStackCurrent (&s->procStates[proc]);
 
   //Mark all live objects in all heaps
   /* NOTE: dangling stacks are cleared, hence, we will only trace dangling
    * stacks if they are either pointed to by global pointers (currentThread,
    * signalHandlerThread, etc.) or if the thread is pointed to by some other
    * live object */
+  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+    fprintf (stderr, "majorMarkCompactSharedGC(1)\n");
   foreachGlobalObjptr (s, dfsMarkTraceShared);
 
+  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+    fprintf (stderr, "majorMarkCompactSharedGC(2)\n");
   for (int proc=0; proc < s->numberOfProcs; proc++) {
     GC_state r = &s->procStates[proc];
     updateWeaksForMarkCompact (r);
   }
 
+  s->controls->selectiveDebug = TRUE;
+  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+    fprintf (stderr, "majorMarkCompactSharedGC(3)\n");
   foreachGlobalObjptr (s, threadInternalObjptrIfInSharedHeap);
+
+  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+    fprintf (stderr, "majorMarkCompactSharedGC(4)\n");
   //Walk local heaps threading pointers to shared heap
   for (int proc=0; proc < s->numberOfProcs; proc++) {
     GC_state r = &s->procStates[proc];
-    updateForwardPointersForMarkCompact (r, r->heap, currentStack, TRUE);
+    if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+      fprintf (stderr, "majorMarkCompactSharedGC(5) [%d]\n", r->procId);
+    updateForwardPointersForMarkCompact (r, r->heap, alignFrontier (r, r->heap->start),
+                                         r->heap->start + r->heap->oldGenSize,
+                                         currentStacks, TRUE);
+    if (r->canMinor and r->forwardState.liftingObject != BOGUS_OBJPTR)
+      updateForwardPointersForMarkCompact (r, r->heap, alignFrontier (r, r->heap->nursery),
+                                           r->frontier, currentStacks, TRUE);
   }
+
+  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+    fprintf (stderr, "majorMarkCompactSharedGC(6)\n");
+
   //Walk the shared heap threading pointers. At the end of this phase, all
   //pointer from local heaps should point to the new location on the shared
   //heap.
-  updateForwardPointersForMarkCompact (s, s->sharedHeap, currentStack, TRUE);
-  updateBackwardPointersAndSlideForMarkCompact (s, s->sharedHeap, currentStack);
+  updateForwardPointersForMarkCompact (s, s->sharedHeap, alignFrontier (s, s->sharedHeap->start),
+                                       s->sharedHeap->start + s->sharedHeap->oldGenSize, currentStacks, TRUE);
+
+  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+    fprintf (stderr, "majorMarkCompactSharedGC(7)\n");
+  updateBackwardPointersAndSlideForMarkCompact (s, s->sharedHeap, currentStacks, TRUE);
 
   s->forwardState.toStart = alignFrontier (s, s->sharedHeap->start);
   s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
   s->forwardState.back = s->sharedHeap->start + s->sharedHeap->oldGenSize;
+
+  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+    fprintf (stderr, "majorMarkCompactSharedGC(8)\n");
   /* Walk the shared heap recreating danglingStackList and lifting partially
    * lifted closures. This also unmarks the danglingStacks and lifted objects.
    * */
   foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, forwardObjptrForSharedMarkCompact, TRUE);
   s->sharedHeap->oldGenSize = s->forwardState.back - s->forwardState.toStart;
 
+  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+    fprintf (stderr, "majorMarkCompactSharedGC(9)\n");
   //Now, unmark the live local heap objects
   foreachGlobalObjptr (s, dfsUnmark);
+  s->controls->selectiveDebug = FALSE;
 
   //Collect statistics
   bytesMarkCompacted = s->sharedHeap->oldGenSize;
   s->cumulativeStatistics->bytesMarkCompactedShared += bytesMarkCompacted;
   s->lastSharedMajorStatistics->kind = GC_MARK_COMPACT;
 
+  free (currentStacks);
   if (detailedGCTime (s))
     stopTiming (&ru_start, &s->cumulativeStatistics->ru_gcMarkCompactShared);
 
-  #if 0
-  pointer end = s->sharedHeap->start + s->sharedHeap->oldGenSize;
-  foreachObjptrInRange (s, s->sharedHeap->start, &end, headerCheck, TRUE);
+  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+    fprintf (stderr, "majorMarkCompactSharedGC(10)\n");
+
+  #if ASSERT
   for (int proc=0; proc < s->numberOfProcs; proc++) {
-    fprintf (stderr, "Checking the headers of local heap (1) [%d]\n", s->procId);
     GC_state r = &s->procStates[proc];
-    end = r->heap->start + r->heap->oldGenSize;
-    foreachObjptrInRange (r, r->heap->start, &end, headerCheck, TRUE);
-    fprintf (stderr, "Checking the headers of local heap (2) [%d]\n", s->procId);
+    fprintf (stderr, "Checking the headers of local heap (1) [%d]\n", r->procId);
+    pointer front = r->heap->start;
+    pointer back = r->heap->start + r->heap->oldGenSize;
+    headerCheck (r, front, back);
+    fprintf (stderr, "Checking the headers of local heap (2) [%d]\n", r->procId);
   }
+  fprintf (stderr, "Checking the headers of shared heap (1)\n");
+  headerCheck (s, s->sharedHeap->start, s->sharedHeap->start + s->sharedHeap->oldGenSize);
+  fprintf (stderr, "Checking the headers of shared heap (2)\n");
   #endif
 
   if (DEBUG or s->controls->messages)

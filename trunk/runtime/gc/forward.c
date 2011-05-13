@@ -222,6 +222,12 @@ void forwardObjptr (GC_state s, objptr *opp) {
   GC_header header;
   GC_objectTypeTag tag;
 
+  /* Since stack sizes may change when they are forwarded, we need to store the
+   * old size of the stack reserved space in the forwarded object. This will
+   * ensure that when a forwarded stack is found while walking the heap, we can
+   * get its correct size. */
+  size_t oldReserved = 0;
+
   op = *opp;
   p = objptrToPointer (op, s->heap->start);
   if ((DEBUG_DETAILED or s->controls->selectiveDebug))
@@ -275,6 +281,7 @@ void forwardObjptr (GC_state s, objptr *opp) {
                    uintmaxToCommaString(stack->reserved),
                    uintmaxToCommaString(reservedNew),
                    uintmaxToCommaString(stack->used));
+        oldReserved = stack->reserved;
         stack->reserved = reservedNew;
       }
       objectBytes = sizeof (struct GC_stack) + stack->used;
@@ -294,11 +301,9 @@ void forwardObjptr (GC_state s, objptr *opp) {
       die ("Out of memory.");
     /* Copy the object. */
     GC_memcpy (p - headerBytes, s->forwardState.back, size);
-    if (FALSE and ((DEBUG_DETAILED or s->controls->selectiveDebug))) {
-      fprintf (stderr, "Zeroing out %s bytes starting at "FMTPTR"\n",
-               uintmaxToCommaString (objectBytes),
-               (uintptr_t)p);
-      memset (p, 0, objectBytes);
+    if (oldReserved) {
+      GC_stack stk = (GC_stack)p;
+      stk->reserved = oldReserved;
     }
     /* If the object has a valid weak pointer, link it into the weaks
      * for update after the copying GC is done.
