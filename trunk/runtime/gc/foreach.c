@@ -355,23 +355,33 @@ pointer foreachObjptrInRangeWithFill (GC_state s, pointer front, pointer *back,
 
       //Skip over forwarded object and may be fill the gap
       if (getHeader (p) == GC_FORWARDED) {
-        objptr op = *((objptr*)p);
-        pointer realP = objptrToPointer (op, s->sharedHeap->start);
+        objptr op = (objptr)p;
+        pointer realP;
+        do {
+          op = *(objptr*)op;
+          realP = objptrToPointer (op, s->sharedHeap->start);
 
-        //We might be in the middle of a heap translation in which case,
-        //the realP needs to be translated. We must also be in the middle
-        //of a shared heap collection.
-        if (s->translateState.from != BOGUS_POINTER and
-            Proc_executingInSection (s)) {
-          op = (objptr)realP;
-          translateObjptrShared (s, &op);
-          realP = (pointer)op;
-          //Update the forwarding pointer to point to the translated location
-          *(objptr*)p = op;
-        }
+          //We might be in the middle of a heap translation in which case,
+          //the realP needs to be translated. We must also be in the middle
+          //of a shared heap collection.
+          if (s->translateState.from != BOGUS_POINTER and
+              Proc_executingInSection (s)) {
+            op = (objptr)realP;
+            translateObjptrShared (s, &op);
+            realP = (pointer)op;
+            //Update the forwarding pointer to point to the translated location
+            *(objptr*)p = op;
+          }
+        } while (getHeader(realP) == GC_FORWARDED);
 
         pointer oldFront = front;
-        front = p + sizeofObjectNoHeader (s, realP);
+        GC_objectTypeTag tag;
+        splitHeader (s, getHeader (realP), getHeaderp (realP), &tag, NULL, NULL, NULL);
+
+        if (tag == STACK_TAG)
+          front = p + sizeofObjectNoHeader (s, p);
+        else
+          front = p + sizeofObjectNoHeader (s, realP);
         if (fillForwarded)
           fillGap (s, oldFront, front);
       }

@@ -32,20 +32,18 @@ size_t sizeofObject (GC_state s, pointer p) {
   size_t headerBytes, objectBytes;
   GC_header header;
   GC_objectTypeTag tag;
+  pointer oldP = p;
   uint16_t bytesNonObjptrs, numObjptrs;
 
   header = getHeader (p);
-  if (header == GC_FORWARDED) {
-    //assert (0);
+  while (header == GC_FORWARDED) {
     if ((DEBUG_DETAILED or s->controls->selectiveDebug))
       fprintf (stderr,
                "sizeOfObject saw forwarded object "FMTPTR" [%d]\n",
                (uintptr_t)p, s->procId);
     objptr op = *((objptr*)p);
     p = objptrToPointer (op, s->sharedHeap->start);
-    assert (isPointerInHeap (s, s->sharedHeap, p) or isPointerInToSpace (s, p));
     header = getHeader (p);
-    assert (header != GC_FORWARDED);
   }
   while ((header & 1) == 0) {
     if ((DEBUG_DETAILED or s->controls->selectiveDebug))
@@ -63,7 +61,7 @@ size_t sizeofObject (GC_state s, pointer p) {
                                        bytesNonObjptrs, numObjptrs);
   } else if (STACK_TAG == tag) {
     headerBytes = GC_STACK_HEADER_SIZE;
-    objectBytes = sizeofStackNoHeader (s, (GC_stack)p);
+    objectBytes = sizeofStackNoHeader (s, (GC_stack)oldP);
   }
   else if (HEADER_ONLY_TAG == tag) {
     headerBytes = GC_HEADER_SIZE;
@@ -87,20 +85,18 @@ size_t sizeofObjectNoHeader (GC_state s, pointer p) {
   size_t objectBytes;
   GC_header header;
   GC_objectTypeTag tag;
+  pointer oldP = p;
   uint16_t bytesNonObjptrs, numObjptrs;
 
   header = getHeader (p);
-  if (header == GC_FORWARDED) {
-    //assert (0);
+  while (header == GC_FORWARDED) {
     if ((DEBUG_DETAILED or s->controls->selectiveDebug))
       fprintf (stderr,
                "sizeOfObjectNoHeader saw forwarded object "FMTPTR" [%d]\n",
                (uintptr_t)p, s->procId);
     objptr op = *((objptr*)p);
     p = objptrToPointer (op, s->sharedHeap->start);
-    assert (isPointerInHeap (s, s->sharedHeap, p) or isPointerInToSpace (s, p));
     header = getHeader (p);
-    assert (header != GC_FORWARDED);
   }
   while ((header & 1) == 0) {
     if ((DEBUG_DETAILED or s->controls->selectiveDebug))
@@ -115,7 +111,7 @@ size_t sizeofObjectNoHeader (GC_state s, pointer p) {
     objectBytes = sizeofArrayNoHeader (s, getArrayLength (p),
                                        bytesNonObjptrs, numObjptrs);
   } else if (STACK_TAG == tag) {
-    objectBytes = sizeofStackNoHeader (s, (GC_stack)p);
+    objectBytes = sizeofStackNoHeader (s, (GC_stack)oldP);
   }
   else if (HEADER_ONLY_TAG == tag) {
     objectBytes = 0;

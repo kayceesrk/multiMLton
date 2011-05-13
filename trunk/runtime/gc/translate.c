@@ -98,15 +98,17 @@ void translateObjptrShared (GC_state s, objptr* opp) {
 
 
   GC_header header = getHeader (p);
-  GC_objectTypeTag tag;
-  splitHeader (s, header, getHeaderp (p), &tag, NULL, NULL, NULL);
-  if (tag == STACK_TAG) {
+  if (not header == GC_FORWARDED) {
+    GC_objectTypeTag tag;
+    splitHeader (s, header, getHeaderp (p), &tag, NULL, NULL, NULL);
+    if (tag == STACK_TAG) {
       GC_stack stack = (GC_stack)p;
       if (DEBUG_TRANSLATE)
-          fprintf (stderr, "translateObjptrShared: Remapping stack->thread objptr. \
-                   stack="FMTPTR" thread="FMTOBJPTR"\n",
-                   (uintptr_t)stack, stack->thread);
+        fprintf (stderr, "translateObjptrShared: Remapping stack->thread objptr. \
+                 stack="FMTPTR" thread="FMTOBJPTR"\n",
+                 (uintptr_t)stack, stack->thread);
       translateObjptrShared (s, &stack->thread);
+    }
   }
 }
 

@@ -664,6 +664,11 @@ void majorMarkCompactSharedGC (GC_state s) {
     pointer front = r->heap->start;
     pointer back = r->heap->start + r->heap->oldGenSize;
     headerCheck (r, front, back);
+    if (r->canMinor and r->forwardState.liftingObject != BOGUS_OBJPTR) {
+      front = r->heap->nursery;
+      back = r->frontier;
+      headerCheck (r, front, back);
+    }
     fprintf (stderr, "Checking the headers of local heap (2) [%d]\n", r->procId);
   }
   fprintf (stderr, "Checking the headers of shared heap (1)\n");
