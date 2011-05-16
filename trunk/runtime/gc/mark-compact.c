@@ -594,7 +594,6 @@ void majorMarkCompactSharedGC (GC_state s) {
     updateWeaksForMarkCompact (r);
   }
 
-  s->controls->selectiveDebug = TRUE;
   if ((DEBUG_DETAILED or s->controls->selectiveDebug))
     fprintf (stderr, "majorMarkCompactSharedGC(3)\n");
   foreachGlobalObjptr (s, threadInternalObjptrIfInSharedHeap);
@@ -643,7 +642,6 @@ void majorMarkCompactSharedGC (GC_state s) {
     fprintf (stderr, "majorMarkCompactSharedGC(9)\n");
   //Now, unmark the live local heap objects
   foreachGlobalObjptr (s, dfsUnmark);
-  s->controls->selectiveDebug = FALSE;
 
   //Collect statistics
   bytesMarkCompacted = s->sharedHeap->oldGenSize;
@@ -660,7 +658,8 @@ void majorMarkCompactSharedGC (GC_state s) {
   #if ASSERT
   for (int proc=0; proc < s->numberOfProcs; proc++) {
     GC_state r = &s->procStates[proc];
-    fprintf (stderr, "Checking the headers of local heap (1) [%d]\n", r->procId);
+    if (DEBUG)
+      fprintf (stderr, "Checking the headers of local heap (1) [%d]\n", r->procId);
     pointer front = r->heap->start;
     pointer back = r->heap->start + r->heap->oldGenSize;
     headerCheck (r, front, back);
@@ -669,11 +668,14 @@ void majorMarkCompactSharedGC (GC_state s) {
       back = r->frontier;
       headerCheck (r, front, back);
     }
-    fprintf (stderr, "Checking the headers of local heap (2) [%d]\n", r->procId);
+    if (DEBUG)
+      fprintf (stderr, "Checking the headers of local heap (2) [%d]\n", r->procId);
   }
-  fprintf (stderr, "Checking the headers of shared heap (1)\n");
+  if (DEBUG)
+    fprintf (stderr, "Checking the headers of shared heap (1)\n");
   headerCheck (s, s->sharedHeap->start, s->sharedHeap->start + s->sharedHeap->oldGenSize);
-  fprintf (stderr, "Checking the headers of shared heap (2)\n");
+  if (DEBUG)
+    fprintf (stderr, "Checking the headers of shared heap (2)\n");
   #endif
 
   if (DEBUG or s->controls->messages)
