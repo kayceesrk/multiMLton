@@ -368,9 +368,8 @@ pointer foreachObjptrInRangeWithFill (GC_state s, pointer front, pointer *back,
             op = (objptr)realP;
             translateObjptrShared (s, &op);
             realP = (pointer)op;
-            //Update the forwarding pointer to point to the translated location
-            *(objptr*)p = op;
           }
+          *(objptr*)p = op;
         } while (getHeader(realP) == GC_FORWARDED);
 
         pointer oldFront = front;

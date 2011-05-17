@@ -295,7 +295,7 @@ void forwardObjptr (GC_state s, objptr *opp) {
     size = headerBytes + objectBytes;
     assert (s->forwardState.back + size + skip <= s->forwardState.toLimit);
     if (s->forwardState.back + size + skip > s->forwardState.toLimit)
-      die ("Out of memory.");
+      die ("Out of memory while lifting objects to the shared heap.");
     /* Copy the object. */
     GC_memcpy (p - headerBytes, s->forwardState.back, size);
     if (oldReserved) {

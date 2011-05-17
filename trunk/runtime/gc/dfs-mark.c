@@ -69,6 +69,15 @@ size_t dfsMarkByMode (GC_state s, pointer root,
     /* Object has already been marked. */
     return 0;
 
+  if (getHeader (root) == GC_FORWARDED) {
+    if ((DEBUG_DFS_MARK or s->controls->selectiveDebug))
+      fprintf (stderr, "dfsMarkByMode saw forwarded object "FMTPTR" [%d]\n",
+               (uintptr_t)root, s->procId);
+    objptr op = pointerToObjptr (root, s->heap->start);
+    fixFwdObjptr (s, &op);
+    root = objptrToPointer (op, s->heap->start);
+  }
+
   if (ignoreSharedHeap and isPointerInHeap (s, s->sharedHeap, root)) {
       /* Object resides in the shared heap. Do not collect */
       if (DEBUG_LWTGC)
