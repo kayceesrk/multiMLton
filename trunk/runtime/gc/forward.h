@@ -25,6 +25,7 @@ struct GC_forwardState {
    * of the sharedHeap allocated to other mutators.
    */
   SkipRange* rangeListFirst;
+  SkipRange* rangeListCurrent;
   SkipRange* rangeListLast;
 
   /* Stacks are usually not moved to the shared heap and stack pointers are
@@ -71,5 +72,6 @@ static inline objptr fixFwdObjptrAndFetch (GC_state s, objptr *opp);
 
 static inline void saveForwardState (GC_state s, struct GC_forwardState* fwd);
 static inline void restoreForwardState (GC_state s, struct GC_forwardState* fwd);
+static void clearRangeList (GC_state s);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

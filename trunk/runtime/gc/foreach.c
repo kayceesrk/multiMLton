@@ -336,14 +336,13 @@ pointer foreachObjptrInRangeWithFill (GC_state s, pointer front, pointer *back,
   assert (front <= b);
   while (front < b) {
     while (front < b) {
-      if (s->forwardState.rangeListFirst &&
-          s->forwardState.rangeListFirst->start == front) {
-        front = s->forwardState.rangeListFirst->end;
-        SkipRange* curr = s->forwardState.rangeListFirst;
-        s->forwardState.rangeListFirst = curr->next;
-        free (curr);
-        if (s->forwardState.rangeListFirst == NULL)
-          s->forwardState.rangeListLast = NULL;
+      if (s->forwardState.rangeListCurrent &&
+          s->forwardState.rangeListCurrent->start == front) {
+        if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+          fprintf (stderr, "foreachObjptrInRangeWithFill: skipping range from "FMTPTR" to "FMTPTR" [%d]\n",
+                   (uintptr_t)front, (uintptr_t)s->forwardState.rangeListCurrent->end, s->procId);
+        front = s->forwardState.rangeListCurrent->end;
+        s->forwardState.rangeListCurrent = s->forwardState.rangeListCurrent->next;
       }
       assert (isAligned ((size_t)front, GC_MODEL_MINALIGN));
       if ((DEBUG_DETAILED or s->controls->selectiveDebug))

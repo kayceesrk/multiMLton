@@ -82,7 +82,7 @@ struct
 
   fun doit' () = run(fn()=>
     let
-      val _ = dim := 500
+      val _ = dim := 50
       val a = (Array.tabulate Array.RowMajor (!dim, !dim, fn (r, c) =>
                             Real.fromInt (r + c)))
       val resMat = ref (Array.tabulate Array.RowMajor (!dim, !dim, fn(r,c) =>

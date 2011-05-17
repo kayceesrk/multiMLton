@@ -144,6 +144,7 @@ void majorCheneyCopySharedGC (GC_state s) {
     s->procStates[proc].forwardState.back = toStart;
     s->procStates[proc].forwardState.forceStackForwarding = TRUE;
 
+    assert (!s->procStates[proc].forwardState.rangeListCurrent);
     assert (!s->procStates[proc].forwardState.rangeListFirst);
     assert (!s->procStates[proc].forwardState.rangeListLast);
   }

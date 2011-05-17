@@ -122,15 +122,7 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
     if (allocChunkInSharedHeap (s, size + skip)) {
       /* A shared heap GC has been performed and the object we are forwarding
        * has been forwarded as a part of the GC. We will abort now. */
-
-      //Cleanup the range list
-      while (s->forwardState.rangeListFirst) {
-        SkipRange* next = s->forwardState.rangeListFirst->next;
-        free (s->forwardState.rangeListFirst);
-        s->forwardState.rangeListFirst = next;
-      }
-      s->forwardState.rangeListFirst = NULL;
-      s->forwardState.rangeListLast = NULL;
+      clearRangeList (s);
       jumpToReturnLocation (s);
       assert (0 and "Should not reach here\n");
     }
@@ -141,13 +133,18 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
       sr->end = s->sharedFrontier;
       sr->next = NULL;
       if (s->forwardState.rangeListLast == NULL) {
-        assert (!s->forwardState.rangeListFirst);
-        s->forwardState.rangeListFirst = s->forwardState.rangeListLast = sr;
+        assert (!s->forwardState.rangeListCurrent);
+        s->forwardState.rangeListFirst = sr;
+        s->forwardState.rangeListCurrent = sr;
+        s->forwardState.rangeListLast = sr;
       }
       else {
         s->forwardState.rangeListLast->next = sr;
         s->forwardState.rangeListLast = sr;
       }
+      if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+        fprintf (stderr, "New skip range from "FMTPTR" to "FMTPTR" [%d]\n",
+                 (uintptr_t)sr->start, (uintptr_t)sr->end, s->procId);
       s->forwardState.back = s->sharedFrontier;
     }
 
@@ -667,4 +664,15 @@ void fixFwdObjptr (GC_state s, objptr* opp) {
 objptr fixFwdObjptrAndFetch (GC_state s, objptr *opp) {
   fixFwdObjptr (s, opp);
   return *opp;
+}
+
+void clearRangeList (GC_state s) {
+  while (s->forwardState.rangeListCurrent) {
+    SkipRange* next = s->forwardState.rangeListCurrent->next;
+    free (s->forwardState.rangeListCurrent);
+    s->forwardState.rangeListCurrent = next;
+  }
+  s->forwardState.rangeListCurrent = NULL;
+  s->forwardState.rangeListLast = NULL;
+  s->forwardState.rangeListFirst = NULL;
 }

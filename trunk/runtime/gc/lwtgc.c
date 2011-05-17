@@ -141,7 +141,9 @@ void liftAllObjectsDuringInit (GC_state s) {
   s->forwardState.toStart = s->sharedFrontier;
   s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
   s->forwardState.back = toStart;
-  s->forwardState.rangeListFirst = s->forwardState.rangeListLast = NULL;
+  s->forwardState.rangeListCurrent = NULL;
+  s->forwardState.rangeListLast = NULL;
+  s->forwardState.rangeListFirst = NULL;
   s->forwardState.forceStackForwarding = FALSE;
 
   //Forward
@@ -157,8 +159,7 @@ void liftAllObjectsDuringInit (GC_state s) {
   if (DEBUG_LWTGC)
     fprintf (stderr, "liftAllObjectsDuringInit: foreachObjptrInRange\n");
   foreachObjptrInRange (s, toStart, &s->forwardState.back, liftObjptr, TRUE);
-  assert (!s->forwardState.rangeListFirst);
-  assert (!s->forwardState.rangeListLast);
+  clearRangeList (s);
 
   /* if (DEBUG_LWTGC)
      fprintf (stderr, "liftAllObjectsDuringInit: updateWeaksForCheneyCopy\n");
@@ -200,7 +201,9 @@ void moveTransitiveClosure (GC_state s, objptr* opp,
     s->forwardState.toStart = s->sharedFrontier;
     s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
     s->forwardState.back = s->forwardState.toStart;
-    s->forwardState.rangeListFirst = s->forwardState.rangeListLast = NULL;
+    s->forwardState.rangeListCurrent = NULL;
+    s->forwardState.rangeListLast = NULL;
+    s->forwardState.rangeListFirst = NULL;
     s->forwardState.amInMinorGC = TRUE;
     s->forwardState.isReturnLocationSet = TRUE;
 
@@ -230,8 +233,7 @@ void moveTransitiveClosure (GC_state s, objptr* opp,
   s->forwardState.amInMinorGC = FALSE;
   s->forwardState.forceStackForwarding = FALSE;
   s->forwardState.liftingObject = BOGUS_OBJPTR;
-  assert (!s->forwardState.rangeListFirst);
-  assert (!s->forwardState.rangeListLast);
+  clearRangeList (s);
 
   if (statValid && needGCTime (s))
     stopWallTiming (&tv_rt, &s->cumulativeStatistics->tv_rt);
@@ -332,7 +334,9 @@ void moveEachObjptrInObject (GC_state s, pointer p) {
   s->forwardState.toStart = s->sharedFrontier;
   s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
   s->forwardState.back = s->forwardState.toStart;
-  s->forwardState.rangeListFirst = s->forwardState.rangeListLast = NULL;
+  s->forwardState.rangeListCurrent = NULL;
+  s->forwardState.rangeListLast = NULL;
+  s->forwardState.rangeListFirst = NULL;
   s->forwardState.amInMinorGC = TRUE;
   s->forwardState.forceStackForwarding = FALSE;
 
@@ -341,9 +345,7 @@ void moveEachObjptrInObject (GC_state s, pointer p) {
   foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, liftObjptr, TRUE);
   s->forwardState.amInMinorGC = FALSE;
   s->forwardState.liftingObject = BOGUS_OBJPTR;
-
-  assert (!s->forwardState.rangeListFirst);
-  assert (!s->forwardState.rangeListLast);
+  clearRangeList (s);
 
   if (not s->canMinor || TRUE /* Force Major */)
     fixForwardingPointers (s, TRUE);
