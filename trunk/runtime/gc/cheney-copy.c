@@ -162,7 +162,7 @@ void majorCheneyCopySharedGC (GC_state s) {
     /* See foreachObjptrInObject():STACK for the details of skipStackToThreadTracing variable */
     skipStackToThreadTracing = TRUE;
     foreachObjptrInRangeWithFill (r, r->heap->start, &end, forwardObjptrForSharedCheneyCopy, TRUE, TRUE);
-    if (r->canMinor and r->forwardState.liftingObject != BOGUS_OBJPTR)
+    if (r->frontier > r->heap->start + r->heap->oldGenSize)
       foreachObjptrInRangeWithFill (r, r->heap->nursery, &r->frontier, forwardObjptrForSharedCheneyCopy, TRUE, TRUE);
     skipStackToThreadTracing = FALSE;
 

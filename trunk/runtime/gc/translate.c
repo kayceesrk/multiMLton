@@ -136,7 +136,7 @@ void translateSharedHeap (GC_state s, pointer from, pointer to, size_t size) {
     GC_state r = &s->procStates[proc];
     pointer end = r->heap->start + r->heap->oldGenSize;
     foreachObjptrInRange (s, r->heap->start, &end, translateObjptrShared, FALSE);
-    if (r->canMinor and r->forwardState.liftingObject != BOGUS_OBJPTR)
+    if (r->frontier > end)
       foreachObjptrInRange (s, r->heap->nursery, &r->frontier, translateObjptrShared, FALSE);
   }
   foreachObjptrInRange (s, alignFrontier (s, to), &limit, translateObjptrShared, FALSE);

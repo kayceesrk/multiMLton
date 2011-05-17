@@ -608,7 +608,7 @@ void majorMarkCompactSharedGC (GC_state s) {
     updateForwardPointersForMarkCompact (r, r->heap, alignFrontier (r, r->heap->start),
                                          r->heap->start + r->heap->oldGenSize,
                                          currentStacks, TRUE);
-    if (r->canMinor and r->forwardState.liftingObject != BOGUS_OBJPTR)
+    if (r->frontier > r->heap->start + r->heap->oldGenSize)
       updateForwardPointersForMarkCompact (r, r->heap, alignFrontier (r, r->heap->nursery),
                                            r->frontier, currentStacks, TRUE);
   }
@@ -663,7 +663,7 @@ void majorMarkCompactSharedGC (GC_state s) {
     pointer front = r->heap->start;
     pointer back = r->heap->start + r->heap->oldGenSize;
     headerCheck (r, front, back);
-    if (r->canMinor and r->forwardState.liftingObject != BOGUS_OBJPTR) {
+    if (r->frontier > back) {
       front = r->heap->nursery;
       back = r->frontier;
       headerCheck (r, front, back);

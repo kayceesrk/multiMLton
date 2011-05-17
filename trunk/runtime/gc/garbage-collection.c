@@ -228,7 +228,7 @@ void performSharedGC (GC_state s,
     //Fix forwarding pointers in local heapsA
     pointer end = s->heap->start + s->heap->oldGenSize;
     foreachObjptrInRange (s, s->heap->start, &end, fixFwdObjptr, TRUE);
-    if (s->canMinor)
+    if (s->frontier > end)
       foreachObjptrInRange (s, s->heap->nursery, &s->frontier, fixFwdObjptr, TRUE);
     //Fix forwarding pointers in forwarded range
     s->forwardState.rangeListCurrent = s->forwardState.rangeListFirst;
@@ -343,9 +343,7 @@ void performSharedGC (GC_state s,
         assert (newSize >= s->sharedHeap->oldGenSize);
         resizeHeap (s, s->sharedHeap, newSize);
       }
-      s->controls->selectiveDebug = TRUE;
       majorMarkCompactSharedGC (s);
-      s->controls->selectiveDebug = FALSE;
     }
 
     s->lastSharedMajorStatistics->bytesLive = s->sharedHeap->oldGenSize;
