@@ -65,10 +65,11 @@ void threadInternalObjptrIfInLocalHeap (GC_state s, objptr *opp) {
   pointer p = objptrToPointer (*opp, s->heap->start);
   if (isPointerInHeap (s, s->heap, p))
     threadInternalObjptr (s, opp);
-  else if ((DEBUG_MARK_COMPACT or s->controls->selectiveDebug))
-    fprintf (stderr,
-             "threadInternalObjptrIfInLocalHeap skipped. opp="FMTPTR" p="FMTPTR"\n",
+  else {
+    if ((DEBUG_MARK_COMPACT or s->controls->selectiveDebug))
+      fprintf (stderr, "threadInternalObjptrIfInLocalHeap skipped. opp="FMTPTR" p="FMTPTR"\n",
              (uintptr_t)opp, (uintptr_t)p);
+  }
 }
 
 void threadInternalObjptrIfInSharedHeap (GC_state s, objptr *opp) {
@@ -76,10 +77,11 @@ void threadInternalObjptrIfInSharedHeap (GC_state s, objptr *opp) {
   pointer p = objptrToPointer (*opp, s->sharedHeap->start);
   if (isPointerInHeap (s, s->sharedHeap, p))
     threadInternalObjptr (s, opp);
-  else if ((DEBUG_MARK_COMPACT or s->controls->selectiveDebug))
-    fprintf (stderr,
-             "threadInternalObjptrIfInSharedHeap skipped. opp="FMTPTR" p="FMTPTR"\n",
+  else {
+    if ((DEBUG_MARK_COMPACT or s->controls->selectiveDebug))
+      fprintf (stderr, "threadInternalObjptrIfInSharedHeap skipped. opp="FMTPTR" p="FMTPTR"\n",
              (uintptr_t)opp, (uintptr_t)p);
+  }
 }
 
 /* If the object pointer is valid, and points to an unmarked object,

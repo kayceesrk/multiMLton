@@ -80,35 +80,42 @@ void translateHeap (GC_state s, pointer from, pointer to, size_t size) {
 }
 
 void translateObjptrShared (GC_state s, objptr* opp) {
-  pointer p = objptrToPointer (*opp, s->sharedHeap->start);
-  pointer oldP = p;
+  pointer p;
+  bool done;
+  do {
+    done = TRUE;
+    p = objptrToPointer (*opp, s->sharedHeap->start);
+    pointer oldP = p;
 
-  if ((DEBUG_DETAILED or s->controls->selectiveDebug) || DEBUG_TRANSLATE)
-    fprintf (stderr, "translateObjptrShared(1) "FMTPTR"\n", (uintptr_t)p);
-  //Only translate the pointers that are in the fromSpace
-  if (p >= s->translateState.from and
+    if ((DEBUG_DETAILED or s->controls->selectiveDebug) || DEBUG_TRANSLATE)
+      fprintf (stderr, "translateObjptrShared(1) "FMTPTR"\n", (uintptr_t)p);
+    //Only translate the pointers that are in the fromSpace
+    if (p >= s->translateState.from and
         p < (s->translateState.from + s->translateState.size)) {
-    p = (p - s->translateState.from) + s->translateState.to;
-    *opp = pointerToObjptr (p, s->translateState.to);
-
-    if ((DEBUG_DETAILED or s->controls->selectiveDebug) or DEBUG_TRANSLATE)
-      fprintf (stderr, "translateObjptrShared(2): old="FMTPTR" new="FMTPTR"\n",
-                (uintptr_t)oldP, (uintptr_t)p);
-  }
-
+      p = (p - s->translateState.from) + s->translateState.to;
+      *opp = pointerToObjptr (p, s->translateState.to);
+      if ((DEBUG_DETAILED or s->controls->selectiveDebug) or DEBUG_TRANSLATE)
+        fprintf (stderr, "translateObjptrShared(2): old="FMTPTR" new="FMTPTR"\n",
+                 (uintptr_t)oldP, (uintptr_t)p);
+    }
+    if (getHeader (p) == GC_FORWARDED) {
+      if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+        fprintf (stderr, "translateObjptrShared saw forwarded pointer "FMTPTR"\n",
+                 (uintptr_t)p);
+      done = FALSE;
+      *opp = *(objptr*)p;
+    }
+  } while (not done);
 
   GC_header header = getHeader (p);
-  if (not (header == GC_FORWARDED)) {
-    GC_objectTypeTag tag;
-    splitHeader (s, header, getHeaderp (p), &tag, NULL, NULL, NULL);
-    if (tag == STACK_TAG) {
-      GC_stack stack = (GC_stack)p;
-      if (DEBUG_TRANSLATE)
-        fprintf (stderr, "translateObjptrShared: Remapping stack->thread objptr. \
-                 stack="FMTPTR" thread="FMTOBJPTR"\n",
-                 (uintptr_t)stack, stack->thread);
-      translateObjptrShared (s, &stack->thread);
-    }
+  GC_objectTypeTag tag;
+  splitHeader (s, header, getHeaderp (p), &tag, NULL, NULL, NULL);
+  if (tag == STACK_TAG) {
+    GC_stack stack = (GC_stack)p;
+    if (DEBUG_TRANSLATE)
+      fprintf (stderr, "translateObjptrShared: Remapping stack->thread objptr. stack="FMTPTR" thread="FMTOBJPTR"\n",
+               (uintptr_t)stack, stack->thread);
+    translateObjptrShared (s, &stack->thread);
   }
 }
 

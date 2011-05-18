@@ -263,8 +263,11 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
                  (uintptr_t)&stack->thread, (uintptr_t)stack->thread);
       callIfIsObjptr (s, f, (objptr*)&(stack->thread));
     }
-    else if ((DEBUG_DETAILED or s->controls->selectiveDebug)) {
-      fprintf (stderr, "  skipping &stack->thread="FMTPTR"\n", (uintptr_t)&stack->thread);
+    else {
+      if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+        fprintf (stderr, "  skipping &stack->thread="FMTPTR"\n", (uintptr_t)&stack->thread);
+      if (!isObjptrInHeap (s, s->heap, stack->thread))
+        stack->thread = BOGUS_OBJPTR;
     }
 
     if ((DEBUG_DETAILED or s->controls->selectiveDebug)) {

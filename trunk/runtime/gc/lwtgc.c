@@ -34,8 +34,9 @@ static inline void liftObjptr (GC_state s, objptr *opp) {
                (uintptr_t)new_p, (uintptr_t)new_headerp, new_header, new_header | LIFT_MASK);
     *new_headerp = new_header | LIFT_MASK;
   }
-  else if (DEBUG_LWTGC) {
-    fprintf (stderr, "\t pointer "FMTPTR" was not lifted\n", (uintptr_t)new_p);
+  else {
+    if (DEBUG_LWTGC)
+      fprintf (stderr, "\t pointer "FMTPTR" was not lifted\n", (uintptr_t)new_p);
   }
 }
 
