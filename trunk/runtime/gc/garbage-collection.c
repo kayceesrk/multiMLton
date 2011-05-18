@@ -495,14 +495,14 @@ size_t fillGap (__attribute__ ((unused)) GC_state s, pointer start, pointer end)
     return 0;
   }
 
-  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+  if (DEBUG_DETAILED)
     fprintf (stderr, "[GC: Filling gap between "FMTPTR" and "FMTPTR" (size = %zu).]\n",
              (uintptr_t)start, (uintptr_t)end, diff);
 
   if (start) {
     /* See note in the array case of foreach.c (line 103) */
     if (diff >= GC_ARRAY_HEADER_SIZE + OBJPTR_SIZE) {
-      if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+      if (DEBUG_DETAILED)
           fprintf (stderr, "[GC: Filling gap with GC_ARRAY]\n");
       assert (diff >= GC_ARRAY_HEADER_SIZE);
       /* Counter */
@@ -568,7 +568,7 @@ static bool allocChunkInSharedHeap (GC_state s,
 
     /* See if the mutator frontier invariant is already true */
     if (bytesRequested <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier)) {
-      if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+      if (DEBUG_DETAILED)
         fprintf (stderr, "[GC: aborting shared alloc: satisfied.] [%d]\n", s->procId);
       return FALSE;
     }
@@ -650,7 +650,7 @@ static void maybeSatisfyAllocationRequestLocally (GC_state s,
     /* See if the mutator frontier invariant is already true */
     assert (s->limitPlusSlop >= s->frontier);
     if (nurseryBytesRequested <= (size_t)(s->limitPlusSlop - s->frontier)) {
-      if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+      if (DEBUG_DETAILED)
         fprintf (stderr, "[GC: aborting local alloc: satisfied.]\n");
       return;
     }
