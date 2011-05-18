@@ -161,13 +161,6 @@ void liftAllObjectsDuringInit (GC_state s) {
   foreachObjptrInRange (s, toStart, &s->forwardState.back, liftObjptr, TRUE);
   clearRangeList (s);
 
-  /* if (DEBUG_LWTGC)
-     fprintf (stderr, "liftAllObjectsDuringInit: updateWeaksForCheneyCopy\n");
-     updateWeaksForCheneyCopy (s);
-     if (DEBUG_LWTGC)
-     fprintf (stderr, "liftAllObjectsDuringInit: resizeHeap\n");
-     resizeHeap (s, s->heap->oldGenSize); */
-
   //Check
   if (DEBUG_LWTGC) {
     fprintf (stderr, "liftAllObjectsDuringInit: check(1)\n");

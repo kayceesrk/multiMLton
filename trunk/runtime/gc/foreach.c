@@ -259,7 +259,8 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
      * details. */
     if (!skipStackToThreadTracing) {
       if ((DEBUG_DETAILED or s->controls->selectiveDebug))
-        fprintf (stderr, "  &stack->thread="FMTPTR"\n", (uintptr_t)&stack->thread);
+        fprintf (stderr, "  &stack->thread="FMTPTR" stack->thread="FMTPTR"\n",
+                 (uintptr_t)&stack->thread, (uintptr_t)stack->thread);
       callIfIsObjptr (s, f, (objptr*)&(stack->thread));
     }
     else if ((DEBUG_DETAILED or s->controls->selectiveDebug)) {
