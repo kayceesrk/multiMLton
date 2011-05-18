@@ -313,7 +313,7 @@ void performSharedGC (GC_state s,
       GC_state r = &s->procStates[proc];
       objptr liftOp = r->forwardState.liftingObject;
       if (liftOp != BOGUS_OBJPTR)
-        maxBytes += GC_size (r, objptrToPointer (liftOp, r->heap->start));
+        maxBytes += estimateSizeForLifting (r, objptrToPointer (liftOp, r->heap->start));
     }
 
     /* We are being optimistic with desired size since maxBytes is an

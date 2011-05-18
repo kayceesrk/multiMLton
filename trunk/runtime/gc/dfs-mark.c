@@ -44,7 +44,8 @@ size_t dfsMarkByMode (GC_state s, pointer root,
                       GC_markMode mode,
                       bool shouldHashCons,
                       bool shouldLinkWeaks,
-                      bool ignoreSharedHeap) {
+                      bool ignoreSharedHeap,
+                      bool sizeEstimationForLifting) {
   GC_header mark; /* Used to set or clear the mark bit. */
   size_t size; /* Total number of bytes marked. */
   pointer cur; /* The current object being marked. */
@@ -140,10 +141,10 @@ mark:
   *headerp = header;
   splitHeader (s, header, headerp, &tag, NULL, &bytesNonObjptrs, &numObjptrs);
   if (NORMAL_TAG == tag) {
-    size +=
-      GC_NORMAL_HEADER_SIZE
-      + bytesNonObjptrs
-      + (numObjptrs * OBJPTR_SIZE);
+    if ((not sizeEstimationForLifting) ||
+        (not isPointerInHeap (s, s->sharedHeap, cur))) {
+      size += GC_NORMAL_HEADER_SIZE + bytesNonObjptrs + (numObjptrs * OBJPTR_SIZE);
+    }
     if (0 == numObjptrs) {
       /* There is nothing to mark. */
 normalDone:
@@ -209,9 +210,12 @@ markNextInNormal:
      *     (i.e. the i'th pointer is at index i).
      *   todo is the start of the element.
      */
-    size +=
-      GC_ARRAY_HEADER_SIZE
-      + sizeofArrayNoHeader (s, getArrayLength (cur), bytesNonObjptrs, numObjptrs);
+
+    if ((not sizeEstimationForLifting) ||
+        (not isPointerInHeap (s, s->sharedHeap, cur))) {
+      size += GC_ARRAY_HEADER_SIZE +
+        sizeofArrayNoHeader (s, getArrayLength (cur), bytesNonObjptrs, numObjptrs);
+    }
     if (0 == numObjptrs or 0 == getArrayLength (cur)) {
       /* There is nothing to mark. */
 arrayDone:
@@ -267,9 +271,13 @@ markNextInArray:
     goto markNext;
   } else {
     assert (STACK_TAG == tag);
-    size +=
-      GC_STACK_HEADER_SIZE
-      + sizeof (struct GC_stack) + ((GC_stack)cur)->reserved;
+
+    if ((not sizeEstimationForLifting) ||
+        ((not isPointerInHeap (s, s->sharedHeap, cur))
+         && ((GC_stack)cur)->isParasitic)) {
+      size += GC_STACK_HEADER_SIZE +
+        sizeof (struct GC_stack) + ((GC_stack)cur)->reserved;
+    }
     top = getStackTop (s, (GC_stack)cur);
     assert (((GC_stack)cur)->used <= ((GC_stack)cur)->reserved);
 markInStack:
@@ -301,7 +309,8 @@ markInFrame:
                frameOffsets [objptrIndex + 1],
                (uintptr_t)todo, (uintptr_t)next);
     if ((not isPointer (next)) or
-        (ignoreSharedHeap and isPointerInHeap (s, s->sharedHeap, next))) {
+        (ignoreSharedHeap and isPointerInHeap (s, s->sharedHeap, next)) or
+        (sizeEstimationForLifting and (not ((GC_stack)cur)->isParasitic))) {
       objptrIndex++;
       goto markInFrame;
     }
@@ -385,14 +394,14 @@ void dfsMarkWithHashConsWithLinkWeaks (GC_state s, objptr *opp) {
   pointer p;
   fixFwdObjptr (s, opp);
   p = objptrToPointer (*opp, s->heap->start);
-  dfsMarkByMode (s, p, MARK_MODE, TRUE, TRUE, TRUE);
+  dfsMarkByMode (s, p, MARK_MODE, TRUE, TRUE, TRUE, FALSE);
 }
 
 void dfsMarkWithoutHashConsWithLinkWeaks (GC_state s, objptr *opp) {
   pointer p;
   fixFwdObjptr (s, opp);
   p = objptrToPointer (*opp, s->heap->start);
-  dfsMarkByMode (s, p, MARK_MODE, FALSE, TRUE, TRUE);
+  dfsMarkByMode (s, p, MARK_MODE, FALSE, TRUE, TRUE, FALSE);
 }
 
 //Similar to dfsMarkWithoutHashConsWithLinkWeaksTraceShared
@@ -400,7 +409,7 @@ void dfsMarkTraceShared (GC_state s, objptr *opp) {
   pointer p;
   fixFwdObjptr (s, opp);
   p = objptrToPointer (*opp, s->heap->start);
-  dfsMarkByMode (s, p, MARK_MODE, FALSE, TRUE, FALSE);
+  dfsMarkByMode (s, p, MARK_MODE, FALSE, TRUE, FALSE, FALSE);
 }
 
 
@@ -408,5 +417,5 @@ void dfsUnmark (GC_state s, objptr *opp) {
   pointer p;
 
   p = objptrToPointer (*opp, s->heap->start);
-  dfsMarkByMode (s, p, UNMARK_MODE, FALSE, FALSE, TRUE);
+  dfsMarkByMode (s, p, UNMARK_MODE, FALSE, FALSE, TRUE, FALSE);
 }
