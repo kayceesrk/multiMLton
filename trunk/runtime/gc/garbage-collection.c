@@ -326,7 +326,8 @@ void performSharedGC (GC_state s,
       fprintf (stderr, "performSharedGC: desiredSize=%s maxBytes=%s\n",
                uintmaxToCommaString (desiredSize),
                uintmaxToCommaString (maxBytes));
-    resizeSharedHeapSecondary (s, desiredSize);
+    if (desiredSize > s->secondarySharedHeap->size)
+      resizeSharedHeapSecondary (s, desiredSize);
     if (not FORCE_MARK_COMPACT
         and (s->secondarySharedHeap->size != 0
              or createSharedHeapSecondary (s, desiredSize)))
