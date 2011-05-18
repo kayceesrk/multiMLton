@@ -98,7 +98,7 @@ void translateObjptrShared (GC_state s, objptr* opp) {
 
 
   GC_header header = getHeader (p);
-  if (not header == GC_FORWARDED) {
+  if (not (header == GC_FORWARDED)) {
     GC_objectTypeTag tag;
     splitHeader (s, header, getHeaderp (p), &tag, NULL, NULL, NULL);
     if (tag == STACK_TAG) {
