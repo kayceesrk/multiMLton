@@ -524,10 +524,7 @@ static inline void forwardObjptrForSharedCheneyCopy (GC_state s, objptr *opp) {
       //If the pointer from toSpace to local heap is a stack and it is not
       //parasitic, add a dangling pointer.
       GC_stack stk = (GC_stack)p;
-      pointer thread = objptrToPointer (stk->thread, r->heap->start);
-      if (getHeader (thread) == GC_FORWARDED) {
-        stk->thread = *(objptr*)thread;
-      }
+      stk->thread = (objptr)((uintptr_t)opp - (uintptr_t)offsetof (struct GC_thread, stack));
       assert (isObjptrInToSpace (s, stk->thread));
 
       if ((DEBUG_DETAILED or s->controls->selectiveDebug))
