@@ -12,7 +12,7 @@ struct
   val numComputeProcessors = numberOfProcessors - numIOProcessors
   val processorNumber = _import "Parallel_processorNumber": unit -> Int32.int;
   val vCompareAndSwap = _import "Parallel_vCompareAndSwap": Int32.int ref * Int32.int * Int32.int -> Int32.int;
-  val wait =  _import "Parallel_wait": unit -> unit;
+  val wait = _import "Parallel_wait": unit -> unit;
   val wakeUp = _import "Parallel_wakeUpThread": Int32.int * Int32.int -> unit;
 
 end

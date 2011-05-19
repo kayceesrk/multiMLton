@@ -10,8 +10,7 @@ struct
   fun debug msg = Debug.sayDebug ([atomicMsg, ThreadID.tidMsg], msg)
   fun debug' msg = debug (fn () => msg^" : " ^Int.toString(PacmlFFI.processorNumber()))
 
-
-  type proc = ((unit -> exn) * exn chan) chan
+  type proc = ((unit -> exn) * exn chan option) chan
 
   val inputChan : ((unit -> exn) * exn chan option) chan = channel ()
 
@@ -41,9 +40,10 @@ struct
                   then myDedicatedChan
                   else inputChan
       val (f, outputChan) = recv (iChan)
-      val _ = debug' "NB.mainLoop : got task. Executing..."
-      val res = f () handle x =>  x
-      val _ = send (outputChan, res)
+      val res = f () handle x => (debug' "got exception";x)
+      val _ = case outputChan of
+                   SOME c => send (c, res)
+                 | NONE => ()
     in
       loop ()
     end
@@ -104,8 +104,6 @@ struct
   let
     val _ = if numIOProcessors = 0 then raise Fail "NonBlocking.execute : no io-threads" else ()
     val myChannelIdx = fetchAndAdd (numDedicated, 1)
-    val _ = debug' ("Channel Index: " ^ Int.toString(myChannelIdx))
-    val _ = debug' ("processor: "^ Int.toString(numComputeProcessors + myChannelIdx))
   in
     if myChannelIdx < numIOProcessors then
       (ignore (List.tabulate (5, fn _ => Thread.spawnOnProc (main, numComputeProcessors + myChannelIdx)));

@@ -134,8 +134,6 @@ struct
           val () = ignore (Thread.spawnHost (fn ()=> (lateInit ();initialProc ())))
           val handler = MLtonSignal.Handler.handler (S.unwrap alrmHandler Thread.reifyHostFromParasite)
           val () = installAlrmHandler handler
-          (* Spawn the Non-blocking worker threads *)
-          (*val _ = List.tabulate (numIOThreads * 5, fn _ => NonBlocking.mkNBThread ())*)
         in
             ()
         end)
