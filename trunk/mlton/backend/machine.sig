@@ -9,12 +9,12 @@
 type int = Int.t
 type word = Word.t
 
-signature MACHINE_STRUCTS = 
+signature MACHINE_STRUCTS =
    sig
       include ATOMS
    end
 
-signature MACHINE = 
+signature MACHINE =
    sig
       include MACHINE_STRUCTS
 
@@ -82,6 +82,8 @@ signature MACHINE =
              | Cast of t * Type.t
              | Contents of {oper: t,
                             ty: Type.t}
+             | Object of {header: word,
+                          size: Bytes.t}
              | File (* expanded by codegen into string constant *)
              | Frontier
              | GCState

@@ -703,6 +703,8 @@ fun output {program as Machine.Program.T {chunks,
              | Label l => labelToStringIndex l
              | Line => "__LINE__"
              | Null => "NULL"
+             | Object {header, size} =>
+                 concat ["OBJ", C.args [C.word header, C.bytes size]]
              | Offset {base, offset, ty} =>
                   concat ["O", C.args [Type.toC ty,
                                        toString base,

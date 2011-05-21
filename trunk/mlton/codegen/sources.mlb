@@ -7,13 +7,13 @@
  *)
 
 local
-   amd64-codegen/sources.mlb
    c-codegen/sources.mlb
+   (* amd64-codegen/sources.mlb
    bytecode/sources.mlb
-   x86-codegen/sources.mlb
+   x86-codegen/sources.mlb *)
 in
-   functor amd64Codegen
-   functor Bytecode
    functor CCodegen
-   functor x86Codegen
+   (* functor amd64Codegen
+   functor Bytecode
+   functor x86Codegen *)
 end
