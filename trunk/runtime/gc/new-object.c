@@ -6,16 +6,16 @@
  * See the file MLton-LICENSE for details.
  */
 
-/* newObject (s, header, bytesRequested, allocInOldGen)
+/* GC_newObject (s, header, bytesRequested, allocInOldGen)
  *
  * Allocate a new object in the heap->
  * bytesRequested includes the size of the header.
  */
 /* XXX DOC spoons must hold the runtime lock if allocInOldGen is true! */
-pointer newObject (GC_state s,
-                   GC_header header,
-                   size_t bytesRequested,
-                   bool allocInOldGen) {
+pointer GC_newObject (GC_state s,
+                      GC_header header,
+                      size_t bytesRequested,
+                      bool allocInOldGen) {
   pointer frontier;
   pointer result;
 
@@ -40,7 +40,7 @@ pointer newObject (GC_state s,
   result = frontier + GC_NORMAL_HEADER_SIZE;
   assert (isAligned ((size_t)result, s->alignment));
   if (DEBUG)
-    fprintf (stderr, FMTPTR " = newObject ("FMTHDR", %"PRIuMAX", %s)\n",
+    fprintf (stderr, FMTPTR " = GC_newObject ("FMTHDR", %"PRIuMAX", %s)\n",
              (uintptr_t)result,
              header,
              (uintmax_t)bytesRequested,
@@ -57,7 +57,7 @@ GC_stack newStack (GC_state s,
   /* XXX unsafe concurrent access */
   if (reserved > s->cumulativeStatistics->maxStackSize)
     s->cumulativeStatistics->maxStackSize = reserved;
-  stack = (GC_stack)(newObject (s, GC_STACK_HEADER,
+  stack = (GC_stack)(GC_newObject (s, GC_STACK_HEADER,
                                 sizeofStackWithHeader (s, reserved),
                                 allocInOldGen));
   stack->reserved = reserved;
@@ -77,7 +77,7 @@ GC_thread newThread (GC_state s, size_t reserved) {
   assert (isStackReservedAligned (s, reserved));
   ensureHasHeapBytesFreeAndOrInvariantForMutator (s, FALSE, FALSE, FALSE, 0, sizeofStackWithHeader (s, alignStackReserved (s, reserved)) + sizeofThread (s), FALSE, FALSE);
   stack = newStack (s, reserved, FALSE);
-  res = newObject (s, GC_THREAD_HEADER,
+  res = GC_newObject (s, GC_THREAD_HEADER,
                    sizeofThread (s),
                    FALSE);
   thread = (GC_thread)(res + offsetofThread (s));

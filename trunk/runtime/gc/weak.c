@@ -59,7 +59,7 @@ pointer GC_weakNew (GC_state s, GC_header header, pointer p) {
   GC_weak weak;
   pointer res;
 
-  res = newObject (s, header,
+  res = GC_newObject (s, header,
                    sizeofWeak (s),
                    FALSE);
   weak = (GC_weak)(res + offsetofWeak (s));

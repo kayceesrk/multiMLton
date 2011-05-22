@@ -394,27 +394,19 @@ structure Statement =
          (Vector.fold2 (srcs, dsts, [], fn (src, dst, ac)  =>
                         move {src = src, dst = dst} :: ac))
 
-      (* This needs to be modified to call into allocation function *)
-      fun object {dst, header, size} =
-         let
-            datatype z = datatype Operand.t
-            fun bytes (b: Bytes.t): Operand.t =
-               Word (WordX.fromIntInf (Bytes.toIntInf b, WordSize.csize ()))
-         in
-            Vector.new3
-            (Move {dst = Contents {oper = Frontier,
-                                   ty = Type.objptrHeader ()},
-                   src = Word (WordX.fromIntInf (Word.toIntInf header,
-                                                 WordSize.objptrHeader ()))},
-             (* CHECK; if objptr <> cpointer, need coercion here. *)
-             PrimApp {args = Vector.new2 (Frontier,
-                                          bytes (Runtime.headerSize ())),
-                      dst = SOME dst,
-                      prim = Prim.cpointerAdd},
-             PrimApp {args = Vector.new2 (Frontier, bytes size),
-                      dst = SOME Frontier,
-                      prim = Prim.cpointerAdd})
-         end
+     fun object {dst, header, size} =
+     let
+       datatype z = datatype Operand.t
+       fun bytes (b: Bytes.t): Operand.t =
+         Word (WordX.fromIntInf (Bytes.toIntInf b, WordSize.csize ()))
+     in
+       Vector.new2
+       (Move {dst = dst,
+              src = Object {header = header, size = size}},
+        PrimApp {args = Vector.new2 (Frontier, bytes size),
+                 dst = SOME Frontier,
+                 prim = Prim.cpointerAdd})
+     end
 
       fun foldOperands (s, ac, f) =
          case s of
