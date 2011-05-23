@@ -10,6 +10,7 @@
 #define _MLTON_GC_H_
 
 #include "platform.h"
+#include "gc.h"
 
 struct GC_state;
 typedef struct GC_state *GC_state;
@@ -24,7 +25,6 @@ typedef GC_state GCState_t;
 #endif
 
 #include "gc/debug.h"
-
 #include "gc/align.h"
 #include "gc/model.h"
 #include "gc/pointer.h"

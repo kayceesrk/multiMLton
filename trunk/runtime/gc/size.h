@@ -8,6 +8,6 @@
 
 #if (defined (MLTON_GC_INTERNAL_BASIS))
 
-PRIVATE size_t GC_size (GC_state s, pointer root);
+PRIVATE size_t GC_sizeOfObject (GC_state s, pointer root);
 
 #endif /* (defined (MLTON_GC_INTERNAL_BASIS)) */

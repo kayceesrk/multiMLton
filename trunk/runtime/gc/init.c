@@ -77,7 +77,7 @@ bad:
 }
 
 /* ---------------------------------------------------------------- */
-/*                             GC_init                              */
+/*                             GC_initialize                              */
 /* ---------------------------------------------------------------- */
 
 int processAtMLton (GC_state s, int argc, char **argv,
@@ -308,7 +308,7 @@ int processAtMLton (GC_state s, int argc, char **argv,
   return i;
 }
 
-int GC_init (GC_state s, int argc, char **argv) {
+int GC_initialize (GC_state s, int argc, char **argv) {
   int res;
 
   assert (s->alignment >= GC_MODEL_MINALIGN);
@@ -491,7 +491,7 @@ void GC_lateInit (GC_state s) {
 }
 
 void GC_duplicate (GC_state d, GC_state s) {
-  // GC_init
+  // GC_initialize
   d->amInGC = s->amInGC;
   d->amOriginal = s->amOriginal;
   d->atomicState = 0;

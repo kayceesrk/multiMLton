@@ -8,7 +8,7 @@
 
 #if (defined (MLTON_GC_INTERNAL_TYPES))
 
-/* GC_init uses the array of struct intInfInits in s at program start
+/* GC_initialize uses the array of struct intInfInits in s at program start
  * to allocate intInfs.
  * The globalIndex'th entry of the globals array in s is set to the
  * IntInf.int whose value corresponds to the mlstr string.
@@ -24,7 +24,7 @@ struct GC_intInfInit {
   const char *mlstr;
 };
 
-/* GC_init allocates a collection of arrays/vectors in the heap. */
+/* GC_initialize allocates a collection of arrays/vectors in the heap. */
 struct GC_vectorInit {
   pointer bytes;
   size_t bytesPerElement;

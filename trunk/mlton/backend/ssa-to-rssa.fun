@@ -314,7 +314,7 @@ structure CFunction =
             readsStackTop = true,
             return = Type.csize (),
             symbolScope = Private,
-            target = Direct "GC_size",
+            target = Direct "GC_sizeOfObject",
             writesStackTop = true}
    end
 

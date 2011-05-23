@@ -81,7 +81,7 @@ struct GC_state {
   struct GC_sourceMaps sourceMaps;
   pointer stackBottom; /* Bottom of stack in current thread. */
   pointer start; /* Like heap->nursery but per processor.  nursery <= start <= frontier */
-  uintmax_t startTime; /* The time when GC_init or GC_loadWorld was called. */
+  uintmax_t startTime; /* The time when GC_initialize or GC_loadWorld was called. */
   int32_t copiedSize;
   int32_t syncReason;
   struct GC_sysvals sysvals;

@@ -143,7 +143,7 @@ FLAGS += -funroll-all-loops
 endif
 
 CPPFLAGS :=
-CFLAGS := -I. -Iplatform $(FLAGS)
+CFLAGS := -I. -Iplatform $(FLAGS) -I../bdwgc/include
 OPTCFLAGS := $(CFLAGS) $(CPPFLAGS) $(OPTFLAGS)
 DEBUGCFLAGS := $(CFLAGS) $(CPPFLAGS) -DASSERT=1 $(DEBUGFLAGS)
 PICCFLAGS := $(CFLAGS) $(CPPFLAGS) $(OPTFLAGS) $(PICFLAGS)
@@ -214,6 +214,9 @@ PLATFORMHFILES :=						\
 	platform.h						\
 	$(shell find platform -type f | grep '\.h$$')
 
+BDWGCHFILES :=	\
+	../bdwgc/include/gc.h
+
 GCHFILES :=							\
 	mlton-gc.h							\
 	$(shell find gc -type f | grep '\.h$$')
@@ -235,6 +238,7 @@ HFILES :=							\
 	cenv.h							\
 	$(UTILHFILES)						\
 	$(PLATFORMHFILES)					\
+	$(BDWGCHFILES)	\
 	$(GCHFILES)						\
 	$(BASISHFILES)
 
@@ -242,17 +246,20 @@ OBJS := 							\
 	util.o							\
 	mlton-gc.o							\
 	platform.o						\
-	platform/$(TARGET_OS).o
+	platform/$(TARGET_OS).o \
+	../bdwgc/install/lib/libgc.a
 DEBUG_OBJS := 							\
 	util-gdb.o						\
 	gc-gdb.o						\
 	platform-gdb.o						\
-	platform/$(TARGET_OS)-gdb.o
+	platform/$(TARGET_OS)-gdb.o \
+	../bdwgc/install/lib/libgc.a
 PIC_OBJS := 							\
 	util-pic.o						\
 	gc-pic.o						\
 	platform-pic.o						\
-	platform/$(TARGET_OS)-pic.o
+	platform/$(TARGET_OS)-pic.o \
+	../bdwgc/install/lib/libgc.a
 
 OMIT_BYTECODE := yes
 ifeq ($(OMIT_BYTECODE), yes)
