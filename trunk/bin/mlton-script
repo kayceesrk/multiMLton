@@ -86,6 +86,8 @@ doit "$lib" \
         -cc-opt-quote "-I$lib/include"                           \
         -cc-opt '-O1 -fno-common'                                \
         -cc-opt '-fno-strict-aliasing -fomit-frame-pointer -w'   \
+				-cc-opt '-I../../bdwgc/include'													 \
+				-link-opt '-I../../bdwgc/lib'														 \
         -link-opt '-lm -lgmp'                                    \
         -mlb-path-map "$lib/mlb-path-map"                        \
         -target-as-opt amd64 '-m64'                              \

@@ -10,6 +10,9 @@
 #define _MLTON_GC_H_
 
 #include "platform.h"
+
+/* For BDWGC */
+#define GC_THREADS
 #include "gc.h"
 
 struct GC_state;

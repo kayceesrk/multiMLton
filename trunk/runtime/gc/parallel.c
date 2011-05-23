@@ -1,4 +1,6 @@
 
+#define GC_THREADS //For BDWGC
+
 #include <pthread.h>
 #include <time.h>
 #include "platform.h"

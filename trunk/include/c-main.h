@@ -9,6 +9,8 @@
 #ifndef _C_MAIN_H_
 #define _C_MAIN_H_
 
+#define GC_THREADS //For BDWGC
+
 #include "common-main.h"
 #include "c-common.h"
 

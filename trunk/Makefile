@@ -298,11 +298,13 @@ runtime:
 	if [ -r runtime/bytecode/opcodes ] ; then $(CP) runtime/bytecode/opcodes "$(LIB)/"; fi
 	$(CP) runtime/*.h "$(INC)/"
 	$(CP) runtime/plpa/*.h "$(INC)/"
+	$(CP) runtime/bdwgc/install/include/*.h "$(INC)/"
 	mv "$(INC)/c-types.h" "$(LIB)/$(TARGET)/include"
 	for d in basis basis/Real basis/Word gc platform util; do	\
 		mkdir -p "$(INC)/$$d";					\
 		$(CP) runtime/$$d/*.h "$(INC)/$$d";			\
 	done
+	$(CP) runtime/bdwgc/install/include/gc/*.h "$(INC)/gc/"
 	$(CP) runtime/bytecode/interpret.h "$(INC)"
 	for x in "$(LIB)"/"$(TARGET)"/*.a; do $(RANLIB) "$$x"; done
 

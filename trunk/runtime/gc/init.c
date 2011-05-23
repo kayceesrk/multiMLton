@@ -322,7 +322,7 @@ int GC_initialize (GC_state s, int argc, char **argv) {
   s->amOriginal = TRUE;
   s->atomicState = 0;
   s->callFromCHandlerThread = BOGUS_OBJPTR;
-  s->controls = (struct GC_controls *) malloc (sizeof (struct GC_controls));
+  s->controls = (struct GC_controls *) GC_MALLOC (sizeof (struct GC_controls));
   s->controls->fixedHeap = 0;
   s->controls->maxHeap = 0;
   s->controls->mayLoadWorld = TRUE;

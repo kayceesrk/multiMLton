@@ -8,14 +8,14 @@
 
 Group
 
-functor amd64Codegen
-functor Bytecode
 functor CCodegen
-functor x86Codegen
+(* functor amd64Codegen
+functor Bytecode
+functor x86Codegen *)
 
 is
 
 c-codegen/sources.cm
-bytecode/sources.cm
+(* bytecode/sources.cm
 x86-codegen/sources.cm
-amd64-codegen/sources.cm
+amd64-codegen/sources.cm *)
