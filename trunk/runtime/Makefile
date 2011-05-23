@@ -215,7 +215,7 @@ PLATFORMHFILES :=						\
 	$(shell find platform -type f | grep '\.h$$')
 
 GCHFILES :=							\
-	gc.h							\
+	mlton-gc.h							\
 	$(shell find gc -type f | grep '\.h$$')
 GCCFILES :=							\
 	$(shell find gc -type f | grep '\.c$$')
@@ -240,7 +240,7 @@ HFILES :=							\
 
 OBJS := 							\
 	util.o							\
-	gc.o							\
+	mlton-gc.o							\
 	platform.o						\
 	platform/$(TARGET_OS).o
 DEBUG_OBJS := 							\
@@ -392,13 +392,13 @@ util-gdb.o: util.c $(UTILCFILES) cenv.h $(UTILHFILES)
 util.o: util.c $(UTILCFILES) cenv.h $(UTILHFILES)
 	$(CC) $(OPTCFLAGS) $(OPTWARNCFLAGS) -c -o $@ $<
 
-gc-pic.o: gc.c $(GCCFILES) $(HFILES)
+mlton-gc-pic.o: mlton-gc.c $(GCCFILES) $(HFILES)
 	$(CC) $(PICCFLAGS) $(GCPICCFLAGS) $(PICWARNCFLAGS) -c -o $@ $<
 
-gc-gdb.o: gc.c $(GCCFILES) $(HFILES)
+mlton-gc-gdb.o: mlton-gc.c $(GCCFILES) $(HFILES)
 	$(CC) $(DEBUGCFLAGS) $(GCDEBUGCFLAGS) $(DEBUGWARNCFLAGS) -c -o $@ $<
 
-gc.o: gc.c $(GCCFILES) $(HFILES)
+mlton-gc.o: mlton-gc.c $(GCCFILES) $(HFILES)
 	$(CC) $(OPTCFLAGS) $(GCOPTCFLAGS) $(OPTWARNCFLAGS) -c -o $@ $<
 
 ## Needs -Wno-float-equal for Real<N>_equal, included via "c-chunk.h".

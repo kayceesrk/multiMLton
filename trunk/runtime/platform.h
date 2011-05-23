@@ -133,7 +133,7 @@
 #endif
 #include "basis-ffi.h"
 
-#include "gc.h"
+#include "mlton-gc.h"
 
 /* ---------------------------------------------------------------- */
 /*                        Runtime Init/Exit/Alloc                   */

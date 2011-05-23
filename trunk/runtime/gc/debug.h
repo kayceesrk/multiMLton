@@ -7,12 +7,12 @@
  */
 
 #ifndef DEBUG
-#define DEBUG FALSE
+#define DEBUG TRUE
 #endif
 
 
 enum {
-  DEBUG_ARRAY = FALSE,
+  DEBUG_ARRAY = TRUE,
   DEBUG_CALL_STACK = FALSE,
   DEBUG_CARD_MARKING = FALSE,
   DEBUG_DETAILED = FALSE,

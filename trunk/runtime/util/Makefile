@@ -79,17 +79,17 @@ HFILES = 							\
 all: libgc.o libgc-gdb.o
 
 libgc-gdb.o: $(CFILES) $(HFILES)
-	$(CC) $(DEBUGFLAGS) -DGC_MODEL_$(DEFAULT_MODEL) -O1 -DASSERT=1 -c -o $@ gc.c
+	$(CC) $(DEBUGFLAGS) -DGC_MODEL_$(DEFAULT_MODEL) -O1 -DASSERT=1 -c -o $@ mlton-gc.c
 
 libgc.o: $(CFILES) $(HFILES)
-	$(CC) $(CFLAGS) -DGC_MODEL_$(DEFAULT_MODEL) -c -o $@ gc.c
+	$(CC) $(CFLAGS) -DGC_MODEL_$(DEFAULT_MODEL) -c -o $@ mlton-gc.c
 
 .PHONY: models
 models: $(CFILES) $(HFILES)
 	(								\
 		for m in $(ALL_MODELS); do				\
-			$(CC) $(CFLAGS) -DGC_MODEL_$$m -c -o libgc.$$m.o gc.c;	\
-			$(CC) $(DEBUGFLAGS) -O1 -DASSERT=1 -DGC_MODEL_$$m -c -o libgc-gdb.$$m.o gc.c;	\
+			$(CC) $(CFLAGS) -DGC_MODEL_$$m -c -o libgc.$$m.o mlton-gc.c;	\
+			$(CC) $(DEBUGFLAGS) -O1 -DASSERT=1 -DGC_MODEL_$$m -c -o libgc-gdb.$$m.o mlton-gc.c;	\
 		done;							\
 	)
 
