@@ -31,7 +31,7 @@ GC_objectHashTable allocHashTable (GC_state s) {
   pointer regionEnd;
   GC_objectHashTable t;
 
-  t = (GC_objectHashTable)(malloc_safe (sizeof(*t)));
+  t = (GC_objectHashTable)(GC_MALLOC (sizeof(*t)));
   // Try to use space in the heap for the elements.
   if (not (isHeapInit (s->secondaryHeap))) {
     if (DEBUG_SHARE)

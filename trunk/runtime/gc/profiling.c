@@ -223,7 +223,7 @@ GC_profileData profileMalloc (GC_state s) {
   GC_profileData p;
   uint32_t profileMasterLength;
 
-  p = (GC_profileData)(malloc_safe (sizeof(*p)));
+  p = (GC_profileData)(GC_MALLOC (sizeof(*p)));
   p->total = 0;
   p->totalGC = 0;
   profileMasterLength = s->sourceMaps.sourcesLength + s->sourceMaps.sourceNamesLength;

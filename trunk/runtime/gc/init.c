@@ -353,7 +353,7 @@ int GC_initialize (GC_state s, int argc, char **argv) {
   s->controls->rusageMeasureGC = FALSE;
   s->controls->summary = FALSE;
   s->cumulativeStatistics = (struct GC_cumulativeStatistics *)
-    malloc (sizeof (struct GC_cumulativeStatistics));
+    GC_MALLOC (sizeof (struct GC_cumulativeStatistics));
   s->cumulativeStatistics->bytesAllocated = 0;
   s->cumulativeStatistics->bytesFilled = 0;
   s->cumulativeStatistics->bytesCopied = 0;
@@ -386,10 +386,10 @@ int GC_initialize (GC_state s, int argc, char **argv) {
   timevalZero (&s->cumulativeStatistics->tv_rt);
   s->currentThread = BOGUS_OBJPTR;
   s->hashConsDuringGC = FALSE;
-  s->heap = (GC_heap) malloc (sizeof (struct GC_heap));
+  s->heap = (GC_heap) GC_MALLOC (sizeof (struct GC_heap));
   initHeap (s, s->heap);
   s->lastMajorStatistics = (struct GC_lastMajorStatistics *)
-    malloc (sizeof (struct GC_lastMajorStatistics));
+    GC_MALLOC (sizeof (struct GC_lastMajorStatistics));
   s->lastMajorStatistics->bytesHashConsed = 0;
   s->lastMajorStatistics->bytesLive = 0;
   s->lastMajorStatistics->kind = GC_COPYING;
@@ -403,7 +403,7 @@ int GC_initialize (GC_state s, int argc, char **argv) {
   s->roots = NULL;
   s->rootsLength = 0;
   s->savedThread = BOGUS_OBJPTR;
-  s->secondaryHeap = (GC_heap) malloc (sizeof (struct GC_heap));
+  s->secondaryHeap = (GC_heap) GC_MALLOC (sizeof (struct GC_heap));
   initHeap (s, s->secondaryHeap);
   s->signalHandlerThread = BOGUS_OBJPTR;
   s->signalsInfo.amInSignalHandler = FALSE;

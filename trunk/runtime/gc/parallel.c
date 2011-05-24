@@ -15,10 +15,10 @@ void Parallel_init (void) {
   GC_state s = pthread_getspecific (gcstate_key);
 
   if (!Proc_isInitialized (s)) {
-    Parallel_mutexes = (int32_t *) malloc (s->numberOfProcs * sizeof (int32_t));
-    waitMutex = (pthread_mutex_t*) malloc (s->numberOfProcs * sizeof (pthread_mutex_t));
-    waitCondVar = (pthread_cond_t*) malloc (s->numberOfProcs * sizeof (pthread_cond_t));
-    dataInMutatorQ = (bool*) malloc (s->numberOfProcs * sizeof(bool));
+    Parallel_mutexes = (int32_t *) GC_MALLOC (s->numberOfProcs * sizeof (int32_t));
+    waitMutex = (pthread_mutex_t*) GC_MALLOC (s->numberOfProcs * sizeof (pthread_mutex_t));
+    waitCondVar = (pthread_cond_t*) GC_MALLOC (s->numberOfProcs * sizeof (pthread_cond_t));
+    dataInMutatorQ = (bool*) GC_MALLOC (s->numberOfProcs * sizeof(bool));
 
 
     /* Set up call-back state in each worker thread */
