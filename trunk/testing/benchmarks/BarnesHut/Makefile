@@ -26,7 +26,7 @@ FLAGS = -std=gnu99 -c -g3 -DASSERT=1 -I$(MMPATH)/trunk/build/lib/self/include \
 				-fomit-frame-pointer -w -m64
 
 DEBUG_LIBS = -L$(MMPATH)/trunk/build/lib/self -lmlton-gdb -lgdtoa-gdb \
-			 -lm -lgmp -m64 -lplpa_included -pthread -lrt
+			 -lm -lgmp -m64 -lplpa_included -pthread -lrt -lgc
 
 LIBS = -L$(MMPATH)/trunk/build/lib/self -lmlton -lgdtoa \
 			 -lm -lgmp -m64 -lplpa_included -pthread -lrt

@@ -92,8 +92,8 @@ POST_UNINSTALL = :
 build_triplet = x86_64-unknown-linux-gnu
 host_triplet = x86_64-unknown-linux-gnu
 target_triplet = x86_64-unknown-linux-gnu
-#am__append_1 = -I$(top_builddir)/libatomic_ops/src \
-#	       -I$(top_srcdir)/libatomic_ops/src
+am__append_1 = -I$(top_builddir)/libatomic_ops/src \
+	       -I$(top_srcdir)/libatomic_ops/src
 
 check_PROGRAMS = gctest$(EXEEXT) leaktest$(EXEEXT) middletest$(EXEEXT) \
 	smashtest$(EXEEXT) hugetest$(EXEEXT) staticrootstest$(EXEEXT) \
@@ -101,7 +101,7 @@ check_PROGRAMS = gctest$(EXEEXT) leaktest$(EXEEXT) middletest$(EXEEXT) \
 
 # C Library: Architecture Dependent
 # ---------------------------------
-#am__append_2 = pthread_start.c pthread_support.c pthread_stop_world.c
+am__append_2 = pthread_start.c pthread_support.c pthread_stop_world.c
 #am__append_3 = darwin_stop_world.c
 #am__append_4 = win32_threads.c
 
@@ -121,11 +121,11 @@ DIST_COMMON = $(am__configure_deps) $(am__pkginclude_HEADERS_DIST) \
 	mkinstalldirs
 #am__append_7 = tracetest$(EXEEXT)
 #am__append_8 = tracetest
-#am__append_9 = threadleaktest$(EXEEXT) \
-#	threadkey_test$(EXEEXT) \
-#	initsecondarythread$(EXEEXT)
-#am__append_10 = threadleaktest threadkey_test \
-#	initsecondarythread
+am__append_9 = threadleaktest$(EXEEXT) \
+	threadkey_test$(EXEEXT) \
+	initsecondarythread$(EXEEXT)
+am__append_10 = threadleaktest threadkey_test \
+	initsecondarythread
 #am__append_11 = test_cpp$(EXEEXT)
 #am__append_12 = test_cpp
 subdir = .
@@ -183,8 +183,8 @@ am__libgc_la_SOURCES_DIST = allchblk.c alloc.c blacklst.c checksums.c \
 	backgraph.c thread_local_alloc.c pthread_start.c \
 	pthread_support.c pthread_stop_world.c darwin_stop_world.c \
 	win32_threads.c
-#am__objects_1 = pthread_start.lo pthread_support.lo \
-#	pthread_stop_world.lo
+am__objects_1 = pthread_start.lo pthread_support.lo \
+	pthread_stop_world.lo
 #am__objects_2 = darwin_stop_world.lo
 #am__objects_3 = win32_threads.lo
 am_libgc_la_OBJECTS = allchblk.lo alloc.lo blacklst.lo checksums.lo \
@@ -194,7 +194,7 @@ am_libgc_la_OBJECTS = allchblk.lo alloc.lo blacklst.lo checksums.lo \
 	real_malloc.lo reclaim.lo specific.lo stubborn.lo typd_mlc.lo \
 	backgraph.lo thread_local_alloc.lo $(am__objects_1) \
 	$(am__objects_2) $(am__objects_3)
-#nodist_libgc_la_OBJECTS = atomic_ops.lo
+nodist_libgc_la_OBJECTS = atomic_ops.lo
 #nodist_libgc_la_OBJECTS =  \
 #	atomic_ops_sysdeps.lo
 libgc_la_OBJECTS = $(am_libgc_la_OBJECTS) $(nodist_libgc_la_OBJECTS)
@@ -216,9 +216,9 @@ libstaticrootslib_la_LINK = $(LIBTOOL) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(libstaticrootslib_la_LDFLAGS) $(LDFLAGS) -o $@
 #am__EXEEXT_1 = tracetest$(EXEEXT)
-#am__EXEEXT_2 = threadleaktest$(EXEEXT) \
-#	threadkey_test$(EXEEXT) \
-#	initsecondarythread$(EXEEXT)
+am__EXEEXT_2 = threadleaktest$(EXEEXT) \
+	threadkey_test$(EXEEXT) \
+	initsecondarythread$(EXEEXT)
 #am__EXEEXT_3 = test_cpp$(EXEEXT)
 am_gctest_OBJECTS = test.$(OBJEXT)
 gctest_OBJECTS = $(am_gctest_OBJECTS)
@@ -226,11 +226,11 @@ am_hugetest_OBJECTS = huge_test.$(OBJEXT)
 hugetest_OBJECTS = $(am_hugetest_OBJECTS)
 hugetest_DEPENDENCIES = $(am__DEPENDENCIES_2)
 am__initsecondarythread_SOURCES_DIST = tests/initsecondarythread.c
-#am_initsecondarythread_OBJECTS =  \
-#	initsecondarythread.$(OBJEXT)
+am_initsecondarythread_OBJECTS =  \
+	initsecondarythread.$(OBJEXT)
 initsecondarythread_OBJECTS = $(am_initsecondarythread_OBJECTS)
-#initsecondarythread_DEPENDENCIES =  \
-#	$(am__DEPENDENCIES_2)
+initsecondarythread_DEPENDENCIES =  \
+	$(am__DEPENDENCIES_2)
 am_leaktest_OBJECTS = leak_test.$(OBJEXT)
 leaktest_OBJECTS = $(am_leaktest_OBJECTS)
 leaktest_DEPENDENCIES = $(am__DEPENDENCIES_2)
@@ -253,13 +253,13 @@ test_cpp_OBJECTS = $(am_test_cpp_OBJECTS)
 ##test_cpp_DEPENDENCIES = gc_cpp.o \
 ##	$(am__DEPENDENCIES_2)
 am__threadkey_test_SOURCES_DIST = tests/threadkey_test.c
-#am_threadkey_test_OBJECTS = threadkey_test.$(OBJEXT)
+am_threadkey_test_OBJECTS = threadkey_test.$(OBJEXT)
 threadkey_test_OBJECTS = $(am_threadkey_test_OBJECTS)
-#threadkey_test_DEPENDENCIES = $(am__DEPENDENCIES_2)
+threadkey_test_DEPENDENCIES = $(am__DEPENDENCIES_2)
 am__threadleaktest_SOURCES_DIST = tests/thread_leak_test.c
-#am_threadleaktest_OBJECTS = thread_leak_test.$(OBJEXT)
+am_threadleaktest_OBJECTS = thread_leak_test.$(OBJEXT)
 threadleaktest_OBJECTS = $(am_threadleaktest_OBJECTS)
-#threadleaktest_DEPENDENCIES = $(am__DEPENDENCIES_2)
+threadleaktest_DEPENDENCIES = $(am__DEPENDENCIES_2)
 am__tracetest_SOURCES_DIST = tests/trace_test.c
 #am_tracetest_OBJECTS = trace_test.$(OBJEXT)
 tracetest_OBJECTS = $(am_tracetest_OBJECTS)
@@ -450,7 +450,7 @@ SED = /bin/sed
 SET_MAKE = 
 SHELL = /bin/sh
 STRIP = strip
-THREADDLLIBS =  -ldl
+THREADDLLIBS = -lpthread -ldl
 UNWINDLIBS = 
 VERSION = 7.2alpha5
 abs_builddir = /home/chandras/multiMLton-BoehmGC/multiMLton/trunk/runtime/bdwgc
@@ -613,7 +613,7 @@ libgc_la_SOURCES = allchblk.c alloc.c blacklst.c checksums.c dbg_mlc.c \
 	thread_local_alloc.c $(am__append_2) $(am__append_3) \
 	$(am__append_4)
 #nodist_libgc_la_SOURCES = libatomic_ops/src/atomic_ops_sysdeps.S
-#nodist_libgc_la_SOURCES = libatomic_ops/src/atomic_ops.c
+nodist_libgc_la_SOURCES = libatomic_ops/src/atomic_ops.c
 
 # Include THREADDLLIBS here to ensure that the correct versions of
 # linuxthread semaphore functions get linked:
@@ -678,12 +678,12 @@ libstaticrootslib_la_LDFLAGS = -version-info 1:3:0 -no-undefined -rpath /nowhere
 libstaticrootslib_la_DEPENDENCIES = $(top_builddir)/libgc.la
 #tracetest_SOURCES = tests/trace_test.c
 #tracetest_LDADD = $(test_ldadd)
-#threadleaktest_SOURCES = tests/thread_leak_test.c
-#threadleaktest_LDADD = $(test_ldadd)
-#threadkey_test_SOURCES = tests/threadkey_test.c
-#threadkey_test_LDADD = $(test_ldadd)
-#initsecondarythread_SOURCES = tests/initsecondarythread.c
-#initsecondarythread_LDADD = $(test_ldadd)
+threadleaktest_SOURCES = tests/thread_leak_test.c
+threadleaktest_LDADD = $(test_ldadd)
+threadkey_test_SOURCES = tests/threadkey_test.c
+threadkey_test_LDADD = $(test_ldadd)
+initsecondarythread_SOURCES = tests/initsecondarythread.c
+initsecondarythread_LDADD = $(test_ldadd)
 #test_cpp_SOURCES = tests/test_cpp.cc
 #test_cpp_LDADD = libgccpp.la $(test_ldadd)
 ##test_cpp_LDADD = gc_cpp.o $(test_ldadd)

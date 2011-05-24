@@ -56,7 +56,7 @@
 /* #undef GC_IRIX_THREADS */
 
 /* Define to support pthreads on Linux. */
-/* #undef GC_LINUX_THREADS */
+#define GC_LINUX_THREADS 1
 
 /* Define to support NetBSD pthreads. */
 /* #undef GC_NETBSD_THREADS */
@@ -196,7 +196,7 @@
 /* #undef SUNOS53_SHARED_LIB */
 
 /* Define to enable thread-local allocation optimisation. */
-/* #undef THREAD_LOCAL_ALLOC */
+#define THREAD_LOCAL_ALLOC 1
 
 /* Define to use of compiler-support for thread-local variables. */
 /* #undef USE_COMPILER_TLS */
@@ -217,7 +217,7 @@
 /* #undef _PTHREADS */
 
 /* Required define if using POSIX threads. */
-/* #undef _REENTRANT */
+#define _REENTRANT 1
 
 /* Define to `__inline__' or `__inline' if that's what the C compiler
    calls it, or to nothing if 'inline' is not supported under any name.  */

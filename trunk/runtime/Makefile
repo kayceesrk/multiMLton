@@ -246,20 +246,17 @@ OBJS := 							\
 	util.o							\
 	mlton-gc.o							\
 	platform.o						\
-	platform/$(TARGET_OS).o \
-	bdwgc/install/lib/libgc.a
+	platform/$(TARGET_OS).o
 DEBUG_OBJS := 							\
 	util-gdb.o						\
 	mlton-gc-gdb.o						\
 	platform-gdb.o						\
-	platform/$(TARGET_OS)-gdb.o \
-	bdwgc/install/lib/libgc.a
+	platform/$(TARGET_OS)-gdb.o
 PIC_OBJS := 							\
 	util-pic.o						\
 	mlton-gc-pic.o						\
 	platform-pic.o						\
-	platform/$(TARGET_OS)-pic.o \
-	bdwgc/install/lib/libgc.a
+	platform/$(TARGET_OS)-pic.o
 
 OMIT_BYTECODE := yes
 ifeq ($(OMIT_BYTECODE), yes)

@@ -289,6 +289,7 @@ runtime:
 	$(MAKE) -C runtime
 	$(CP) include/*.h "$(INC)/"
 	$(CP) runtime/*.a "$(LIB)/$(TARGET)/"
+	$(CP) runtime/bdwgc/install/lib/libgc.a "$(LIB)/$(TARGET)/"
 	$(CP) runtime/gen/sizes "$(LIB)/$(TARGET)/"
 	mkdir -p "$(SRC)/basis-library/config/c/$(TARGET_ARCH)-$(TARGET_OS)"
 	$(CP) runtime/gen/c-types.sml \

@@ -5,20 +5,43 @@ finalize.lo finalize.o: finalize.c include/private/gc_pmark.h \
   /usr/lib/gcc/x86_64-redhat-linux/4.1.2/include/stddef.h \
   /usr/include/features.h /usr/include/sys/cdefs.h \
   /usr/include/bits/wordsize.h /usr/include/gnu/stubs.h \
-  /usr/include/gnu/stubs-64.h include/private/gc_priv.h \
-  /usr/include/stdlib.h /usr/include/sys/types.h \
-  /usr/include/bits/types.h /usr/include/bits/typesizes.h \
-  /usr/include/time.h /usr/include/endian.h /usr/include/bits/endian.h \
-  /usr/include/sys/select.h /usr/include/bits/select.h \
-  /usr/include/bits/sigset.h /usr/include/bits/time.h \
-  /usr/include/sys/sysmacros.h /usr/include/bits/pthreadtypes.h \
+  /usr/include/gnu/stubs-64.h include/private/../gc_pthread_redirects.h \
+  /usr/include/pthread.h /usr/include/endian.h /usr/include/bits/endian.h \
+  /usr/include/sched.h /usr/include/bits/types.h \
+  /usr/include/bits/typesizes.h /usr/include/time.h \
+  /usr/include/bits/sched.h /usr/include/bits/time.h \
+  /usr/include/signal.h /usr/include/bits/sigset.h \
+  /usr/include/bits/pthreadtypes.h /usr/include/bits/setjmp.h \
+  /usr/include/dlfcn.h /usr/include/bits/dlfcn.h \
+  /usr/include/bits/signum.h /usr/include/bits/siginfo.h \
+  /usr/include/bits/sigaction.h /usr/include/bits/sigcontext.h \
+  /usr/include/bits/sigstack.h /usr/include/bits/sigthread.h \
+  include/private/gc_priv.h /usr/include/stdlib.h \
+  /usr/include/sys/types.h /usr/include/sys/select.h \
+  /usr/include/bits/select.h /usr/include/sys/sysmacros.h \
   /usr/include/alloca.h include/private/../gc_tiny_fl.h \
   include/private/gcconfig.h /usr/include/unistd.h \
   /usr/include/bits/posix_opt.h /usr/include/bits/confname.h \
   /usr/include/getopt.h include/private/gc_hdrs.h \
-  include/private/gc_locks.h /usr/include/string.h \
+  include/private/gc_locks.h libatomic_ops/src/atomic_ops.h \
+  /usr/include/assert.h libatomic_ops/src/atomic_ops/sysdeps/gcc/x86_64.h \
+  libatomic_ops/src/atomic_ops/sysdeps/gcc/../all_aligned_atomic_load_store.h \
+  libatomic_ops/src/atomic_ops/sysdeps/gcc/../aligned_atomic_load_store.h \
+  libatomic_ops/src/atomic_ops/sysdeps/gcc/../char_atomic_load_store.h \
+  libatomic_ops/src/atomic_ops/sysdeps/gcc/../short_aligned_atomic_load_store.h \
+  libatomic_ops/src/atomic_ops/sysdeps/gcc/../int_aligned_atomic_load_store.h \
+  libatomic_ops/src/atomic_ops/sysdeps/gcc/../ordered_except_wr.h \
+  libatomic_ops/src/atomic_ops/sysdeps/gcc/../read_ordered.h \
+  libatomic_ops/src/atomic_ops/sysdeps/gcc/../test_and_set_t_is_char.h \
+  libatomic_ops/src/atomic_ops/sysdeps/gcc/../standard_ao_double_t.h \
+  /usr/lib/gcc/x86_64-redhat-linux/4.1.2/include/xmmintrin.h \
+  /usr/lib/gcc/x86_64-redhat-linux/4.1.2/include/mmintrin.h \
+  /usr/lib/gcc/x86_64-redhat-linux/4.1.2/include/mm_malloc.h \
+  /usr/lib/gcc/x86_64-redhat-linux/4.1.2/include/emmintrin.h \
+  libatomic_ops/src/atomic_ops/generalize.h \
+  libatomic_ops/src/atomic_ops/generalize-small.h /usr/include/string.h \
   /usr/include/bits/string.h /usr/include/bits/string2.h \
-  /usr/include/setjmp.h /usr/include/bits/setjmp.h
+  /usr/include/setjmp.h
 
 include/private/gc_pmark.h:
 
@@ -44,11 +67,15 @@ include/private/../gc_config_macros.h:
 
 /usr/include/gnu/stubs-64.h:
 
-include/private/gc_priv.h:
+include/private/../gc_pthread_redirects.h:
 
-/usr/include/stdlib.h:
+/usr/include/pthread.h:
 
-/usr/include/sys/types.h:
+/usr/include/endian.h:
+
+/usr/include/bits/endian.h:
+
+/usr/include/sched.h:
 
 /usr/include/bits/types.h:
 
@@ -56,21 +83,45 @@ include/private/gc_priv.h:
 
 /usr/include/time.h:
 
-/usr/include/endian.h:
+/usr/include/bits/sched.h:
 
-/usr/include/bits/endian.h:
+/usr/include/bits/time.h:
+
+/usr/include/signal.h:
+
+/usr/include/bits/sigset.h:
+
+/usr/include/bits/pthreadtypes.h:
+
+/usr/include/bits/setjmp.h:
+
+/usr/include/dlfcn.h:
+
+/usr/include/bits/dlfcn.h:
+
+/usr/include/bits/signum.h:
+
+/usr/include/bits/siginfo.h:
+
+/usr/include/bits/sigaction.h:
+
+/usr/include/bits/sigcontext.h:
+
+/usr/include/bits/sigstack.h:
+
+/usr/include/bits/sigthread.h:
+
+include/private/gc_priv.h:
+
+/usr/include/stdlib.h:
+
+/usr/include/sys/types.h:
 
 /usr/include/sys/select.h:
 
 /usr/include/bits/select.h:
 
-/usr/include/bits/sigset.h:
-
-/usr/include/bits/time.h:
-
 /usr/include/sys/sysmacros.h:
-
-/usr/include/bits/pthreadtypes.h:
 
 /usr/include/alloca.h:
 
@@ -90,6 +141,42 @@ include/private/gc_hdrs.h:
 
 include/private/gc_locks.h:
 
+libatomic_ops/src/atomic_ops.h:
+
+/usr/include/assert.h:
+
+libatomic_ops/src/atomic_ops/sysdeps/gcc/x86_64.h:
+
+libatomic_ops/src/atomic_ops/sysdeps/gcc/../all_aligned_atomic_load_store.h:
+
+libatomic_ops/src/atomic_ops/sysdeps/gcc/../aligned_atomic_load_store.h:
+
+libatomic_ops/src/atomic_ops/sysdeps/gcc/../char_atomic_load_store.h:
+
+libatomic_ops/src/atomic_ops/sysdeps/gcc/../short_aligned_atomic_load_store.h:
+
+libatomic_ops/src/atomic_ops/sysdeps/gcc/../int_aligned_atomic_load_store.h:
+
+libatomic_ops/src/atomic_ops/sysdeps/gcc/../ordered_except_wr.h:
+
+libatomic_ops/src/atomic_ops/sysdeps/gcc/../read_ordered.h:
+
+libatomic_ops/src/atomic_ops/sysdeps/gcc/../test_and_set_t_is_char.h:
+
+libatomic_ops/src/atomic_ops/sysdeps/gcc/../standard_ao_double_t.h:
+
+/usr/lib/gcc/x86_64-redhat-linux/4.1.2/include/xmmintrin.h:
+
+/usr/lib/gcc/x86_64-redhat-linux/4.1.2/include/mmintrin.h:
+
+/usr/lib/gcc/x86_64-redhat-linux/4.1.2/include/mm_malloc.h:
+
+/usr/lib/gcc/x86_64-redhat-linux/4.1.2/include/emmintrin.h:
+
+libatomic_ops/src/atomic_ops/generalize.h:
+
+libatomic_ops/src/atomic_ops/generalize-small.h:
+
 /usr/include/string.h:
 
 /usr/include/bits/string.h:
@@ -97,5 +184,3 @@ include/private/gc_locks.h:
 /usr/include/bits/string2.h:
 
 /usr/include/setjmp.h:
-
-/usr/include/bits/setjmp.h:

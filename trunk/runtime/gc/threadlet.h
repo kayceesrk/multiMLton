@@ -5,7 +5,7 @@ static pointer GC_getFrameBottom (void);
 PRIVATE int GC_getFrameBottomAsOffset (void);
 bool GC_proceedToExtract (pointer p, int startOffset);
 GC_thread GC_extractParasite (pointer p, int startOffset);
-void GC_noop (void);
+void GC_mltonNoop (void);
 
 /* Management and debugging functions */
 void GC_printFrames (void);

@@ -9,7 +9,7 @@
 void foo (__attribute__ ((unused)) GC_state s, __attribute__ ((unused)) GC_frameIndex f) {
 }
 
-void GC_noop (void) {}
+void GC_mltonNoop (void) {}
 
 void GC_printFrames (void) {
     GC_state s = pthread_getspecific (gcstate_key);
