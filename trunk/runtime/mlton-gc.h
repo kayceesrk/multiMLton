@@ -13,6 +13,9 @@
 
 /* For BDWGC */
 #define GC_THREADS
+#define USE_MMAP
+#define GC_DEBUG
+#define ENABLE_TRACE
 #include "gc.h"
 
 struct GC_state;

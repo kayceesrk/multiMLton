@@ -265,3 +265,7 @@ void GC_prefixAndSwitchTo (GC_state s, pointer p) {
     s->atomicState --;
     return;
 }
+
+void GC_debugPrint (int i) {
+  fprintf (stderr, "GC_debugPrint[%d]\n", i);
+}

@@ -30,7 +30,6 @@ void assertIsObjptrInFromSpace (GC_state s, objptr *opp) {
 
 #if ASSERT
 bool invariantForGC (GC_state s) {
-  int proc;
   if (DEBUG)
     fprintf (stderr, "invariantForGC\n");
   /* Frame layouts */
@@ -73,33 +72,6 @@ bool invariantForGC (GC_state s) {
   }
   assert (s->secondaryHeap->start == NULL
           or s->heap->size == s->secondaryHeap->size);
-  /* Check that all pointers are into from space. */
-  foreachGlobalObjptr (s, assertIsObjptrInFromSpace);
-  pointer back = s->heap->start + s->heap->oldGenSize;
-  if (DEBUG_DETAILED)
-    fprintf (stderr, "Checking old generation.\n");
-  foreachObjptrInRange (s, alignFrontier (s, s->heap->start), &back,
-                        assertIsObjptrInFromSpace, FALSE);
-  if (DEBUG_DETAILED)
-    fprintf (stderr, "Checking nursery.\n");
-  if (s->procStates) {
-    pointer firstStart = s->heap->frontier;
-    for (proc = 0; proc < s->numberOfProcs; proc++) {
-      foreachObjptrInRange (s, s->procStates[proc].start,
-                            &s->procStates[proc].frontier,
-                        assertIsObjptrInFromSpace, FALSE);
-       if (s->procStates[proc].start
-          and s->procStates[proc].start < firstStart)
-        firstStart = s->procStates[proc].start;
-    }
-    foreachObjptrInRange (s, s->heap->nursery,
-                          &firstStart,
-                          assertIsObjptrInFromSpace, FALSE);
-  }
-  else {
-    foreachObjptrInRange (s, s->start, &s->frontier,
-                          assertIsObjptrInFromSpace, FALSE);
-  }
  /* Current thread. */
   GC_stack stack = getStackCurrent(s);
   assert (isStackReservedAligned (s, stack->reserved));

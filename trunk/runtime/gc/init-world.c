@@ -74,12 +74,11 @@ void initIntInfs (GC_state s) {
 
 void initVectors (GC_state s) {
   struct GC_vectorInit *inits;
-  pointer frontier;
+  pointer frontier, oldFrontier;
   uint32_t i;
 
   assert (isFrontierAligned (s, s->frontier));
   inits = s->vectorInits;
-  frontier = s->frontier;
   for (i = 0; i < s->vectorInitsLength; i++) {
     size_t bytesPerElement;
     size_t dataBytes;
@@ -93,7 +92,7 @@ void initVectors (GC_state s) {
                            ? OBJPTR_SIZE
                            : dataBytes),
                         s->alignment);
-    assert (objectSize <= (size_t)(s->heap->start + s->heap->size - frontier));
+    oldFrontier = frontier = (pointer) GC_MALLOC (objectSize);
     *((GC_arrayCounter*)(frontier)) = 0;
     frontier = frontier + GC_ARRAY_COUNTER_SIZE;
     *((GC_arrayLength*)(frontier)) = inits[i].numElements;
@@ -123,14 +122,11 @@ void initVectors (GC_state s) {
                (uintptr_t)(s->globals[inits[i].globalIndex]));
     memcpy (frontier, inits[i].bytes, dataBytes);
     frontier += objectSize - GC_ARRAY_HEADER_SIZE;
+    assert (frontier == oldFrontier + objectSize);
   }
   if (DEBUG_DETAILED)
     fprintf (stderr, "frontier after string allocation is "FMTPTR"\n",
              (uintptr_t)frontier);
-  GC_profileAllocInc (s, (size_t)(frontier - s->frontier));
-  s->cumulativeStatistics->bytesAllocated += (size_t)(frontier - s->frontier);
-  assert (isFrontierAligned (s, frontier));
-  s->frontier = frontier;
 }
 
 void initWorld (GC_state s) {

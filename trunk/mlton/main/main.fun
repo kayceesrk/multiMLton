@@ -159,16 +159,7 @@ fun hasNativeCodegen () =
    end
 
 
-fun defaultAlignIs8 () =
-   let
-      datatype z = datatype Control.Target.arch
-   in
-      case !Control.Target.arch of
-         HPPA => true
-       | IA64 => true
-       | Sparc => true
-       | _ => false
-   end
+fun defaultAlignIs8 () = true
 
 fun makeOptions {usage} =
    let

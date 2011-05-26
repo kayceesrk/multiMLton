@@ -67,7 +67,7 @@ PRIVATE Pointer gcStateAddress;
         s.profiling.kind = pk;                                    \
         s.profiling.stack = ps;                                   \
         s.profiling.isProfilingTimeOn = false;                    \
-        s.globalObjptrNonRoot = (Pointer *) malloc (gnr * sizeof (Pointer));  \
+        s.globalObjptrNonRoot = (Pointer *) GC_MALLOC (gnr * sizeof (Pointer));  \
         MLton_init (argc, argv, &s);                              \
 
 #define LIB_PASTE(x,y) x ## y

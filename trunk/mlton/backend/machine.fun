@@ -400,12 +400,9 @@ structure Statement =
        fun bytes (b: Bytes.t): Operand.t =
          Word (WordX.fromIntInf (Bytes.toIntInf b, WordSize.csize ()))
      in
-       Vector.new2
+       Vector.new1
        (Move {dst = dst,
-              src = Object {header = header, size = size}},
-        PrimApp {args = Vector.new2 (Frontier, bytes size),
-                 dst = SOME Frontier,
-                 prim = Prim.cpointerAdd})
+              src = Object {header = header, size = size}})
      end
 
       fun foldOperands (s, ac, f) =

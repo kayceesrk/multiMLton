@@ -24,7 +24,7 @@
 #endif
 
 #ifndef DEBUG_CCODEGEN
-#define DEBUG_CCODEGEN FALSE
+#define DEBUG_CCODEGEN TRUE
 #endif
 
 #define ExnStack *(size_t*)(GCState + ExnStackOffset)
@@ -37,7 +37,6 @@
 /* ------------------------------------------------- */
 /*                      Memory                       */
 /* ------------------------------------------------- */
-
 
 PRIVATE extern Pointer GC_newObject (struct GC_state* s, uint64_t h, size_t size, int32_t allocInOldGen);
 
@@ -93,19 +92,9 @@ PRIVATE extern Pointer GC_newObject (struct GC_state* s, uint64_t h, size_t size
                 if (x) goto l;                                          \
         } while (0)
 
-#define FlushFrontier()                         \
-        do {                                    \
-                FrontierMem = Frontier;         \
-        } while (0)
-
 #define FlushStackTop()                         \
         do {                                    \
                 StackTopMem = StackTop;         \
-        } while (0)
-
-#define CacheFrontier()                         \
-        do {                                    \
-                Frontier = FrontierMem;         \
         } while (0)
 
 #define CacheStackTop()                         \
@@ -137,7 +126,6 @@ PRIVATE extern Pointer GC_newObject (struct GC_state* s, uint64_t h, size_t size
                 if (DEBUG_CCODEGEN)                                     \
                         fprintf (stderr, "%s:%d: entering chunk %d  l_nextFun = %d\n", \
                                         __FILE__, __LINE__, n, (int)l_nextFun); \
-                CacheFrontier();                                        \
                 CacheStackTop();                                        \
                 while (1) {                                             \
                 top:                                                    \
@@ -149,7 +137,6 @@ PRIVATE extern Pointer GC_newObject (struct GC_state* s, uint64_t h, size_t size
                         cont.nextFun = l_nextFun;                       \
                         cont.nextChunk = (void*)nextChunks[l_nextFun];  \
                         leaveChunk:                                     \
-                                FlushFrontier();                        \
                                 FlushStackTop();                        \
                                 return cont;                            \
                 } /* end switch (l_nextFun) */                          \

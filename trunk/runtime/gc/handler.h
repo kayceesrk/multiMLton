@@ -6,6 +6,8 @@
  * See the file MLton-LICENSE for details.
  */
 
+#define GC_THREADS
+
 #if (defined (MLTON_GC_INTERNAL_FUNCS))
 
 static inline void switchToSignalHandlerThreadIfNonAtomicAndSignalPending (GC_state s);

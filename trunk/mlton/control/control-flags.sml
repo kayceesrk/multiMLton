@@ -24,7 +24,7 @@ structure Align =
 datatype align = datatype Align.t
 
 val align = control {name = "align",
-                     default = Align4,
+                     default = Align8,
                      toString = Align.toString}
 
 val atMLtons = control {name = "atMLtons",
@@ -772,7 +772,7 @@ val loopPasses = control {name = "loop passes",
                           toString = Int.toString}
 
 val markCards = control {name = "mark cards",
-                         default = true,
+                         default = false,
                          toString = Bool.toString}
 
 val maxFunctionSize = control {name = "max function size",

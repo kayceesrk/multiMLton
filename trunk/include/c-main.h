@@ -229,6 +229,8 @@ void run (void *arg) {                                                  \
 }                                                                       \
 PUBLIC int MLton_main (int argc, char* argv[]) {                        \
         int procNo;                                                     \
+        GC_set_all_interior_pointers (1);                               \
+        GC_init ();                                                     \
         pthread_t *threads;                                             \
         pthread_t alrmHandlerThread;                                    \
         pthread_t profHandlerThread;                                    \
@@ -237,8 +239,8 @@ PUBLIC int MLton_main (int argc, char* argv[]) {                        \
                 /* Initialize with a generic state to read in @MLtons, etc */ \
                 Initialize (s, al, mg, mfs, mmc, pk, ps, gnr);          \
                                                                         \
-                threads = (pthread_t *) malloc ((s.numberOfProcs-1) * sizeof (pthread_t)); \
-                gcState = (GC_state) malloc ((s.numberOfProcs+1) * sizeof (struct GC_state)); \
+                threads = (pthread_t *) GC_MALLOC ((s.numberOfProcs-1) * sizeof (pthread_t)); \
+                gcState = (GC_state) GC_MALLOC ((s.numberOfProcs+1) * sizeof (struct GC_state)); \
                 /* Create key */                                        \
                 if (pthread_key_create(&gcstate_key, NULL)) {           \
                         fprintf (stderr, "pthread_key_create failed: %s\n", strerror (errno)); \
@@ -286,7 +288,7 @@ PUBLIC int MLton_main (int argc, char* argv[]) {                        \
 MLtonCallFromC                                                          \
 PUBLIC void LIB_OPEN(LIBNAME) (int argc, char* argv[]) {                \
         struct cont cont;                                               \
-        gcState = (GC_state) malloc (sizeof (struct GC_state));         \
+        gcState = (GC_state) GC_MALLOC (sizeof (struct GC_state));      \
         Initialize (gcState[0], al, mg, mfs, mmc, pk, ps, gnr);         \
         GC_state s = &gcState[0];                                       \
         if (s->amOriginal) {                                            \

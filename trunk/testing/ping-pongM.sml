@@ -3,19 +3,17 @@ structure Main =
 struct
 
   open MLton
-  open PCML
+  open Pacml
   structure NB = struct fun execute f = f () end
 
    fun p () : string =
-        (*Int.toString(B.processorNumber())*)""
+        (*Int.toString(B.processorNumber()) *)""
 
-
-   fun print' str  = ()
    fun pong ch n =
       let
          fun loop n =
             let
-               val _ = NB.execute (fn () =>print' ("\nReceiving "^(p())))
+               val _ = NB.execute (fn () =>print ("\nReceiving "^(p())))
                val i = (recv ch)
                val _ = NB.execute (fn () => print ("\nReceived "
                               ^Int.toString(i)
@@ -34,10 +32,10 @@ struct
          fun loop i =
             if i > n then ()
                else let
-                       val _ = print' ("\nSending "^(p())
+                       val _ = print ("\nSending "^(p())
                                       ^" "^Int.toString(i))
                        val _ = (send (ch, i))
-                       val _ = print' ("\nSent "^(p())
+                       val _ = print ("\nSent "^(p())
                                       ^" "^Int.toString(i))
                     in
                        loop (i + 1)
@@ -52,7 +50,7 @@ struct
    let
      val _ = print "\nIn doit"
    in
-      RunPCML.doit
+      run
       (fn () =>
        let
           val _ = spawn (fn () => print ("\nCreating channel "^(p())))
@@ -70,8 +68,7 @@ struct
          val _ = spawn (fn () => print ("\nCreated ping and pong "^(p())))
        in
           ()
-       end,
-       SOME (Time.fromMilliseconds 10))
+       end)
        (* n = 2,000,000 *)
    end
 end

@@ -1057,10 +1057,6 @@ fun output {program as Machine.Program.T {chunks,
                                        res
                                     end
                            val _ =
-                              if modifiesFrontier
-                                 then print "\tFlushFrontier();\n"
-                              else ()
-                           val _ =
                               if readsStackTop
                                  then print "\tFlushStackTop();\n"
                               else ()
@@ -1087,10 +1083,6 @@ fun output {program as Machine.Program.T {chunks,
                                        C.call (name, args, print)
                                     end
                            val _ = afterCall ()
-                           val _ =
-                              if modifiesFrontier
-                                 then print "\tCacheFrontier();\n"
-                              else ()
                            val _ =
                               if writesStackTop
                                  then print "\tCacheStackTop();\n"

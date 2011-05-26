@@ -15,4 +15,6 @@ struct
   val wait = _import "Parallel_wait": unit -> unit;
   val wakeUp = _import "Parallel_wakeUpThread": Int32.int * Int32.int -> unit;
 
+  val debugPrint = _import "GC_debugPrint" : int -> unit;
+
 end

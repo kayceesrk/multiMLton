@@ -18,10 +18,9 @@ pointer GC_arrayAllocate (GC_state s,
   pointer frontier;
   pointer last;
   pointer result;
-  bool holdLock;
 
   splitHeader(s, header, NULL, NULL, &bytesNonObjptrs, &numObjptrs);
-  if (DEBUG)
+  if (DEBUG_ARRAY || DEBUG_DETAILED)
     fprintf (stderr, "GC_arrayAllocate (%"PRIuMAX", "FMTARRLEN", "FMTHDR") [%d]\n",
              (uintmax_t)ensureBytesFree, numElements, header, Proc_processorNumber (s));
   bytesPerElement = bytesNonObjptrs + (numObjptrs * OBJPTR_SIZE);
@@ -49,44 +48,15 @@ pointer GC_arrayAllocate (GC_state s,
              uintmaxToCommaString(arraySizeAligned),
              uintmaxToCommaString(ensureBytesFree));
 
-  /* Determine whether we will perform this allocation locally or not */
-  holdLock = arraySizeAligned >= s->controls->oldGenArraySize;
 
-  if (holdLock) {
-    /* Global alloc */
-    s->syncReason = SYNC_OLD_GEN_ARRAY;
-    ENTER0 (s);
-    if (not hasHeapBytesFree (s, arraySizeAligned, ensureBytesFree)) {
-      performGC (s, arraySizeAligned, ensureBytesFree, FALSE, TRUE);
-    }
-    assert (hasHeapBytesFree (s, arraySizeAligned, ensureBytesFree));
-    frontier = s->heap->start + s->heap->oldGenSize;
-    assert (isFrontierAligned (s, frontier));
+  /* Local alloc */
+  size_t bytesRequested;
+  pointer newFrontier;
 
-    /* This must be updated while holding the lock! */
-    s->heap->oldGenSize += arraySizeAligned;
-    assert (s->heap->start + s->heap->oldGenSize <= s->heap->nursery);
-    s->cumulativeStatistics->bytesAllocated += arraySizeAligned;
-    /* NB LEAVE appears below since no heap invariant holds while the
-       oldGenSize has been updated but the array remains uninitialized. */
-  } else {
-    /* Local alloc */
-    size_t bytesRequested;
-    pointer newFrontier;
-
-    bytesRequested = arraySizeAligned + ensureBytesFree;
-    if (not hasHeapBytesFree (s, 0, bytesRequested)) {
-      /* Local alloc may still require getting the lock, but we will release
-         it before initialization. */
-      ensureHasHeapBytesFreeAndOrInvariantForMutator (s, FALSE, FALSE, FALSE,
-                                                      0, bytesRequested, FALSE, FALSE);
-    }
-    assert (hasHeapBytesFree (s, 0, bytesRequested));
-    frontier = s->frontier;
-    newFrontier = frontier + arraySizeAligned;
-    assert (isFrontierAligned (s, newFrontier));
-    s->frontier = newFrontier;
-  }
+  bytesRequested = arraySizeAligned;
+  frontier = (pointer) GC_MALLOC (bytesRequested);
+  newFrontier = frontier + arraySizeAligned;
+  assert (isFrontierAligned (s, newFrontier));
 
   /* Now do the initialization */
   last = frontier + arraySize;
@@ -133,10 +103,6 @@ pointer GC_arrayAllocate (GC_state s,
    * unless we did the GC, we never set s->currentThread->stack->used
    * to reflect what the mutator did with stackTop.
    */
-
-  if (holdLock) {
-    LEAVE1 (s, result);
-  }
 
   return result;
 }
