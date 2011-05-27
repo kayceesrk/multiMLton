@@ -60,13 +60,9 @@ void growStackCurrent (GC_state s, bool allocInOldGen) {
              uintmaxToCommaString(getStackCurrent(s)->reserved),
              uintmaxToCommaString(reserved),
              uintmaxToCommaString(getStackCurrent(s)->used));
-  assert (allocInOldGen ?
-          hasHeapBytesFree (s, sizeofStackWithHeader (s, reserved), 0) :
-          hasHeapBytesFree (s, 0, sizeofStackWithHeader (s, reserved)));
   stack = newStack (s, reserved, allocInOldGen);
   copyStack (s, getStackCurrent(s), stack);
   getThreadCurrent(s)->stack = pointerToObjptr ((pointer)stack, s->heap->start);
-  markCard (s, objptrToPointer (getThreadCurrentObjptr(s), s->heap->start));
 }
 
 void enterGC (GC_state s) {
@@ -267,90 +263,6 @@ size_t fillGap (__attribute__ ((unused)) GC_state s, pointer start, pointer end)
   }
 }
 
-static void maybeSatisfyAllocationRequestLocally (GC_state s,
-                                                  size_t nurseryBytesRequested) {
-  /* First try and take another chunk from the shared nursery */
-  while (TRUE)
-  {
-    /* This is the only read of the global frontier -- never read it again
-       until after the swap. */
-    pointer oldFrontier = s->heap->frontier;
-    pointer newHeapFrontier, newProcFrontier;
-    pointer newStart;
-    /* heap->start and heap->size are read-only (unless you hold the global
-       lock) so it's ok to read them here */
-    size_t availableBytes = (size_t)((s->heap->start + s->heap->availableSize)
-                                     - oldFrontier);
-
-    /* If another thread is trying to get exclusive access, the join the
-       queue. */
-    if (Proc_threadInSection (s)) {
-      if (DEBUG)
-        fprintf (stderr, "[GC: aborting local alloc: mutex.]\n");
-      return;
-    }
-    /* See if the mutator frontier invariant is already true */
-    assert (s->limitPlusSlop >= s->frontier);
-    if (nurseryBytesRequested <= (size_t)(s->limitPlusSlop - s->frontier)) {
-      if (DEBUG)
-        fprintf (stderr, "[GC: aborting local alloc: satisfied.]\n");
-      return;
-    }
-    /* Perhaps there is not enough space in the nursery to satify this
-       request; if that's true then we need to do a full collection */
-    if (nurseryBytesRequested + GC_BONUS_SLOP > availableBytes) {
-      if (DEBUG)
-        fprintf (stderr, "[GC: aborting local alloc: no space.]\n");
-      return;
-    }
-
-    /* OK! We might possibly satisfy this request without the runtime lock!
-       Let's see what that will entail... */
-
-    /* Now see if we were the most recent thread to allocate */
-    if (oldFrontier == s->limitPlusSlop + GC_BONUS_SLOP) {
-      /* This is the next chunk so no need to fill */
-      newHeapFrontier = s->frontier + nurseryBytesRequested + GC_BONUS_SLOP;
-      /* Leave "start" and "frontier" where they are */
-      newStart = s->start;
-      newProcFrontier = s->frontier;
-    }
-    else {
-      /* Fill the old gap */
-      fillGap (s, s->frontier, s->limitPlusSlop + GC_BONUS_SLOP);
-      /* Don't update frontier or limitPlusSlop since we will either
-         overwrite them (if we succeed) or just fill the same gap again
-         (if we fail).  (There is no obvious other pair of values that
-         we can set them to that is safe.) */
-      newHeapFrontier = oldFrontier + nurseryBytesRequested + GC_BONUS_SLOP;
-      newProcFrontier = oldFrontier;
-      /* Move "start" since the space between old-start and frontier is not
-         necessary filled */
-      newStart = oldFrontier;
-    }
-
-    if (__sync_bool_compare_and_swap (&s->heap->frontier,
-                                      oldFrontier, newHeapFrontier)) {
-      if (DEBUG)
-        fprintf (stderr, "[GC: Local alloction of chunk @ "FMTPTR".]\n",
-                 (uintptr_t)newProcFrontier);
-
-      s->start = newStart;
-      s->frontier = newProcFrontier;
-      assert (isFrontierAligned (s, s->frontier));
-      s->limitPlusSlop = newHeapFrontier - GC_BONUS_SLOP;
-      s->limit = s->limitPlusSlop - GC_HEAP_LIMIT_SLOP;
-
-      return;
-    }
-    else {
-      if (DEBUG)
-        fprintf (stderr, "[GC: Contention for alloction (frontier is "FMTPTR").]\n",
-                 (uintptr_t)s->heap->frontier);
-    }
-  }
-}
-
 // assumes that stack->used and thread->exnstack are up to date
 // assumes exclusive access to runtime if !mustEnter
 // forceGC = force major collection
@@ -382,11 +294,7 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
   if (forceStackGrowth && DEBUG_SPLICE)
       fprintf (stderr, "stackBytesRequested = %ld\n", stackBytesRequested);
 
-  /* try to satisfy (at least part of the) request locally */
-  maybeSatisfyAllocationRequestLocally (s, nurseryBytesRequested + stackBytesRequested);
-
-  if (not stackTopOk
-      and (hasHeapBytesFree (s, 0, stackBytesRequested))) {
+  if (not stackTopOk) {
     if (DEBUG or s->controls->messages)
       fprintf (stderr, "GC: growing stack locally... [%d]\n",
                s->procStates ? Proc_processorNumber (s) : -1);
@@ -468,16 +376,6 @@ void GC_collect (GC_state s, size_t bytesRequested, bool force,
     fprintf (stderr, "%s %d: GC_collect [%d]\n", file, line,
              Proc_processorNumber (s));
 
-  /* When the mutator requests zero bytes, it may actually need as
-   * much as GC_HEAP_LIMIT_SLOP.
-   */
-  if (0 == bytesRequested)
-    bytesRequested = s->controls->allocChunkSize;
-  else if (bytesRequested < s->controls->allocChunkSize)
-    bytesRequested = s->controls->allocChunkSize;
-  else
-    bytesRequested += GC_HEAP_LIMIT_SLOP;
-
   /* XXX copied from enter() */
   /* used needs to be set because the mutator has changed s->stackTop. */
   getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
@@ -486,7 +384,7 @@ void GC_collect (GC_state s, size_t bytesRequested, bool force,
 
 
   ensureHasHeapBytesFreeAndOrInvariantForMutator (s, force,
-                                                  TRUE, TRUE,
+                                                  FALSE, TRUE,
                                                   0, 0, TRUE, FALSE);
 }
 

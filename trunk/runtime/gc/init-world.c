@@ -124,9 +124,6 @@ void initVectors (GC_state s) {
     frontier += objectSize - GC_ARRAY_HEADER_SIZE;
     assert (frontier == oldFrontier + objectSize);
   }
-  if (DEBUG_DETAILED)
-    fprintf (stderr, "frontier after string allocation is "FMTPTR"\n",
-             (uintptr_t)frontier);
 }
 
 void initWorld (GC_state s) {

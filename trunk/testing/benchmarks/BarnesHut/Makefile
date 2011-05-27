@@ -29,7 +29,7 @@ DEBUG_LIBS = -L$(MMPATH)/trunk/build/lib/self -lmlton-gdb -lgdtoa-gdb \
 			 -lm -lgmp -m64 -lplpa_included -pthread -lrt -lgc
 
 LIBS = -L$(MMPATH)/trunk/build/lib/self -lmlton -lgdtoa \
-			 -lm -lgmp -m64 -lplpa_included -pthread -lrt
+			 -lm -lgmp -m64 -lplpa_included -pthread -lrt -lgc
 
 %.o: %.c
 	gcc $(FLAGS) -o $@ $<
