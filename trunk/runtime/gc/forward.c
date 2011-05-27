@@ -132,16 +132,20 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
       sr->start = s->forwardState.back;
       sr->end = s->sharedFrontier;
       sr->next = NULL;
+
       if (s->forwardState.rangeListLast == NULL) {
-        assert (!s->forwardState.rangeListCurrent);
+        assert (!s->forwardState.rangeListFirst);
         s->forwardState.rangeListFirst = sr;
-        s->forwardState.rangeListCurrent = sr;
         s->forwardState.rangeListLast = sr;
       }
       else {
         s->forwardState.rangeListLast->next = sr;
         s->forwardState.rangeListLast = sr;
       }
+
+      if (s->forwardState.rangeListCurrent == NULL)
+        s->forwardState.rangeListCurrent = sr;
+
       if (DEBUG_DETAILED)
         fprintf (stderr, "New skip range from "FMTPTR" to "FMTPTR" [%d]\n",
                  (uintptr_t)sr->start, (uintptr_t)sr->end, s->procId);
