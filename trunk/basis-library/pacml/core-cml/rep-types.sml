@@ -91,6 +91,7 @@ structure RepTypes =
 
        datatype ('a,'b) aevt =
             PAIR of ('a sevt * 'b sevt)
+          | AGUARD of unit -> ('a, 'b) aevt
 
        datatype ('a,'b) cevt =
             SEVT of 'a sevt
