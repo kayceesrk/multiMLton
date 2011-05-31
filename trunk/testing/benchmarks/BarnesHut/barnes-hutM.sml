@@ -1118,10 +1118,10 @@ functor Main (V : VECTOR) : sig
     val totalWork = Array.length(plist)
     val s = L.makeTree (plist, rmin, rsize)
     val workChunk = 64
-	val totalSlaves = 8
-	val term = []
-	val workChan  = channel ()
-	val resultChan = channel ()
+    val totalSlaves = 32
+    val term = []
+    val workChan  = channel ()
+    val resultChan = channel ()
     val prog = ref 0
     fun splitWork i =
 		if i > totalWork then ()
@@ -1172,7 +1172,7 @@ val count = ref 0
           dtime, eps, tol, rsize, rmin
         } = let
           val step = stepSystem output
-          fun loop (nstep, tnow) = if (*(tnow < tstop + (0.1 * dtime))*)!count < 25
+          fun loop (nstep, tnow) = if (*(tnow < tstop + (0.1 * dtime))*)!count < 50
                 then (count := !count + 1;
                       print (concat ["Count=", Int.toString (!count), "\n"]);
                       loop (step { plist = bodies, dtime = dtime, eps = eps, nstep = nstep,
