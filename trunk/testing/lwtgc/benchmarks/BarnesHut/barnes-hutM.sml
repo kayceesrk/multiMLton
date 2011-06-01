@@ -1118,10 +1118,10 @@ functor Main (V : VECTOR) : sig
     val totalWork = Array.length(plist)
     val s = L.makeTree (plist, rmin, rsize)
     val workChunk = 64
-	val totalSlaves = 8
-	val term = []
-	val workChan  = channel ()
-	val resultChan = channel ()
+    val totalSlaves = 32
+    val term = []
+    val workChan  = channel ()
+    val resultChan = channel ()
     val prog = ref 0
     fun splitWork i =
 		if i > totalWork then ()
