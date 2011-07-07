@@ -212,10 +212,22 @@ structure Type =
                            (Bits.- (WordSize.bits (WordSize.smallIntInfWord ()),
                                     Bits.one)))))))
 
+      val deSeq: t -> t vector option =
+         fn t =>
+         case node t of
+            Seq l => SOME l
+          | _ => NONE
+
       val deLabel: t -> Label.t option =
          fn t =>
          case node t of
             Label l => SOME l
+          | _ => NONE
+
+      val deObjptrVector: t -> ObjptrTycon.t vector option =
+         fn t =>
+         case node t of
+            Objptr opts => SOME opts
           | _ => NONE
 
       val deObjptr: t -> ObjptrTycon.t option =

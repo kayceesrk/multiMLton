@@ -89,7 +89,7 @@ structure Operand =
 
       fun layout (z: t): Layout.t =
          let
-            open Layout 
+            open Layout
          in
             case z of
                ArrayOffset {base, index, offset, scale, ty} =>
@@ -305,7 +305,7 @@ structure Statement =
 
             val (src, srcTy, ssSrc, dstTy, finishDst) =
                case (Type.deReal srcTy, Type.deReal dstTy) of
-                  (NONE, NONE) => 
+                  (NONE, NONE) =>
                      (src, srcTy, [], dstTy, fn dst => (dst, []))
                 | (SOME rs, NONE) =>
                      let
@@ -350,9 +350,9 @@ structure Statement =
                        (Operand.Var {ty = tmpTy, var = tmp},
                         [PrimApp {args = Vector.new1 src,
                                   dst = SOME (tmp, tmpTy),
-                                  prim = (Prim.wordExtdToWord 
-                                          (WordSize.fromBits srcW, 
-                                           WordSize.fromBits dstW, 
+                                  prim = (Prim.wordExtdToWord
+                                          (WordSize.fromBits srcW,
+                                           WordSize.fromBits dstW,
                                            {signed = false}))}])
                     end
 
@@ -747,7 +747,7 @@ structure Function =
                    val _ =
                       Transfer.foreachLabel
                       (transfer, fn to =>
-                       (ignore o Graph.addEdge) 
+                       (ignore o Graph.addEdge)
                        (g, {from = from, to = labelNode to}))
                 in
                    ()
@@ -887,6 +887,84 @@ structure Program =
          (List.foreach (functions, Function.clear)
           ; Function.clear main)
 
+      local
+        open ObjectType
+        open Type
+      in
+        fun hasTransitiveIdentity objectTypes ty i =
+          let
+            val visited = ref []
+
+            fun objptrTyconHasTransitiveIdentity ty =
+              (mainLoop
+                (Vector.sub (objectTypes, ObjptrTycon.index ty))
+                (ObjptrTycon.index ty))
+
+            and typeHasTransitiveIdentity (typ : Type.t) =
+              (case deObjptrVector typ of
+                   SOME v =>
+                    (Vector.fold (v, false, (fn (e, res) => (res orelse (objptrTyconHasTransitiveIdentity e)))))
+                 | NONE =>
+                    (case deSeq typ of
+                        SOME v =>
+                          (Vector.fold (v, false, (fn (e, res) => (res orelse (typeHasTransitiveIdentity e)))))
+                      | NONE => false))
+
+            and mainLoop ty i =
+              if List.contains (!visited, i, Int.equals) then
+                false
+              else
+                (visited := (i::(!visited));
+                  case ty of
+                      Array {elt, hasIdentity} =>
+                        (if hasIdentity then
+                          true
+                        else typeHasTransitiveIdentity elt)
+                    | Normal {hasIdentity, ty} =>
+                        (if hasIdentity then
+                          true
+                        else
+                          typeHasTransitiveIdentity ty)
+                    | _ => false)
+          in
+            mainLoop ty i
+          end
+
+        fun isUnbounded objectTypes ty i =
+          let
+            val visited = ref []
+
+            fun objptrTyconIsUnbounded ty =
+              (mainLoop
+                (Vector.sub (objectTypes, ObjptrTycon.index ty))
+                (ObjptrTycon.index ty))
+
+            and typeIsUnbounded (typ : Type.t) =
+              (case deObjptrVector typ of
+                   SOME v =>
+                    (Vector.fold (v, false, (fn (e, res) => (res orelse (objptrTyconIsUnbounded e)))))
+                 | NONE =>
+                    (case deSeq typ of
+                        SOME v =>
+                          (Vector.fold (v, false, (fn (e, res) => (res orelse (typeIsUnbounded e)))))
+                      | NONE => false))
+
+            and mainLoop ty i =
+              if List.contains (!visited, i, Int.equals) then
+                true
+              else
+                (visited := (i::(!visited));
+                  case ty of
+                      Array {elt, hasIdentity} => true
+                    | Normal {hasIdentity, ty} =>
+                        typeIsUnbounded ty
+                    | _ => false)
+          in
+            mainLoop ty i
+          end
+
+      end
+
       fun layouts (T {functions, main, objectTypes, ...},
                    output': Layout.t -> unit): unit =
          let
@@ -895,8 +973,17 @@ structure Program =
          in
             output (str "\nObjectTypes:")
             ; Vector.foreachi (objectTypes, fn (i, ty) =>
-                               output (seq [str "opt_", Int.layout i,
-                                            str " = ", ObjectType.layout ty]))
+                                let
+                                  val hasId = hasTransitiveIdentity objectTypes ty i
+                                  val hasIdStr = Bool.toString hasId
+                                  val isUnb = isUnbounded objectTypes ty i
+                                  val isUnbStr = Bool.toString isUnb
+                                in
+                                  output (seq [str "opt_", Int.layout i,
+                                                str " = ", ObjectType.layout ty,
+                                                str " hasIdentityTransitive = ", str hasIdStr,
+                                                str " isUnbounded = ", str isUnbStr])
+                                end)
             ; output (str "\nMain:")
             ; Function.layouts (main, output)
             ; output (str "\nFunctions:")
@@ -960,7 +1047,7 @@ structure Program =
                         val _ = Array.update (visited, i, true)
                         val f = Vector.sub (functions, i)
                         val v' = v f
-                        val _ = Function.dfs 
+                        val _ = Function.dfs
                                 (f, fn Block.T {transfer, ...} =>
                                  (Transfer.foreachFunc (transfer, visit)
                                   ; fn () => ()))
@@ -1051,7 +1138,7 @@ structure Program =
                                  NONE => keep ()
                                | SOME src =>
                                     let
-                                       val src = 
+                                       val src =
                                           if Type.equals (Operand.ty src, dstTy)
                                              then src
                                           else Cast (src, dstTy)
@@ -1152,7 +1239,7 @@ structure Program =
 
       fun shrink (T {functions, handlesSignals, main, objectTypes}) =
          let
-            val p = 
+            val p =
                T {functions = List.revMap (functions, Function.shrink),
                   handlesSignals = handlesSignals,
                   main = Function.shrink main,
@@ -1218,7 +1305,7 @@ structure Program =
                let
                   val {name, start, blocks, ...} = Function.dest f
                   val {get = labelInfo: Label.t -> HandlerInfo.t,
-                       rem = remLabelInfo, 
+                       rem = remLabelInfo,
                        set = setLabelInfo} =
                      Property.getSetOnce
                      (Label.plist, Property.initRaise ("info", Label.layout))
@@ -1362,7 +1449,7 @@ structure Program =
                      (fn display =>
                       let
                          open Layout
-                         val _ = 
+                         val _ =
                             display (seq [str "checkHandlers ",
                                           Func.layout name])
                          val _ =
@@ -1605,7 +1692,7 @@ structure Program =
                           | _ => false)
                    | SetSlotExnStack => true
                end
-            val statementOk = 
+            val statementOk =
                Trace.trace ("Rssa.statementOk",
                             Statement.layout,
                             Bool.layout)
@@ -1633,7 +1720,7 @@ structure Program =
                              returns: Type.t vector option): bool =
                case returns of
                   NONE => true
-                | SOME ts => 
+                | SOME ts =>
                      Vector.equals (formals, ts, fn ((_, t), t') =>
                                     Type.isSubtype (t', t))
             fun callIsOk {args, func, raises, return, returns} =
@@ -1797,7 +1884,7 @@ structure Program =
                                            val expects =
                                               #2 (Vector.sub (args, 0))
                                         in
-                                           Type.isSubtype (return, expects) 
+                                           Type.isSubtype (return, expects)
                                            andalso
                                            CType.equals (Type.toCType return,
                                                          Type.toCType expects)
@@ -1823,7 +1910,7 @@ structure Program =
                                   Bool.layout)
                                  blockOk
 
-                  val _ = 
+                  val _ =
                      Vector.foreach
                      (blocks, fn b =>
                       check' (b, "block", blockOk, Block.layout))
