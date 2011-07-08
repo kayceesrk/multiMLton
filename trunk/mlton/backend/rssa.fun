@@ -887,84 +887,6 @@ structure Program =
          (List.foreach (functions, Function.clear)
           ; Function.clear main)
 
-      local
-        open ObjectType
-        open Type
-      in
-        fun hasTransitiveIdentity objectTypes ty i =
-          let
-            val visited = ref []
-
-            fun objptrTyconHasTransitiveIdentity ty =
-              (mainLoop
-                (Vector.sub (objectTypes, ObjptrTycon.index ty))
-                (ObjptrTycon.index ty))
-
-            and typeHasTransitiveIdentity (typ : Type.t) =
-              (case deObjptrVector typ of
-                   SOME v =>
-                    (Vector.fold (v, false, (fn (e, res) => (res orelse (objptrTyconHasTransitiveIdentity e)))))
-                 | NONE =>
-                    (case deSeq typ of
-                        SOME v =>
-                          (Vector.fold (v, false, (fn (e, res) => (res orelse (typeHasTransitiveIdentity e)))))
-                      | NONE => false))
-
-            and mainLoop ty i =
-              if List.contains (!visited, i, Int.equals) then
-                false
-              else
-                (visited := (i::(!visited));
-                  case ty of
-                      Array {elt, hasIdentity} =>
-                        (if hasIdentity then
-                          true
-                        else typeHasTransitiveIdentity elt)
-                    | Normal {hasIdentity, ty} =>
-                        (if hasIdentity then
-                          true
-                        else
-                          typeHasTransitiveIdentity ty)
-                    | _ => false)
-          in
-            mainLoop ty i
-          end
-
-        fun isUnbounded objectTypes ty i =
-          let
-            val visited = ref []
-
-            fun objptrTyconIsUnbounded ty =
-              (mainLoop
-                (Vector.sub (objectTypes, ObjptrTycon.index ty))
-                (ObjptrTycon.index ty))
-
-            and typeIsUnbounded (typ : Type.t) =
-              (case deObjptrVector typ of
-                   SOME v =>
-                    (Vector.fold (v, false, (fn (e, res) => (res orelse (objptrTyconIsUnbounded e)))))
-                 | NONE =>
-                    (case deSeq typ of
-                        SOME v =>
-                          (Vector.fold (v, false, (fn (e, res) => (res orelse (typeIsUnbounded e)))))
-                      | NONE => false))
-
-            and mainLoop ty i =
-              if List.contains (!visited, i, Int.equals) then
-                true
-              else
-                (visited := (i::(!visited));
-                  case ty of
-                      Array {elt, hasIdentity} => true
-                    | Normal {hasIdentity, ty} =>
-                        typeIsUnbounded ty
-                    | _ => false)
-          in
-            mainLoop ty i
-          end
-
-      end
-
       fun layouts (T {functions, main, objectTypes, ...},
                    output': Layout.t -> unit): unit =
          let
@@ -973,17 +895,8 @@ structure Program =
          in
             output (str "\nObjectTypes:")
             ; Vector.foreachi (objectTypes, fn (i, ty) =>
-                                let
-                                  val hasId = hasTransitiveIdentity objectTypes ty i
-                                  val hasIdStr = Bool.toString hasId
-                                  val isUnb = isUnbounded objectTypes ty i
-                                  val isUnbStr = Bool.toString isUnb
-                                in
                                   output (seq [str "opt_", Int.layout i,
-                                                str " = ", ObjectType.layout ty,
-                                                str " hasIdentityTransitive = ", str hasIdStr,
-                                                str " isUnbounded = ", str isUnbStr])
-                                end)
+                                                str " = ", ObjectType.layout ty]))
             ; output (str "\nMain:")
             ; Function.layouts (main, output)
             ; output (str "\nFunctions:")

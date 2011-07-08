@@ -941,9 +941,106 @@ fun convertConst (c: Const.t): Const.t =
        | _ => c
    end
 
+local
+  open ObjectType
+  open Type
+in
+  fun hasTransitiveIdentity objectTypes ty i =
+    let
+      val visited = ref []
+
+      fun objptrTyconHasTransitiveIdentity ty =
+        (mainLoop
+          (Vector.sub (objectTypes, ObjptrTycon.index ty))
+          (ObjptrTycon.index ty))
+
+      and typeHasTransitiveIdentity (typ : Type.t) =
+        (case deObjptrVector typ of
+              SOME v =>
+              (Vector.fold (v, false, (fn (e, res) => (res orelse (objptrTyconHasTransitiveIdentity e)))))
+            | NONE =>
+              (case deSeq typ of
+                  SOME v =>
+                    (Vector.fold (v, false, (fn (e, res) => (res orelse (typeHasTransitiveIdentity e)))))
+                | NONE => false))
+
+      and mainLoop ty i =
+        if List.contains (!visited, i, Int.equals) then
+          false
+        else
+          (visited := (i::(!visited));
+            case ty of
+                Array {elt, hasIdentity, hasIdentityTransitive} =>
+                  (if hasIdentity then
+                    (hasIdentityTransitive := true;
+                    true)
+                  else
+                    let
+                      val res = typeHasTransitiveIdentity elt
+                      val _ = hasIdentityTransitive := res
+                    in
+                      res
+                    end)
+              | Normal {hasIdentity, ty, hasIdentityTransitive, ...} =>
+                  (if hasIdentity then
+                    (hasIdentityTransitive := true;
+                    true)
+                  else
+                    let
+                      val res = typeHasTransitiveIdentity ty
+                      val _ = hasIdentityTransitive := res
+                    in
+                      res
+                    end)
+              | _ => false)
+    in
+      mainLoop ty i
+    end
+
+  fun isUnbounded objectTypes ty i =
+    let
+      val visited = ref []
+
+      fun objptrTyconIsUnbounded ty =
+        (mainLoop
+          (Vector.sub (objectTypes, ObjptrTycon.index ty))
+          (ObjptrTycon.index ty))
+
+      and typeIsUnbounded (typ : Type.t) =
+        (case deObjptrVector typ of
+              SOME v =>
+              (Vector.fold (v, false, (fn (e, res) => (res orelse (objptrTyconIsUnbounded e)))))
+            | NONE =>
+              (case deSeq typ of
+                  SOME v =>
+                    (Vector.fold (v, false, (fn (e, res) => (res orelse (typeIsUnbounded e)))))
+                | NONE => false))
+
+      and mainLoop ty i =
+        if List.contains (!visited, i, Int.equals) then
+          true
+        else
+          (visited := (i::(!visited));
+            case ty of
+                Array {elt, hasIdentity, ...} => true
+              | Normal {hasIdentity, ty, isUnbounded, ...} =>
+                  let
+                    val res = typeIsUnbounded ty
+                    val _ = isUnbounded := res
+                  in
+                    res
+                  end
+              | _ => false)
+    in
+      mainLoop ty i
+    end
+
+end
+
 fun convert (program as S.Program.T {functions, globals, main, ...},
              {codegenImplementsPrim: Rssa.Type.t Rssa.Prim.t -> bool}): Rssa.Program.t =
    let
+      val _ = print "----BEFORE----\n"
       val {diagnostic, genCase, object, objectTypes, select, toRtype, update} =
          PackedRepresentation.compute program
       val objectTypes = Vector.concat [ObjectType.basic (), objectTypes]
@@ -951,6 +1048,15 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
          Vector.foreachi
          (objectTypes, fn (i, (opt, _)) => ObjptrTycon.setIndex (opt, i))
       val objectTypes = Vector.map (objectTypes, #2)
+      val () = Vector.foreachi (objectTypes, fn (i, ty) =>
+                                let
+                                  val _ = hasTransitiveIdentity objectTypes ty i
+                                  val _ = isUnbounded objectTypes ty i
+                                in
+                                  ()
+                                end)
+
+      val _ = print "----AFTER----\n"
       val () = diagnostic ()
       val {get = varInfo: Var.t -> {ty: S.Type.t},
            set = setVarInfo, ...} =

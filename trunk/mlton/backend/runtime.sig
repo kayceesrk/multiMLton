@@ -90,9 +90,12 @@ signature RUNTIME =
          sig
             datatype t =
                Array of {hasIdentity: bool,
+                         hasIdentityTransitive: bool,
                          bytesNonObjptrs: Bytes.t,
                          numObjptrs: int}
              | Normal of {hasIdentity: bool,
+                          hasIdentityTransitive: bool,
+                          isUnbounded: bool,
                           bytesNonObjptrs: Bytes.t,
                           numObjptrs: int}
              | Stack

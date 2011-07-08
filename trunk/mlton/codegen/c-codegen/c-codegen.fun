@@ -352,10 +352,10 @@ fun outputDeclarations
              datatype z = datatype Runtime.RObjectType.t
              val (tag, hasIdentity, bytesNonObjptrs, numObjptrs) =
                 case ObjectType.toRuntime ty of
-                   Array {hasIdentity, bytesNonObjptrs, numObjptrs} =>
+                   Array {hasIdentity, bytesNonObjptrs, numObjptrs,...} =>
                       ("ARRAY_TAG", hasIdentity,
                        Bytes.toInt bytesNonObjptrs, numObjptrs)
-                 | Normal {hasIdentity, bytesNonObjptrs, numObjptrs} =>
+                 | Normal {hasIdentity, bytesNonObjptrs, numObjptrs, ...} =>
                       ("NORMAL_TAG", hasIdentity,
                        Bytes.toInt bytesNonObjptrs, numObjptrs)
                  | Stack =>

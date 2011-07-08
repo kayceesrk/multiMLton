@@ -201,9 +201,12 @@ structure RObjectType =
    struct
       datatype t =
          Array of {hasIdentity: bool,
+                   hasIdentityTransitive: bool,
                    bytesNonObjptrs: Bytes.t,
                    numObjptrs: int}
        | Normal of {hasIdentity: bool,
+                    hasIdentityTransitive: bool,
+                    isUnbounded: bool,
                     bytesNonObjptrs: Bytes.t,
                     numObjptrs: int}
        | Stack
@@ -216,14 +219,19 @@ structure RObjectType =
             open Layout
          in
             case t of
-               Array {hasIdentity, bytesNonObjptrs, numObjptrs} =>
+               Array {hasIdentity, bytesNonObjptrs, numObjptrs,
+                      hasIdentityTransitive} =>
                   seq [str "Array ",
                        record [("hasIdentity", Bool.layout hasIdentity),
+                               ("hasIdentityTransitive", Bool.layout hasIdentityTransitive),
                                ("bytesNonObjptrs", Bytes.layout bytesNonObjptrs),
                                ("numObjptrs", Int.layout numObjptrs)]]
-             | Normal {hasIdentity, bytesNonObjptrs, numObjptrs} =>
+             | Normal {hasIdentity, bytesNonObjptrs, numObjptrs,
+                       hasIdentityTransitive, isUnbounded} =>
                   seq [str "Normal ",
                        record [("hasIdentity", Bool.layout hasIdentity),
+                               ("hasIdentityTransitive", Bool.layout hasIdentityTransitive),
+                               ("isUnbounded", Bool.layout isUnbounded),
                                ("bytesNonObjptrs", Bytes.layout bytesNonObjptrs),
                                ("numObjptrs", Int.layout numObjptrs)]]
              | Stack => str "Stack"

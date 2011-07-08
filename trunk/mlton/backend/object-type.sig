@@ -13,8 +13,11 @@ signature OBJECT_TYPE =
       type ty
       datatype t =
          Array of {elt: ty,
-                   hasIdentity: bool}
+                   hasIdentity: bool,
+                   hasIdentityTransitive: bool ref}
        | Normal of {hasIdentity: bool,
+                    hasIdentityTransitive: bool ref,
+                    isUnbounded: bool ref,
                     ty: ty}
        | Stack
        | Weak of ty option (* in Weak (SOME t), must have Type.isPointer t *)

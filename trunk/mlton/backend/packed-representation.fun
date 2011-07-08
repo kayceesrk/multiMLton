@@ -2573,6 +2573,8 @@ fun compute (program as Ssa.Program.T {datatypes, ...}) =
                                         SOME
                                         (opt, (ObjectType.Normal
                                                {hasIdentity = hasIdentity,
+                                                hasIdentityTransitive = ref false,
+                                                isUnbounded = ref false,
                                                 ty = ObjptrRep.componentsTy opr}))
                                    | _ => NONE)
                               val () = setTupleRep (t, tr)
@@ -2632,6 +2634,7 @@ fun compute (program as Ssa.Program.T {datatypes, ...}) =
                                            SOME (opt,
                                                  ObjectType.Array
                                                  {elt = elt,
+                                                  hasIdentityTransitive = ref false,
                                                   hasIdentity = hasIdentity})
                                         end)
                                  in
@@ -2734,6 +2737,8 @@ fun compute (program as Ssa.Program.T {datatypes, ...}) =
               ConRep.Tuple (TupleRep.Indirect opr) =>
                  (objptrTycon,
                   ObjectType.Normal {hasIdentity = Prod.isMutable args,
+                                     hasIdentityTransitive = ref false,
+                                     isUnbounded = ref false,
                                      ty = ObjptrRep.componentsTy opr}) :: ac
             | _ => ac))
       val objectTypes = ref objectTypes
@@ -2741,6 +2746,7 @@ fun compute (program as Ssa.Program.T {datatypes, ...}) =
          List.foreach (!delayedObjectTypes, fn f =>
                        Option.app (f (), fn z => List.push (objectTypes, z)))
       val objectTypes = Vector.fromList (!objectTypes)
+
       fun diagnostic () =
          Control.diagnostics
          (fn display =>

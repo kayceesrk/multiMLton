@@ -369,8 +369,11 @@ structure ObjectType =
       type ty = Type.t
       datatype t =
          Array of {elt: ty,
-                   hasIdentity: bool}
+                   hasIdentity: bool,
+                   hasIdentityTransitive: bool ref}
        | Normal of {hasIdentity: bool,
+                    hasIdentityTransitive: bool ref,
+                    isUnbounded: bool ref,
                     ty: ty}
        | Stack
        | Weak of Type.t option
@@ -382,13 +385,16 @@ structure ObjectType =
             open Layout
          in
             case t of
-               Array {elt, hasIdentity} =>
+               Array {elt, hasIdentity, hasIdentityTransitive} =>
                   seq [str "Array ",
                        record [("elt", Type.layout elt),
-                               ("hasIdentity", Bool.layout hasIdentity)]]
-             | Normal {hasIdentity, ty} =>
+                               ("hasIdentity", Bool.layout hasIdentity),
+                               ("hasIdentityTransitive", Bool.layout (!hasIdentityTransitive))]]
+             | Normal {hasIdentity, ty, hasIdentityTransitive, isUnbounded} =>
                   seq [str "Normal ",
                        record [("hasIdentity", Bool.layout hasIdentity),
+                               ("hasIdentityTransitive", Bool.layout (!hasIdentityTransitive)),
+                               ("isUnbounded", Bool.layout (!isUnbounded)),
                                ("ty", Type.layout ty)]]
              | Stack => str "Stack"
              | Weak t => seq [str "Weak ", Option.layout Type.layout t]
@@ -452,6 +458,8 @@ structure ObjectType =
                end
          in
             Normal {hasIdentity = true,
+                    hasIdentityTransitive = ref true,
+                    isUnbounded = ref false,
                     ty = Type.seq (Vector.new4 (padding,
                                                 Type.csize (),
                                                 Type.exnStack (),
@@ -479,6 +487,7 @@ structure ObjectType =
                in
                   (ObjptrTycon.wordVector b,
                    Array {hasIdentity = false,
+                          hasIdentityTransitive = ref false,
                           elt = Type.word (WordSize.fromBits b)})
                end
          in
@@ -499,19 +508,22 @@ structure ObjectType =
       in
          fun toRuntime (t: t): R.t =
             case t of
-               Array {elt, hasIdentity} =>
+               Array {elt, hasIdentity, hasIdentityTransitive} =>
                   let
                      val (b, nops) = Type.bytesAndObjptrs elt
                   in
                      R.Array {hasIdentity = hasIdentity,
+                              hasIdentityTransitive = !hasIdentityTransitive,
                               bytesNonObjptrs = b,
                               numObjptrs = nops}
                   end
-             | Normal {hasIdentity, ty} =>
+             | Normal {hasIdentity, ty, hasIdentityTransitive, isUnbounded} =>
                   let
                      val (b, nops) = Type.bytesAndObjptrs ty
                   in
                      R.Normal {hasIdentity = hasIdentity,
+                               hasIdentityTransitive = !hasIdentityTransitive,
+                               isUnbounded = !isUnbounded,
                                bytesNonObjptrs = b,
                                numObjptrs = nops}
                   end
