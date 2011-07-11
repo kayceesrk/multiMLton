@@ -121,25 +121,28 @@ typedef uint32_t GC_smallGapSize;
 #if (defined (MLTON_GC_INTERNAL_TYPES))
 
 /*
- * The type index of a header is an index into an array of object
- * types, where each element describes the layout of an object.  The
- * object types array is declared as:
+ * The type index of a header is an index into an array of object types, where
+ * each element describes the layout of an object.  The object types array is
+ * declared as:
  *
  *  GC_objectType *objectTypes;
  *
- * The objectTypes pointer is initialized to point to a static array
- * of object types that is emitted for each compiled program.  The
- * hasIdentity field indicates whether or not the object has mutable
- * fields, in which case it may not be hash-cons-ed.  In a normal
- * object, the bytesNonObjptrs field indicates the number of bytes of
- * non heap-pointer data, while the numObjptrs field indicates the
- * number of heap pointers.  In an array object, the bytesNonObjptrs
- * field indicates the number of bytes of non heap-pointer data in a
- * single array element, while the numObjptrs field indicates the
- * number of heap pointers in a single array element.  In a stack
- * object, the bytesNonObjptrs and numObjptrs fields are irrelevant.
- * In a weak object, the bytesNonObjptrs and numObjptrs fields are
- * interpreted as in a normal object.
+ * The objectTypes pointer is initialized to point to a static array of object
+ * types that is emitted for each compiled program.  The hasIdentity field
+ * indicates whether or not the object has mutable fields, in which case it may
+ * not be hash-cons-ed.  In a normal object, the bytesNonObjptrs field
+ * indicates the number of bytes of non heap-pointer data, while the numObjptrs
+ * field indicates the number of heap pointers.  In an array object, the
+ * bytesNonObjptrs field indicates the number of bytes of non heap-pointer data
+ * in a single array element, while the numObjptrs field indicates the number
+ * of heap pointers in a single array element.  In a stack object, the
+ * bytesNonObjptrs and numObjptrs fields are irrelevant. In a weak object, the
+ * bytesNonObjptrs and numObjptrs fields are interpreted as in a normal object.
+ *
+ * hasIdentityTransitive indicates whether the transitive closure of the object
+ * is mutable. isUnbounded indicates whether the object has a fixed size
+ * statically. In particular, stacks, arrays and recursive objects are
+ * considered to be unbounded statically.
 */
 typedef struct GC_objectType {
   /* Keep tag first, at zero offset, since it is referenced most often. */
@@ -147,6 +150,8 @@ typedef struct GC_objectType {
   bool hasIdentity;
   uint16_t bytesNonObjptrs;
   uint16_t numObjptrs;
+  bool hasIdentityTransitive;
+  bool isUnbounded;
 } *GC_objectType;
 enum {
   /* The type indices here must agree with those in backend/rep-type.fun. */

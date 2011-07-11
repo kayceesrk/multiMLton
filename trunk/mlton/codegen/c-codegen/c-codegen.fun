@@ -350,16 +350,16 @@ fun outputDeclarations
           fn (_, ty) =>
           let
              datatype z = datatype Runtime.RObjectType.t
-             val (tag, hasIdentity, bytesNonObjptrs, numObjptrs) =
+             val (tag, hasIdentity, bytesNonObjptrs, numObjptrs, hasIdentityTransitive, isUnbounded) =
                 case ObjectType.toRuntime ty of
-                   Array {hasIdentity, bytesNonObjptrs, numObjptrs,...} =>
+                   Array {hasIdentity, bytesNonObjptrs, numObjptrs, hasIdentityTransitive} =>
                       ("ARRAY_TAG", hasIdentity,
-                       Bytes.toInt bytesNonObjptrs, numObjptrs)
-                 | Normal {hasIdentity, bytesNonObjptrs, numObjptrs, ...} =>
+                       Bytes.toInt bytesNonObjptrs, numObjptrs, hasIdentityTransitive, true)
+                 | Normal {hasIdentity, bytesNonObjptrs, numObjptrs, hasIdentityTransitive, isUnbounded} =>
                       ("NORMAL_TAG", hasIdentity,
-                       Bytes.toInt bytesNonObjptrs, numObjptrs)
+                       Bytes.toInt bytesNonObjptrs, numObjptrs, hasIdentityTransitive, isUnbounded)
                  | Stack =>
-                      ("STACK_TAG", false, 0, 0)
+                      ("STACK_TAG", false, 0, 0, false, false)
                  | Weak {gone} =>
                       let
                          val bytesObjptr =
@@ -393,15 +393,19 @@ fun outputDeclarations
                                then (bytesNonObjptrs + bytesObjptr, 0)
                             else (bytesNonObjptrs, 1)
                       in
-                         ("WEAK_TAG", false, bytesNonObjptrs, numObjptrs)
+                         (* Being conservative and choosing true for both
+                          * hasIdentityTransitive and isUnbounded - KC *)
+                         ("WEAK_TAG", false, bytesNonObjptrs, numObjptrs, true, true)
                       end
-                 | HeaderOnly => ("HEADER_ONLY_TAG", false, 0, 0)
-                 | Fill => ("FILL_TAG", false, 0, 0)
+                 | HeaderOnly => ("HEADER_ONLY_TAG", false, 0, 0, false, false)
+                 | Fill => ("FILL_TAG", false, 0, 0, false, true)
           in
              concat ["{ ", tag, ", ",
                      C.bool hasIdentity, ", ",
                      C.int bytesNonObjptrs, ", ",
-                     C.int numObjptrs, " }"]
+                     C.int numObjptrs, ", ",
+                     C.bool hasIdentityTransitive, ", ",
+                     C.bool isUnbounded, " }"]
           end)
       fun declareMLtonMain () =
          let
