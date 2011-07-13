@@ -51,7 +51,8 @@ size_t sizeofObject (GC_state s, pointer p) {
                header, (uintptr_t)p, s->procId);
     header = *(GC_header*)header;
   }
-  splitHeader (s, header, getHeaderp (p), &tag, NULL, &bytesNonObjptrs, &numObjptrs);
+  splitHeader (s, header, getHeaderp (p), &tag, NULL,
+               &bytesNonObjptrs, &numObjptrs, NULL, NULL);
   if ((NORMAL_TAG == tag) or (WEAK_TAG == tag)) {
     headerBytes = GC_NORMAL_HEADER_SIZE;
     objectBytes = bytesNonObjptrs + (numObjptrs * OBJPTR_SIZE);
@@ -104,7 +105,8 @@ size_t sizeofObjectNoHeader (GC_state s, pointer p) {
                header, (uintptr_t)p, s->procId);
     header = *(GC_header*)header;
   }
-  splitHeader (s, header, getHeaderp (p), &tag, NULL, &bytesNonObjptrs, &numObjptrs);
+  splitHeader (s, header, getHeaderp (p), &tag, NULL,
+               &bytesNonObjptrs, &numObjptrs, NULL, NULL);
   if ((NORMAL_TAG == tag) or (WEAK_TAG == tag)) {
     objectBytes = bytesNonObjptrs + (numObjptrs * OBJPTR_SIZE);
   } else if (ARRAY_TAG == tag) {
@@ -131,7 +133,8 @@ size_t sizeofObjectNoHeader (GC_state s, pointer p) {
 size_t sizeofObjectHeader (GC_state s, GC_header header) {
   GC_objectTypeTag tag;
   assert (header != GC_FORWARDED);
-  splitHeader (s, header, NULL, &tag, NULL, NULL, NULL);
+  splitHeader (s, header, NULL, &tag, NULL,
+               NULL, NULL, NULL, NULL);
   if (tag == ARRAY_TAG)
     return GC_ARRAY_HEADER_SIZE;
   else

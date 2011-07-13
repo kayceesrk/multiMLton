@@ -480,6 +480,7 @@ fun flatten (program as Program.T {datatypes, functions, globals, main}) =
              | Lwtgc_isObjptr => dontFlatten ()
              | Lwtgc_isObjptrInLocalHeap => dontFlatten ()
              | Lwtgc_isObjptrInSharedHeap => dontFlatten ()
+             | Lwtgc_objectTypeInfo => dontFlatten ()
              | Weak_get => deWeak (arg 0)
              | Weak_new =>
                   let val a = arg 0

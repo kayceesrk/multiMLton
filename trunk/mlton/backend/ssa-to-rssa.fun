@@ -375,6 +375,23 @@ structure CFunction =
             target = Direct "GC_isInSharedOrForwarded",
             writesStackTop = false}
 
+      fun objectTypeInfo t =
+         T {args = Vector.new2 (Type.gcState (), t),
+            bytesNeeded = NONE,
+            convention = Cdecl,
+            ensuresBytesFree = false,
+            mayGC = false,
+            maySwitchThreads = false,
+            modifiesFrontier = false,
+            prototype = (Vector.new2 (CType.gcState, CType.cpointer),
+                         SOME CType.bool),
+            readsStackTop = false,
+            return = Type.bool,
+            symbolScope = Private,
+            target = Direct "GC_objectTypeInfo",
+            writesStackTop = false}
+
+
       fun sqAcquireLock () =
          T {args = Vector.new2 (Type.gcState (), Type.cint ()),
             bytesNeeded = NONE,
@@ -1040,7 +1057,6 @@ end
 fun convert (program as S.Program.T {functions, globals, main, ...},
              {codegenImplementsPrim: Rssa.Type.t Rssa.Prim.t -> bool}): Rssa.Program.t =
    let
-      val _ = print "----BEFORE----\n"
       val {diagnostic, genCase, object, objectTypes, select, toRtype, update} =
          PackedRepresentation.compute program
       val objectTypes = Vector.concat [ObjectType.basic (), objectTypes]
@@ -1056,7 +1072,6 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                   ()
                                 end)
 
-      val _ = print "----AFTER----\n"
       val () = diagnostic ()
       val {get = varInfo: Var.t -> {ty: S.Type.t},
            set = setVarInfo, ...} =
@@ -2020,6 +2035,15 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                            if not (Type.isObjptr t) then
                                              move (Operand.bool false)
                                            else isObjptrInSharedHeap (varOp (arg 0)))
+                               | Lwtgc_objectTypeInfo =>
+                                    (case toRtype (varType (arg 0)) of
+                                        NONE => move (Operand.bool false)
+                                      | SOME t =>
+                                           if not (Type.isObjptr t) then
+                                             move (Operand.bool false)
+                                           else
+                                              simpleCCallWithGCState
+                                              (CFunction.objectTypeInfo (Operand.ty (a 0))))
                                | Lwtgc_isObjptr =>
                                     (case toRtype (varType (arg 0)) of
                                         NONE => move (Operand.bool false)

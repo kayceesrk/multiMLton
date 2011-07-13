@@ -183,7 +183,10 @@ enum {
 
 static inline void splitHeader (GC_state s, GC_header header, __attribute__((unused)) GC_header* headerp,
                                 GC_objectTypeTag *tagRet, bool *hasIdentityRet,
-                                uint16_t *bytesNonObjptrsRet, uint16_t *numObjptrsRet);
+                                uint16_t *bytesNonObjptrsRet, uint16_t *numObjptrsRet,
+                                bool *hasIdentityTransitiveRet, bool* isUnboundedRet);
 static inline pointer advanceToObjectData (GC_state s, pointer p);
+
+PRIVATE bool GC_objectTypeInfo (GC_state s, pointer p);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

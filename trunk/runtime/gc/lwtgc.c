@@ -93,7 +93,7 @@ static inline void assertLiftedObjptr (GC_state s, objptr *opp) {
   if (!res) {
     GC_header* hp = getHeaderp (objptrToPointer (op, s->heap->start));
     GC_objectTypeTag tag;
-    splitHeader (s, h, hp, &tag, NULL, NULL, NULL);
+    splitHeader (s, h, hp, &tag, NULL, NULL, NULL, NULL, NULL);
     stackType = (tag == STACK_TAG);
   }
 
@@ -115,7 +115,7 @@ static inline void liftThreadDuringInit (GC_state s, objptr op) {
   if (isObjptr (op)) {
     pointer p = objptrToPointer (op, s->heap->start);
     header = getHeader (p);
-    splitHeader(s, header, getHeaderp (p), &tag, NULL, &bytesNonObjptrs, &numObjptrs);
+    splitHeader(s, header, getHeaderp (p), &tag, NULL, &bytesNonObjptrs, &numObjptrs, NULL, NULL);
 
     /* We know that the object is a GC_thread */
     assert (tag == NORMAL_TAG);

@@ -156,7 +156,8 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
   GC_objectTypeTag tag;
 
   header = getHeader (p);
-  splitHeader(s, header, getHeaderp (p), &tag, NULL, &bytesNonObjptrs, &numObjptrs);
+  splitHeader(s, header, getHeaderp (p), &tag, NULL,
+              &bytesNonObjptrs, &numObjptrs, NULL, NULL);
   if (DEBUG_DETAILED)
     fprintf (stderr,
              "foreachObjptrInObject ("FMTPTR")"
@@ -378,7 +379,8 @@ pointer foreachObjptrInRangeWithFill (GC_state s, pointer front, pointer *back,
 
         pointer oldFront = front;
         GC_objectTypeTag tag;
-        splitHeader (s, getHeader (realP), getHeaderp (realP), &tag, NULL, NULL, NULL);
+        splitHeader (s, getHeader (realP), getHeaderp (realP),
+                     &tag, NULL, NULL, NULL, NULL, NULL);
 
         if (tag == STACK_TAG)
           front = p + sizeofObjectNoHeader (s, p);

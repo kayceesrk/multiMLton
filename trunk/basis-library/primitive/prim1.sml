@@ -74,13 +74,17 @@ struct
   val addToSpawnOnWBA = _prim "Lwtgc_addToSpawnOnWBA": 'a * Int32.int -> unit;
   val isObjptrInLocalHeap = _prim "Lwtgc_isObjptrInLocalHeap": 'a -> bool;
   val isObjptrInSharedHeap = _prim "Lwtgc_isObjptrInSharedHeap": 'a -> bool;
+  val objectTypeInfo = _prim "Lwtgc_objectTypeInfo": 'a -> bool;
   val isObjptr = _prim "Lwtgc_isObjptr": 'a -> bool;
   val needPreemption = _prim "Lwtgc_needPreemption": 'a ref * 'a -> bool;
+
 end
 
 structure Ref =
    struct
       open Ref
+
+      exception RefFail
 
       val ffiPrint = _import "GC_print": Int32.int -> unit;
       val preemptFn = ref (fn () => ())
@@ -94,7 +98,8 @@ structure Ref =
         val v' = if (Lwtgc.isObjptr v) andalso
                     (Lwtgc.isObjptrInLocalHeap v) andalso
                     (Lwtgc.isObjptrInSharedHeap r) then
-                  (Lwtgc.addToMoveOnWBA (v);
+                  (if Lwtgc.objectTypeInfo v then () else raise RefFail;
+                   Lwtgc.addToMoveOnWBA v;
                    preemptFn ();
                    v)
                 else v

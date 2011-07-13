@@ -53,7 +53,8 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
     GC_objectTypeTag tag;
     uint16_t bytesNonObjptrs, numObjptrs;
 
-    splitHeader(s, header, getHeaderp (p), &tag, NULL, &bytesNonObjptrs, &numObjptrs);
+    splitHeader(s, header, getHeaderp (p), &tag, NULL,
+                &bytesNonObjptrs, &numObjptrs, NULL, NULL);
 
     /* Compute the space taken by the header and object body. */
     if ((NORMAL_TAG == tag) or (WEAK_TAG == tag)) { /* Fixed size object. */
@@ -249,7 +250,8 @@ void forwardObjptr (GC_state s, objptr *opp) {
     size_t headerBytes, objectBytes;
     uint16_t bytesNonObjptrs, numObjptrs;
 
-    splitHeader(s, header, getHeaderp (p), &tag, NULL, &bytesNonObjptrs, &numObjptrs);
+    splitHeader(s, header, getHeaderp (p), &tag, NULL,
+                &bytesNonObjptrs, &numObjptrs, NULL, NULL);
 
     /* Compute the space taken by the header and object body. */
     if ((NORMAL_TAG == tag) or (WEAK_TAG == tag)) { /* Fixed size object. */
@@ -422,7 +424,8 @@ void forwardObjptrForSharedMarkCompact (GC_state s, objptr *opp) {
     GC_header header = getHeader (p);
     GC_header* headerp = getHeaderp (p);
 
-    splitHeader (r, getHeader (p), getHeaderp (p), &tag, NULL, NULL, NULL);
+    splitHeader (r, getHeader (p), getHeaderp (p),
+                 &tag, NULL, NULL, NULL, NULL, NULL);
 
     if (DEBUG_DETAILED)
       fprintf (stderr, "forwardObjptrForSharedMarkCompact: invariant breaking pointer opp="FMTPTR" p="FMTPTR" [%d]\n",
@@ -518,7 +521,8 @@ static inline void forwardObjptrForSharedCheneyCopy (GC_state s, objptr *opp) {
     //opp is in shared heap, and p is in any local heap.
     GC_state r = getGCStateFromPointer (s, p);
     GC_objectTypeTag tag;
-    splitHeader (r, getHeader (p), getHeaderp (p), &tag, NULL, NULL, NULL);
+    splitHeader (r, getHeader (p), getHeaderp (p), &tag,
+                 NULL, NULL, NULL, NULL, NULL);
 
     if (DEBUG_DETAILED)
       fprintf (stderr, "forwardObjptrForSharedCheneyCopy: invariant breaking pointer opp="FMTPTR" p="FMTPTR" [%d]\n",

@@ -187,7 +187,8 @@ thread:
         goto updateObject;
       }
 
-      splitHeader(s, header, getHeaderp (p), &tag, NULL, &bytesNonObjptrs, &numObjptrs);
+      splitHeader(s, header, getHeaderp (p), &tag, NULL,
+                  &bytesNonObjptrs, &numObjptrs, NULL, NULL);
 
       /* Compute the space taken by the header and object body. */
       if ((NORMAL_TAG == tag) or (WEAK_TAG == tag)) { /* Fixed size object. */
@@ -373,7 +374,8 @@ unmark:
         }
         goto updateObject;
       }
-      splitHeader(s, header, getHeaderp (p), &tag, NULL, &bytesNonObjptrs, &numObjptrs);
+      splitHeader(s, header, getHeaderp (p), &tag, NULL,
+                  &bytesNonObjptrs, &numObjptrs, NULL, NULL);
 
       /* Compute the space taken by the header and object body. */
       if ((NORMAL_TAG == tag) or (WEAK_TAG == tag)) { /* Fixed size object. */

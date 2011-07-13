@@ -174,7 +174,8 @@ lookNext:
          ++p1, ++p2)
       unless (*p1 == *p2)
         goto lookNext;
-    splitHeader (s, header, getHeaderp (object), &tag, NULL, NULL, NULL);
+    splitHeader (s, header, getHeaderp (object), &tag,
+                 NULL, NULL, NULL, NULL, NULL);
     if (ARRAY_TAG == tag
         and (getArrayLength (object) != getArrayLength (e->object)))
       goto lookNext;
@@ -241,7 +242,8 @@ pointer hashConsPointer (GC_state s, pointer object, bool countBytesHashConsed) 
     fprintf (stderr, "hashConsPointer ("FMTPTR")\n", (uintptr_t)object);
   t = s->objectHashTable;
   header = getHeader (object);
-  splitHeader(s, header, getHeaderp (object), &tag, &hasIdentity, &bytesNonObjptrs, &numObjptrs);
+  splitHeader(s, header, getHeaderp (object), &tag, &hasIdentity,
+              &bytesNonObjptrs, &numObjptrs, NULL, NULL);
   if (hasIdentity) {
     /* Don't hash cons. */
     res = object;

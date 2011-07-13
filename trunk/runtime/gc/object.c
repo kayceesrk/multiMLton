@@ -52,11 +52,12 @@ GC_header buildHeaderFromTypeIndex (uint32_t t) {
 
 void splitHeader(GC_state s, GC_header header, __attribute__((unused)) GC_header* headerpunused,
                  GC_objectTypeTag *tagRet, bool *hasIdentityRet,
-                 uint16_t *bytesNonObjptrsRet, uint16_t *numObjptrsRet) {
+                 uint16_t *bytesNonObjptrsRet, uint16_t *numObjptrsRet,
+                 bool *hasIdentityTransitiveRet, bool *isUnboundedRet) {
   unsigned int objectTypeIndex;
   GC_objectType objectType;
   GC_objectTypeTag tag;
-  bool hasIdentity;
+  bool hasIdentity, hasIdentityTransitive, isUnbounded;
   uint16_t bytesNonObjptrs, numObjptrs;
   GC_header* headerp = NULL;
 
@@ -73,6 +74,8 @@ void splitHeader(GC_state s, GC_header header, __attribute__((unused)) GC_header
   objectType = &(s->objectTypes[objectTypeIndex]);
   tag = objectType->tag;
   hasIdentity = objectType->hasIdentity;
+  hasIdentityTransitive = objectType->hasIdentityTransitive;
+  isUnbounded = objectType->isUnbounded;
   bytesNonObjptrs = objectType->bytesNonObjptrs;
   numObjptrs = objectType->numObjptrs;
 
@@ -82,12 +85,16 @@ void splitHeader(GC_state s, GC_header header, __attribute__((unused)) GC_header
              "  objectTypeIndex = %u"
              "  tag = %s"
              "  hasIdentity = %s"
+             "  hasIdentityTransitive = %s"
+             "  isUnbounded = %s"
              "  bytesNonObjptrs = %"PRIu16
              "  numObjptrs = %"PRIu16"\n",
              header,
              objectTypeIndex,
              objectTypeTagToString(tag),
              boolToString(hasIdentity),
+             boolToString(hasIdentityTransitive),
+             boolToString(isUnbounded),
              bytesNonObjptrs, numObjptrs);
 
   if (tagRet != NULL)
@@ -98,6 +105,10 @@ void splitHeader(GC_state s, GC_header header, __attribute__((unused)) GC_header
     *bytesNonObjptrsRet = bytesNonObjptrs;
   if (numObjptrsRet != NULL)
     *numObjptrsRet = numObjptrs;
+  if (hasIdentityTransitiveRet != NULL)
+    *hasIdentityTransitiveRet = hasIdentityTransitive;
+  if (isUnboundedRet != NULL)
+    *isUnboundedRet = isUnbounded;
 }
 
 /* advanceToObjectData (s, p)
@@ -124,3 +135,14 @@ pointer advanceToObjectData (__attribute__ ((unused)) GC_state s, pointer p) {
   return res;
 }
 
+bool GC_objectTypeInfo (GC_state s, pointer p) {
+  bool hasIdentityTransitive, isUnbounded;
+  unsigned int objectTypeIndex = (getHeader (p) & TYPE_INDEX_MASK) >> TYPE_INDEX_SHIFT;
+  splitHeader (s, getHeader (p), getHeaderp (p), NULL, NULL,
+               NULL, NULL, &hasIdentityTransitive, &isUnbounded);
+  if (DEBUG_OBJECT_TYPE_INFO) {
+    fprintf (stderr, "hasIdentityTransitive = %d isUnbounded = %d objectTypeIndex = %d\n",
+             hasIdentityTransitive, isUnbounded, objectTypeIndex);
+  }
+  return true;
+}

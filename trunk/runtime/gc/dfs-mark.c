@@ -139,7 +139,7 @@ mark:
    * would see the object as unmarked and traverse it again.
    */
   *headerp = header;
-  splitHeader (s, header, headerp, &tag, NULL, &bytesNonObjptrs, &numObjptrs);
+  splitHeader (s, header, headerp, &tag, NULL, &bytesNonObjptrs, &numObjptrs, NULL, NULL);
   if (NORMAL_TAG == tag) {
     if ((not sizeEstimationForLifting) ||
         (not isPointerInHeap (s, s->sharedHeap, cur))) {
@@ -341,7 +341,7 @@ ret:
   cur = prev;
   headerp = getHeaderp (cur);
   header = *headerp;
-  splitHeader (s, header, headerp, &tag, NULL, &bytesNonObjptrs, &numObjptrs);
+  splitHeader (s, header, headerp, &tag, NULL, &bytesNonObjptrs, &numObjptrs, NULL, NULL);
   /* It's impossible to get a WEAK_TAG here, since we would never
    * follow the weak object pointer.
    */

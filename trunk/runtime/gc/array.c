@@ -56,7 +56,8 @@ pointer indexArrayAtObjptrIndex (GC_state s, pointer a,
   GC_objectTypeTag tag;
 
   header = getHeader (a);
-  splitHeader(s, header, getHeaderp (a), &tag, NULL, &bytesNonObjptrs, &numObjptrs);
+  splitHeader(s, header, getHeaderp (a), &tag, NULL,
+              &bytesNonObjptrs, &numObjptrs, NULL, NULL);
   assert (tag == ARRAY_TAG);
 
   return a
