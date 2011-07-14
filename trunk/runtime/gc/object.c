@@ -137,12 +137,13 @@ pointer advanceToObjectData (__attribute__ ((unused)) GC_state s, pointer p) {
 
 bool GC_objectTypeInfo (GC_state s, pointer p) {
   bool hasIdentityTransitive, isUnbounded;
-  unsigned int objectTypeIndex = (getHeader (p) & TYPE_INDEX_MASK) >> TYPE_INDEX_SHIFT;
-  splitHeader (s, getHeader (p), getHeaderp (p), NULL, NULL,
+  GC_header header = getHeader (p);
+  unsigned int objectTypeIndex = (header & TYPE_INDEX_MASK) >> TYPE_INDEX_SHIFT;
+  splitHeader (s, header, getHeaderp (p), NULL, NULL,
                NULL, NULL, &hasIdentityTransitive, &isUnbounded);
   if (DEBUG_OBJECT_TYPE_INFO) {
-    fprintf (stderr, "hasIdentityTransitive = %d isUnbounded = %d objectTypeIndex = %d\n",
-             hasIdentityTransitive, isUnbounded, objectTypeIndex);
+    fprintf (stderr, "hasIdentityTransitive = %d isUnbounded = %d objectTypeIndex = %d isVirgin = %d\n",
+             hasIdentityTransitive, isUnbounded, objectTypeIndex, isObjectVirgin (header));
   }
   return true;
 }

@@ -62,9 +62,12 @@ COMPILE_TIME_ASSERT(sizeof_objptr__eq__sizeof_header,
                     sizeof(objptr) == sizeof(GC_header));
 
 #define GC_VALID_HEADER_MASK ((GC_header)0x1)
-#define TYPE_INDEX_BITS    18
-#define TYPE_INDEX_MASK    ((GC_header)0x0007FFFE)
+#define TYPE_INDEX_BITS    17
+#define TYPE_INDEX_MASK    ((GC_header)0x0003FFFE)
 #define TYPE_INDEX_SHIFT   1
+#define VIRGIN_BITS        1
+#define VIRGIN_MASK        ((GC_header)0x00040000)
+#define VIRGIN_SHIFT       18
 #define LIFT_BITS          1
 #define LIFT_MASK          ((GC_header)0x00080000)
 #define LIFT_SHIFT         19

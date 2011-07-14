@@ -107,6 +107,12 @@ static inline bool isObjectLifted (GC_header header) {
             && (header & LIFT_MASK));
 }
 
+static inline bool isObjectVirgin (GC_header header) {
+    return (not (header == GC_FORWARDED)
+            && (header & VIRGIN_MASK));
+}
+
+
 bool isPointerInAnyLocalHeap (GC_state s, pointer p) {
   for (int proc = 0; proc < s->numberOfProcs; proc++) {
     GC_state r = &s->procStates[proc];

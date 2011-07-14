@@ -98,7 +98,7 @@ structure Ref =
         val v' = if (Lwtgc.isObjptr v) andalso
                     (Lwtgc.isObjptrInLocalHeap v) andalso
                     (Lwtgc.isObjptrInSharedHeap r) then
-                  (if Lwtgc.objectTypeInfo v then () else raise RefFail;
+                  ((*if Lwtgc.objectTypeInfo v then () else raise RefFail;*)
                    Lwtgc.addToMoveOnWBA v;
                    preemptFn ();
                    v)
