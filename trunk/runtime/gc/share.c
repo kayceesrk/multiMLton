@@ -21,10 +21,13 @@ void GC_share (GC_state s, pointer object) {
   if (DEBUG_SHARE or s->controls->messages)
     s->lastMajorStatistics->bytesHashConsed = 0;
   // Don't hash cons during the first round of marking.
-  bytesExamined = dfsMarkByMode (s, object, MARK_MODE, FALSE, FALSE, FALSE, FALSE);
+  bytesExamined =
+    dfsMarkByMode (s, object, emptyForeachObjectFun, MARK_MODE,
+                   FALSE, FALSE, FALSE, FALSE);
   s->objectHashTable = allocHashTable (s);
   // Hash cons during the second round of (un)marking.
-  dfsMarkByMode (s, object, UNMARK_MODE, TRUE, FALSE, FALSE, FALSE);
+  dfsMarkByMode (s, object, emptyForeachObjectFun, UNMARK_MODE,
+                 TRUE, FALSE, FALSE, FALSE);
   freeHashTable (s->objectHashTable);
   bytesHashConsed = s->lastMajorStatistics->bytesHashConsed;
   s->cumulativeStatistics->bytesHashConsed += bytesHashConsed;

@@ -42,9 +42,9 @@ struct GC_state {
   int32_t spawnOnWBASize;
   int32_t spawnOnWBAMaxSize;
 
-
   pointer sharedFrontier;
   pointer sharedLimit;
+  bool isClosureVirgin;
   size_t exnStack;
 
   /* Alphabetized fields follow. */

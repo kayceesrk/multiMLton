@@ -41,6 +41,7 @@ bool isPointerMarkedByMode (pointer p, GC_markMode m) {
  * It returns the total size in bytes of the objects marked.
  */
 size_t dfsMarkByMode (GC_state s, pointer root,
+                      GC_foreachObjectFun f,
                       GC_markMode mode,
                       bool shouldHashCons,
                       bool shouldLinkWeaks,
@@ -132,6 +133,8 @@ mark:
   assert (not isPointerMarkedByMode (cur, mode));
   assert (header == getHeader (cur));
   assert (headerp == getHeaderp (cur));
+  /* Apply f before marking */
+  f (s, cur);
   header ^= MARK_MASK;
   /* Store the mark.  In the case of an object that contains a pointer to
    * itself, it is essential that we store the marked header before marking
@@ -390,18 +393,24 @@ ret:
   assert (FALSE);
 }
 
+void emptyForeachObjectFun (__attribute__((unused)) GC_state s,
+                            __attribute__((unused)) pointer p) {
+}
+
 void dfsMarkWithHashConsWithLinkWeaks (GC_state s, objptr *opp) {
   pointer p;
   fixFwdObjptr (s, opp);
   p = objptrToPointer (*opp, s->heap->start);
-  dfsMarkByMode (s, p, MARK_MODE, TRUE, TRUE, TRUE, FALSE);
+  dfsMarkByMode (s, p, emptyForeachObjectFun, MARK_MODE,
+                 TRUE, TRUE, TRUE, FALSE);
 }
 
 void dfsMarkWithoutHashConsWithLinkWeaks (GC_state s, objptr *opp) {
   pointer p;
   fixFwdObjptr (s, opp);
   p = objptrToPointer (*opp, s->heap->start);
-  dfsMarkByMode (s, p, MARK_MODE, FALSE, TRUE, TRUE, FALSE);
+  dfsMarkByMode (s, p, emptyForeachObjectFun, MARK_MODE,
+                 FALSE, TRUE, TRUE, FALSE);
 }
 
 //Similar to dfsMarkWithoutHashConsWithLinkWeaksTraceShared
@@ -409,7 +418,8 @@ void dfsMarkTraceShared (GC_state s, objptr *opp) {
   pointer p;
   fixFwdObjptr (s, opp);
   p = objptrToPointer (*opp, s->heap->start);
-  dfsMarkByMode (s, p, MARK_MODE, FALSE, TRUE, FALSE, FALSE);
+  dfsMarkByMode (s, p, emptyForeachObjectFun, MARK_MODE,
+                 FALSE, TRUE, FALSE, FALSE);
 }
 
 
@@ -417,5 +427,7 @@ void dfsUnmark (GC_state s, objptr *opp) {
   pointer p;
 
   p = objptrToPointer (*opp, s->heap->start);
-  dfsMarkByMode (s, p, UNMARK_MODE, FALSE, FALSE, TRUE, FALSE);
+  dfsMarkByMode (s, p, emptyForeachObjectFun,
+                 UNMARK_MODE, FALSE, FALSE, TRUE, FALSE);
 }
+

@@ -15,10 +15,12 @@ size_t GC_size (GC_state s, pointer root) {
 
   if (DEBUG_SIZE)
     fprintf (stderr, "GC_size marking\n");
-  res = dfsMarkByMode (s, root, MARK_MODE, FALSE, FALSE, FALSE, FALSE);
+  res = dfsMarkByMode (s, root, emptyForeachObjectFun, MARK_MODE,
+                       FALSE, FALSE, FALSE, FALSE);
   if (DEBUG_SIZE)
     fprintf (stderr, "GC_size unmarking\n");
-  dfsMarkByMode (s, root, UNMARK_MODE, FALSE, FALSE, FALSE, FALSE);
+  dfsMarkByMode (s, root, emptyForeachObjectFun, UNMARK_MODE,
+                 FALSE, FALSE, FALSE, FALSE);
   LEAVE_LOCAL0 (s);
 
   return res;
@@ -32,10 +34,12 @@ size_t GC_sizeInLocalHeap (GC_state s, pointer root) {
 
   if (DEBUG_SIZE)
     fprintf (stderr, "GC_sizeInLocalHeap marking\n");
-  res = dfsMarkByMode (s, root, MARK_MODE, FALSE, FALSE, TRUE, FALSE);
+  res = dfsMarkByMode (s, root, emptyForeachObjectFun, MARK_MODE,
+                       FALSE, FALSE, TRUE, FALSE);
   if (DEBUG_SIZE)
     fprintf (stderr, "GC_sizeInLocalHeap unmarking\n");
-  dfsMarkByMode (s, root, UNMARK_MODE, FALSE, FALSE, TRUE, FALSE);
+  dfsMarkByMode (s, root, emptyForeachObjectFun, UNMARK_MODE,
+                 FALSE, FALSE, TRUE, FALSE);
 
   LEAVE_LOCAL0 (s);
   return res;
@@ -56,10 +60,12 @@ size_t estimateSizeForLifting (GC_state s, pointer root) {
 
   if (DEBUG_SIZE)
     fprintf (stderr, "estimateSizeForLifting marking\n");
-  res = dfsMarkByMode (s, root, MARK_MODE, FALSE, FALSE, FALSE, TRUE);
+  res = dfsMarkByMode (s, root, emptyForeachObjectFun, MARK_MODE,
+                       FALSE, FALSE, FALSE, TRUE);
   if (DEBUG_SIZE)
     fprintf (stderr, "estimateSizeForLifting unmarking\n");
-  dfsMarkByMode (s, root, UNMARK_MODE, FALSE, FALSE, FALSE, TRUE);
+  dfsMarkByMode (s, root, emptyForeachObjectFun, UNMARK_MODE,
+                 FALSE, FALSE, FALSE, TRUE);
 
   LEAVE_LOCAL0 (s);
   return res;

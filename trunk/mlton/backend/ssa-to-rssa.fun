@@ -380,16 +380,16 @@ structure CFunction =
             bytesNeeded = NONE,
             convention = Cdecl,
             ensuresBytesFree = false,
-            mayGC = false,
+            mayGC = true,
             maySwitchThreads = false,
             modifiesFrontier = false,
             prototype = (Vector.new2 (CType.gcState, CType.cpointer),
                          SOME CType.bool),
-            readsStackTop = false,
+            readsStackTop = true,
             return = Type.bool,
             symbolScope = Private,
             target = Direct "GC_objectTypeInfo",
-            writesStackTop = false}
+            writesStackTop = true}
 
 
       fun sqAcquireLock () =
@@ -1497,7 +1497,8 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                         S.Statement.Profile e => add (Statement.Profile e)
                       | S.Statement.Update {base, offset, value} =>
                           let
-                            fun updateCard (lhsAddr: Operand.t, rhsAddr: Operand.t, continue: Label.t, returnTy, baseTy):
+                            fun updateCard (lhsAddr: Operand.t, rhsAddr, newRhsAddr: Var.t,
+                                            continue: Label.t, returnTy, baseTy):
                                            (Statement.t list * Transfer.t) =
                               let
                                   val index = Var.newNoname ()
@@ -1522,6 +1523,53 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
 
                                 val (stmts2, cond2) = addressInLocalHeap (rhsAddr)
 
+                                (* Mark virgin bit *)
+                                fun score base =
+                                let
+                                  val tmp = Var.newNoname ()
+                                  val headerOp = Offset {base = base,
+                                                          offset = Runtime.headerOffset (),
+                                                          ty = Type.objptrHeader ()}
+                                  val virginMask =
+                                    Operand.word (WordX.fromIntInf (Runtime.virginMask,
+                                                                    WordSize.objptrHeader ()))
+                                  val s1 =
+                                    PrimApp {args = Vector.new2 (headerOp, virginMask),
+                                              dst = SOME (tmp, Type.objptrHeader ()),
+                                              prim = Prim.wordOrb (WordSize.objptrHeader ())}
+                                  val s2 =
+                                    Move {dst = Offset {base = base,
+                                                        offset = Runtime.headerOffset (),
+                                                        ty =  Type.objptrHeader ()},
+                                          src = Operand.Var {var = tmp, ty = Type.objptrHeader ()}}
+                                in
+                                  Vector.new2 (s1, s2)
+                                end
+
+                                val newRhsAddrOp =
+                                  Operand.Var {var = newRhsAddr, ty = returnTy}
+
+                                val scoreBlock =
+                                  newBlock
+                                  {args = Vector.new0 (),
+                                   kind = Kind.Jump,
+                                   statements = score newRhsAddrOp,
+                                   transfer =
+                                     Transfer.Goto {args = Vector.new0 (),
+                                                    dst = continue}}
+
+                                val maybeScoreBlock =
+                                  newBlock
+                                  {args = Vector.new1 (newRhsAddr, returnTy),
+                                   kind = Kind.Jump,
+                                   statements = Vector.new0 (),
+                                   transfer =
+                                    Transfer.ifBool
+                                    (Operand.Var {var = cond2, ty = Type.bool},
+                                     {truee = scoreBlock,
+                                      falsee = continue})}
+
+
                                 val origContinue =
                                   newBlock
                                   {args = Vector.new0 (),
@@ -1529,7 +1577,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                    statements = Vector.new0 (),
                                    transfer =
                                    Goto {args = Vector.new1 (rhsAddr),
-                                         dst = continue}}
+                                         dst = maybeScoreBlock}}
 
                                 val cReturnVar = Var.newNoname ()
                                 val cReturnOp = Operand.Var {var = cReturnVar, ty = returnTy}
@@ -1541,7 +1589,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                    statements = Vector.new0 (),
                                    transfer =
                                    Goto {args = Vector.new1 (cReturnOp),
-                                         dst = continue}}
+                                         dst = maybeScoreBlock}}
                                 val moveBlock =
                                   newBlock
                                   {args = Vector.new0 (),
@@ -1598,6 +1646,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                     (cReturnOp2,
                                       {truee = maybeMoveBlock,
                                       falsee = if (!Control.markCards) then maybeCardMarkBlock else origContinue})}
+
                                 val isInSharedOrForwardedBlock =
                                   newBlock
                                   {args = Vector.new0 (),
@@ -1623,6 +1672,9 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                      val newValueVar = Var.newNoname ()
                                      val newValueOp = Operand.Var {var = newValueVar, ty = ty}
                                      val baseTy = Option.valOf (toRtype (varType (Base.object base)))
+
+
+
                                      val ss' =
                                         update
                                         {base = baseOp,
@@ -1635,10 +1687,11 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                          baseTy = varType (Base.object base),
                                          offset = offset,
                                          value = valueOp}
+
                                   in
                                     if (Type.isObjptr ty) then
-                                      split (Vector.new1 (newValueVar, ty), Kind.Jump, ss' @ ss,
-                                              fn l => updateCard (Base.object baseOp, valueOp, l, ty, baseTy))
+                                      split (Vector.new0 (), Kind.Jump, ss' @ ss,
+                                              fn l => updateCard (Base.object baseOp, valueOp, newValueVar, l, ty, baseTy))
                                     else
                                       adds ss''
                                   end)

@@ -108,8 +108,8 @@ static inline bool isObjectLifted (GC_header header) {
 }
 
 static inline bool isObjectVirgin (GC_header header) {
-    return (not (header == GC_FORWARDED)
-            && (header & VIRGIN_MASK));
+    return ((not (header == GC_FORWARDED))
+            && (not (header & VIRGIN_MASK)));
 }
 
 

@@ -135,15 +135,36 @@ pointer advanceToObjectData (__attribute__ ((unused)) GC_state s, pointer p) {
   return res;
 }
 
+void isObjectPointerVirgin (GC_state s, pointer p) {
+  s->isClosureVirgin =
+    s->isClosureVirgin && isObjectVirgin (getHeader(p));
+}
+
 bool GC_objectTypeInfo (GC_state s, pointer p) {
-  bool hasIdentityTransitive, isUnbounded;
+  bool hasIdentityTransitive, isUnbounded, isClosureVirgin;
   GC_header header = getHeader (p);
+  GC_objectTypeTag tag;
   unsigned int objectTypeIndex = (header & TYPE_INDEX_MASK) >> TYPE_INDEX_SHIFT;
-  splitHeader (s, header, getHeaderp (p), NULL, NULL,
+  splitHeader (s, header, getHeaderp (p), &tag, NULL,
                NULL, NULL, &hasIdentityTransitive, &isUnbounded);
+
+  if (tag == STACK_TAG) {
+    isClosureVirgin = FALSE;
+  }
+  else {
+    s->isClosureVirgin = TRUE;
+    dfsMarkByMode (s, p, isObjectPointerVirgin, MARK_MODE,
+                  FALSE, FALSE, TRUE, FALSE);
+    isClosureVirgin = s->isClosureVirgin;
+    dfsMarkByMode (s, p, emptyForeachObjectFun, UNMARK_MODE,
+                  FALSE, FALSE, TRUE, FALSE);
+  }
+
   if (DEBUG_OBJECT_TYPE_INFO) {
-    fprintf (stderr, "hasIdentityTransitive = %d isUnbounded = %d objectTypeIndex = %d isVirgin = %d\n",
-             hasIdentityTransitive, isUnbounded, objectTypeIndex, isObjectVirgin (header));
+    fprintf (stderr, "hasIdentityTransitive = %d isUnbounded = %d objectTypeIndex = %d \
+             isObjectVirgin = %d isClosureVirgin = %d\n",
+             hasIdentityTransitive, isUnbounded, objectTypeIndex,
+             isObjectVirgin (header), isClosureVirgin);
   }
   return true;
 }
