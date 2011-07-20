@@ -293,6 +293,10 @@ markInStack:
                (uintmax_t)(top - getStackBottom (s, (GC_stack)cur)));
     if (top == getStackBottom (s, (GC_stack)(cur)))
       goto ret;
+    if (f == isObjectPointerVirgin) {
+      s->isClosureVirgin = FALSE;
+      goto ret;
+    }
     objptrIndex = 0;
     returnAddress = *(GC_returnAddress*) (top - GC_RETURNADDRESS_SIZE);
     frameLayout = getFrameLayoutFromReturnAddress (s, returnAddress);

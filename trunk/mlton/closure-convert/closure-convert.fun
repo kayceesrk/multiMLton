@@ -195,6 +195,7 @@ structure VarInfo =
       in
          val lambda = valOf o make #lambda
          val value = make #value
+         fun isGlobal (r: t) = !(#isGlobal r)
       end
    end
 
@@ -1049,20 +1050,14 @@ fun closureConvert
                                  let
                                    val v = varExpInfo (arg 0)
                                    val ty = valueType (VarInfo.value v)
-                                   val s1 = Layout.toString (Sxml.VarExp.layout (arg 0))
                                  in
-                                  if (Type.maybeObjptr ty) then
-                                    let
-                                      val s2 = Layout.toString (Type.layout ty)
-                                    in
-                                      defaultVal ()
-                                    end
+                                  if (VarInfo.isGlobal v) then
+                                    (print "--\n";
+                                    Dexp.falsee)
+                                  else if (Type.maybeObjptr ty) then
+                                    defaultVal ()
                                   else
-                                    let
-                                      val s2 = Layout.toString (Type.layout ty)
-                                    in
-                                      Dexp.falsee
-                                    end
+                                    Dexp.falsee
                                  end
                              | Lwtgc_needPreemption =>
                                  let

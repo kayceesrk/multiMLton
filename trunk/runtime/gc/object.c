@@ -156,7 +156,7 @@ bool GC_objectTypeInfo (GC_state s, pointer p) {
     dfsMarkByMode (s, p, isObjectPointerVirgin, MARK_MODE,
                   FALSE, FALSE, TRUE, FALSE);
     isClosureVirgin = s->isClosureVirgin;
-    dfsMarkByMode (s, p, emptyForeachObjectFun, UNMARK_MODE,
+    dfsMarkByMode (s, p, isObjectPointerVirgin, UNMARK_MODE,
                   FALSE, FALSE, TRUE, FALSE);
   }
 
@@ -166,5 +166,5 @@ bool GC_objectTypeInfo (GC_state s, pointer p) {
              hasIdentityTransitive, isUnbounded, objectTypeIndex,
              isObjectVirgin (header), isClosureVirgin);
   }
-  return true;
+  return isClosureVirgin;
 }

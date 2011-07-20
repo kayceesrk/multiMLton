@@ -380,16 +380,16 @@ structure CFunction =
             bytesNeeded = NONE,
             convention = Cdecl,
             ensuresBytesFree = false,
-            mayGC = true,
+            mayGC = false,
             maySwitchThreads = false,
             modifiesFrontier = false,
             prototype = (Vector.new2 (CType.gcState, CType.cpointer),
                          SOME CType.bool),
-            readsStackTop = true,
+            readsStackTop = false,
             return = Type.bool,
             symbolScope = Private,
             target = Direct "GC_objectTypeInfo",
-            writesStackTop = true}
+            writesStackTop = false}
 
 
       fun sqAcquireLock () =
@@ -1057,6 +1057,7 @@ end
 fun convert (program as S.Program.T {functions, globals, main, ...},
              {codegenImplementsPrim: Rssa.Type.t Rssa.Prim.t -> bool}): Rssa.Program.t =
    let
+      val global = S.Statement.prettifyGlobals (globals)
       val {diagnostic, genCase, object, objectTypes, select, toRtype, update} =
          PackedRepresentation.compute program
       val objectTypes = Vector.concat [ObjectType.basic (), objectTypes]
@@ -2101,9 +2102,12 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                     (case toRtype (varType (arg 0)) of
                                         NONE => move (Operand.bool false)
                                       | SOME t =>
+                                          let
+                                          in
                                            if not (Type.isObjptr t) then
                                              move (Operand.bool false)
-                                           else move (Operand.bool true))
+                                           else move (Operand.bool true)
+                                          end)
                                | MLton_size =>
                                     simpleCCallWithGCState
                                     (CFunction.size (Operand.ty (a 0)))
