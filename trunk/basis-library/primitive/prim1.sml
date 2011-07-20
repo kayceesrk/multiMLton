@@ -77,7 +77,7 @@ struct
   val objectTypeInfo = _prim "Lwtgc_objectTypeInfo": 'a -> bool;
   val isObjptr = _prim "Lwtgc_isObjptr": 'a -> bool;
   val needPreemption = _prim "Lwtgc_needPreemption": 'a ref * 'a -> bool;
-
+  val move = _prim "MLton_move": 'a * bool * bool -> 'a;
 end
 
 structure Ref =
@@ -97,12 +97,15 @@ structure Ref =
         val preemptFn = deref preemptFn
         val v' = if (Lwtgc.isObjptr v) andalso
                     (Lwtgc.isObjptrInLocalHeap v) andalso
-                    (Lwtgc.isObjptrInSharedHeap r) then
-                  (if Lwtgc.objectTypeInfo v then () else raise RefFail;
-                   Lwtgc.addToMoveOnWBA v;
-                   preemptFn ();
-                   v)
-                else v
+                    (Lwtgc.isObjptrInSharedHeap r)
+                 then
+                    (if Lwtgc.objectTypeInfo v then
+                      let val _ = Lwtgc.move (v, false, true) in v end
+                     else
+                      (Lwtgc.addToMoveOnWBA v;
+                       preemptFn ();
+                       v))
+                 else v
       in
         v'
       end
