@@ -190,6 +190,7 @@ static inline void splitHeader (GC_state s, GC_header header, __attribute__((unu
                                 bool *hasIdentityTransitiveRet, bool* isUnboundedRet);
 static inline pointer advanceToObjectData (GC_state s, pointer p);
 static inline void isObjectPointerVirgin (GC_state s, pointer p);
+static inline void doesPointToTmpPointer (GC_state s, objptr* opp);
 
 PRIVATE bool GC_objectTypeInfo (GC_state s, pointer p);
 

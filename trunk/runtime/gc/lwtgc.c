@@ -61,7 +61,10 @@ static inline void liftObjptrAndFillOrig (GC_state s, objptr *opp) {
   objptr new_op = *opp;
   pointer new_p = objptrToPointer (new_op, s->sharedHeap->start);
 
-  if (isPointerInHeap (s, s->sharedHeap, new_p)) {
+  uint32_t typeIndex = (getHeader(new_p) & TYPE_INDEX_MASK) >> TYPE_INDEX_SHIFT;
+  uint32_t threadTypeIndex = 1;
+
+  if (isPointerInHeap (s, s->sharedHeap, new_p) && (typeIndex != threadTypeIndex)) {
     size_t objSize = sizeofObject (s, new_p);
     old_p -= sizeofObjectHeader (s, getHeader (new_p));
     if (DEBUG_DETAILED)
@@ -266,7 +269,9 @@ pointer GC_move (GC_state s, pointer p,
 
   objptr op = pointerToObjptr (p, s->heap->start);
   objptr* pOp = &op;
+
   moveTransitiveClosure (s, pOp, forceStackForwarding, FALSE);
+
   if (DEBUG_LWTGC)
     fprintf (stderr, "GC_move: After move transitive closure [%d]\n", s->procId);
 

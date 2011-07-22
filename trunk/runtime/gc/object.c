@@ -136,8 +136,16 @@ pointer advanceToObjectData (__attribute__ ((unused)) GC_state s, pointer p) {
 }
 
 void isObjectPointerVirgin (GC_state s, pointer p) {
-  s->isClosureVirgin =
-    s->isClosureVirgin && isObjectVirgin (getHeader(p));
+  fprintf (stderr, "pointer="FMTPTR" header="FMTHDR" typeIndex=%ld isClosureVirgin=%d [%d]\n",
+           (uintptr_t)p, getHeader(p), (getHeader(p) & TYPE_INDEX_MASK) >> TYPE_INDEX_SHIFT,
+          isObjectVirgin(getHeader(p)), s->procId);
+  s->tmpBool = s->tmpBool && isObjectVirgin (getHeader(p));
+}
+
+void doesPointToTmpPointer (GC_state s, objptr* opp) {
+  pointer p = objptrToPointer (*opp, s->heap->start);
+  if (p == s->tmpPointer)
+    s->tmpInt++;
 }
 
 bool GC_objectTypeInfo (GC_state s, pointer p) {
@@ -152,19 +160,26 @@ bool GC_objectTypeInfo (GC_state s, pointer p) {
     isClosureVirgin = FALSE;
   }
   else {
-    s->isClosureVirgin = TRUE;
+    s->tmpBool = TRUE;
     dfsMarkByMode (s, p, isObjectPointerVirgin, MARK_MODE,
                   FALSE, FALSE, TRUE, FALSE);
-    isClosureVirgin = s->isClosureVirgin;
+    isClosureVirgin = s->tmpBool;
     dfsMarkByMode (s, p, isObjectPointerVirgin, UNMARK_MODE,
                   FALSE, FALSE, TRUE, FALSE);
   }
 
   if (DEBUG_OBJECT_TYPE_INFO) {
+    s->tmpInt = 0;
+    s->tmpPointer = p;
+    s->syncReason = SYNC_MISC;
+    ENTER_LOCAL0(s);
+    GC_stack stk = getStackCurrent (s);
+    foreachObjptrInObject (s, (pointer)stk, doesPointToTmpPointer, TRUE);
+    LEAVE_LOCAL0(s);
     fprintf (stderr, "hasIdentityTransitive = %d isUnbounded = %d objectTypeIndex = %d \
-             isObjectVirgin = %d isClosureVirgin = %d\n",
-             hasIdentityTransitive, isUnbounded, objectTypeIndex,
-             isObjectVirgin (header), isClosureVirgin);
+                      isClosureVirgin = %d numPointerFromStack = %d\n",
+                     hasIdentityTransitive, isUnbounded, objectTypeIndex,
+                     isClosureVirgin, s->tmpInt);
   }
   return isClosureVirgin;
 }

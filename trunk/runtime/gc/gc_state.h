@@ -44,7 +44,9 @@ struct GC_state {
 
   pointer sharedFrontier;
   pointer sharedLimit;
-  bool isClosureVirgin;
+  bool tmpBool;
+  pointer tmpPointer;
+  int32_t tmpInt;
   size_t exnStack;
 
   /* Alphabetized fields follow. */

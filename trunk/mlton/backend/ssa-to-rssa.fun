@@ -385,7 +385,7 @@ structure CFunction =
             modifiesFrontier = false,
             prototype = (Vector.new2 (CType.gcState, CType.cpointer),
                          SOME CType.bool),
-            readsStackTop = false,
+            readsStackTop = true,
             return = Type.bool,
             symbolScope = Private,
             target = Direct "GC_objectTypeInfo",

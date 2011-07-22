@@ -294,7 +294,7 @@ markInStack:
     if (top == getStackBottom (s, (GC_stack)(cur)))
       goto ret;
     if (f == isObjectPointerVirgin) {
-      s->isClosureVirgin = FALSE;
+      s->tmpBool = FALSE;
       goto ret;
     }
     objptrIndex = 0;
