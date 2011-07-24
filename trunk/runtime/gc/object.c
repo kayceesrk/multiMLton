@@ -136,9 +136,6 @@ pointer advanceToObjectData (__attribute__ ((unused)) GC_state s, pointer p) {
 }
 
 void isObjectPointerVirgin (GC_state s, pointer p) {
-  fprintf (stderr, "pointer="FMTPTR" header="FMTHDR" typeIndex=%ld isClosureVirgin=%d [%d]\n",
-           (uintptr_t)p, getHeader(p), (getHeader(p) & TYPE_INDEX_MASK) >> TYPE_INDEX_SHIFT,
-          isObjectVirgin(getHeader(p)), s->procId);
   s->tmpBool = s->tmpBool && isObjectVirgin (getHeader(p));
 }
 

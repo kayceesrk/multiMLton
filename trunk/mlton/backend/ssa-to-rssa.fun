@@ -1695,9 +1695,8 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
 
                                   in
                                     if (Type.isObjptr ty andalso (not isGlobal)) then
-                                      (print ((Layout.toString (Operand.layout valueOp))^" **\n");
                                        split (Vector.new0 (), Kind.Jump, ss' @ ss,
-                                              fn l => updateCard (Base.object baseOp, valueOp, newValueVar, l, ty, baseTy)))
+                                              fn l => updateCard (Base.object baseOp, valueOp, newValueVar, l, ty, baseTy))
                                     else
                                       adds ss''
                                   end)
