@@ -723,6 +723,22 @@ structure Statement =
 
       fun clear s = foreachDef (s, Var.clear o #1)
 
+      fun getIsGlobalFunction (v: t vector): Var.t -> bool =
+         let
+            val {get = global: Var.t -> bool, set = setGlobal, ...} =
+               Property.getSet (Var.plist, Property.initConst false)
+            val _ =
+               Vector.foreach
+               (v, fn s =>
+                case s of
+                   Bind {var, exp, ...} =>
+                      Option.app (var, fn var => setGlobal (var, true))
+                 | _ => ())
+         in
+            global
+         end
+
+
       fun prettifyGlobals (v: t vector): Var.t -> string option =
          let
             val {get = global: Var.t -> string option, set = setGlobal, ...} =

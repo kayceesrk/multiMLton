@@ -1057,7 +1057,7 @@ end
 fun convert (program as S.Program.T {functions, globals, main, ...},
              {codegenImplementsPrim: Rssa.Type.t Rssa.Prim.t -> bool}): Rssa.Program.t =
    let
-      val global = S.Statement.prettifyGlobals (globals)
+      val isGlobalFn = S.Statement.getIsGlobalFunction (globals)
       val {diagnostic, genCase, object, objectTypes, select, toRtype, update} =
          PackedRepresentation.compute program
       val objectTypes = Vector.concat [ObjectType.basic (), objectTypes]
@@ -1580,6 +1580,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                    Goto {args = Vector.new1 (rhsAddr),
                                          dst = maybeScoreBlock}}
 
+
                                 val cReturnVar = Var.newNoname ()
                                 val cReturnOp = Operand.Var {var = cReturnVar, ty = returnTy}
 
@@ -1591,6 +1592,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                    transfer =
                                    Goto {args = Vector.new1 (cReturnOp),
                                          dst = maybeScoreBlock}}
+
                                 val moveBlock =
                                   newBlock
                                   {args = Vector.new0 (),
@@ -1660,6 +1662,9 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                     func = CFunction.isInSharedOrForwarded baseTy,
                                     return = SOME returnFromHandler2}}
 
+                                val _ = print ((Layout.toString (Operand.layout rhsAddr))^" ")
+                                val _ = print (Layout.toString (Label.layout isInSharedOrForwardedBlock))
+                                val _ = print "\n"
                               in
                                 (stmts2, Transfer.Goto {args = Vector.new0 (), dst = isInSharedOrForwardedBlock})
                               end
@@ -1673,8 +1678,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                      val newValueVar = Var.newNoname ()
                                      val newValueOp = Operand.Var {var = newValueVar, ty = ty}
                                      val baseTy = Option.valOf (toRtype (varType (Base.object base)))
-
-
+                                     val isGlobal = isGlobalFn value
 
                                      val ss' =
                                         update
@@ -1690,9 +1694,10 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                          value = valueOp}
 
                                   in
-                                    if (Type.isObjptr ty) then
-                                      split (Vector.new0 (), Kind.Jump, ss' @ ss,
-                                              fn l => updateCard (Base.object baseOp, valueOp, newValueVar, l, ty, baseTy))
+                                    if (Type.isObjptr ty andalso (not isGlobal)) then
+                                      (print ((Layout.toString (Operand.layout valueOp))^" **\n");
+                                       split (Vector.new0 (), Kind.Jump, ss' @ ss,
+                                              fn l => updateCard (Base.object baseOp, valueOp, newValueVar, l, ty, baseTy)))
                                     else
                                       adds ss''
                                   end)

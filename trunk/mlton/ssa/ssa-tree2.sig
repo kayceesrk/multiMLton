@@ -145,6 +145,7 @@ signature SSA_TREE2 =
             val foreachUse: t * (Var.t -> unit) -> unit
             val layout: t -> Layout.t
             val prettifyGlobals: t vector -> (Var.t -> string option)
+            val getIsGlobalFunction: t vector -> (Var.t -> bool)
             val profile: ProfileExp.t -> t
             val replaceUses: t * (Var.t -> Var.t) -> t
          end
