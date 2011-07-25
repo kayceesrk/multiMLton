@@ -270,9 +270,9 @@ structure Main =
 
     val alGenB = alive genB
     val genC = mkgen (alGenB at (2,2) @
-                      alive(gun) at (20, 20) @
-                      glider at (50, 50) @
-                      alGenB at (100, 100))
+                      alive(gun) at (4, 4) @
+                      glider at (8, 2) @
+                      alGenB at (10, 1))
 
     fun foo () =
       let
