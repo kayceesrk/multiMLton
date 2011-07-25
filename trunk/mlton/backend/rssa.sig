@@ -36,6 +36,7 @@ signature RSSA =
       structure Switch: SWITCH
       sharing Atoms = Switch
 
+
       structure Operand:
          sig
             datatype t =
@@ -236,6 +237,9 @@ signature RSSA =
             val layoutStats: t -> Layout.t
             val orderFunctions: t -> t
             val shrink: t -> t
+            val dirtyAssist: t -> t
             val typeCheck: t -> unit
          end
+
+
    end

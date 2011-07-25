@@ -33,6 +33,7 @@ fun constrain (ty: Type.t): Layout.t =
       else empty
    end
 
+
 structure Operand =
    struct
       datatype t =
@@ -781,6 +782,219 @@ structure Function =
                  start = start}
          end
 
+      fun addressInLocalHeap (addr) =
+      let
+        val sz = WordSize.objptr ()
+        val indexTy = Type.word sz
+        val c1 = Var.newNoname ()
+        val c2 = Var.newNoname ()
+        val c3 = Var.newNoname ()
+        val c4 = Var.newNoname ()
+        val cond = Var.newNoname ()
+        val stmts =
+          [PrimApp {args = Vector.new2 (Operand.cast (Operand.Runtime GCField.LocalHeapStart, indexTy),
+                                        Operand.cast (addr, indexTy)),
+                    dst = SOME (c1, Type.bool),
+                    prim = Prim.wordLt (sz, {signed = false})},
+          PrimApp {args = Vector.new2 (Operand.cast (addr, indexTy),
+                                        Operand.cast (Operand.Runtime GCField.LimitPlusSlop, indexTy)),
+                    dst = SOME (c2, Type.bool),
+                    prim = Prim.wordLt (sz, {signed = false})},
+          PrimApp {args = Vector.new2 (Operand.cast (addr, indexTy),
+                                        Operand.cast (Operand.Runtime GCField.LocalHeapStart, indexTy)),
+                    dst = SOME (c3, Type.bool),
+                    prim = Prim.wordEqual sz},
+          PrimApp {args = Vector.new2 (Operand.Var {var = c1, ty = Type.bool},
+                                        Operand.Var {var = c2, ty = Type.bool}),
+                    dst = SOME (c4, Type.bool),
+                    prim = Prim.wordAndb (WordSize.bool)},
+          PrimApp {args = Vector.new2 (Operand.Var {var = c3, ty = Type.bool},
+                                        Operand.Var {var = c4, ty = Type.bool}),
+                    dst = SOME (cond, Type.bool),
+                    prim = Prim.wordOrb (WordSize.bool)}]
+      in
+        (stmts, cond)
+      end
+
+
+
+      fun dirtyAssist (f: t): t =
+        let
+          val {args, name, raises, returns, start, ...} =
+              dest f
+          val blocks = ref []
+
+          fun newBlock {args, kind,
+                        statements: Statement.t vector,
+                        transfer: Transfer.t}: Label.t =
+            let
+                val l = Label.newNoname ()
+                val _ = List.push (blocks,
+                                  Block.T {args = args,
+                                            kind = kind,
+                                            label = l,
+                                            statements = statements,
+                                            transfer = transfer})
+            in
+                l
+            end
+
+      fun translateStatementsTransfer (statements, ss, transfer) =
+         let
+            fun loop (i, ss, t): Statement.t vector * Transfer.t =
+               if i < 0
+                  then (Vector.fromList ss, t)
+               else
+                  let
+                     fun none () = loop (i - 1, ss, t)
+                     fun add s = loop (i - 1, s :: ss, t)
+                     fun adds ss' = loop (i - 1, ss' @ ss, t)
+                     val s = Vector.sub (statements, i)
+                     fun split (args, kind,
+                                ss: Statement.t list,
+                                make: Label.t -> Statement.t list * Transfer.t) =
+                        let
+                           val l = newBlock {args = args,
+                                             kind = kind,
+                                             statements = Vector.fromList ss,
+                                             transfer = t}
+                           val (ss, t) = make l
+                        in
+                           loop (i - 1, ss, t)
+                        end
+
+
+                    fun isNotObjptr (addr) =
+                    let
+                      val sz = WordSize.objptr ()
+                      val indexTy = Type.word sz
+                      val cond = Var.newNoname ()
+                      val pointerMask =
+                        Operand.word (WordX.fromIntInf (Runtime.pointerMask, sz))
+                      val stmts =
+                        [PrimApp {args = Vector.new2 (Operand.cast (addr, indexTy),
+                                                      pointerMask),
+                                  dst = SOME (cond, Type.bool),
+                                  prim = Prim.wordAndb sz}]
+                    in
+                      (stmts, cond)
+                    end
+
+                    local
+
+                      open Operand
+
+                      fun make prim (z1: Operand.t, z2: Operand.t) =
+                        let
+                          val ty = Operand.ty z1
+                          val tmp = Var.newNoname ()
+                        in
+                          (PrimApp {args = Vector.new2 (z1, z2),
+                                    dst = SOME (tmp, ty),
+                                    prim = prim (WordSize.fromBits (Type.width ty))},
+                           Var {ty = ty, var = tmp})
+                        end
+                      val andb = make Prim.wordAndb
+                      val lshift = make Prim.wordLshift
+                      val orb = make Prim.wordOrb
+                      val rshift = make (fn s => Prim.wordRshift (s, {signed = false}))
+
+                    in
+                      fun score base =
+                      let
+                        val headerOp = Offset {base = base,
+                                               offset = Runtime.headerOffset (),
+                                               ty = Type.objptrHeader ()}
+                        val virginMaskLower =
+                          word (WordX.fromIntInf (Runtime.virginMaskLower,
+                                                  WordSize.objptrHeader ()))
+                        val shift = word (WordX.one WordSize.shiftArg)
+                        val (s1, tmp) = andb (headerOp, virginMaskLower)
+                        val (s2, tmp) = lshift (tmp, shift)
+                        val (s3, tmp) = orb (tmp, virginMaskLower)
+                        val (s4, tmp) = orb (headerOp, tmp)
+                        val s5 = Move {dst = headerOp, src = tmp}
+                        val stmts = [s1, s2, s3, s4, s5]
+                      in
+                        Vector.fromList stmts
+                      end
+                    end
+
+                    fun maybeScore (continue: Label.t, rhsAddr) =
+                      let
+                        val (stmts, cond) = isNotObjptr rhsAddr
+
+                        val scoreBlock =
+                          newBlock
+                          {args = Vector.new0 (),
+                            kind = Kind.Jump,
+                            statements = score rhsAddr,
+                            transfer =
+                              Transfer.Goto {args = Vector.new0 (),
+                                            dst = continue}}
+                      in
+                        (stmts, Transfer.ifBool (Operand.Var {var = cond, ty = Type.bool},
+                                                 {truee = continue, falsee = scoreBlock}))
+
+                      end
+
+                  in
+                    case s of
+                      Move {dst, src} =>
+                        let
+                          val ty = case dst of
+                                        Operand.ArrayOffset {ty, ...} => SOME ty
+                                      | Operand.Offset {ty, ...} => SOME ty
+                                      | _ => NONE
+                          val cond1 = case ty of
+                                           NONE => false
+                                         | SOME ty => Type.isObjptr ty
+                          fun getCond2 src =
+                            case src of
+                                 Operand.Cast (t, _) => getCond2 t
+                               | Operand.Const _ => false
+                               | _ => true
+                          val cond2 = getCond2 src
+                        in
+                          (if cond1 andalso cond2 then
+                             split (Vector.new0 (), Kind.Jump, [s] @ ss,
+                                    fn l => maybeScore (l, src))
+                           else
+                             add s)
+                        end
+                    | _ => add s
+                  end
+         in
+            loop (Vector.length statements - 1, ss, transfer)
+         end
+
+          val () =
+              dfs
+              (f, fn Block.T {args, kind, label, statements, transfer} =>
+              let
+                  val (ss, t) = translateStatementsTransfer (statements, [], transfer)
+                  val () =
+                    List.push
+                    (blocks, Block.T {args = args,
+                                      kind = kind,
+                                      label = label,
+                                      statements = ss,
+                                      transfer = t})
+              in
+                  fn () => ()
+              end)
+          val blocks = Vector.fromList (!blocks)
+        in
+          new {args = args,
+          blocks = blocks,
+          name = name,
+          raises = raises,
+          returns = returns,
+          start = start}
+        end
+
+
+
       fun shrink (f: t): t =
          let
             val {args, blocks, name, raises, returns, start} = dest f
@@ -882,6 +1096,9 @@ structure Program =
                handlesSignals: bool,
                main: Function.t,
                objectTypes: ObjectType.t vector}
+
+
+
 
       fun clear (T {functions, main, ...}) =
          (List.foreach (functions, Function.clear)
@@ -1156,6 +1373,19 @@ structure Program =
                T {functions = List.revMap (functions, Function.shrink),
                   handlesSignals = handlesSignals,
                   main = Function.shrink main,
+                  objectTypes = objectTypes}
+            val p = copyProp p
+            val () = clear p
+         in
+            p
+         end
+
+      fun dirtyAssist (T {functions, handlesSignals, main, objectTypes}) =
+         let
+            val p =
+               T {functions = List.revMap (functions, Function.dirtyAssist),
+                  handlesSignals = handlesSignals,
+                  main = Function.dirtyAssist main,
                   objectTypes = objectTypes}
             val p = copyProp p
             val () = clear p

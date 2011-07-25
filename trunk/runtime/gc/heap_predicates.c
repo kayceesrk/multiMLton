@@ -107,11 +107,11 @@ static inline bool isObjectLifted (GC_header header) {
             && (header & LIFT_MASK));
 }
 
-static inline bool isObjectVirgin (GC_header header) {
-    return ((not (header == GC_FORWARDED))
-            && (not (header & VIRGIN_MASK)));
+static inline GC_numReferences countReferences (GC_header header) {
+  if (header == GC_FORWARDED)
+    return MANY;
+  return (header & VIRGIN_MASK) >> VIRGIN_SHIFT;
 }
-
 
 bool isPointerInAnyLocalHeap (GC_state s, pointer p) {
   for (int proc = 0; proc < s->numberOfProcs; proc++) {

@@ -517,6 +517,10 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->spawnOnWBASize = 0;
   s->spawnOnWBAMaxSize = BUFFER_SIZE;
 
+  s->tmpBool = FALSE;
+  s->tmpPointer = BOGUS_POINTER;
+  s->tmpInt = -1;
+
   s->translateState.from = BOGUS_POINTER;
   s->translateState.to = BOGUS_POINTER;
   s->translateState.size = 0;

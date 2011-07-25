@@ -1426,6 +1426,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                         in
                            loop (i - 1, ss, t)
                         end
+
                     fun addressInSharedHeap (addr) =
                     let
                       val sz = WordSize.objptr ()
@@ -1436,16 +1437,16 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                       val c4 = Var.newNoname ()
                       val cond = Var.newNoname ()
                       val stmts =
-                        [PrimApp {args = Vector.new2 (Operand.cast (Runtime GCField.SharedHeapStart, indexTy),
+                        [PrimApp {args = Vector.new2 (Operand.cast (Operand.Runtime GCField.SharedHeapStart, indexTy),
                                                       Operand.cast (addr, indexTy)),
                                   dst = SOME (c1, Type.bool),
                                   prim = Prim.wordLt (sz, {signed = false})},
                         PrimApp {args = Vector.new2 (Operand.cast (addr, indexTy),
-                                                      Operand.cast (Runtime GCField.SharedHeapEnd, indexTy)),
+                                                      Operand.cast (Operand.Runtime GCField.SharedHeapEnd, indexTy)),
                                   dst = SOME (c2, Type.bool),
                                   prim = Prim.wordLt (sz, {signed = false})},
                         PrimApp {args = Vector.new2 (Operand.cast (addr, indexTy),
-                                                      Operand.cast (Runtime GCField.SharedHeapStart, indexTy)),
+                                                      Operand.cast (Operand.Runtime GCField.SharedHeapStart, indexTy)),
                                   dst = SOME (c3, Type.bool),
                                   prim = Prim.wordEqual sz},
                         PrimApp {args = Vector.new2 (Operand.Var {var = c1, ty = Type.bool},
@@ -1470,16 +1471,16 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                       val c4 = Var.newNoname ()
                       val cond = Var.newNoname ()
                       val stmts =
-                        [PrimApp {args = Vector.new2 (Operand.cast (Runtime GCField.LocalHeapStart, indexTy),
+                        [PrimApp {args = Vector.new2 (Operand.cast (Operand.Runtime GCField.LocalHeapStart, indexTy),
                                                       Operand.cast (addr, indexTy)),
                                   dst = SOME (c1, Type.bool),
                                   prim = Prim.wordLt (sz, {signed = false})},
                         PrimApp {args = Vector.new2 (Operand.cast (addr, indexTy),
-                                                      Operand.cast (Runtime GCField.LimitPlusSlop, indexTy)),
+                                                      Operand.cast (Operand.Runtime GCField.LimitPlusSlop, indexTy)),
                                   dst = SOME (c2, Type.bool),
                                   prim = Prim.wordLt (sz, {signed = false})},
                         PrimApp {args = Vector.new2 (Operand.cast (addr, indexTy),
-                                                      Operand.cast (Runtime GCField.LocalHeapStart, indexTy)),
+                                                      Operand.cast (Operand.Runtime GCField.LocalHeapStart, indexTy)),
                                   dst = SOME (c3, Type.bool),
                                   prim = Prim.wordEqual sz},
                         PrimApp {args = Vector.new2 (Operand.Var {var = c1, ty = Type.bool},
@@ -1493,6 +1494,8 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                     in
                       (stmts, cond)
                     end
+
+
                   in
                      case s of
                         S.Statement.Profile e => add (Statement.Profile e)
@@ -1524,52 +1527,17 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
 
                                 val (stmts2, cond2) = addressInLocalHeap (rhsAddr)
 
-                                (* Mark virgin bit *)
-                                fun score base =
-                                let
-                                  val tmp = Var.newNoname ()
-                                  val headerOp = Offset {base = base,
-                                                          offset = Runtime.headerOffset (),
-                                                          ty = Type.objptrHeader ()}
-                                  val virginMask =
-                                    Operand.word (WordX.fromIntInf (Runtime.virginMask,
-                                                                    WordSize.objptrHeader ()))
-                                  val s1 =
-                                    PrimApp {args = Vector.new2 (headerOp, virginMask),
-                                              dst = SOME (tmp, Type.objptrHeader ()),
-                                              prim = Prim.wordOrb (WordSize.objptrHeader ())}
-                                  val s2 =
-                                    Move {dst = Offset {base = base,
-                                                        offset = Runtime.headerOffset (),
-                                                        ty =  Type.objptrHeader ()},
-                                          src = Operand.Var {var = tmp, ty = Type.objptrHeader ()}}
-                                in
-                                  Vector.new2 (s1, s2)
-                                end
-
                                 val newRhsAddrOp =
                                   Operand.Var {var = newRhsAddr, ty = returnTy}
 
-                                val scoreBlock =
-                                  newBlock
-                                  {args = Vector.new0 (),
-                                   kind = Kind.Jump,
-                                   statements = score newRhsAddrOp,
-                                   transfer =
-                                     Transfer.Goto {args = Vector.new0 (),
-                                                    dst = continue}}
-
-                                val maybeScoreBlock =
+                                val doesNotScoreBlock =
                                   newBlock
                                   {args = Vector.new1 (newRhsAddr, returnTy),
                                    kind = Kind.Jump,
                                    statements = Vector.new0 (),
                                    transfer =
-                                    Transfer.ifBool
-                                    (Operand.Var {var = cond2, ty = Type.bool},
-                                     {truee = scoreBlock,
-                                      falsee = continue})}
-
+                                    Transfer.Goto {args = Vector.new0 (),
+                                                   dst = continue}}
 
                                 val origContinue =
                                   newBlock
@@ -1578,7 +1546,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                    statements = Vector.new0 (),
                                    transfer =
                                    Goto {args = Vector.new1 (rhsAddr),
-                                         dst = maybeScoreBlock}}
+                                         dst = doesNotScoreBlock}}
 
 
                                 val cReturnVar = Var.newNoname ()
@@ -1591,7 +1559,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                    statements = Vector.new0 (),
                                    transfer =
                                    Goto {args = Vector.new1 (cReturnOp),
-                                         dst = maybeScoreBlock}}
+                                         dst = doesNotScoreBlock}}
 
                                 val moveBlock =
                                   newBlock
@@ -1662,9 +1630,6 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                     func = CFunction.isInSharedOrForwarded baseTy,
                                     return = SOME returnFromHandler2}}
 
-                                val _ = print ((Layout.toString (Operand.layout rhsAddr))^" ")
-                                val _ = print (Layout.toString (Label.layout isInSharedOrForwardedBlock))
-                                val _ = print "\n"
                               in
                                 (stmts2, Transfer.Goto {args = Vector.new0 (), dst = isInSharedOrForwardedBlock})
                               end

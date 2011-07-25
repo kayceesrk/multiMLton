@@ -190,7 +190,7 @@ fun convert (S.Program.T {datatypes, functions, globals, main}) =
                                                                   prim = convertPrim prim})
                                       else
                                           makeFalsee (var, ty))
-                                | SOME _ => (print "---\n"; makeFalsee (var, ty)))
+                                | SOME _ => makeFalsee (var, ty))
                            end
                        | Ref_deref =>
                             simple (S2.Exp.Select {base = Base.Object (arg 0),

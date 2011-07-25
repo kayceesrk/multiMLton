@@ -25,7 +25,7 @@ objptr getThreadCurrentObjptr (GC_state s) {
 
 GC_thread getThreadCurrent (GC_state s) {
   pointer p = objptrToPointer(getThreadCurrentObjptr(s), s->heap->start);
-  assert ((getHeader (p) & ~LIFT_MASK) == (GC_header)0x3);
+  assert ((getHeader (p) & ~(LIFT_MASK | VIRGIN_MASK)) == (GC_header)0x3);
   return (GC_thread)(p + offsetofThread (s));
 }
 

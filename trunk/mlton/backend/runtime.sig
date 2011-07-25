@@ -113,7 +113,8 @@ signature RUNTIME =
       val labelSize: unit -> Bytes.t
       val limitSlop: Bytes.t
       val lwtgcMask: IntInf.t
-      val virginMask: IntInf.t
+      val virginMaskLower: IntInf.t
+      val pointerMask: IntInf.t
       val maxFrameSize: Bytes.t
       val cpointerSize: unit -> Bytes.t
       val objptrSize: unit -> Bytes.t

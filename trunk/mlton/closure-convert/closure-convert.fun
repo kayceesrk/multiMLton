@@ -1052,8 +1052,7 @@ fun closureConvert
                                    val ty = valueType (VarInfo.value v)
                                  in
                                   if (VarInfo.isGlobal v) then
-                                    (print "--\n";
-                                    Dexp.falsee)
+                                    Dexp.falsee
                                   else if (Type.maybeObjptr ty) then
                                     defaultVal ()
                                   else
