@@ -248,9 +248,9 @@ structure Main =
 
 
    fun nthgen_cml g 0 sl =
-                     ((*print "0 : ";printGen g; print "\n\n";*) g)
+                     (print "0 : ";printGen g; print "\n\n"; g)
      | nthgen_cml g i sl =
-                    ((*print  (Int.toString(i)^": "); printGen g;*) nthgen_cml (master g sl) (i-1) sl)
+                    (print  (Int.toString(i)^": "); printGen g; nthgen_cml (master g sl) (i-1) sl)
 
    fun nthgen g 0 = ((*print "0 : ";printGen g; print "\n\n";*) g)
      | nthgen g i = ((*print  (Int.toString(i)^": ");

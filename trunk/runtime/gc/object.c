@@ -188,19 +188,13 @@ bool GC_objectTypeInfo (GC_state s, pointer p) {
   }
 
   if (DEBUG_OBJECT_TYPE_INFO) {
-    s->tmpInt = 0;
-    s->tmpPointer = p;
-    s->syncReason = SYNC_MISC;
-    ENTER_LOCAL0(s);
-    GC_stack stk = getStackCurrent (s);
-    foreachObjptrInObject (s, (pointer)stk, doesPointToTmpPointer, TRUE);
-    LEAVE_LOCAL0(s);
     fprintf (stderr, "hasIdentityTransitive = %d isUnbounded = %d objectTypeIndex = %d \
                       isClosureVirgin = %d numPointerFromStack = %d\n",
                      hasIdentityTransitive, isUnbounded, objectTypeIndex,
                      isClosureVirgin, s->tmpInt);
   }
   if (isClosureVirgin) {
+    s->syncReason = SYNC_MISC;
     ENTER_LOCAL0(s);
     GC_stack stk = getStackCurrent (s);
     foreachObjptrInObject (s, (pointer)stk, fixFwdObjptr, TRUE);
