@@ -11,15 +11,31 @@
  * Allocate a new object in the heap->
  * bytesRequested includes the size of the header.
  */
-/* XXX DOC spoons must hold the runtime lock if allocInOldGen is true! */
 pointer GC_newObject (GC_state s,
                       GC_header header,
                       size_t bytesRequested,
                       bool allocInOldGen) {
   pointer frontier;
   pointer result;
+  GC_objectTypeTag tag;
+  uint16_t numObjptrs;
+  size_t objectTypeIndex;
 
-  frontier = (pointer) GC_MALLOC (bytesRequested);
+  objectTypeIndex = (header & TYPE_INDEX_MASK) >> TYPE_INDEX_SHIFT;
+  splitHeader (s, header, &tag, NULL, NULL, &numObjptrs);
+
+  if (DISABLE_TYPED_ALLOC)
+    frontier = (pointer) GC_MALLOC (bytesRequested);
+  else if (tag == NORMAL_TAG and numObjptrs == 0) /* The object contains no objptrs */
+      frontier = (pointer) GC_MALLOC_ATOMIC (bytesRequested);
+  else if (tag == NORMAL_TAG) { /* Utilize the type information */
+    frontier =
+      (pointer) GC_MALLOC_EXPLICITLY_TYPED (bytesRequested,
+                                            s->objectDescr[objectTypeIndex]);
+  }
+  else
+    frontier = (pointer) GC_MALLOC (bytesRequested);
+
   GC_profileAllocInc (s, bytesRequested);
   *((GC_header*)frontier) = header;
   result = frontier + GC_NORMAL_HEADER_SIZE;

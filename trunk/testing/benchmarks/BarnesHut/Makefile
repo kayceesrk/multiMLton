@@ -9,7 +9,8 @@ MORE :=
 SRCS := $(wildcard *.sml)
 SRC_RULS := $(subst .sml,-amd64,$(SRCS))
 
-MULTIMLTON=../../../build/bin/mlton
+MMPATH = $(HOME)/multiMLton-BoehmGC/multiMLton
+MULTIMLTON= $(MMPATH)/trunk/build/bin/mlton
 
 %-amd64 : $(SRCS)
 	$(MULTIMLTON) $(MORE) -keep g -debug $(DEBUG) -profile $(PROFILE) -profile-stack $(STACK) -profile-branch $(BRANCH) -output $@ "$(subst -amd64,,$@).sml"
@@ -19,9 +20,8 @@ all: $(SRC_RULS)
 clean:
 	rm -rf $(SRC_RULS) *~ op *.out *.c *ssa *ssa2 *xml *-ml *machine
 
-MMPATH = $(HOME)/multiMLton-BoehmGC/multiMLton
 
-FLAGS = -std=gnu99 -c -g3 -DASSERT=1 -I$(MMPATH)/trunk/build/lib/self/include \
+FLAGS = -std=gnu99 -c -g -DASSERT=1 -I$(MMPATH)/trunk/build/lib/self/include \
 				-I$(MMPATH)/trunk/build/lib/include -O1 -fno-common -fno-strict-aliasing \
 				-fomit-frame-pointer -w -m64
 

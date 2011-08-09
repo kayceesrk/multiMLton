@@ -92,6 +92,31 @@ void splitHeader(GC_state s, GC_header header,
     *numObjptrsRet = numObjptrs;
 }
 
+void initObjectDescr (GC_state s) {
+  assert (!s->objectDescr);
+  s->objectDescr = (GC_descr*) malloc (sizeof (GC_descr) * s->objectTypesLength);
+  for (size_t i=0; i < s->objectTypesLength; i++) {
+    GC_objectType ot = &(s->objectTypes[i]);
+    if (ot->tag == NORMAL_TAG && ot->numObjptrs > 0) {
+      size_t objSize =
+        GC_NORMAL_HEADER_SIZE + ot->bytesNonObjptrs + ot->numObjptrs * OBJPTR_SIZE;
+      size_t bitmapSize = (((objSize / sizeof(GC_word)) + GC_WORDSZ - 1)/GC_WORDSZ);
+      GC_word bitmap[bitmapSize];
+      for (size_t j=0; j < bitmapSize; j++)
+        bitmap[j] = (GC_word)0;
+
+      for (int j=0; j < ot->numObjptrs; j++) {
+        size_t offset =
+          (GC_NORMAL_HEADER_SIZE + ot->bytesNonObjptrs + j * OBJPTR_SIZE) / sizeof (GC_word);
+        GC_set_bit (bitmap, offset);
+      }
+
+      s->objectDescr[i] = GC_make_descriptor (bitmap, objSize / sizeof(GC_word));
+    }
+  }
+}
+
+
 /* advanceToObjectData (s, p)
  *
  * If p points at the beginning of an object, then advanceToObjectData

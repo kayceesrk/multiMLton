@@ -419,6 +419,9 @@ int GC_initialize (GC_state s, int argc, char **argv) {
   s->weaks = NULL;
   s->saveWorldStatus = true;
   s->profiling.isProfilingTimeOn = false;
+  s->objectDescr = NULL;
+
+  initObjectDescr (s);
 
   initIntInf (s);
   initSignalStack (s);
@@ -522,6 +525,7 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->weaks = s->weaks;
   d->copiedSize = s->copiedSize;
   d->saveWorldStatus = s->saveWorldStatus;
+  d->objectDescr = s->objectDescr;
 
   // XXX spoons better duplicate?
   //initSignalStack (d);

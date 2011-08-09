@@ -54,7 +54,14 @@ pointer GC_arrayAllocate (GC_state s,
   pointer newFrontier;
 
   bytesRequested = arraySizeAligned;
-  frontier = (pointer) GC_MALLOC (bytesRequested);
+
+  if (DISABLE_TYPED_ALLOC)
+    frontier = (pointer) GC_MALLOC (bytesRequested);
+  else if (numObjptrs == 0)
+    frontier = (pointer) GC_MALLOC_ATOMIC (bytesRequested);
+  else
+    frontier = (pointer) GC_MALLOC (bytesRequested);
+
   newFrontier = frontier + arraySizeAligned;
   assert (isFrontierAligned (s, newFrontier));
 

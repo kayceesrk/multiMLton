@@ -177,5 +177,6 @@ static inline void splitHeader (GC_state s, GC_header header,
                                 GC_objectTypeTag *tagRet, bool *hasIdentityRet,
                                 uint16_t *bytesNonObjptrsRet, uint16_t *numObjptrsRet);
 static inline pointer advanceToObjectData (GC_state s, pointer p);
+static void initObjectDescr (GC_state s);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */
