@@ -67,13 +67,18 @@ def main():
 											"max-heap " + m]
 					r = run ("./" + str(b), str(progName[b]), atMLtons, "")
 					c.execute ('insert into results values (?, ?, ?, ?, ?)', (b, n, m, "runTime", int(r)))
-
-	conn.commit ()
+		conn.commit ()
 
 	print ("Analyze")
 	print ("-------")
-	c.execute ("select * from results")
-	for row in c:
-		print (row)
+
+  #For each benchmark plot the heap vs time graph
+	for b in benchmarks:
+		for n in [1, 2, 4, 8, 16]:
+			c.execute ("select maxHeap, result from results where benchmark=? and numProcs=? and resultType=?", (b, n, "runTime"))
+			for row in c.fetchall():
+				print (row)
+			print ("\n------------------------------------\n")
+
 
 main ()
