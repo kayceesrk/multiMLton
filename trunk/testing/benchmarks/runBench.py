@@ -3,6 +3,8 @@ import shlex
 import re
 import sqlite3
 from optparse import OptionParser
+import numpy
+import matplotlib.pyplot as plt
 
 logging=True
 
@@ -36,6 +38,17 @@ def run (dir, prog, atMLtons, args):
 		time = re.sub (r'.*Time diff:\s*([0-9]*)\s*ms.*', r'\1', output)
 	print ("\tCompleted in " + str(time) + " ms")
 	return time
+
+def hsizeToInt (s):
+	intVal = int(s.replace('K','').replace('M','').replace('G',''))
+	if s.endswith('K'):
+		intVal *= 1024
+	elif s.endswith('M'):
+		intVal *= 1024*1024
+	elif s.endswith('G'):
+		intVal *= 1024*1024*1024
+	return intVal
+
 
 def main():
 	#Parse options
@@ -76,8 +89,14 @@ def main():
 	for b in benchmarks:
 		for n in [1, 2, 4, 8, 16]:
 			c.execute ("select maxHeap, result from results where benchmark=? and numProcs=? and resultType=?", (b, n, "runTime"))
-			for row in c.fetchall():
-				print (row)
+			data = c.fetchall ()
+			x = list (map (lambda v: hsizeToInt (v[0]), data))
+			#Assumes that for a particular benchmark the smallest heap size is the same
+			minX = min(x)
+			x = [v/minX for v in x]
+			y = list (map (lambda v: v[1], data))
+			print (x)
+			print (y)
 			print ("\n------------------------------------\n")
 
 
