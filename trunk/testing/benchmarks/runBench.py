@@ -59,7 +59,12 @@ def main():
 	parser = OptionParser()
 	parser.add_option("-d", "--database", dest="database", help="database location", \
 										metavar="FILE", default="/home/chandras/PLDI/results")
-	parser.add_option("-a", "--analyze-only", dest="analyzeOnly", default=False)
+	parser.add_option("-a", "--analyze-only", dest="analyzeOnly", default=False, \
+										help="Skip running the benchmarks and only run the analysis")
+	parser.add_option("-b", "--benchmark", dest="bmarkList", action="append", \
+										help="run only the given benchmarks")
+	parser.add_option("-r", "--rerun", dest="rerun", default=False, \
+										help="Rerun a specific test even if the corresponding result is available in the database")
 
 	(options, args) = parser.parse_args()
 
@@ -68,7 +73,10 @@ def main():
 	c = conn.cursor ()
 
 	#benchmark parameters
-	benchmarks = ["BarnesHut", "AllPairs", "Mandelbrot"]
+	if (options.bmarkList):
+		benchmarks = options.bmarkList
+	else:
+		benchmarks = ["BarnesHut", "AllPairs", "Mandelbrot"]
 	progName = {"BarnesHut": "barnes-hutM-amd64", \
 							"AllPairs": "floyd-warshall-amd64", \
 							"Mandelbrot": "mandelbrot-amd64"}
@@ -94,43 +102,54 @@ def main():
 				for m in maxHeap[b]:
 					atMLtons = ["number-processors " + str(n), \
 											"max-heap " + m]
-					r = run ("./" + str(b), str(progName[b]), atMLtons, args[b])
-					c.execute ('delete from results where benchmark=? and numProcs=? and maxHeap=? and resultType=?', \
-										 (b, n, m, "runTime"))
-					c.execute ('insert into results values (?, ?, ?, ?, ?)', (b, n, m, "runTime", int(r)))
-					conn.commit ()
+
+					#run only if required
+					shouldRun = True
+					if (options.rerun == False):
+						c.execute ("select * from results where benchmark=? and numProcs=? and maxHeap=? and resultType=?", \
+											(b, n, m, "runTime"))
+						if (c.fetchall ()):
+							shouldRun = False
+
+					if (shouldRun):
+						r = run ("./" + str(b), str(progName[b]), atMLtons, args[b])
+						c.execute ('delete from results where benchmark=? and numProcs=? and maxHeap=? and resultType=?', \
+											(b, n, m, "runTime"))
+						c.execute ('insert into results values (?, ?, ?, ?, ?)', (b, n, m, "runTime", int(r)))
+						conn.commit ()
 
 	print ("Analyze")
 	print ("-------")
 
 	nodeKind = ['o-', 's--', 'D-.', 'x:', '^-', 'V--', '>-.', '<:']
 
-  #For each benchmark plot the heap vs time graph
-	plt.xlabel ("Heap size relative to min heap size")
-	plt.ylabel ("Time (ms)")
-	plt.grid (True)
 	for b in benchmarks:
-
 		#intialize
 		nodeIndex = 0
 		shouldPlot = False
 
+		#For each benchmark plot the heap vs time graph
+		plt.xlabel ("Heap size relative to min heap size")
+		plt.ylabel ("Time (ms)")
+		plt.grid (True)
 		plt.title (b + " -- Heap vs Time")
 		log ("preparing data for plotting heap vs time for " + b)
+
+		#calculate the minimum x
+		c.execute ("select distinct maxHeap from results where benchmark=? \
+								and resultType=? and result!=0", (b, "runTime"))
+		minX = min(list (map (lambda v: hsizeToInt (v[0]), c.fetchall ())))
+
 		for n in [1, 2, 4, 8, 16]:
 			c.execute ("select maxHeap, result from results where benchmark=? and numProcs=? \
 									and resultType=? and result!=0", (b, n, "runTime"))
 			data = c.fetchall ()
-			print (data)
 			x = list (map (lambda v: hsizeToInt (v[0]), data))
 			if x: #x is not empty
 				shouldPlot = True
-				#Assumes that for a particular benchmark the smallest heap size is the same
-				minX = min(x)
 				x = [v/minX for v in x]
 				y = list (map (lambda v: v[1], data))
 				plt.plot (x, y, nodeKind[nodeIndex], label="Proc="+str(n))
-				print (nodeIndex)
 				nodeIndex += 1
 
 		if shouldPlot:
