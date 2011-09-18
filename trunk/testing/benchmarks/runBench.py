@@ -85,19 +85,33 @@ def main():
 	print ("Analyze")
 	print ("-------")
 
+	nodeKind = ['o-', 's--', 'D-.', 'x:', '^-', 'V--', '>-.', '<:']
+	nodeIndex = 0
+
   #For each benchmark plot the heap vs time graph
+	plt.xlabel ("Heap size relative to min heap size")
+	plt.ylabel ("Time (ms)")
+	plt.grid (True)
 	for b in benchmarks:
+		nodeIndex = 0
+		plt.title (b + " -- Heap vs Time")
+		log ("plotting heap vs time for " + b)
 		for n in [1, 2, 4, 8, 16]:
-			c.execute ("select maxHeap, result from results where benchmark=? and numProcs=? and resultType=?", (b, n, "runTime"))
+			c.execute ("select maxHeap, result from results where benchmark=? and numProcs=? \
+									and resultType=? and result!=0", (b, n, "runTime"))
 			data = c.fetchall ()
 			x = list (map (lambda v: hsizeToInt (v[0]), data))
 			#Assumes that for a particular benchmark the smallest heap size is the same
 			minX = min(x)
 			x = [v/minX for v in x]
 			y = list (map (lambda v: v[1], data))
-			print (x)
-			print (y)
-			print ("\n------------------------------------\n")
+			plt.plot (x, y, nodeKind[nodeIndex], label="Proc_"+str(n))
+			nodeIndex += 1
+
+		#plot the current graph
+		plt.xlim(xmin = 0)
+		plt.legend ()
+		plt.savefig (b+"_heap_vs_time.eps")
 
 
 main ()
