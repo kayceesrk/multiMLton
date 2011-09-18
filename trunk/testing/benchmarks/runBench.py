@@ -75,10 +75,14 @@ def main():
 	args = {"BarnesHut": "", \
 					"AllPairs": "512 64", \
 					"Mandelbrot": ""}
-	numProcs = [1, 2, 4, 6, 8, 10, 12, 14, 16]
-	maxHeap = {"BarnesHut": ["50M", "40M", "30M", "20M", "10M", "9M", "8M", "7M", "6M", "6.5M"], \
-						 "AllPairs": ["50M", "40M", "30M", "20M", "10M", "9M", "8M", "7M", "6M", "6.5M"],
-						 "Mandelbrot": ["50M", "40M", "30M", "25M", "20M", "18M", "16M", "14M", "12M", "11M", "10M", "9M", "8M", "7M"]}
+	numProcs = [1, 2, 4, 8, 16]
+	maxHeap = {"BarnesHut": ["50M", "40M", "30M", "20M", "10M", "9M", "8M", "7M", \
+													 "6.5M", "6M", "5.5M"], \
+						 "AllPairs": ["50M", "40M", "30M", "20M", "10M", "9M", "8M", "7M", \
+						 							"6.5M", "6M", "5.5M"],
+						 "Mandelbrot": ["50M", "40M", "30M", "25M", "20M", "18M", "16M", \
+								 						"14M", "12M", "11M", "10M", "9M", "8M", "7M", "6M", \
+														"5M", "4M", "3M"]}
 
 	#create the results table if it is not already present
 	c.execute('create table if not exists results \
@@ -94,7 +98,7 @@ def main():
 					c.execute ('delete from results where benchmark=? and numProcs=? and maxHeap=? and resultType=?', \
 										 (b, n, m, "runTime"))
 					c.execute ('insert into results values (?, ?, ?, ?, ?)', (b, n, m, "runTime", int(r)))
-		conn.commit ()
+					conn.commit ()
 
 	print ("Analyze")
 	print ("-------")
@@ -117,6 +121,7 @@ def main():
 			c.execute ("select maxHeap, result from results where benchmark=? and numProcs=? \
 									and resultType=? and result!=0", (b, n, "runTime"))
 			data = c.fetchall ()
+			print (data)
 			x = list (map (lambda v: hsizeToInt (v[0]), data))
 			if x: #x is not empty
 				shouldPlot = True
@@ -125,6 +130,7 @@ def main():
 				x = [v/minX for v in x]
 				y = list (map (lambda v: v[1], data))
 				plt.plot (x, y, nodeKind[nodeIndex], label="Proc="+str(n))
+				print (nodeIndex)
 				nodeIndex += 1
 
 		if shouldPlot:
@@ -133,6 +139,7 @@ def main():
 			plt.xlim(xmin = 0)
 			plt.legend ()
 			plt.savefig (b+"_heap_vs_time.eps")
+			plt.close ()
 
 
 main ()
