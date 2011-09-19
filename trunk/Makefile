@@ -45,6 +45,8 @@ else
 	BOOTSTRAP_OTHER:=false
 endif
 
+BOOTSTRAP_OTHER:=false
+
 ifeq ($(origin VERSION), undefined)
 	VERSION := multi.$(shell date +%Y%m%d)
 endif
