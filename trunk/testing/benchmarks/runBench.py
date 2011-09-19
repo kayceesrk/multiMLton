@@ -54,6 +54,53 @@ def hsizeToInt (s):
 	return intVal
 
 
+def fullParameters():
+	progName = {"BarnesHut": "barnes-hutM-amd64", \
+							"AllPairs": "floyd-warshall-amd64", \
+							"Mandelbrot": "mandelbrot-amd64", \
+							"KClustering": "kclustering-amd64", \
+							"TSP": "tsp-amd64", \
+							"CountGraphs": "count-graphs-amd64", \
+							"GameOfLife": "lifeM-amd64", \
+							"Mergesort": "mergesort-amd64"}
+	args = {"BarnesHut": "", \
+					"AllPairs": "512 64", \
+					"Mandelbrot": "", \
+					"KClustering": "0 256 200 50 0", \
+					"TSP": "", \
+					"CountGraphs": "", \
+					"GameOfLife": "64 300", \
+					"Mergesort": "10000"}
+	numProcs = [1, 2, 4, 8, 16]
+	maxHeap = {"BarnesHut": ["50M", "40M", "30M", "20M", "10M", "9M", "8M", "7M", \
+													 "6.5M", "6M", "5.5M"], \
+						 "AllPairs": ["50M", "40M", "30M", "20M", "10M", "9M", "8M", "7M", \
+						 							"6.5M", "6M", "5.5M"],
+						 "Mandelbrot": ["50M", "40M", "30M", "25M", "20M", "18M", "16M", \
+								 						"14M", "12M", "11M", "10M", "9M", "8M", "7M", "6M", \
+														"5M", "4M", "3M"], \
+						 "KClustering": ["20M", "15M", "12M", "11M", "10M", "9M", "8M", "7.5M", \
+							 							 "7M", "6.5M", "6M"], \
+					   "TSP": ["200M", "150M", "100M", "96M", "95M", "94.5M", \
+						 "CountGraphs": ["25M", "15M", "10M", "6M", "4M", "3M", "2.5M", "2M", "1M"], \
+						 "GameOfLife": ["25M", "15M", "10M", "6M", "4M", "3M", "2.5M", "2M", "1M"], \
+						 "Mergesort": ["100M", "50M", "40M", "30M", "25M", "22M", "20M", "19M", "18M"}
+	return (progName, args, numProcs, maxHeap)
+
+def testParameters():
+	progName = {"BarnesHut": "barnes-hutM-amd64", \
+							"AllPairs": "floyd-warshall-amd64", \
+							"Mandelbrot": "mandelbrot-amd64"}
+	args = {"BarnesHut": "", \
+					"AllPairs": "512 64", \
+					"Mandelbrot": ""}
+	numProcs = [1, 2, 4, 8, 16]
+	maxHeap = {"BarnesHut": ["50M"], \
+						 "AllPairs": ["50M", "40M"], \
+						 "Mandelbrot": ["50M", "40M"]}
+	return (progName, args, numProcs, maxHeap)
+
+
 def main():
 	#Parse options
 	parser = OptionParser()
@@ -77,24 +124,11 @@ def main():
 		benchmarks = options.bmarkList
 	else:
 		benchmarks = ["BarnesHut", "AllPairs", "Mandelbrot"]
-	progName = {"BarnesHut": "barnes-hutM-amd64", \
-							"AllPairs": "floyd-warshall-amd64", \
-							"Mandelbrot": "mandelbrot-amd64"}
-	args = {"BarnesHut": "", \
-					"AllPairs": "512 64", \
-					"Mandelbrot": ""}
-	numProcs = [1, 2, 4, 8, 16]
-	maxHeap = {"BarnesHut": ["50M", "40M", "30M", "20M", "10M", "9M", "8M", "7M", \
-													 "6.5M", "6M", "5.5M"], \
-						 "AllPairs": ["50M", "40M", "30M", "20M", "10M", "9M", "8M", "7M", \
-						 							"6.5M", "6M", "5.5M"],
-						 "Mandelbrot": ["50M", "40M", "30M", "25M", "20M", "18M", "16M", \
-								 						"14M", "12M", "11M", "10M", "9M", "8M", "7M", "6M", \
-														"5M", "4M", "3M"]}
+	(progName, args, numProcs, maxHeap) = fullParameters ()
 
-	#create the results table if it is not already present
-	c.execute('create table if not exists results \
-						(benchmark text, numProcs int, maxHeap text, resultType text, result int)')
+	#create the runtime table if it is not already present
+	c.execute('create table if not exists runTime \
+						(benchmark text, numProcs int, maxHeap text, result int)')
 
 	if (not options.analyzeOnly):
 		for b in benchmarks:
@@ -106,16 +140,16 @@ def main():
 					#run only if required
 					shouldRun = True
 					if (options.rerun == False):
-						c.execute ("select * from results where benchmark=? and numProcs=? and maxHeap=? and resultType=?", \
-											(b, n, m, "runTime"))
+						c.execute ("select * from runTime where benchmark=? and numProcs=? and maxHeap=?", \
+											(b, n, m))
 						if (c.fetchall ()):
 							shouldRun = False
 
 					if (shouldRun):
 						r = run ("./" + str(b), str(progName[b]), atMLtons, args[b])
-						c.execute ('delete from results where benchmark=? and numProcs=? and maxHeap=? and resultType=?', \
-											(b, n, m, "runTime"))
-						c.execute ('insert into results values (?, ?, ?, ?, ?)', (b, n, m, "runTime", int(r)))
+						c.execute ('delete from runTime where benchmark=? and numProcs=? and maxHeap=?', \
+											(b, n, m))
+						c.execute ('insert into runTime values (?, ?, ?, ?)', (b, n, m, int(r)))
 						conn.commit ()
 
 	print ("Analyze")
@@ -136,13 +170,12 @@ def main():
 		log ("preparing data for plotting heap vs time for " + b)
 
 		#calculate the minimum x
-		c.execute ("select distinct maxHeap from results where benchmark=? \
-								and resultType=? and result!=0", (b, "runTime"))
+		c.execute ("select distinct maxHeap from runTime where benchmark=? and result!=0", [b])
 		minX = min(list (map (lambda v: hsizeToInt (v[0]), c.fetchall ())))
 
 		for n in [1, 2, 4, 8, 16]:
-			c.execute ("select maxHeap, result from results where benchmark=? and numProcs=? \
-									and resultType=? and result!=0", (b, n, "runTime"))
+			c.execute ("select maxHeap, result from runTime where benchmark=? and numProcs=? \
+									and result!=0", (b, n))
 			data = c.fetchall ()
 			x = list (map (lambda v: hsizeToInt (v[0]), data))
 			if x: #x is not empty

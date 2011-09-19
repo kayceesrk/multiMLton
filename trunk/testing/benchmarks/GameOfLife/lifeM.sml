@@ -12,7 +12,6 @@ structure Main =
   struct
     open MLton.Pacml
     val print = TextIO.print
-    val numSlaves = 16
 
     fun map f [] = []
       | map f (a::x) = f a :: map f x
@@ -163,7 +162,19 @@ structure Main =
     val genB = mkgen(glider at (2,2) @ bail at (2,12)
                      @ rotate (barberpole 4) at (5,20))
 
-    fun slave () : ((generation * int * int * int * int) option chan * generation chan)= let
+    fun printGen gen = let
+      val living = alive gen
+      fun printPoint x =
+        let
+          val (a,b) = x
+        in
+          print ("("^Int.toString(a)^","^Int.toString(b)^") ")
+        end
+    in
+      (List.map printPoint living; print "\n")
+    end
+
+    fun slave id () : ((generation * int * int * int * int) option chan * generation chan)= let
       val ch1 = channel()
       val ch2 : generation chan = channel()
       fun work () =
@@ -191,27 +202,17 @@ structure Main =
       (ch1, ch2)
     end
 
-    fun printGen gen = let
-      val living = alive gen
-      fun printPoint x =
-        let
-          val (a,b) = x
-        in
-          print ("("^Int.toString(a)^","^Int.toString(b)^") ")
-        end
-    in
-      (List.map printPoint living; print "\n")
-    end
 
-   fun master gen sl =
+   fun master gen sl numSlaves =
    let
      val (min,max) = getMinMaxX gen
      val size = (max-min+1) div numSlaves
      val r = ref ((max-min+1) mod numSlaves)
      val pos = ref min
      (* Creates a slave, assigns work to it and returns channel *)
-     fun assign pos r ch =
+     fun assign pos r ch id =
       let
+        val _ = MLton.size (gen)
         (* must have 1 row extra at the top and bottom *)
         val s = !pos
         val e = if (!r)>0 then (!pos + size) else (!pos + size -1)
@@ -232,7 +233,7 @@ structure Main =
                                            let
                                              val (ch, _) = Vector.sub (sl, i)
                                            in
-                                             assign pos r ch
+                                             assign pos r ch i
                                            end)
      val resultList = List.tabulate (numSlaves, fn i =>
                                                   let
@@ -247,10 +248,15 @@ structure Main =
 
 
 
-   fun nthgen_cml g 0 sl =
-                     ((*print "0 : ";printGen g; print "\n\n";*) g)
-     | nthgen_cml g i sl =
-                    ((*print  (Int.toString(i)^": "); printGen g;*) nthgen_cml (master g sl) (i-1) sl)
+   fun nthgen_cml g 0 sl numSlaves =
+                     (print "0 : ";
+                      (*printGen g; *)
+                      print "\n\n";
+                      g)
+     | nthgen_cml g i sl numSlaves =
+                    (print  (Int.toString(i)^"\n");
+                     (* printGen g; *)
+                     nthgen_cml (master g sl numSlaves) (i-1) sl numSlaves)
 
    fun nthgen g 0 = ((*print "0 : ";printGen g; print "\n\n";*) g)
      | nthgen g i = ((*print  (Int.toString(i)^": ");
@@ -274,30 +280,33 @@ structure Main =
                       glider at (8, 2) @
                       alGenB at (10, 1))
 
-    fun foo () =
+    fun foo numSlaves gens () =
       let
-        val sl = Vector.tabulate (numSlaves, fn _ => slave ())
-        val g = (nthgen_cml genC 25000 sl)
+        val sl = Vector.tabulate (numSlaves, fn id => slave id ())
+        val g = (nthgen_cml genC gens sl numSlaves)
       in
         (show print g;
         shutdown OS.Process.success)
       end
 
-    fun doit n =
-        run (foo)
+    fun doit n gens =
+        run (foo n gens)
         (* n = ANY *)
   end (* Life *)
 
-val n =
+val (n, gens) =
    case CommandLine.arguments () of
-      [] => 100
-    | s::_ => (case Int.fromString s of
-                  NONE => 100
-                | SOME n => n)
+     s1::s2::_ => (case (Int.fromString s1,
+                        Int.fromString s2) of
+                       (SOME n, SOME gens) => (n, gens)
+                     | _ => (16, 1000))
+    | _ => (16, 1000)
 
 val ts = Time.now ()
-val _ = TextIO.print "\nStarting main"
-val _ = Main.doit n
+val _ = TextIO.print "Starting main\n"
+val _ = TextIO.print ("numThreads: "^(Int.toString n)^"\n")
+val _ = TextIO.print ("numGenerations: "^(Int.toString gens)^"\n")
+val _ = Main.doit n gens
 val te = Time.now ()
 val d = Time.-(te, ts)
 val _ = TextIO.print (concat ["Time start: ", Time.toString ts, "\n"])
