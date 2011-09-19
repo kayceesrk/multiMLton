@@ -29,7 +29,7 @@ typedef enum {
 
 typedef enum {
   ZERO=0,
-  ONE,
+  ONE=1,
   MANY
 } GC_numReferences;
 

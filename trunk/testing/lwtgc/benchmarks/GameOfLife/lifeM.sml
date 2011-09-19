@@ -107,7 +107,7 @@ structure Main =
                       val (min,max) = b
                       val nMin = if x<min then x else min
                       val nMax = if x>max then x else max
-                                       in
+                  in
                       (nMin,nMax)
                   end
             in
@@ -212,17 +212,13 @@ structure Main =
      (* Creates a slave, assigns work to it and returns channel *)
      fun assign pos r ch id =
       let
+        val _ = MLton.size gen
+        val _ = printGen gen
         (* must have 1 row extra at the top and bottom *)
         val s = !pos
         val e = if (!r)>0 then (!pos + size) else (!pos + size -1)
         val _ = if (!r)>0 then (r := !r -1; pos := !pos +1) else ()
         val g = filterRows (s-1) (e+1) gen
-        val _ = print ("slaveID: "^(Int.toString id)^" ")
-        val _ = print ("s "^(Int.toString (s-1))^" ")
-        val _ = print ("e "^(Int.toString (e+1))^"\n")
-        val _ = printGen gen
-        val _ = print "---\n"
-        val _ = printGen g
         val _ = send (ch, SOME (g, s, e, min, max))
         val _ = pos := !pos + size
       in
@@ -251,7 +247,7 @@ structure Main =
      result
    end
 
-
+   fun show pr = (app (fn s => (pr s; pr "\n"))) o plot o alive
 
    fun nthgen_cml g 0 sl numSlaves =
                      (print "0 : ";
@@ -275,7 +271,6 @@ structure Main =
       (7,31),(7,40),(7,41),(8,20),(8,28),(8,29),(8,30),(8,31),(8,40),(8,41),
       (9,29),(9,30),(9,31),(9,32)]
 
-    fun show pr = (app (fn s => (pr s; pr "\n"))) o plot o alive
 
     fun testit strm = (show (fn c => TextIO.output (strm, c)) (nthgen genB 50))
 

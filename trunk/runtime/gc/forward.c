@@ -441,6 +441,7 @@ void forwardObjptrForSharedMarkCompact (GC_state s, objptr *opp) {
       #if ASSERT
       pointer thrd = objptrToPointer (stk->thread, s->sharedHeap->start);
       header = getHeader (thrd);
+      header = header & (~VIRGIN_MASK);
       assert (header == (GC_header)0x80003);
       #endif
 

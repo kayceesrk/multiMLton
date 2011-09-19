@@ -239,8 +239,6 @@ void performSharedGC (GC_state s,
       fprintf (stderr, "performSharedGC: finished fixing forwarding pointers [%d]\n", s->procId);
   }
 
-  //Clear remembered stacks
-  clearDanglingStackList (s);
 
   /* If we are not the last processor to sync, then someone else has to know
    * about our request */
@@ -259,6 +257,10 @@ void performSharedGC (GC_state s,
   /* See if a GC has already been performed */
   if (bytesRequested > availableBytes) {
     /* perform GC */
+
+    //Clear remembered stacks
+    for (int proc=0; proc < s->numberOfProcs; proc++)
+      clearDanglingStackList (&s->procStates[proc]);
     bytesRequested = (s->controls->allocChunkSize + GC_BONUS_SLOP) * s->numberOfProcs;
 
     if (DEBUG or s->controls->messages) {
