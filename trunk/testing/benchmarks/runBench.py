@@ -126,7 +126,8 @@ def main():
 	if (options.bmarkList):
 		benchmarks = options.bmarkList
 	else:
-		benchmarks = ["BarnesHut", "AllPairs", "Mandelbrot"]
+		benchmarks = ["BarnesHut", "AllPairs", "Mandelbrot", "KClustering", "TSP", \
+									"CountGraphs", "GameOfLife", "Mergesort", "RayTrace"]
 	(progName, args, numProcs, maxHeap) = fullParameters ()
 
 	#create the runtime table if it is not already present
