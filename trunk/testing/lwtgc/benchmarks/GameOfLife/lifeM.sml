@@ -213,7 +213,7 @@ structure Main =
      fun assign pos r ch id =
       let
         val _ = MLton.size gen
-        val _ = printGen gen
+        (* val _ = printGen gen *)
         (* must have 1 row extra at the top and bottom *)
         val s = !pos
         val e = if (!r)>0 then (!pos + size) else (!pos + size -1)
@@ -285,8 +285,7 @@ structure Main =
         val sl = Vector.tabulate (numSlaves, fn id => slave id ())
         val g = (nthgen_cml genC gens sl numSlaves)
       in
-        (show print g;
-        shutdown OS.Process.success)
+        (shutdown OS.Process.success)
       end
 
     fun doit n gens =
