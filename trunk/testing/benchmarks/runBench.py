@@ -63,7 +63,7 @@ def fullParameters():
 							"CountGraphs": "count-graphs-amd64", \
 							"GameOfLife": "lifeM-amd64", \
 							"Mergesort": "mergesort-amd64", \
-							"RayTrace": "raytrace-amd64"}
+							"Raytrace": "raytrace-amd64"}
 	args = {"BarnesHut": "", \
 					"AllPairs": "512 64", \
 					"Mandelbrot": "", \
@@ -72,7 +72,7 @@ def fullParameters():
 					"CountGraphs": "", \
 					"GameOfLife": "64 300", \
 					"Mergesort": "10000", \
-					"RayTrace": "64"}
+					"Raytrace": "64"}
 	numProcs = [1, 2, 4, 8, 16]
 	maxHeap = {"BarnesHut": ["50M", "40M", "30M", "20M", "10M", "9M", "8M", "7M", \
 													 "6.5M", "6M", "5.5M"], \
@@ -87,7 +87,7 @@ def fullParameters():
 						 "CountGraphs": ["25M", "15M", "10M", "6M", "4M", "3M", "2.5M", "2M", "1M"], \
 						 "GameOfLife": ["25M", "15M", "10M", "6M", "4M", "3M", "2.5M", "2M", "1M"], \
 						 "Mergesort": ["100M", "50M", "40M", "30M", "25M", "22M", "20M", "19M", "18M"], \
-						 "RayTrace": ["60M", "40M", "30M", "25M", "22M", "20M", "18M", "16M", "15M"]}
+						 "Raytrace": ["60M", "40M", "30M", "25M", "22M", "20M", "18M", "16M", "15M"]}
 	return (progName, args, numProcs, maxHeap)
 
 def testParameters():
@@ -127,7 +127,7 @@ def main():
 		benchmarks = options.bmarkList
 	else:
 		benchmarks = ["BarnesHut", "AllPairs", "Mandelbrot", "KClustering", "TSP", \
-									"CountGraphs", "GameOfLife", "Mergesort", "RayTrace"]
+									"CountGraphs", "GameOfLife", "Mergesort", "Raytrace"]
 	(progName, args, numProcs, maxHeap) = fullParameters ()
 
 	#create the runtime table if it is not already present
