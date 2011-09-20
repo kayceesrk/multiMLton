@@ -132,30 +132,47 @@ def main():
 									"CountGraphs", "GameOfLife", "Mergesort", "Raytrace", "BarnesHut2"]
 	(progName, args, numProcs, maxHeap) = fullParameters ()
 
-	#create the runtime table if it is not already present
-	c.execute('create table if not exists runTime \
-						(benchmark text, numProcs int, maxHeap text, gckind text, result int)')
+	nodeKind = ['o-', 's--', 'D-.', 'x:', '^-', 'V--', '>-.', '<:']
 
 	for b in benchmarks:
-		for n in numProcs:
-			for m in maxHeap[b]:
-				atMLtons = ["number-processors " + str(n), \
-										"max-heap " + m]
+		#intialize
+		nodeIndex = 0
+		shouldPlot = False
 
-				#run only if required
-				shouldRun = True
-				if (options.rerun == False):
-					c.execute ("select result from runTime where benchmark=? and numProcs=? and maxHeap=? and gckind=?", \
-										(b, n, m, "UT"))
-					data = c.fetchall ()
-					if (data and int(data[0][0]) != 0):
-						shouldRun = False
+		#For each benchmark plot the heap vs time graph
+		plt.xlabel ("Heap size relative to min heap size")
+		plt.ylabel ("Time (ms)")
+		plt.grid (True)
+		plt.title (b + " -- Heap vs Time")
+		log ("preparing data for plotting heap vs time for " + b)
 
-				if (shouldRun):
-					r = run ("./" + str(b), str(progName[b]), atMLtons, args[b])
-					c.execute ('delete from runTime where benchmark=? and numProcs=? and maxHeap=? and gckind="UT"', \
-										(b, n, m))
-					c.execute ('insert into runTime values (?, ?, ?, ?, ?)', (b, n, m, "UT", int(r)))
-					conn.commit ()
+		#calculate the minimum x
+		c.execute ("select distinct maxHeap from runTime where benchmark=? and result!=0", [b])
+		data = list (map (lambda v: hsizeToInt (v[0]), c.fetchall ()))
+		if data:
+			minX = min(data)
+		else:
+			minX = 0
+
+		for n in [1, 2, 4, 8, 16]:
+			c.execute ("select maxHeap, result from runTime where benchmark=? and numProcs=? \
+									and result!=0 and gckind='UT'", (b, n))
+			data = c.fetchall ()
+			x = list (map (lambda v: hsizeToInt (v[0]), data))
+			if x: #x is not empty
+				shouldPlot = True
+				x = [v/minX for v in x]
+				y = list (map (lambda v: v[1], data))
+				plt.plot (x, y, nodeKind[nodeIndex], label="Proc="+str(n))
+				nodeIndex += 1
+
+		if shouldPlot:
+			log ("plotting heap vs time for " + b)
+			#plot the current graph
+			plt.xlim(xmin = 0)
+			plt.legend ()
+			plt.savefig (b+"_heap_vs_time.eps")
+			plt.close ()
+
 
 main ()
