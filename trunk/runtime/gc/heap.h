@@ -68,7 +68,7 @@ static inline bool isHeapInit (GC_heap h);
 static void displayHeap (GC_state s, GC_heap heap, FILE *stream);
 
 static inline void initHeap (GC_state s, GC_heap h, GC_heapKind);
-static inline size_t sizeofHeapDesired (GC_state s, size_t live, size_t currentSize);
+static inline size_t sizeofHeapDesired (GC_state s, size_t live, size_t currentSize, GC_heapKind kind);
 
 static inline void releaseHeap (GC_state s, GC_heap h);
 static void shrinkHeap (GC_state s, GC_heap h, size_t keepSize);

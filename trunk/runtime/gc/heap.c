@@ -38,15 +38,21 @@ void initHeap (__attribute__ ((unused)) GC_state s,
   h->withMapsSize = 0;
 }
 
-/* sizeofHeapDesired (s, l, cs)
+/* sizeofHeapDesired (s, l, cs, kind)
  *
  * returns the desired heap size for a heap with l bytes live,
- * given that the current heap size is cs.
+ * given that the current heap size is cs and the gc kind is kind.
  */
-size_t sizeofHeapDesired (GC_state s, size_t liveSize, size_t currentSize) {
+size_t sizeofHeapDesired (GC_state s, size_t liveSize, size_t currentSize, GC_heapKind kind) {
   size_t liveWithMapsSize;
   size_t res;
   float withMapsRatio;
+  uintmax_t maxHeap;
+
+  if (kind == LOCAL_HEAP)
+    maxHeap = s->controls->maxHeapLocal;
+  else
+    maxHeap = s->controls->maxHeapShared;
 
   liveSize = align (liveSize, s->sysvals.pageSize);
   liveWithMapsSize = liveSize + sizeofCardMapAndCrossMap (s, liveSize);
@@ -106,18 +112,25 @@ size_t sizeofHeapDesired (GC_state s, size_t liveSize, size_t currentSize) {
       die ("Out of memory with fixed heap size %s.",
            uintmaxToCommaString(s->controls->fixedHeap));
     }
-  } else if (s->controls->maxHeap > 0) {
-    if (res > s->controls->maxHeap)
-      res = s->controls->maxHeap;
+  } else if (maxHeap > 0) {
+    if (res > maxHeap)
+      res = maxHeap;
     if (res < liveSize)
-      die ("Out of memory with max heap size %s.",
-           uintmaxToCommaString(s->controls->maxHeap));
+      die ("Out of memory with max heap size %s.", uintmaxToCommaString(maxHeap));
   }
+
+  char kindStr[25];
+  if (kind == LOCAL_HEAP)
+    strcpy (kindStr, "LOCAL_HEAP");
+  else
+    strcpy (kindStr, "SHARED_HEAP");
+
   if (DEBUG_RESIZING)
-    fprintf (stderr, "%s = sizeofHeapDesired (%s, %s)\n",
+    fprintf (stderr, "%s = sizeofHeapDesired (%s, %s, %s)\n",
              uintmaxToCommaString(res),
              uintmaxToCommaString(liveSize),
-             uintmaxToCommaString(currentSize));
+             uintmaxToCommaString(currentSize),
+             kindStr);
   assert (res >= liveSize);
   return res;
 }
@@ -278,8 +291,8 @@ bool createHeap (GC_state s, GC_heap h,
 bool createHeapSecondary (GC_state s, size_t desiredSize) {
   if ((s->controls->fixedHeap > 0
        and s->heap->size + desiredSize > s->controls->fixedHeap)
-      or (s->controls->maxHeap > 0
-          and s->heap->size + desiredSize > s->controls->maxHeap))
+      or (s->controls->maxHeapLocal > 0
+          and s->heap->size + desiredSize > s->controls->maxHeapLocal))
     return FALSE;
   return createHeap (s, s->secondaryLocalHeap, desiredSize, s->heap->oldGenSize);
 }
@@ -287,8 +300,8 @@ bool createHeapSecondary (GC_state s, size_t desiredSize) {
 bool createSharedHeapSecondary (GC_state s, size_t desiredSize) {
   if ((s->controls->fixedHeap > 0
        and s->sharedHeap->size + desiredSize > s->controls->fixedHeap)
-      or (s->controls->maxHeap > 0
-          and s->sharedHeap->size + desiredSize > s->controls->maxHeap))
+      or (s->controls->maxHeapShared > 0
+          and s->sharedHeap->size + desiredSize > s->controls->maxHeapShared))
     return FALSE;
   return createHeap (s, s->secondarySharedHeap,
                      desiredSize, s->sharedHeap->oldGenSize);
@@ -520,7 +533,11 @@ void resizeHeap (GC_state s, GC_heap h, size_t minSize) {
              uintmaxToCommaString(minSize),
              uintmaxToCommaString(h->size),
              isShared);
-  desiredSize = sizeofHeapDesired (s, minSize, h->size);
+  if (isShared)
+    desiredSize = sizeofHeapDesired (s, minSize, h->size, SHARED_HEAP);
+  else
+    desiredSize = sizeofHeapDesired (s, minSize, h->size, LOCAL_HEAP);
+
   assert (minSize <= desiredSize);
   if (desiredSize <= h->size) {
     shrinkHeap (s, h, desiredSize);

@@ -23,7 +23,8 @@ void majorGC (GC_state s, size_t bytesRequested, bool mayResize, bool liftWBAs) 
            < s->controls->ratios.hashCons))
     s->hashConsDuringGC = TRUE;
   desiredSize =
-    sizeofHeapDesired (s, s->lastMajorStatistics->bytesLive + bytesRequested, 0);
+    sizeofHeapDesired (s, s->lastMajorStatistics->bytesLive + bytesRequested,
+                       0, LOCAL_HEAP);
   if (liftWBAs)
     liftAllObjptrsInMoveOnWBA (s);
   if (not FORCE_MARK_COMPACT
@@ -322,8 +323,8 @@ void performSharedGC (GC_state s,
      * over-approzimation of live size */
     size_t desiredSize =
       ((s->controls->fixedHeap != 0 and maxBytes > s->controls->fixedHeap) or
-       (s->controls->maxHeap != 0 and maxBytes > s->controls->maxHeap))
-      ? maxBytes : sizeofHeapDesired (s, maxBytes, 0);
+       (s->controls->maxHeapShared != 0 and maxBytes > s->controls->maxHeapShared))
+      ? maxBytes : sizeofHeapDesired (s, maxBytes, 0, SHARED_HEAP);
     if (DEBUG)
       fprintf (stderr, "performSharedGC: desiredSize=%s maxBytes=%s\n",
                uintmaxToCommaString (desiredSize),
@@ -338,8 +339,8 @@ void performSharedGC (GC_state s,
       size_t newSize = 0;
       if (s->controls->fixedHeap != 0 and desiredSize > s->controls->fixedHeap)
         newSize = s->controls->fixedHeap;
-      else if (s->controls->maxHeap != 0 and desiredSize > s->controls->maxHeap)
-        newSize = s->controls->maxHeap;
+      else if (s->controls->maxHeapShared != 0 and desiredSize > s->controls->maxHeapShared)
+        newSize = s->controls->maxHeapShared;
       else if (desiredSize > s->sharedHeap->size)
         newSize = desiredSize;
       if (newSize > 0) {

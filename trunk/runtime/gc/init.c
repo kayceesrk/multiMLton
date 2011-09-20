@@ -208,11 +208,17 @@ int processAtMLton (GC_state s, int argc, char **argv,
           s->controls->ratios.markCompact = stringToFloat (argv[i++]);
           unless (1.0 < s->controls->ratios.markCompact)
             die ("@MLton mark-compact-ratio argument must be greater than 1.0.");
-        } else if (0 == strcmp (arg, "max-heap")) {
+        } else if (0 == strcmp (arg, "max-heap-local")) {
           i++;
           if (i == argc)
             die ("@MLton max-heap missing argument.");
-          s->controls->maxHeap = align (stringToBytes (argv[i++]),
+          s->controls->maxHeapLocal = align (stringToBytes (argv[i++]),
+                                       2 * s->sysvals.pageSize);
+        } else if (0 == strcmp (arg, "max-heap-shared")) {
+          i++;
+          if (i == argc)
+            die ("@MLton max-heap missing argument.");
+          s->controls->maxHeapShared = align (stringToBytes (argv[i++]),
                                        2 * s->sysvals.pageSize);
         } else if (0 == strcmp (arg, "may-page-heap")) {
           i++;
@@ -421,7 +427,8 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->callFromCHandlerThread = BOGUS_OBJPTR;
   s->controls = (struct GC_controls *) malloc (sizeof (struct GC_controls));
   s->controls->fixedHeap = 0;
-  s->controls->maxHeap = 0;
+  s->controls->maxHeapLocal = 0;
+  s->controls->maxHeapShared = 0;
   s->controls->mayLoadWorld = TRUE;
   s->controls->mayPageHeap = FALSE;
   s->controls->mayProcessAtMLton = TRUE;
@@ -533,7 +540,7 @@ int GC_init (GC_state s, int argc, char **argv) {
     die ("Page size must be a multiple of card size.");
   processAtMLton (s, s->atMLtonsLength, s->atMLtons, &s->worldFile);
   res = processAtMLton (s, argc, argv, &s->worldFile);
-  if (s->controls->fixedHeap > 0 and s->controls->maxHeap > 0)
+  if (s->controls->fixedHeap > 0 and s->controls->maxHeapLocal > 0)
     die ("Cannot use both fixed-heap and max-heap.");
   unless (s->controls->ratios.markCompact <= s->controls->ratios.copy
           and s->controls->ratios.copy <= s->controls->ratios.live)

@@ -44,7 +44,8 @@ struct GC_ratios {
 
 struct GC_controls {
   size_t fixedHeap; /* If 0, then no fixed heap-> */
-  size_t maxHeap; /* if zero, then unlimited, else limit total heap */
+  size_t maxHeapLocal; /* if zero, then unlimited, else limit total heap */
+  size_t maxHeapShared; /* if zero, then unlimited, else limit total heap */
   bool mayLoadWorld;
   bool mayPageHeap; /* Permit paging heap to disk during GC */
   bool mayProcessAtMLton;

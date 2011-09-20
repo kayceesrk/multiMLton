@@ -52,32 +52,22 @@ void loadWorldFromFILE (GC_state s, FILE *f) {
   s->savedClosure = readObjptr (f);
   s->pacmlThreadId = readObjptr (f);
 
-  loadArray (s->danglingStackList, sizeof (objptr),
-             &s->danglingStackListSize,
+  loadArray (s->danglingStackList, sizeof (objptr), &s->danglingStackListSize,
              &s->danglingStackListMaxSize, f);
-  loadArray (s->moveOnWBA, sizeof (objptr),
-             &s->moveOnWBASize,
-             &s->moveOnWBAMaxSize, f);
-  loadArray (s->preemptOnWBA, sizeof (objptr),
-             &s->preemptOnWBASize,
-             &s->preemptOnWBAMaxSize, f);
-  loadArray (s->spawnOnWBA, sizeof (SpawnThread),
-             &s->spawnOnWBASize,
-             &s->spawnOnWBAMaxSize, f);
+  loadArray (s->moveOnWBA, sizeof (objptr), &s->moveOnWBASize, &s->moveOnWBAMaxSize, f);
+  loadArray (s->preemptOnWBA, sizeof (objptr), &s->preemptOnWBASize, &s->preemptOnWBAMaxSize, f);
+  loadArray (s->spawnOnWBA, sizeof (SpawnThread), &s->spawnOnWBASize, &s->spawnOnWBAMaxSize, f);
 
   loadCircularBuffer (s->schedulerQueue->primary, f);
   loadCircularBuffer (s->schedulerQueue->secondary, f);
 
-  createHeap (s, s->heap,
-              sizeofHeapDesired (s, s->heap->oldGenSize, 0),
-              s->heap->oldGenSize);
+  createHeap (s, s->heap, sizeofHeapDesired (s, s->heap->oldGenSize, 0, LOCAL_HEAP), s->heap->oldGenSize);
   setCardMapAndCrossMap (s);
   if (s->sharedHeap->oldGenSize == 0) {
     createHeap (s, s->sharedHeap, 1024, 1024);
   }
   else {
-    createHeap (s, s->sharedHeap,
-                sizeofHeapDesired (s, s->sharedHeap->oldGenSize, 0),
+    createHeap (s, s->sharedHeap, sizeofHeapDesired (s, s->sharedHeap->oldGenSize, 0, SHARED_HEAP),
                 s->sharedHeap->oldGenSize);
   }
   fread_safe (s->heap->start, 1, s->heap->oldGenSize, f);
