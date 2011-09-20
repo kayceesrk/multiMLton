@@ -79,7 +79,7 @@ void initVectors (GC_state s) {
 
   assert (isFrontierAligned (s, s->frontier));
   inits = s->vectorInits;
-  frontier = s->frontier;
+  frontier = s->sharedFrontier;
   for (i = 0; i < s->vectorInitsLength; i++) {
     size_t bytesPerElement;
     size_t dataBytes;
@@ -93,7 +93,7 @@ void initVectors (GC_state s) {
                            ? OBJPTR_SIZE
                            : dataBytes),
                         s->alignment);
-    assert (objectSize <= (size_t)(s->heap->start + s->heap->size - frontier));
+    assert (objectSize <= (size_t)(s->sharedHeap->start + s->sharedHeap->size - frontier));
     *((GC_arrayCounter*)(frontier)) = 0;
     frontier = frontier + GC_ARRAY_COUNTER_SIZE;
     *((GC_arrayLength*)(frontier)) = inits[i].numElements;
@@ -117,7 +117,7 @@ void initVectors (GC_state s) {
     }
     *((GC_header*)(frontier)) = buildHeaderFromTypeIndex (typeIndex);
     frontier = frontier + GC_HEADER_SIZE;
-    s->globals[inits[i].globalIndex] = pointerToObjptr(frontier, s->heap->start);
+    s->globals[inits[i].globalIndex] = pointerToObjptr(frontier, s->sharedHeap->start);
     if (DEBUG_DETAILED)
       fprintf (stderr, "allocated vector at "FMTPTR"\n",
                (uintptr_t)(s->globals[inits[i].globalIndex]));
@@ -127,10 +127,10 @@ void initVectors (GC_state s) {
   if (DEBUG_DETAILED)
     fprintf (stderr, "frontier after string allocation is "FMTPTR"\n",
              (uintptr_t)frontier);
-  GC_profileAllocInc (s, (size_t)(frontier - s->frontier));
-  s->cumulativeStatistics->bytesAllocated += (size_t)(frontier - s->frontier);
+  //GC_profileAllocInc (s, (size_t)(frontier - s->frontier));
+  s->cumulativeStatistics->bytesLifted += (size_t)(frontier - s->sharedFrontier);
   assert (isFrontierAligned (s, frontier));
-  s->frontier = frontier;
+  s->sharedFrontier = frontier;
 }
 
 void initWorld (GC_state s) {
@@ -141,33 +141,31 @@ void initWorld (GC_state s) {
 
   for (i = 0; i < s->globalsLength; ++i)
     s->globals[i] = BOGUS_OBJPTR;
-  s->lastMajorStatistics->bytesLive = sizeofInitialBytesLive (s);
-  minSize = s->lastMajorStatistics->bytesLive
-    + ((GC_HEAP_LIMIT_SLOP + GC_BONUS_SLOP) * s->numberOfProcs);
-  createHeap (s, s->heap,
-              sizeofHeapDesired (s, minSize, 0),
-              minSize);
+  s->lastSharedMajorStatistics->bytesLive = sizeofInitialBytesLive (s);
+  minSize = s->lastSharedMajorStatistics->bytesLive;
+  createHeap (s, s->sharedHeap, sizeofHeapDesired (s, minSize, 0), minSize);
+
+  //set up shared heap
+  start = alignFrontier (s, s->sharedHeap->start);
+  s->sharedStart = s->sharedFrontier = start;
+  s->sharedLimitPlusSlop = s->sharedHeap->start + s->sharedHeap->size - GC_BONUS_SLOP;
+  s->sharedLimit = s->sharedLimitPlusSlop - GC_HEAP_LIMIT_SLOP;
+  initIntInfs (s);
+  initVectors (s);
+  s->sharedHeap->oldGenSize = s->sharedFrontier - s->sharedHeap->start;
+  setGCStateCurrentSharedHeap (s, 0, 0, true);
 
   //set up local heap
+  createHeap (s, s->heap, sizeofHeapDesired (s, 65536, 0), 0);
   setCardMapAndCrossMap (s);
   start = alignFrontier (s, s->heap->start);
   s->start = s->frontier = start;
   s->limitPlusSlop = s->heap->start + s->heap->size - GC_BONUS_SLOP;
   s->limit = s->limitPlusSlop - GC_HEAP_LIMIT_SLOP;
-  initIntInfs (s);
-  initVectors (s);
   assert ((size_t)(s->frontier - start) <= s->lastMajorStatistics->bytesLive);
   s->heap->oldGenSize = s->frontier - s->heap->start;
   setGCStateCurrentLocalHeap (s, 0, 0);
 
-  //set up shared heap
-  createHeap (s, s->sharedHeap, sizeofHeapDesired (s, s->heap->oldGenSize, 0) , s->heap->oldGenSize);
-  start = alignFrontier (s, s->sharedHeap->start);
-  s->sharedStart = s->sharedFrontier = start;
-  s->sharedLimitPlusSlop = s->sharedHeap->start + s->sharedHeap->size - GC_BONUS_SLOP;
-  s->sharedLimit = s->sharedLimitPlusSlop - GC_HEAP_LIMIT_SLOP;
-  s->sharedHeap->oldGenSize = s->sharedFrontier - s->sharedHeap->start;
-  setGCStateCurrentSharedHeap (s, 0, 0, true);
 
   thread = newThread (s, sizeofStackInitialReserved (s));
   switchToThread (s, pointerToObjptr((pointer)thread - offsetofThread (s), s->heap->start));
@@ -181,7 +179,7 @@ void duplicateWorld (GC_state d, GC_state s) {
   //set up local heap
   d->heap = (GC_heap) malloc (sizeof (struct GC_heap));
   initHeap (d, d->heap, LOCAL_HEAP);
-  createHeap (d, d->heap, sizeofHeapDesired (s, s->heap->oldGenSize, 0), 0);
+  createHeap (d, d->heap, sizeofHeapDesired (s, 65536, 0), 0);
   start = alignFrontier (d, d->heap->start);
   d->start = d->frontier = start;
   d->limitPlusSlop = d->heap->start + d->heap->size - GC_BONUS_SLOP;
