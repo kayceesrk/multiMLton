@@ -56,6 +56,7 @@ def hsizeToInt (s):
 
 def fullParameters():
 	progName = {"BarnesHut": "barnes-hutM-amd64", \
+							"BarnesHut2": "barnes-hut-amd64", \
 							"AllPairs": "floyd-warshall-amd64", \
 							"Mandelbrot": "mandelbrot-amd64", \
 							"KClustering": "kclustering-amd64", \
@@ -65,6 +66,7 @@ def fullParameters():
 							"Mergesort": "mergesort-amd64", \
 							"Raytrace": "raytrace-amd64"}
 	args = {"BarnesHut": "", \
+					"BarnesHut2": "4096 64", \
 					"AllPairs": "512 64", \
 					"Mandelbrot": "", \
 					"KClustering": "0 256 200 50 0", \
@@ -75,6 +77,8 @@ def fullParameters():
 					"Raytrace": "64"}
 	numProcs = [1, 2, 4, 8, 16]
 	maxHeap = {"BarnesHut": ["50M", "40M", "30M", "20M", "10M", "9M", "8M", "7M", \
+													 "6.5M", "6M", "5.5M"], \
+					   "BarnesHut2": ["50M", "40M", "30M", "20M", "10M", "9M", "8M", "7M", \
 													 "6.5M", "6M", "5.5M"], \
 						 "AllPairs": ["50M", "40M", "30M", "20M", "10M", "9M", "8M", "7M", \
 						 							"6.5M", "6M", "5.5M"],
@@ -127,7 +131,7 @@ def main():
 		benchmarks = options.bmarkList
 	else:
 		benchmarks = ["BarnesHut", "AllPairs", "Mandelbrot", "KClustering", "TSP", \
-									"CountGraphs", "GameOfLife", "Mergesort", "Raytrace"]
+									"CountGraphs", "GameOfLife", "Mergesort", "Raytrace", "BarnesHut2"]
 	(progName, args, numProcs, maxHeap) = fullParameters ()
 
 	#create the runtime table if it is not already present
