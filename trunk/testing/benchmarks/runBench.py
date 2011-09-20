@@ -87,7 +87,7 @@ def fullParameters():
 						 "CountGraphs": ["25M", "15M", "10M", "6M", "4M", "3M", "2.5M", "2M", "1M"], \
 						 "GameOfLife": ["25M", "15M", "10M", "6M", "4M", "3M", "2.5M", "2M", "1M"], \
 						 "Mergesort": ["100M", "50M", "40M", "30M", "25M", "22M", "20M", "19M", "18M"], \
-						 "Raytrace": ["60M", "40M", "30M", "25M", "22M", "20M", "18M", "16M", "15M"]}
+						 "Raytrace": ["30M", "25M", "22M", "20M", "18M", "16M", "15M"]}
 	return (progName, args, numProcs, maxHeap)
 
 def testParameters():
@@ -176,7 +176,11 @@ def main():
 
 		#calculate the minimum x
 		c.execute ("select distinct maxHeap from runTime where benchmark=? and result!=0", [b])
-		minX = min(list (map (lambda v: hsizeToInt (v[0]), c.fetchall ())))
+		data = list (map (lambda v: hsizeToInt (v[0]), c.fetchall ()))
+		if data:
+			minX = min(data)
+		else:
+			minX = 0
 
 		for n in [1, 2, 4, 8, 16]:
 			c.execute ("select maxHeap, result from runTime where benchmark=? and numProcs=? \
