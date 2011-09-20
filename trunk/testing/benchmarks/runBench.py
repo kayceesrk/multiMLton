@@ -83,11 +83,11 @@ def fullParameters():
 														"5M", "4M", "3M"], \
 						 "KClustering": ["20M", "15M", "12M", "11M", "10M", "9M", "8M", "7.5M", \
 							 							 "7M", "6.5M", "6M"], \
-					   "TSP": ["200M", "150M", "100M", "96M", "95M", "94.5M", \
+					   "TSP": ["200M", "150M", "100M", "96M", "95M", "94.5M"], \
 						 "CountGraphs": ["25M", "15M", "10M", "6M", "4M", "3M", "2.5M", "2M", "1M"], \
 						 "GameOfLife": ["25M", "15M", "10M", "6M", "4M", "3M", "2.5M", "2M", "1M"], \
-						 "Mergesort": ["100M", "50M", "40M", "30M", "25M", "22M", "20M", "19M", "18M", \
-						 "RayTrace": ["60M", "40M", "30M", "25M", "22M", "20M", "18M", "16M", "15M"}
+						 "Mergesort": ["100M", "50M", "40M", "30M", "25M", "22M", "20M", "19M", "18M"], \
+						 "RayTrace": ["60M", "40M", "30M", "25M", "22M", "20M", "18M", "16M", "15M"]}
 	return (progName, args, numProcs, maxHeap)
 
 def testParameters():
@@ -143,9 +143,10 @@ def main():
 					#run only if required
 					shouldRun = True
 					if (options.rerun == False):
-						c.execute ("select * from runTime where benchmark=? and numProcs=? and maxHeap=?", \
+						c.execute ("select result from runTime where benchmark=? and numProcs=? and maxHeap=?", \
 											(b, n, m))
-						if (c.fetchall ()):
+						data = c.fetchall ()
+						if (data and int(data[0][0]) != 0):
 							shouldRun = False
 
 					if (shouldRun):
