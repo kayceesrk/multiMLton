@@ -53,7 +53,7 @@ void initIntInfs (GC_state s) {
   __mpz_struct resmpz;
   int ans;
 
-  assert (isFrontierAligned (s, s->frontier));
+  assert (isFrontierAligned (s, s->sharedFrontier));
   for (i = 0; i < s->intInfInitsLength; i++) {
     inits = &(s->intInfInits[i]);
     assert (inits->globalIndex < s->globalsLength);
@@ -68,8 +68,11 @@ void initIntInfs (GC_state s) {
     if (neg)
       resmpz._mp_size = - resmpz._mp_size;
     s->globals[inits->globalIndex] = finiIntInfRes (s, &resmpz, bytes);
+    fprintf (stderr, "initIntInfs: HEADER = "FMTHDR"\n", getHeader ((pointer)s->globals[inits->globalIndex]));
+    assert (0);
+    exit (1);
   }
-  assert (isFrontierAligned (s, s->frontier));
+  assert (isFrontierAligned (s, s->sharedFrontier));
 }
 
 void initVectors (GC_state s) {
@@ -115,7 +118,7 @@ void initVectors (GC_state s) {
       die ("unknown bytes per element in vectorInit: %"PRIuMAX"",
            (uintmax_t)bytesPerElement);
     }
-    *((GC_header*)(frontier)) = buildHeaderFromTypeIndex (typeIndex);
+    *((GC_header*)(frontier)) = (buildHeaderFromTypeIndex (typeIndex) | LIFT_MASK);
     frontier = frontier + GC_HEADER_SIZE;
     s->globals[inits[i].globalIndex] = pointerToObjptr(frontier, s->sharedHeap->start);
     if (DEBUG_DETAILED)

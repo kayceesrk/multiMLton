@@ -100,12 +100,12 @@ void initIntInfRes (GC_state s, __mpz_struct *res,
   GC_intInf bp;
   size_t nlimbs;
 
-  assert (bytes <= (size_t)(s->limitPlusSlop - s->frontier));
-  bp = (GC_intInf)s->frontier;
+  assert (bytes <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier));
+  bp = (GC_intInf)s->sharedFrontier;
   /* We have as much space for the limbs as there is to the end of the
    * heap->  Divide by (sizeof(mp_limb_t)) to get number of limbs.
    */
-  nlimbs = ((size_t)(s->limitPlusSlop - (pointer)bp->obj.body.limbs)) / (sizeof(mp_limb_t));
+  nlimbs = ((size_t)(s->sharedLimitPlusSlop - (pointer)bp->obj.body.limbs)) / (sizeof(mp_limb_t));
   /* The _mp_alloc field is declared as int.
    * Avoid an overflowing assignment, which could happen with huge
    * heaps.
@@ -168,11 +168,11 @@ objptr finiIntInfRes (GC_state s, __mpz_struct *res, size_t bytes) {
       return (objptr)(ans<<1 | 1);
     }
   }
-  setFrontier (s, (pointer)(&bp->obj.body.limbs[size]), bytes);
+  setSharedFrontier (s, (pointer)(&bp->obj.body.limbs[size]), bytes);
   bp->counter = (GC_arrayCounter)0;
   bp->length = (GC_arrayLength)(size + 1); /* +1 for isneg field */
   bp->header = GC_INTINF_HEADER;
-  return pointerToObjptr ((pointer)&bp->obj, s->heap->start);
+  return pointerToObjptr ((pointer)&bp->obj, s->sharedHeap->start);
 }
 
 static inline objptr binary (objptr lhs, objptr rhs, size_t bytes,

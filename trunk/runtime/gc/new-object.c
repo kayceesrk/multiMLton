@@ -128,3 +128,15 @@ static inline void setFrontier (GC_state s, pointer p,
   assert (s->frontier <= s->limitPlusSlop);
   assert (s->start <= s->frontier);
 }
+
+static inline void setSharedFrontier (GC_state s, pointer p,
+                                __attribute__ ((unused)) size_t bytes) {
+  p = alignFrontier (s, p);
+  assert ((size_t)(p - s->sharedFrontier) <= bytes);
+  GC_profileAllocInc (s, p - s->sharedFrontier);
+  /* XXX unsafe concurrent access */
+  s->cumulativeStatistics->bytesAllocated += p - s->sharedFrontier;
+  s->sharedFrontier = p;
+  assert (s->sharedFrontier <= s->sharedLimitPlusSlop);
+  assert (s->sharedStart <= s->sharedFrontier);
+}
