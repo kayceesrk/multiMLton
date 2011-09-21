@@ -191,7 +191,7 @@ bool createHeap (GC_state s, GC_heap h,
   size_t backoff;
   size_t newSize;
   size_t newWithMapsSize;
-  bool isShared;
+  bool isShared = FALSE;
 
   if (h == s->sharedHeap || h == s->secondarySharedHeap)
     isShared = TRUE;
@@ -317,7 +317,7 @@ bool remapHeap (GC_state s, GC_heap h,
   size_t newWithMapsSize;
   size_t origSize;
   size_t origWithMapsSize;
-  bool isShared;
+  bool isShared = FALSE;
 
   if (h == s->sharedHeap || h == s->secondarySharedHeap)
     isShared = TRUE;
