@@ -18,7 +18,7 @@ struct
   type parasite = RepTypes.parasite
 
   fun debug msg = Debug.sayDebug ([], (msg))
-  fun debug' msg = debug (fn () => msg^"."^(ProtoThread.getThreadTypeString())
+  fun debug' msg = debug (fn () => msg()^"."^(ProtoThread.getThreadTypeString())
                                    ^" : "^Int.toString(PacmlFFI.processorNumber()))
 
   val pri = 0

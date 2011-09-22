@@ -116,7 +116,7 @@ struct
   fun tidMsg () = tidToString (getCurThreadId ())
 
   fun debug msg = Debug.sayDebug ([atomicMsg, tidMsg], msg)
-  fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
+  fun debug' msg = debug (fn () => msg()^" : "^Int.toString(PacmlFFI.processorNumber()))
 
   (* and setCurThreadId (tid as TID {processorId, ...}) =
   let

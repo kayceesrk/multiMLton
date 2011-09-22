@@ -22,7 +22,7 @@ structure Mailbox : MAILBOX_EXTRA =
       structure PT= ProtoThread
 
       fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
-      fun debug' msg = debug (fn () => msg^"."^(PT.getThreadTypeString()) ^" : "^Int.toString(PacmlFFI.processorNumber()))
+      fun debug' msg = debug (fn () => msg()^"."^(PT.getThreadTypeString()) ^" : "^Int.toString(PacmlFFI.processorNumber()))
 
       structure E = Event
       structure C = Channel
@@ -36,10 +36,10 @@ structure Mailbox : MAILBOX_EXTRA =
       fun send (MB (c), x) =
       let
         val () = Assert.assertNonAtomic' "Mailbox.send(1)"
-        val () = debug' "Mailbox.send(1)"
+        val () = debug' (fn () => "Mailbox.send(1)")
         val () = C.aSend (c, x)
         val () = Assert.assertNonAtomic' "Mailbox.send(2)"
-        val () = debug' "Mailbox.send(2)"
+        val () = debug' (fn () => "Mailbox.send(2)")
       in
         ()
       end
@@ -47,28 +47,28 @@ structure Mailbox : MAILBOX_EXTRA =
       fun recv (MB (c)) =
       let
         val () = Assert.assertNonAtomic' "Mailbox.recv(1)"
-        val () = debug' "Mailbox.recv(1)"
+        val () = debug' (fn () => "Mailbox.recv(1)")
         val v = C.recv (c)
         val () = Assert.assertNonAtomic' "Mailbox.recv(2)"
-        val () = debug' "Mailbox.recv(2)"
+        val () = debug' (fn () => "Mailbox.recv(2)")
       in
         v
       end
 
       fun recvEvt (MB (c)) =
         let
-          val () = debug' "Mailbox.recvEvt(1)"
+          val () = debug' (fn () => "Mailbox.recvEvt(1)")
           val e = C.recvEvt(c)
-          val () = debug' "Mailbox.recvEvt(2)"
+          val () = debug' (fn () => "Mailbox.recvEvt(2)")
         in
           e
         end
 
       fun recvPoll (MB (c)) =
         let
-          val () = debug' "Mailbox.recvPoll(1)"
+          val () = debug' (fn () => "Mailbox.recvPoll(1)")
           val v = C.recvPoll (c)
-          val () = debug' "Mailbox.recvPoll(2)"
+          val () = debug' (fn () => "Mailbox.recvPoll(2)")
         in
           v
         end

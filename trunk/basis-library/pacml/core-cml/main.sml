@@ -15,7 +15,7 @@ struct
   structure Debug = LocalDebug(val debug = false)
 
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
-  fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
+  fun debug' msg = debug (fn () => msg()^" : "^Int.toString(PacmlFFI.processorNumber()))
 
 
 
@@ -73,12 +73,12 @@ struct
   fun alrmHandler thrd =
     let
       val () = Assert.assertAtomic' ("RunCML.alrmHandler", SOME 1)
-      val () = debug' "alrmHandler(1)" (* Atomic 1 *)
+      val () = debug' (fn () => "alrmHandler(1)") (* Atomic 1 *)
       val () = S.preempt thrd
       val () = TO.preemptTime ()
       val _ = TO.preempt ()
       val nextThrd = S.next()
-      val () = debug' "alrmHandler(2)"
+      val () = debug' (fn () => "alrmHandler(2)")
     in
       nextThrd
     end
@@ -145,24 +145,24 @@ struct
           fun lateInit () =
           let
             val () = Config.isRunning := true
-            val () = debug' "lateInit"
+            val () = debug' (fn () => "lateInit")
             (* Spawn the Non-blocking worker threads *)
             val _ = List.tabulate (numIOThreads * 5, fn _ => NonBlocking.mkNBThread ())
             val _ = List.tabulate (numIOThreads, fn i => PacmlFFI.wakeUp (PacmlFFI.numComputeProcessors + i, 1))
           in
             ()
           end
-          val () = debug' (concat ["numberOfProcessors = ", Int.toString (PacmlFFI.numberOfProcessors)])
-          val () = debug' (concat ["numComputeProcessors = ", Int.toString (PacmlFFI.numComputeProcessors)])
-          val () = debug' (concat ["numIOProcessors = ", Int.toString (PacmlFFI.numIOProcessors)])
+          val () = debug' (fn () => concat ["numberOfProcessors = ", Int.toString (PacmlFFI.numberOfProcessors)])
+          val () = debug' (fn () => concat ["numComputeProcessors = ", Int.toString (PacmlFFI.numComputeProcessors)])
+          val () = debug' (fn () => concat ["numIOProcessors = ", Int.toString (PacmlFFI.numIOProcessors)])
           val () = reset true
           val handler = MLtonSignal.Handler.handler (S.unwrap alrmHandler Thread.reifyHostFromParasite)
           val () = installAlrmHandler handler
-          val () = debug' "Main(-2)"
+          val () = debug' (fn () => "Main(-2)")
           val () = SH.shutdownHook := PT.prepend (thrd, fn arg => (atomicBegin (); arg))
-          val () = debug' "Main(-1)"
+          val () = debug' (fn () => "Main(-1)")
           val () = SH.pauseHook := pauseHook
-          val () = debug' "Main(0)"
+          val () = debug' (fn () => "Main(0)")
           val () = ignore (Thread.spawnHost (fn ()=> (lateInit (); initialProc ())))
         in
             ()

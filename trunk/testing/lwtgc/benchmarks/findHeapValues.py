@@ -8,6 +8,7 @@ import sys
 import os
 import fnmatch
 import locale
+import sqlite3
 
 logging=True
 
@@ -136,16 +137,16 @@ def fullParameters():
 							"Mergesort": "mergesort-amd64", \
 							"Raytrace": "raytrace-amd64"}
 	args = {"BarnesHut": "", \
-					"BarnesHut2": "4096 64", \
+					"BarnesHut2": "1024 256", \
 					"AllPairs": "512 64", \
 					"Mandelbrot": "", \
 					"KClustering": "0 256 200 50 0", \
 					"TSP": "", \
-					"CountGraphs": "", \
+					"CountGraphs": "1", \
 					"GameOfLife": "64 300", \
 					"Mergesort": "10000", \
 					"Raytrace": "64"}
-	numProcs = [1, 2, 4, 8, 16]
+	numProcs = [16]
 	return (progName, args, numProcs)
 
 def testParameters():
@@ -179,72 +180,67 @@ def getPoints (min, max):
 	pointsPerPartition = 4
 	return getPointsRec (min, max, numPartitions, pointsPerPartition)
 
-def maxHeapLocalValues (benchmarks, numProcs, progName, args):
-	for b in benchmarks:
-		for n in numProcs:
-			done = False
-			atMLtons = ["number-processors " + str(n), \
-									"enable-timer 20000", \
-									"gc-summary individual"]
-			(t, m, ml, ms) = run ("./" + str(b), str(progName[b]), atMLtons, args[b])
-			maxHeapLocalMax = ml
+def maxHeapLocalValues (b, n, progName, args, c):
+	atMLtons = ["number-processors " + str(n), \
+							"enable-timer 20000", \
+							"gc-summary individual"]
+	(t, m, ml, ms) = run ("./" + str(b), str(progName[b]), atMLtons, args[b])
+	maxHeapLocalMax = ml
+	if int(t) == 0:
+		sys.exit ("Initial run failed. Exiting....")
+
+	min = 0
+	max = maxHeapLocalMax
+	while (bytesIntToString (min, 0) != bytesIntToString (max, 0)):
+		print (bytesIntToString (min, 0))
+		print (bytesIntToString (max, 0))
+		cur = (min + max)/2
+		newAtMLtons = atMLtons + ["max-heap-local " + bytesIntToString (round(cur), 1)]
+		(t, m, ml, ms) = run ("./" + str(b), str(progName[b]), newAtMLtons, args[b])
+		if int(t) == 0:
+			print ("Repeat")
+			(t, m, ml, ms) = run ("./" + str(b), str(progName[b]), newAtMLtons, args[b])
 			if int(t) == 0:
-				sys.exit ("Initial run failed. Exiting....")
+				min = cur
+			else:
+				max = cur
+		else:
+			max = cur
+	maxHeapLocalMin = cur
 
-			min = 0
-			max = maxHeapLocalMax
-			while (bytesIntToString (min, 0) != bytesIntToString (max, 0)):
-				print (bytesIntToString (min, 0))
-				print (bytesIntToString (max, 0))
-				cur = (min + max)/2
-				newAtMLtons = atMLtons + ["max-heap-local " + bytesIntToString (round(cur), 1)]
-				(t, m, ml, ms) = run ("./" + str(b), str(progName[b]), newAtMLtons, args[b])
-				if int(t) == 0:
-					print ("Repeat")
-					(t, m, ml, ms) = run ("./" + str(b), str(progName[b]), newAtMLtons, args[b])
-					if int(t) == 0:
-						min = cur
-					else:
-						max = cur
-				else:
-					max = cur
-			maxHeapLocalMin = cur
+	points = getPoints (maxHeapLocalMin, maxHeapLocalMax)
+	points.sort ()
+	print ("values for maxHeapLocal: " + str ([bytesIntToString (x, 1) for x in points]))
+	return points
 
-			points = getPoints (maxHeapLocalMin, maxHeapLocalMax)
-			points.sort ()
-			print ("values for maxHeapLocal: " + str ([bytesIntToString (x, 1) for x in points]))
-			return points
+def maxHeapSharedValues (b, n, progName, args, c):
+	atMLtons = ["number-processors " + str(n), \
+							"enable-timer 20000", \
+							"gc-summary individual"]
+	(t, m, ml, ms) = run ("./" + str(b), str(progName[b]), atMLtons, args[b])
+	maxHeapSharedMax = ms
+	if int(t) == 0:
+		sys.exit ("Initial run failed. Exiting....")
 
-def maxHeapSharedValues (benchmarks, numProcs, progName, args):
-	for b in benchmarks:
-		for n in numProcs:
-			done = False
-			atMLtons = ["number-processors " + str(n), \
-									"enable-timer 20000", \
-									"gc-summary individual"]
-			(t, m, ml, ms) = run ("./" + str(b), str(progName[b]), atMLtons, args[b])
-			maxHeapSharedMax = ms
-			if int(t) == 0:
-				sys.exit ("Initial run failed. Exiting....")
+	min = 0
+	max = maxHeapSharedMax
+	while (bytesIntToString (min, 0) != bytesIntToString (max, 0)):
+		print (bytesIntToString (min, 0))
+		print (bytesIntToString (max, 0))
+		cur = (min + max)/2
+		newAtMLtons = atMLtons + ["max-heap-shared " + bytesIntToString (round(cur), 1)]
+		(t, m, ml, ms) = run ("./" + str(b), str(progName[b]), newAtMLtons, args[b])
+		if int(t) == 0:
+			min = cur
+		else:
+			max = cur
+	maxHeapSharedMin = cur
 
-			min = 0
-			max = maxHeapSharedMax
-			while (bytesIntToString (min, 0) != bytesIntToString (max, 0)):
-				print (bytesIntToString (min, 0))
-				print (bytesIntToString (max, 0))
-				cur = (min + max)/2
-				newAtMLtons = atMLtons + ["max-heap-shared " + bytesIntToString (round(cur), 1)]
-				(t, m, ml, ms) = run ("./" + str(b), str(progName[b]), newAtMLtons, args[b])
-				if int(t) == 0:
-					min = cur
-				else:
-					max = cur
-			maxHeapSharedMin = cur
+	points = getPoints (maxHeapSharedMin, maxHeapSharedMax)
+	points.sort ()
+	print ("values for maxHeapShared: " + str ([bytesIntToString (x, 1) for x in points]))
 
-			points = getPoints (maxHeapSharedMin, maxHeapSharedMax)
-			points.sort ()
-			print ("values for maxHeapShared: " + str ([bytesIntToString (x, 1) for x in points]))
-			return points
+	return points
 
 def main():
 
@@ -260,9 +256,31 @@ def main():
 	else:
 		benchmarks = ["BarnesHut", "AllPairs", "Mandelbrot", "KClustering", "TSP", \
 									"CountGraphs", "GameOfLife", "Mergesort", "Raytrace", "BarnesHut2"]
-	(progName, args, numProcs) = testParameters ()
 
-	maxHeapSharedValues (benchmarks, numProcs, progName, args)
-	maxHeapLocalValues (benchmarks, numProcs, progName, args)
+	#Connect to database
+	conn = sqlite3.connect("/home/chandras/PLDI/results")
+	c = conn.cursor ()
+
+	c.execute ("create table if not exists heapRanges \
+							(benchmark text, numProcs int, gckind text, args text, maxSHV text, maxLHV text)")
+
+	(progName, args, numProcs) = fullParameters ()
+
+	for b in benchmarks:
+		for n in numProcs:
+			shouldRun = False
+			c.execute ("select * from heapRanges where benchmark=? and numProcs=? and args=? and gckind=?",
+								 (b, n, args[b], "WB"))
+
+			if (not c.fetchall ()):
+				shouldRun = True
+
+			if (shouldRun):
+				maxSHV = maxHeapSharedValues (b, n, progName, args, c)
+				maxLHV = maxHeapLocalValues (b, n, progName, args, c)
+				#insert into DB
+				c.execute ("insert into heapRanges values (?, ?, ?, ?, ?, ?)",
+										(b, n, "WB", args[b], str(maxSHV), str(maxLHV)))
+				conn.commit ()
 
 main ()

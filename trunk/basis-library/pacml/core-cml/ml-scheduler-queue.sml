@@ -15,7 +15,7 @@ struct
   type thread_id = RepTypes.thread_id
 
   fun debug msg = Debug.sayDebug ([], (msg))
-  fun debug' msg = debug (fn () => msg^" : "^Int.toString(PacmlFFI.processorNumber()))
+  fun debug' msg = debug (fn () => msg()^" : "^Int.toString(PacmlFFI.processorNumber()))
 
   (* These processors are used only to run IO CML thread *)
   val numIOProcs = PacmlFFI.numIOProcessors
