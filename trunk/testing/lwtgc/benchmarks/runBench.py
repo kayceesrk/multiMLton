@@ -154,6 +154,8 @@ def testParameters():
 
 def main():
 	reruns = 1
+
+
 	#Parse options
 	parser = OptionParser()
 	parser.add_option("-d", "--database", dest="database", help="database location", \
@@ -176,27 +178,45 @@ def main():
 		benchmarks = ["BarnesHut2",	"CountGraphs"]
 	(progName, args, numProcs) = fullParameters ()
 
+	if (bool(input("Are you sure you want to drop the tables? "))):
+		c.execute ("drop table if exists runTime")
+		c.execute ("drop table if exists completedRuns")
+		conn.commit ()
+
 	#create the completed run if it is not already present
 	c.execute('create table if not exists completedRuns \
 						(benchmark text, numProcs int, maxHeapLocal text, maxHeapShared text, gckind text)')
+
+
 
 	#create the runtime table if it is not already present
 	c.execute('create table if not exists runTime \
 						(benchmark text, numProcs int, maxHeapLocal text, \
 						 maxHeapShared text, maxHeap text, gckind text, result int)')
 
+
 	for b in benchmarks:
 		for n in numProcs:
 			c.execute ("select maxSHV, maxLHV from heapRanges where benchmark=? and numProcs=? \
 									and gckind=? and args=?", (b, n, "WB", args[b]))
-			data = c.fetchall ()
+			data = c.fetchone ()
 			if (not data):
 				print ("Benchmark: " + str(b) + " numProcs: " + str(n) + " -- heapRanges not found!!")
 				continue
-			sys.exit ("STOP!")
 
-			for ms in maxHeapShared:
-				for ml in maxHeapLocal:
+			maxHeapShared, maxHeapLocal = data
+			maxHeapShared = maxHeapShared.replace('[', '').replace(']','').replace(',',' ')
+			maxHeapShared  = shlex.split (maxHeapShared)
+			maxHeapLocal = maxHeapLocal.replace('[', '').replace(']','').replace(',', ' ')
+			maxHeapLocal  = shlex.split (maxHeapLocal)
+
+			print (maxHeapShared)
+			print (maxHeapLocal)
+
+			for msInt in maxHeapShared:
+				for mlInt in maxHeapLocal:
+					ml = bytesIntToString (mlInt, 1)
+					ms = bytesIntToString (msInt, 1)
 					atMLtons = ["number-processors " + str(n), \
 											"max-heap-local " + str(ml), \
 											"max-heap-shared " + str(ms), \
@@ -211,18 +231,25 @@ def main():
 						if (data):
 							shouldRun = False
 
+						failed = 0
 						if (shouldRun):
 							r, m, mlr, msr = 0, 0, 0, 0
 							for i in range(0, reruns):
 								(_r, _m, _mlr, _msr) = run ("./" + str(b), str(progName[b]), atMLtons, args[b])
+								if int(_r) == 0:
+									failed += 1
+									print ("Failed: " + str(failed))
 								r += int(_r)
 								m += int(_m)
 								mlr += int(_mlr)
 								msr += int(_msr)
 
-							r, m, mlr, msr = r/reruns, m/reruns, mlr/reruns, msr/reruns
+							if (reruns-failed) != 0:
+								r, m, mlr, msr = r/(reruns-failed), m/(reruns-failed), mlr/(reruns-failed), msr/(reruns-failed)
+							else:
+								r, m, mlr, msr = 0, 0, 0, 0
 							c.execute ('insert into runTime values (?, ?, ?, ?, ?, ?, ?)', \
-												(b, n, convert_bytes (mlr), convert_bytes (msr), convert_bytes (m), "WB", int(r)))
+												(b, n, bytesIntToString (mlr, 1), bytesIntToString (msr, 1), bytesIntToString (m, 1), "WB", int(r)))
 							c.execute ("insert into completedRuns values (?, ?, ?, ?, 'RB')",\
 												(b, n, ml, ms))
 							conn.commit ()
