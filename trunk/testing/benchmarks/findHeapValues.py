@@ -201,7 +201,9 @@ def maxHeapLocalValues (b, n, progName, args, c):
 			max = cur
 	maxHeapLocalMin = cur
 
-	points = getPoints (maxHeapLocalMin, maxHeapLocalMax)
+	points = getPoints (maxHeapLocalMin, maxHeapLocalMin * 5)
+	points.append(maxHeapLocalMax/2)
+	points.append(maxHeapLocalMax)
 	points.sort ()
 	print ("values for maxHeapLocal: " + str ([bytesIntToString (x, 1) for x in points]))
 	return points
@@ -230,6 +232,8 @@ def maxHeapSharedValues (b, n, progName, args, c):
 	maxHeapSharedMin = cur
 
 	points = getPoints (maxHeapSharedMin, maxHeapSharedMax)
+	points.append(maxHeapSharedMax/2)
+	points.append(maxHeapSharedMax)
 	points.sort ()
 	print ("values for maxHeapShared: " + str ([bytesIntToString (x, 1) for x in points]))
 

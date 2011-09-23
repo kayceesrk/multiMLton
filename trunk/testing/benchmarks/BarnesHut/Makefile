@@ -20,6 +20,9 @@ all: $(SRC_RULS)
 clean:
 	rm -rf $(SRC_RULS) *~ op *.out *.c *ssa *ssa2 *xml *-ml *machine
 
+clean-summaries:
+	rm gc-summary.*
+
 
 FLAGS = -std=gnu99 -c -g -DASSERT=1 -I$(MMPATH)/trunk/build/lib/self/include \
 				-I$(MMPATH)/trunk/build/lib/include -O1 -fno-common -fno-strict-aliasing \

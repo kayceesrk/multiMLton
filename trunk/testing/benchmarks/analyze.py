@@ -30,27 +30,8 @@ def bytesIntToString (bytes, decimal):
 		size = str (round (bytes, decimal)) + "b"
 	return size
 
-def bytesIntToString2 (bytes, decimal):
-	bytes = float(bytes)
-	if bytes >= 1099511627776:
-		terabytes = bytes / 1099511627776
-		size = '%.1fT' % terabytes
-		size = str (round (terabytes, decimal)) + "T"
-	elif bytes >= 1073741824:
-		gigabytes = bytes / 1073741824
-		size = '%.1fG' % gigabytes
-	elif bytes >= 1048576:
-		megabytes = bytes / 1048576
-		size = '%.1fM' % megabytes
-	elif bytes >= 1024:
-		kilobytes = bytes / 1024
-		size = '%.1fK' % kilobytes
-	else:
-		size = '%.1fb' % bytes
-	return size
-
 def bytesStringToInt (s):
-	intVal = float(s.replace('K','').replace('M','').replace('G',''))
+	intVal = float(s.replace('K','').replace('M','').replace('G','').replace('b',''))
 	if s.endswith('K'):
 		intVal *= 1024
 	elif s.endswith('M'):
@@ -173,7 +154,7 @@ def main():
 		benchmarks = options.bmarkList
 	else:
 		benchmarks = ["BarnesHut2", "CountGraphs"]
-	(progName, args, numProcs, maxHeap) = fullParameters ()
+	(progName, args, numProcs) = fullParameters ()
 
 	nodeKind = ['o-', 's--', 'D-.', 'x:', '^-', 'V--', '>-.', '<:']
 
@@ -190,37 +171,38 @@ def main():
 		log ("preparing data for plotting heap vs time for " + b)
 
 		#calculate the minimum x
-		c.execute ("select distinct maxHeap from runTime where benchmark=? and gckind='UT' and result!=0", [b])
+		c.execute ("select distinct maxHeap from runTime where benchmark=? and gckind='UT' and args=? and result!=0", (b, args[b]))
 		data = list (map (lambda v: bytesStringToInt (v[0]), c.fetchall ()))
 		if data:
 			minX = min(data)
 		else:
 			minX = 0
 
-	for n in numProcs:
-		c.execute ("select maxHeap, result from runTime where benchmark=? and numProcs=? \
-								and result!=0 and gckind='UT'", (b, n))
-		data = c.fetchall ()
-		x = list (map (lambda v: hsizeToFloat (v[0]), data))
-		if x: #x is not empty
-			shouldPlot = True
-			x = [v/minX for v in x]
-			y = list (map (lambda v: v[1], data))
-			z = list (zip (x,y))
-			z.sort ()
-			x,y = list(zip (*z))
-			l = "P="+str(n)
-			plt.plot (x, y, nodeKind[nodeIndex], label=l)
-			nodeIndex += 1
-			nodeIndex %= len(nodeKind)
+		for n in numProcs:
+			c.execute ("select maxHeap, result from runTime where benchmark=? and numProcs=? \
+									and result!=0 and gckind='UT' and args=?", (b, n, args[b]))
+			data = c.fetchall ()
+			print (data)
+			x = list (map (lambda v: bytesStringToInt (v[0]), data))
+			if x: #x is not empty
+				shouldPlot = True
+				x = [v/minX for v in x]
+				y = list (map (lambda v: v[1], data))
+				z = list (zip (x,y))
+				z.sort ()
+				x,y = list(zip (*z))
+				l = "P="+str(n)
+				plt.plot (x, y, nodeKind[nodeIndex], label=l)
+				nodeIndex += 1
+				nodeIndex %= len(nodeKind)
 
-		if shouldPlot:
-			log ("plotting heap vs time for " + b)
-			#plot the current graph
-			plt.xlim(xmin = 0)
-			plt.legend ()
-			plt.savefig (b+"UT_local_heap_vs_time.eps")
-			plt.close ()
+			if shouldPlot:
+				log ("plotting heap vs time for " + b)
+				#plot the current graph
+				plt.xlim(xmin = 0)
+				plt.legend ()
+				plt.savefig (b+"_UT_local_heap_vs_time.eps")
+				plt.close ()
 
 
 main ()

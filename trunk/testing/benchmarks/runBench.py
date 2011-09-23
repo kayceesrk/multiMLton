@@ -180,14 +180,14 @@ def main():
 
 	#create the completed run if it is not already present
 	c.execute('create table if not exists completedRuns \
-						(benchmark text, numProcs int, maxHeapLocal text, maxHeapShared text, gckind text)')
+						(benchmark text, numProcs int, maxHeapLocal text, maxHeapShared text, gckind text, args text)')
 
 
 
 	#create the runtime table if it is not already present
 	c.execute('create table if not exists runTime \
 						(benchmark text, numProcs int, maxHeapLocal text, \
-						 maxHeapShared text, maxHeap text, gckind text, result int)')
+						 maxHeapShared text, maxHeap text, gckind text, args text, result int)')
 
 
 	for b in benchmarks:
@@ -211,13 +211,14 @@ def main():
 				ms = bytesIntToString (0, 1)
 				atMLtons = ["number-processors " + str(n), \
 										"max-heap " + str(ml), \
-										"enable-timer 20000"]
+										"enable-timer 20000", \
+										"gc-summary "]
 
 				#run only if required
 				shouldRun = True
 				if (options.rerun == False):
 					c.execute ("select * from completedRuns where benchmark=? and numProcs=? and maxHeapLocal=? \
-											and maxHeapShared=? and gckind=?", (b, n, ml, ms, "UT"))
+											and maxHeapShared=? and gckind=? and args=?", (b, n, ml, ms, "UT", args[b]))
 					data = c.fetchall ()
 					if (data):
 						shouldRun = False
@@ -239,10 +240,11 @@ def main():
 							r, m, mlr, msr = r/(reruns-failed), m/(reruns-failed), mlr/(reruns-failed), msr/(reruns-failed)
 						else:
 							r, m, mlr, msr = 0, 0, 0, 0
-						c.execute ('insert into runTime values (?, ?, ?, ?, ?, ?, ?)', \
-											(b, n, bytesIntToString (mlr, 1), bytesIntToString (msr, 1), bytesIntToString (m, 1), "UT", int(r)))
-						c.execute ("insert into completedRuns values (?, ?, ?, ?, 'RB')",\
-											(b, n, ml, ms))
+
+						c.execute ('insert into runTime values (?, ?, ?, ?, ?, ?, ?, ?)', \
+											(b, n, bytesIntToString (mlr, 1), bytesIntToString (msr, 1), bytesIntToString (m, 1), "UT", args[b], int(r)))
+						c.execute ("insert into completedRuns values (?, ?, ?, ?, 'UT', ?)",\
+											(b, n, ml, ms, args[b]))
 						conn.commit ()
 
 main ()
