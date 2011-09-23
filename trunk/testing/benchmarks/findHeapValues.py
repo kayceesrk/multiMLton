@@ -276,7 +276,7 @@ def main():
 									 (b, n, args[b], "UT"))
 				maxLHV = maxHeapLocalValues (b, n, progName, args, c)
 				maxSHV = []
-				#insert into DB
+				 #insert into DB
 				c.execute ("insert into heapRanges values (?, ?, ?, ?, ?, ?)",
 										(b, n, "UT", args[b], str(maxSHV), str(maxLHV)))
 				conn.commit ()
