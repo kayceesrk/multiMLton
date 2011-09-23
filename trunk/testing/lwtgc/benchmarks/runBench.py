@@ -176,7 +176,7 @@ def main():
 	if (options.bmarkList):
 		benchmarks = options.bmarkList
 	else:
-		benchmarks = ["BarnesHut2",	"CountGraphs"]
+		benchmarks = ["BarnesHut2",	"CountGraphs", "KClustering"]
 	(progName, args, numProcs) = fullParameters ()
 
 	#create the completed run if it is not already present

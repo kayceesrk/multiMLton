@@ -255,7 +255,7 @@ def main():
 	if (options.bmarkList):
 		benchmarks = options.bmarkList
 	else:
-		benchmarks = ["BarnesHut2",	"CountGraphs"]
+		benchmarks = ["BarnesHut2",	"CountGraphs", "KClustering"]
 
 	#Connect to database
 	conn = sqlite3.connect("/home/chandras/PLDI/resultsWB")
@@ -276,6 +276,8 @@ def main():
 				shouldRun = True
 
 			if (shouldRun):
+				c.execute ("delete from heapRanges where benchmark=? and numProcs=? and args=? and gckind=?", \
+									 (b, n, args[b], "WB"))
 				maxSHV = maxHeapSharedValues (b, n, progName, args, c)
 				maxLHV = maxHeapLocalValues (b, n, progName, args, c)
 				#insert into DB

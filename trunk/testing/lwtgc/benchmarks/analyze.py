@@ -190,7 +190,7 @@ def main():
 	if (options.bmarkList):
 		benchmarks = options.bmarkList
 	else:
-		benchmarks = ["BarnesHut2", "CountGraphs"]
+		benchmarks = ["BarnesHut2", "CountGraphs", "KClustering"]
 	(progName, args, numProcs) = fullParameters ()
 
 	nodeKind = ['o-', 's--', 'D-.', 'x:', '^-', 'V--', '>-.', '<:']
