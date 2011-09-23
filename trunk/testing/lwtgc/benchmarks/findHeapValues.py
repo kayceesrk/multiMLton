@@ -165,7 +165,7 @@ def getPointsRec (min, max, numPartitions, pointsPerPartition):
 	if (numPartitions):
 		cur = (min + max)/2
 		if (numPartitions == 1):
-			res += getPointsInRange (min, max, pointsPerPartition * 2)
+			res += getPointsInRange (min, max, pointsPerPartition * 3)
 		else:
 			res += getPointsInRange (cur, max, pointsPerPartition)
 		res += getPointsRec (min, round (cur), numPartitions - 1, pointsPerPartition)

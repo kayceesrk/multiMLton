@@ -153,8 +153,7 @@ def testParameters():
 	return (progName, args, numProcs)
 
 def main():
-	reruns = 1
-
+	reruns = 2
 
 	#Parse options
 	parser = OptionParser()
@@ -178,7 +177,7 @@ def main():
 		benchmarks = ["BarnesHut2",	"CountGraphs"]
 	(progName, args, numProcs) = fullParameters ()
 
-	if (bool(input("Are you sure you want to drop the tables? "))):
+	if (False and bool(input("Are you sure you want to drop the tables? "))):
 		c.execute ("drop table if exists runTime")
 		c.execute ("drop table if exists completedRuns")
 		conn.commit ()
