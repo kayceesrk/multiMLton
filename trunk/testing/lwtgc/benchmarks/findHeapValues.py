@@ -165,7 +165,7 @@ def getPointsRec (min, max, numPartitions, pointsPerPartition):
 	if (numPartitions):
 		cur = (min + max)/2
 		if (numPartitions == 1):
-			res += getPointsInRange (min, max, pointsPerPartition * 3)
+			res += getPointsInRange (min, max, pointsPerPartition * 2)
 		else:
 			res += getPointsInRange (cur, max, pointsPerPartition)
 		res += getPointsRec (min, round (cur), numPartitions - 1, pointsPerPartition)
@@ -205,7 +205,7 @@ def maxHeapLocalValues (b, n, progName, args, c):
 			max = cur
 	maxHeapLocalMin = cur
 
-	points = getPoints (maxHeapLocalMin, maxHeapLocalMax)
+	points = getPoints (maxHeapLocalMin, maxHeapLocalMin * 3)
 	points.sort ()
 	print ("values for maxHeapLocal: " + str ([bytesIntToString (x, 1) for x in points]))
 	return points
@@ -233,7 +233,7 @@ def maxHeapSharedValues (b, n, progName, args, c):
 			max = cur
 	maxHeapSharedMin = cur
 
-	points = getPoints (maxHeapSharedMin, maxHeapSharedMax)
+	points = getPoints (maxHeapSharedMin, maxHeapSharedMin * 5)
 	points.sort ()
 	print ("values for maxHeapShared: " + str ([bytesIntToString (x, 1) for x in points]))
 
@@ -254,7 +254,7 @@ def main():
 		benchmarks = ["BarnesHut2",	"CountGraphs"]
 
 	#Connect to database
-	conn = sqlite3.connect("/home/chandras/PLDI/results")
+	conn = sqlite3.connect("/home/chandras/PLDI/resultsWB")
 	c = conn.cursor ()
 
 	c.execute ("create table if not exists heapRanges \

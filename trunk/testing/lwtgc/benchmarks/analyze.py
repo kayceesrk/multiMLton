@@ -153,8 +153,6 @@ def testParameters():
 	return (progName, args, numProcs)
 
 def main():
-	reruns = 2
-
 	#Parse options
 	parser = OptionParser()
 	parser.add_option("-d", "--database", dest="database", help="database location", \
@@ -174,83 +172,55 @@ def main():
 	if (options.bmarkList):
 		benchmarks = options.bmarkList
 	else:
-		benchmarks = ["BarnesHut2",	"CountGraphs"]
+		benchmarks = ["BarnesHut2", "CountGraphs"]
 	(progName, args, numProcs) = fullParameters ()
 
-	if (False and bool(input("Are you sure you want to drop the tables? "))):
-		c.execute ("drop table if exists runTime")
-		c.execute ("drop table if exists completedRuns")
-		conn.commit ()
-
-	#create the completed run if it is not already present
-	c.execute('create table if not exists completedRuns \
-						(benchmark text, numProcs int, maxHeapLocal text, maxHeapShared text, gckind text)')
-
-
-
-	#create the runtime table if it is not already present
-	c.execute('create table if not exists runTime \
-						(benchmark text, numProcs int, maxHeapLocal text, \
-						 maxHeapShared text, maxHeap text, gckind text, result int)')
-
+	nodeKind = ['o-', 's--', 'D-.', 'x:', '^-', 'V--', '>-.', '<:']
 
 	for b in benchmarks:
+		#intialize
+		nodeIndex = 0
+		shouldPlot = False
+
+		#For each benchmark plot the heap vs time graph
+		plt.xlabel ("Heap size relative to min heap size")
+		plt.ylabel ("Time (ms)")
+		plt.grid (True)
+		plt.title (b + " -- Heap vs Time")
+		log ("preparing data for plotting heap vs time for " + b)
+
+		#calculate the minimum x
+		c.execute ("select maxHeap from runTime where benchmark=? and gckind='WB' and result!=0", [b])
+		data = list (map (lambda v: bytesStringToInt (v[0]), c.fetchall ()))
+		if data:
+			minX = min(data)
+		else:
+			minX = 0
+
 		for n in numProcs:
-			c.execute ("select maxSHV, maxLHV from heapRanges where benchmark=? and numProcs=? \
-									and gckind=? and args=?", (b, n, "WB", args[b]))
-			data = c.fetchone ()
-			if (not data):
-				print ("Benchmark: " + str(b) + " numProcs: " + str(n) + " -- heapRanges not found!!")
-				continue
+			c.execute ("select maxHeap, result from runTime where benchmark=? and numProcs=? \
+									and result!=0 and gckind='WB'", (b, n))
+			data = c.fetchall ()
+			x = list (map (lambda v: bytesStringToInt (v[0]), data))
+			if x: #x is not empty
+				shouldPlot = True
+				x = [v/minX for v in x]
+				y = list (map (lambda v: v[1], data))
+				z = list (zip (x,y))
+				z.sort ()
+				x,y = list(zip (*z))
+				l = "P="+str(n)
+				plt.plot (x, y, nodeKind[nodeIndex], label=l)
+				nodeIndex += 1
+				nodeIndex %= len(nodeKind)
 
-			maxHeapShared, maxHeapLocal = data
-			maxHeapShared = maxHeapShared.replace('[', '').replace(']','').replace(',',' ')
-			maxHeapShared  = shlex.split (maxHeapShared)
-			maxHeapLocal = maxHeapLocal.replace('[', '').replace(']','').replace(',', ' ')
-			maxHeapLocal  = shlex.split (maxHeapLocal)
+			if shouldPlot:
+				log ("plotting heap vs time for " + b)
+				#plot the current graph
+				plt.xlim(xmin = 0)
+				plt.legend ()
+				plt.savefig (b+"_WB_local_heap_vs_time.eps")
+				plt.close ()
 
-			print (maxHeapShared)
-			print (maxHeapLocal)
-
-			for msInt in maxHeapShared:
-				for mlInt in maxHeapLocal:
-					ml = bytesIntToString (mlInt, 1)
-					ms = bytesIntToString (msInt, 1)
-					atMLtons = ["number-processors " + str(n), \
-											"max-heap-local " + str(ml), \
-											"max-heap-shared " + str(ms), \
-											"enable-timer 20000"]
-
-					#run only if required
-					shouldRun = True
-					if (options.rerun == False):
-						c.execute ("select * from completedRuns where benchmark=? and numProcs=? and maxHeapLocal=? \
-												and maxHeapShared=? and gckind=?", (b, n, ml, ms, "WB"))
-						data = c.fetchall ()
-						if (data):
-							shouldRun = False
-
-						failed = 0
-						if (shouldRun):
-							r, m, mlr, msr = 0, 0, 0, 0
-							for i in range(0, reruns):
-								(_r, _m, _mlr, _msr) = run ("./" + str(b), str(progName[b]), atMLtons, args[b])
-								if int(_r) == 0:
-									failed += 1
-									print ("Failed: " + str(failed))
-								r += int(_r)
-								m += int(_m)
-								mlr += int(_mlr)
-								msr += int(_msr)
-
-							if (reruns-failed) != 0:
-								r, m, mlr, msr = r/(reruns-failed), m/(reruns-failed), mlr/(reruns-failed), msr/(reruns-failed)
-							else:
-								r, m, mlr, msr = 0, 0, 0, 0
-							c.execute ('insert into runTime values (?, ?, ?, ?, ?, ?, ?)', \
-												(b, n, bytesIntToString (mlr, 1), bytesIntToString (msr, 1), bytesIntToString (m, 1), "WB", int(r)))
-							c.execute ("insert into completedRuns values (?, ?, ?, ?, 'RB')",\
-												(b, n, ml, ms))
-							conn.commit ()
 
 main ()
