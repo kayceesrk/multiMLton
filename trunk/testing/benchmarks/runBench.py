@@ -170,7 +170,7 @@ def main():
 	if (options.bmarkList):
 		benchmarks = options.bmarkList
 	else:
-		benchmarks = ["BarnesHut2",	"CountGraphs"]
+		benchmarks = ["BarnesHut2",	"CountGraphs", "KClustering"]
 	(progName, args, numProcs) = fullParameters ()
 
 	if (False and bool(input("Are you sure you want to drop the tables? "))):
