@@ -190,7 +190,7 @@ def main():
 		log ("preparing data for plotting heap vs time for " + b)
 
 		#calculate the minimum x
-		c.execute ("select maxHeap from runTime where benchmark=? and gckind='WB' and result!=0", [b])
+		c.execute ("select maxHeap from runTime where benchmark=? and gckind='WB' and result!=0 and args=?", (b, args[b]))
 		data = list (map (lambda v: bytesStringToInt (v[0]), c.fetchall ()))
 		if data:
 			minX = min(data)
@@ -199,7 +199,7 @@ def main():
 
 		for n in numProcs:
 			c.execute ("select maxHeap, result from runTime where benchmark=? and numProcs=? \
-									and result!=0 and gckind='WB'", (b, n))
+									and result!=0 and gckind='WB' and args=?", (b, n, args[b]))
 			data = c.fetchall ()
 			x = list (map (lambda v: bytesStringToInt (v[0]), data))
 			if x: #x is not empty

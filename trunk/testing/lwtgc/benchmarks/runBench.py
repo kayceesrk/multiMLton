@@ -93,7 +93,6 @@ def runAndGetOutput (args, dir):
 	return output
 
 def run (dir, prog, atMLtons, args):
-	print ("\n-------------------------------\n")
 	print ("DIR: " + dir + " PROG: " + prog)
 	atMLtonString = ""
 	for a in atMLtons:
@@ -182,13 +181,12 @@ def main():
 
 	#create the completed run if it is not already present
 	c.execute('create table if not exists completedRuns \
-						(benchmark text, numProcs int, maxHeapLocal text, maxHeapShared text, gckind text)')
+						(benchmark text, numProcs int, maxHeapLocal text, maxHeapShared text, gckind text, args text)')
 
 	#create the runtime table if it is not already present
 	c.execute('create table if not exists runTime \
 						(benchmark text, numProcs int, maxHeapLocal text, \
-						 maxHeapShared text, maxHeap text, gckind text, result int)')
-
+						 maxHeapShared text, maxHeap text, gckind text, args text, result int)')
 
 	for b in benchmarks:
 		for n in numProcs:
@@ -208,8 +206,15 @@ def main():
 			print (maxHeapShared)
 			print (maxHeapLocal)
 
+			totalRuns = len(maxHeapShared) * len (maxHeapLocal)
+			runCount = 0
 			for msInt in maxHeapShared:
 				for mlInt in maxHeapLocal:
+					runCount += 1
+					print ("\n-------------------------------\n")
+					print ("In Benchmark: " + str(b) + " numProcs: " + str(n))
+					print ("In run " + str(runCount) + " of " + str(totalRuns))
+
 					ml = bytesIntToString (mlInt, 1)
 					ms = bytesIntToString (msInt, 1)
 					atMLtons = ["number-processors " + str(n), \
@@ -222,7 +227,7 @@ def main():
 					shouldRun = True
 					if (options.rerun == False):
 						c.execute ("select * from completedRuns where benchmark=? and numProcs=? and maxHeapLocal=? \
-												and maxHeapShared=? and gckind=?", (b, n, ml, ms, "WB"))
+												and maxHeapShared=? and gckind=? and args=?", (b, n, ml, ms, "WB", args[b]))
 						data = c.fetchall ()
 						if (data):
 							print ("skipping...")
@@ -245,10 +250,10 @@ def main():
 								r, m, mlr, msr = r/(reruns-failed), m/(reruns-failed), mlr/(reruns-failed), msr/(reruns-failed)
 							else:
 								r, m, mlr, msr = 0, 0, 0, 0
-							c.execute ('insert into runTime values (?, ?, ?, ?, ?, ?, ?)', \
-												(b, n, bytesIntToString (mlr, 1), bytesIntToString (msr, 1), bytesIntToString (m, 1), "WB", int(r)))
-							c.execute ("insert into completedRuns values (?, ?, ?, ?, 'WB')",\
-												(b, n, ml, ms))
+							c.execute ('insert into runTime values (?, ?, ?, ?, ?, ?, ?, ?)', \
+												(b, n, bytesIntToString (mlr, 1), bytesIntToString (msr, 1), bytesIntToString (m, 1), "WB", args[b], int(r)))
+							c.execute ("insert into completedRuns values (?, ?, ?, ?, 'WB', ?)",\
+												(b, n, ml, ms, args[b]))
 							conn.commit ()
 
 main ()
