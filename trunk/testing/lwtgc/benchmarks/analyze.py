@@ -152,6 +152,24 @@ def testParameters():
 	numProcs = [16]
 	return (progName, args, numProcs)
 
+def avgSameXes (x,y):
+	xRes = []
+	yRes = []
+	count = 1
+	yCur = -1
+	for i in range (1, len(x)+1):
+		if (i < len(x) and x[i] == x[i-1]):
+			yCur += y[i]
+			count += 1
+		else:
+			xRes.append (x[i-1])
+			yRes.append (yCur/count)
+			if (i < len(x)):
+				yCur = y[i]
+				count = 1
+
+	return (xRes, yRes)
+
 def main():
 	#Parse options
 	parser = OptionParser()
@@ -210,7 +228,12 @@ def main():
 				z.sort ()
 				x,y = list(zip (*z))
 				l = "P="+str(n)
-				plt.plot (x, y, nodeKind[nodeIndex], label=l)
+				#plt.plot (x, y, nodeKind[nodeIndex], label=l)
+				#nodeIndex += 1
+				#nodeIndex %= len(nodeKind)
+
+				xRes, yRes = avgSameXes (x, y)
+				plt.plot (xRes, yRes, nodeKind [nodeIndex], label=l)
 				nodeIndex += 1
 				nodeIndex %= len(nodeKind)
 
