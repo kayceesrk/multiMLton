@@ -147,7 +147,7 @@ def main():
 		log ("preparing data for plotting heap vs time for " + b)
 
 		#calculate the minimum x
-		c.execute ("select distinct maxHeap from runTime where benchmark=? and result!=0", [b])
+		c.execute ("select distinct maxHeap from runTime where benchmark=? and result!=0 and gckind='UT'", [b])
 		data = list (map (lambda v: hsizeToInt (v[0]), c.fetchall ()))
 		if data:
 			minX = min(data)
