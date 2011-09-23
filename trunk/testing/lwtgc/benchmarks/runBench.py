@@ -75,11 +75,14 @@ def getMem(dir):
 					m = re.sub (r'max local heap size: (.*?) bytes', r'\1', line).rstrip ()
 					totalLocal += int (re.sub (r',', r'', m))
 
-	infile = open (dir + "/gc-summary.cumul.out", "r")
-	for line in infile.readlines ():
-		if line.startswith ("max shared heap size"):
-			m = re.sub (r'max shared heap size: (.*?) bytes', r'\1', line).rstrip ()
-			shared = int (re.sub (r',', r'', m))
+	try:
+		infile = open (dir + "/gc-summary.cumul.out", "r")
+		for line in infile.readlines ():
+			if line.startswith ("max shared heap size"):
+				m = re.sub (r'max shared heap size: (.*?) bytes', r'\1', line).rstrip ()
+				shared = int (re.sub (r',', r'', m))
+	except:
+		pass
 
 	return totalLocal + shared, totalLocal, shared
 
@@ -177,16 +180,9 @@ def main():
 		benchmarks = ["BarnesHut2",	"CountGraphs"]
 	(progName, args, numProcs) = fullParameters ()
 
-	if (False and bool(input("Are you sure you want to drop the tables? "))):
-		c.execute ("drop table if exists runTime")
-		c.execute ("drop table if exists completedRuns")
-		conn.commit ()
-
 	#create the completed run if it is not already present
 	c.execute('create table if not exists completedRuns \
 						(benchmark text, numProcs int, maxHeapLocal text, maxHeapShared text, gckind text)')
-
-
 
 	#create the runtime table if it is not already present
 	c.execute('create table if not exists runTime \
@@ -219,7 +215,8 @@ def main():
 					atMLtons = ["number-processors " + str(n), \
 											"max-heap-local " + str(ml), \
 											"max-heap-shared " + str(ms), \
-											"enable-timer 20000"]
+											"enable-timer 20000", \
+											"gc-summary individual"]
 
 					#run only if required
 					shouldRun = True
@@ -228,6 +225,7 @@ def main():
 												and maxHeapShared=? and gckind=?", (b, n, ml, ms, "WB"))
 						data = c.fetchall ()
 						if (data):
+							print ("skipping...")
 							shouldRun = False
 
 						failed = 0
@@ -249,7 +247,7 @@ def main():
 								r, m, mlr, msr = 0, 0, 0, 0
 							c.execute ('insert into runTime values (?, ?, ?, ?, ?, ?, ?)', \
 												(b, n, bytesIntToString (mlr, 1), bytesIntToString (msr, 1), bytesIntToString (m, 1), "WB", int(r)))
-							c.execute ("insert into completedRuns values (?, ?, ?, ?, 'RB')",\
+							c.execute ("insert into completedRuns values (?, ?, ?, ?, 'WB')",\
 												(b, n, ml, ms))
 							conn.commit ()
 

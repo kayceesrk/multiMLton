@@ -19,6 +19,9 @@ all: $(SRC_RULS)
 clean:
 	rm -rf $(SRC_RULS) *~ op *.out *.c *ssa *ssa2 *xml *-ml *machine
 
+clean-summaries:
+	rm gc-summary.*
+
 MMPATH = $(HOME)/temp/multiMLton
 
 FLAGS = -std=gnu99 -c -g -DASSERT=1 -I$(MMPATH)/trunk/build/lib/self/include \
