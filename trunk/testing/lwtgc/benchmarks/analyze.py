@@ -137,7 +137,7 @@ def fullParameters():
 					"BarnesHut2": "1024 256", \
 					"AllPairs": "512 64", \
 					"Mandelbrot": "", \
-					"KClustering": "0 256 200 50 0", \
+					"KClustering": "0 50 700 70 0", \
 					"TSP": "", \
 					"CountGraphs": "1", \
 					"GameOfLife": "64 300", \

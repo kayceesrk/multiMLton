@@ -139,7 +139,7 @@ def fullParameters():
 					"BarnesHut2": "1024 256", \
 					"AllPairs": "512 64", \
 					"Mandelbrot": "", \
-					"KClustering": "0 256 200 50 0", \
+					"KClustering": "0 50 700 70 0", \
 					"TSP": "", \
 					"CountGraphs": "1", \
 					"GameOfLife": "64 300", \
@@ -203,57 +203,55 @@ def main():
 			maxHeapLocal = maxHeapLocal.replace('[', '').replace(']','').replace(',', ' ')
 			maxHeapLocal  = shlex.split (maxHeapLocal)
 
-			print (maxHeapShared)
-			print (maxHeapLocal)
-
-			totalRuns = len(maxHeapShared) * len (maxHeapLocal)
+			totalRuns = len(maxHeapShared)
 			runCount = 0
-			for msInt in maxHeapShared:
-				for mlInt in maxHeapLocal:
-					runCount += 1
-					print ("\n-------------------------------\n")
-					print ("In Benchmark: " + str(b) + " numProcs: " + str(n))
-					print ("In run " + str(runCount) + " of " + str(totalRuns))
+			for i in range (0, totalRuns):
+				mlInt = maxHeapLocal[i]
+				msInt = maxHeapShared[i]
+				runCount += 1
+				print ("\n-------------------------------\n")
+				print ("In Benchmark: " + str(b) + " numProcs: " + str(n))
+				print ("In run " + str(runCount) + " of " + str(totalRuns))
 
-					ml = bytesIntToString (mlInt, 1)
-					ms = bytesIntToString (msInt, 1)
-					atMLtons = ["number-processors " + str(n), \
-											"max-heap-local " + str(ml), \
-											"max-heap-shared " + str(ms), \
-											"enable-timer 20000", \
-											"gc-summary individual"]
+				ml = bytesIntToString (mlInt, 1)
+				ms = bytesIntToString (msInt, 1)
+				atMLtons = ["number-processors " + str(n), \
+										"max-heap-local " + str(ml), \
+										"max-heap-shared " + str(ms), \
+										"enable-timer 20000", \
+										"gc-summary individual"]
 
-					#run only if required
-					shouldRun = True
-					if (options.rerun == False):
-						c.execute ("select * from completedRuns where benchmark=? and numProcs=? and maxHeapLocal=? \
-												and maxHeapShared=? and gckind=? and args=?", (b, n, ml, ms, "WB", args[b]))
-						data = c.fetchall ()
-						if (data):
-							print ("skipping...")
-							shouldRun = False
+				#run only if required
+				shouldRun = True
+				if (options.rerun == False):
+					c.execute ("select * from completedRuns where benchmark=? and numProcs=? and maxHeapLocal=? \
+											and maxHeapShared=? and gckind=? and args=?", (b, n, ml, ms, "WB", args[b]))
+					data = c.fetchall ()
+					if (data):
+						print ("skipping...")
+						shouldRun = False
 
-						failed = 0
-						if (shouldRun):
+					failed = 0
+					if (shouldRun):
+						r, m, mlr, msr = 0, 0, 0, 0
+						for i in range(0, reruns):
+							(_r, _m, _mlr, _msr) = run ("./" + str(b), str(progName[b]), atMLtons, args[b])
+							if int(_r) == 0:
+								failed += 1
+								print ("Failed: " + str(failed))
+							r += int(_r)
+							m += int(_m)
+							mlr += int(_mlr)
+							msr += int(_msr)
+
+						if (reruns-failed) != 0:
+							r, m, mlr, msr = r/(reruns-failed), m/(reruns-failed), mlr/(reruns-failed), msr/(reruns-failed)
+						else:
 							r, m, mlr, msr = 0, 0, 0, 0
-							for i in range(0, reruns):
-								(_r, _m, _mlr, _msr) = run ("./" + str(b), str(progName[b]), atMLtons, args[b])
-								if int(_r) == 0:
-									failed += 1
-									print ("Failed: " + str(failed))
-								r += int(_r)
-								m += int(_m)
-								mlr += int(_mlr)
-								msr += int(_msr)
-
-							if (reruns-failed) != 0:
-								r, m, mlr, msr = r/(reruns-failed), m/(reruns-failed), mlr/(reruns-failed), msr/(reruns-failed)
-							else:
-								r, m, mlr, msr = 0, 0, 0, 0
-							c.execute ('insert into runTime values (?, ?, ?, ?, ?, ?, ?, ?)', \
-												(b, n, bytesIntToString (mlr, 1), bytesIntToString (msr, 1), bytesIntToString (m, 1), "WB", args[b], int(r)))
-							c.execute ("insert into completedRuns values (?, ?, ?, ?, 'WB', ?)",\
-												(b, n, ml, ms, args[b]))
-							conn.commit ()
+						c.execute ('insert into runTime values (?, ?, ?, ?, ?, ?, ?, ?)', \
+											(b, n, bytesIntToString (mlr, 1), bytesIntToString (msr, 1), bytesIntToString (m, 1), "WB", args[b], int(r)))
+						c.execute ("insert into completedRuns values (?, ?, ?, ?, 'WB', ?)",\
+											(b, n, ml, ms, args[b]))
+						conn.commit ()
 
 main ()
