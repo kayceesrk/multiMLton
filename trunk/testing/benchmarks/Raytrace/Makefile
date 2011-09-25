@@ -9,7 +9,7 @@ MORE :=
 SRCS := $(wildcard *.sml)
 SRC_RULS := $(subst .sml,-amd64,$(SRCS))
 
-MMPATH = $(HOME)/temp/UT/multiMLton
+MMPATH = $(HOME)/PLDI/multiMLton-UT
 MULTIMLTON= $(MMPATH)/trunk/build/bin/mlton
 
 %-amd64 : $(SRCS)
@@ -19,6 +19,9 @@ all: $(SRC_RULS)
 
 clean:
 	rm -rf $(SRC_RULS) *~ op *.out *.c *ssa *ssa2 *xml *-ml *machine
+
+clean-summaries:
+	rm gc-summary.*
 
 
 FLAGS = -std=gnu99 -c -g -DASSERT=1 -I$(MMPATH)/trunk/build/lib/self/include \

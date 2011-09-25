@@ -122,7 +122,7 @@ def fullParameters():
 	progName = {"BarnesHut": "barnes-hutM-amd64", \
 							"BarnesHut2": "barnes-hut-amd64", \
 							"AllPairs": "floyd-warshall-amd64", \
-							"Mandelbrot": "mandelbrot-amd64", \
+							"Mandelbrot2": "mandelbrot-amd64", \
 							"KClustering": "kclustering-amd64", \
 							"TSP": "tsp-amd64", \
 							"CountGraphs": "count-graphs-amd64", \
@@ -130,15 +130,15 @@ def fullParameters():
 							"Mergesort": "mergesort-amd64", \
 							"Raytrace": "raytrace-amd64"}
 	args = {"BarnesHut": "", \
-					"BarnesHut2": "1024 256", \
+					"BarnesHut2": "2048 512", \
 					"AllPairs": "512 64", \
-					"Mandelbrot": "", \
-					"KClustering": "0 256 200 50 0", \
+					"Mandelbrot2": "2048 128", \
+					"KClustering": "0 50 700 70 0", \
 					"TSP": "", \
 					"CountGraphs": "1", \
 					"GameOfLife": "64 300", \
 					"Mergesort": "10000", \
-					"Raytrace": "64"}
+					"Raytrace": "48"}
 	numProcs = [16]
 	return (progName, args, numProcs)
 
@@ -210,7 +210,7 @@ def main():
 				ml = bytesIntToString (mlInt, 1)
 				ms = bytesIntToString (0, 1)
 				atMLtons = ["number-processors " + str(n), \
-										"max-heap " + str(ml), \
+										"fixed-heap " + str(ml), \
 										"enable-timer 20000", \
 										"gc-summary "]
 
@@ -223,28 +223,28 @@ def main():
 					if (data):
 						shouldRun = False
 
-					failed = 0
-					if (shouldRun):
+				failed = 0
+				if (shouldRun):
+					r, m, mlr, msr = 0, 0, 0, 0
+					for i in range(0, reruns):
+						(_r, _m, _mlr, _msr) = run ("./" + str(b), str(progName[b]), atMLtons, args[b])
+						if int(_r) == 0:
+							failed += 1
+							print ("Failed: " + str(failed))
+						r += int(_r)
+						m += int(_m)
+						mlr += int(_mlr)
+						msr += int(_msr)
+
+					if (reruns-failed) != 0:
+						r, m, mlr, msr = r/(reruns-failed), m/(reruns-failed), mlr/(reruns-failed), msr/(reruns-failed)
+					else:
 						r, m, mlr, msr = 0, 0, 0, 0
-						for i in range(0, reruns):
-							(_r, _m, _mlr, _msr) = run ("./" + str(b), str(progName[b]), atMLtons, args[b])
-							if int(_r) == 0:
-								failed += 1
-								print ("Failed: " + str(failed))
-							r += int(_r)
-							m += int(_m)
-							mlr += int(_mlr)
-							msr += int(_msr)
 
-						if (reruns-failed) != 0:
-							r, m, mlr, msr = r/(reruns-failed), m/(reruns-failed), mlr/(reruns-failed), msr/(reruns-failed)
-						else:
-							r, m, mlr, msr = 0, 0, 0, 0
-
-						c.execute ('insert into runTime values (?, ?, ?, ?, ?, ?, ?, ?)', \
-											(b, n, bytesIntToString (mlr, 1), bytesIntToString (msr, 1), bytesIntToString (m, 1), "UT", args[b], int(r)))
-						c.execute ("insert into completedRuns values (?, ?, ?, ?, 'UT', ?)",\
-											(b, n, ml, ms, args[b]))
-						conn.commit ()
+					c.execute ('insert into runTime values (?, ?, ?, ?, ?, ?, ?, ?)', \
+										(b, n, bytesIntToString (mlr, 1), bytesIntToString (msr, 1), bytesIntToString (m, 1), "UT", args[b], int(r)))
+					c.execute ("insert into completedRuns values (?, ?, ?, ?, 'UT', ?)",\
+										(b, n, ml, ms, args[b]))
+					conn.commit ()
 
 main ()

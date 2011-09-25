@@ -112,6 +112,10 @@ def run (dir, prog, atMLtons, args):
 	except:
 		time = "0"
 		(m, ml, ms) = "0", "0", "0"
+
+	if (int(time) > 50000):
+		time, m, ml, ms = "0", "0", "0", "0"
+
 	print ("\tCompleted in " + str(time) + " ms")
 	print ("\t\tTotal Mem: " + bytesIntToString (m, 1))
 	print ("\t\tTotal Local Mem: " + bytesIntToString(ml, 1))
@@ -122,7 +126,7 @@ def fullParameters():
 	progName = {"BarnesHut": "barnes-hutM-amd64", \
 							"BarnesHut2": "barnes-hut-amd64", \
 							"AllPairs": "floyd-warshall-amd64", \
-							"Mandelbrot": "mandelbrot-amd64", \
+							"Mandelbrot2": "mandelbrot-amd64", \
 							"KClustering": "kclustering-amd64", \
 							"TSP": "tsp-amd64", \
 							"CountGraphs": "count-graphs-amd64", \
@@ -130,15 +134,15 @@ def fullParameters():
 							"Mergesort": "mergesort-amd64", \
 							"Raytrace": "raytrace-amd64"}
 	args = {"BarnesHut": "", \
-					"BarnesHut2": "1024 256", \
+					"BarnesHut2": "2048 512", \
 					"AllPairs": "512 64", \
-					"Mandelbrot": "", \
-					"KClustering": "0 256 200 50 0", \
+					"Mandelbrot2": "2048 128", \
+					"KClustering": "0 50 700 70 0", \
 					"TSP": "", \
 					"CountGraphs": "1", \
 					"GameOfLife": "64 300", \
 					"Mergesort": "10000", \
-					"Raytrace": "64"}
+					"Raytrace": "48"}
 	numProcs = [16]
 	return (progName, args, numProcs)
 
@@ -161,7 +165,7 @@ def getPointsRec (min, max, numPartitions, pointsPerPartition):
 	if (numPartitions):
 		cur = (min + max)/2
 		if (numPartitions == 1):
-			res += getPointsInRange (min, max, pointsPerPartition * 3)
+			res += getPointsInRange (min, max, pointsPerPartition)
 		else:
 			res += getPointsInRange (cur, max, pointsPerPartition)
 		res += getPointsRec (min, round (cur), numPartitions - 1, pointsPerPartition)
@@ -169,8 +173,12 @@ def getPointsRec (min, max, numPartitions, pointsPerPartition):
 
 def getPoints (min, max):
 	#Total number of points = numPartitions * pointsPerPartition
-	numPartitions = 3
+	numPartitions = 4
 	pointsPerPartition = 4
+
+	if (min > max):
+		return []
+
 	return getPointsRec (min, max, numPartitions, pointsPerPartition)
 
 def maxHeapLocalValues (b, n, progName, args, c):
@@ -201,9 +209,10 @@ def maxHeapLocalValues (b, n, progName, args, c):
 			max = cur
 	maxHeapLocalMin = cur
 
-	points = getPoints (maxHeapLocalMin, maxHeapLocalMin * 5)
-	points.append(maxHeapLocalMax/2)
-	points.append(maxHeapLocalMax)
+	points = getPoints (maxHeapLocalMin, maxHeapLocalMax * 1.5)
+	points.sort ()
+	points2 = getPointsInRange (points[0], points[1], 5)
+	points += points2
 	points.sort ()
 	print ("values for maxHeapLocal: " + str ([bytesIntToString (x, 1) for x in points]))
 	return points
@@ -231,9 +240,7 @@ def maxHeapSharedValues (b, n, progName, args, c):
 			max = cur
 	maxHeapSharedMin = cur
 
-	points = getPoints (maxHeapSharedMin, maxHeapSharedMax)
-	points.append(maxHeapSharedMax/2)
-	points.append(maxHeapSharedMax)
+	points = getPoints (maxHeapSharedMin, maxHeapSharedMax * 1.5)
 	points.sort ()
 	print ("values for maxHeapShared: " + str ([bytesIntToString (x, 1) for x in points]))
 

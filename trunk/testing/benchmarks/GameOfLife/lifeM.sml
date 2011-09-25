@@ -217,7 +217,7 @@ structure Main =
         val s = !pos
         val e = if (!r)>0 then (!pos + size) else (!pos + size -1)
         val _ = if (!r)>0 then (r := !r -1; pos := !pos +1) else ()
-        val g = filterRows (s-1) (e+1) gen
+        val g = filterRows (s - 1) (e + 1) gen
         val _ = send (ch, SOME (g, s, e, min, max))
         val _ = pos := !pos + size
       in
