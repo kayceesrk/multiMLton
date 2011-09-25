@@ -88,7 +88,7 @@ structure Main : BMARK =
 
   end (* Mandelbrot *)
 
- val (n, numThreads) =
+val (n, numThreads) =
   case CommandLine.arguments () of
      s1::s2::_ => (case (Int.fromString s1,
                          Int.fromString s2) of

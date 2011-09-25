@@ -130,7 +130,7 @@ def fullParameters():
 							"AllPairs": "floyd-warshall-amd64", \
 							"Mandelbrot2": "mandelbrot-amd64", \
 							"KClustering": "kclustering-amd64", \
-							"TSP": "tsp-amd64", \
+							"TSP2": "tsp-amd64", \
 							"CountGraphs": "count-graphs-amd64", \
 							"GameOfLife": "lifeM-amd64", \
 							"Mergesort": "mergesort-amd64", \
@@ -140,7 +140,7 @@ def fullParameters():
 					"AllPairs": "512 64", \
 					"Mandelbrot2": "2048 128", \
 					"KClustering": "0 50 700 70 0", \
-					"TSP": "", \
+					"TSP2": "", \
 					"CountGraphs": "1", \
 					"GameOfLife": "64 300", \
 					"Mergesort": "10000", \
