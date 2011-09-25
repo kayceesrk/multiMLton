@@ -8,22 +8,7 @@
 
 //XXX unsafe executed in parallel
 size_t GC_size (GC_state s, pointer root) {
-  size_t res;
-
-  s->syncReason = SYNC_MISC;
-  ENTER_LOCAL0 (s); /* update stack in heap, in case it is reached */
-
-  if (DEBUG_SIZE)
-    fprintf (stderr, "GC_size marking\n");
-  res = dfsMarkByMode (s, root, emptyForeachObjectFun, MARK_MODE,
-                       FALSE, FALSE, FALSE, FALSE);
-  if (DEBUG_SIZE)
-    fprintf (stderr, "GC_size unmarking\n");
-  dfsMarkByMode (s, root, emptyForeachObjectFun, UNMARK_MODE,
-                 FALSE, FALSE, FALSE, FALSE);
-  LEAVE_LOCAL0 (s);
-
-  return res;
+  return GC_sizeInLocalHeap (s, root);
 }
 
 size_t GC_sizeInLocalHeap (GC_state s, pointer root) {

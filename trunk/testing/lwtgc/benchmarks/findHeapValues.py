@@ -130,20 +130,20 @@ def fullParameters():
 							"KClustering": "kclustering-amd64", \
 							"CountGraphs": "count-graphs-amd64", \
 							"AllPairs": "floyd-warshall-amd64", \
-							"Mandelbrot": "mandelbrot-amd64", \
+							"Mandelbrot2": "mandelbrot-amd64", \
 							"TSP": "tsp-amd64", \
 							"GameOfLife": "lifeM-amd64", \
 							"Mergesort": "mergesort-amd64", \
 							"Raytrace": "raytrace-amd64"}
-	args = {"BarnesHut2": "1024 256", \
+	args = {"BarnesHut2": "2048 512", \
 					"KClustering": "0 50 700 70 0", \
 					"CountGraphs": "1", \
+					"Raytrace": "48", \
 					"AllPairs": "512 64", \
-					"Mandelbrot": "", \
+					"Mandelbrot2": "2048 128", \
 					"TSP": "", \
 					"GameOfLife": "64 300", \
-					"Mergesort": "10000", \
-					"Raytrace": "64"}
+					"Mergesort": "10000"}
 	numProcs = [16]
 	return (progName, args, numProcs)
 
@@ -212,7 +212,7 @@ def maxHeapLocalValues (b, n, progName, args, c):
 
 	points = getPoints (maxHeapLocalMin, maxHeapLocalMax)
 	points.sort ()
-	points2 = getPointsInRange (points[0], points[1], 10)
+	points2 = getPointsInRange (points[0], points[1], 15)
 	points += points2
 	points.sort ()
 	print ("values for maxHeapLocal: " + str ([bytesIntToString (x, 1) for x in points]))
@@ -243,7 +243,7 @@ def maxHeapSharedValues (b, n, progName, args, c):
 
 	points = getPoints (maxHeapSharedMin, maxHeapSharedMax)
 	points.sort ()
-	points2 = getPointsInRange (points[0], points[1], 10)
+	points2 = getPointsInRange (points[0], points[1], 15)
 	points += points2
 	points.sort ()
 	print ("values for maxHeapShared: " + str ([bytesIntToString (x, 1) for x in points]))

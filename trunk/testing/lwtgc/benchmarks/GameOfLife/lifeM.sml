@@ -213,7 +213,6 @@ structure Main =
      fun assign pos r ch id =
       let
         val _ = MLton.size gen
-        (* val _ = printGen gen *)
         (* must have 1 row extra at the top and bottom *)
         val s = !pos
         val e = if (!r)>0 then (!pos + size) else (!pos + size -1)
@@ -251,12 +250,14 @@ structure Main =
 
    fun nthgen_cml g 0 sl numSlaves =
                      (print "0 : ";
-                      (*printGen g; *)
+                      (* printGen g; *)
+                      show print g;
                       print "\n\n";
                       g)
      | nthgen_cml g i sl numSlaves =
                     (print  (Int.toString(i)^"\n");
-                     (* printGen g; *)
+                     (* printGen g;
+                     show print g; *)
                      nthgen_cml (master g sl numSlaves) (i-1) sl numSlaves)
 
    fun nthgen g 0 = ((*print "0 : ";printGen g; print "\n\n";*) g)
