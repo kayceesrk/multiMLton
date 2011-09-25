@@ -129,9 +129,9 @@ def fullParameters():
 	progName = {"BarnesHut2": "barnes-hut-amd64", \
 							"KClustering": "kclustering-amd64", \
 							"CountGraphs": "count-graphs-amd64", \
-							"AllPairs": "floyd-warshall-amd64", \
 							"Mandelbrot2": "mandelbrot-amd64", \
 							"TSP2": "tsp-amd64", \
+							"Nucleic": "nucleic-amd64", \
 							"GameOfLife": "lifeM-amd64", \
 							"Mergesort": "mergesort-amd64", \
 							"Raytrace": "raytrace-amd64"}
@@ -139,9 +139,9 @@ def fullParameters():
 					"KClustering": "0 50 700 70 0", \
 					"CountGraphs": "1", \
 					"Raytrace": "48", \
-					"AllPairs": "512 64", \
 					"Mandelbrot2": "2048 128", \
 					"TSP2": "", \
+					"Nucleic": "256", \
 					"GameOfLife": "64 300", \
 					"Mergesort": "10000"}
 	numProcs = [16]

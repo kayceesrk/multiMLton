@@ -132,6 +132,10 @@ static inline void liftThreadDuringInit (GC_state s, objptr op) {
 }
 
 void liftAllObjectsDuringInit (GC_state s) {
+  if (not hasHeapBytesFree (s, s->sharedHeap, 0, s->frontier - s->heap->start)) {
+    s->syncReason = SYNC_HEAP;
+    performSharedGC (s, s->frontier - s->heap->start);
+  }
   s->syncReason = SYNC_FORCE;
   getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
   getThreadCurrent(s)->exnStack = s->exnStack;

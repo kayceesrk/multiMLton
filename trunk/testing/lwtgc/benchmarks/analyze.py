@@ -123,22 +123,22 @@ def run (dir, prog, atMLtons, args):
 	return (time, m, ml, ms)
 
 def fullParameters():
-	progName = {"BarnesHut": "barnes-hutM-amd64", \
-							"BarnesHut2": "barnes-hut-amd64", \
+	progName = {"BarnesHut2": "barnes-hut-amd64", \
 							"AllPairs": "floyd-warshall-amd64", \
 							"Mandelbrot2": "mandelbrot-amd64", \
 							"KClustering": "kclustering-amd64", \
 							"TSP2": "tsp-amd64", \
+							"Nucleic": "nucleic-amd64", \
 							"CountGraphs": "count-graphs-amd64", \
 							"GameOfLife": "lifeM-amd64", \
 							"Mergesort": "mergesort-amd64", \
 							"Raytrace": "raytrace-amd64"}
-	args = {"BarnesHut": "", \
-					"BarnesHut2": "2048 512", \
+	args = {"BarnesHut2": "2048 512", \
 					"AllPairs": "512 64", \
 					"Mandelbrot2": "2048 128", \
 					"KClustering": "0 50 700 70 0", \
 					"TSP2": "", \
+					"Nucleic": "256",
 					"CountGraphs": "1", \
 					"GameOfLife": "64 300", \
 					"Mergesort": "10000", \
