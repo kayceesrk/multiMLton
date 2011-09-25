@@ -140,7 +140,7 @@ def fullParameters():
 					"Mandelbrot2": "2048 128", \
 					"KClustering": "0 50 700 70 0", \
 					"TSP2": "", \
-					"Nucleic": "256", \
+					"Nucleic": "512", \
 					"CountGraphs": "1", \
 					"GameOfLife": "64 300", \
 					"Mergesort": "10000", \

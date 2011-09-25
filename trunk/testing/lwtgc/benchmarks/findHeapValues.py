@@ -141,7 +141,7 @@ def fullParameters():
 					"Raytrace": "48", \
 					"Mandelbrot2": "2048 128", \
 					"TSP2": "", \
-					"Nucleic": "256", \
+					"Nucleic": "512", \
 					"GameOfLife": "64 300", \
 					"Mergesort": "10000"}
 	numProcs = [16]
