@@ -172,7 +172,7 @@ struct
 
   datatype proc_spec = ANY_PROC | ON_PROC of int
 
-  fun spawnHostHelper (f, ps) =
+  fun spawnHostHelperEager (f, ps) =
   let
     val () = atomicBegin ()
     val tid = case ps of
@@ -189,9 +189,16 @@ struct
     val thrd = H_THRD (tid, PT.new thrdFun)
     val rhost = PT.getRunnableHost (PT.prep (thrd))
 
-    (* If the newly spawned thread is going to another processor, then
-     * move it to the shared heap *)
-    val () = (debug' (fn () => "spawnHostHelper.lift(1): tid="^(TID.tidToString tid));
+    (* If the newly spawned thread is going to another processor, then move it
+    * to the shared heap. We first try to move the thread to the shared heap
+    * without needing a GC. If we are not able to do it, we add rhost to
+    * moveOnWBA queue and preempt, with the hope that there will be other
+    * threads to run on this core. If there are none, we will perform a GC,
+    * after which we will place rhost on the target scheduler. *)
+    val () = if (Primitive.Controls.wbUsesTypeInfo andalso Primitive.Lwtgc.objectTypeInfo rhost) then
+              (ignore (Primitive.Lwtgc.move (rhost, false, true)))
+             else
+              (debug' (fn () => "spawnHostHelper.lift(1): tid="^(TID.tidToString tid));
               Primitive.Lwtgc.addToMoveOnWBA (rhost);
               S.preemptOnWriteBarrier ();
               debug' (fn () => "spawnHostHelper.lift(2): tid="^(TID.tidToString tid)))
@@ -251,9 +258,15 @@ struct
     tid
   end
 
-  fun spawnHost f = spawnHostHelperLazy (f, ANY_PROC)
+  fun spawnHost f = if (Primitive.Controls.lazySpawn) then
+                      spawnHostHelperLazy (f, ANY_PROC)
+                    else
+                      spawnHostHelperEager (f, ANY_PROC)
   fun spawn f = spawnHost f
-  fun spawnOnProc (f, n) = spawnHostHelperLazy (f, ON_PROC n)
+  fun spawnOnProc (f, n) = if (Primitive.Controls.lazySpawn) then
+                             spawnHostHelperLazy (f, ON_PROC n)
+                           else
+                             spawnHostHelperEager (f, ON_PROC n)
 
   fun createHost f =
   let

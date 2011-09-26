@@ -153,7 +153,8 @@ struct
            (* restore atomic state *)
            val () = setAtomicState (atomicState)
          in
-           nextWithCounter (iter, to)
+           (PacmlFFI.maybeWaitForGC ();
+           nextWithCounter (iter, to))
          end)
     else
       (let
