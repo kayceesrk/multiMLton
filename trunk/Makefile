@@ -107,6 +107,14 @@ compiler:
 	$(MAKE) -C "$(COMP)"
 	$(CP) "$(COMP)/$(AOUT)$(EXE)" "$(LIB)/"
 
+.PHONE: quick-compiler
+quick-compiler:
+	rm -f ./build/bin/mlton
+	make compiler
+	cp ./bin/mlton-script ./build/bin/mlton
+	chmod a+x ./build/bin/mlton
+	make world
+
 .PHONY: constants
 constants:
 	@echo 'Creating constants file.'

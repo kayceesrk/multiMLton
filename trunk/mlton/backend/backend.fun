@@ -188,8 +188,10 @@ fun toMachine (program: Ssa.Program.t, codegen) =
                else pass ({name = name, doit = doit}, p)
             val p = maybePass ({name = "rssaShrink1",
                                 doit = Program.shrink}, p)
-            val p = pass ({name = "dirtyAssist",
-                           doit = Program.dirtyAssist}, p)
+            val p = if (!Control.wbUsesTypeInfo) then
+                      pass ({name = "dirtyAssist",
+                             doit = Program.dirtyAssist}, p)
+                    else p
             val p = pass ({name = "insertLimitChecks",
                            doit = LimitCheck.insert}, p)
             val p = pass ({name = "insertSignalChecks",
