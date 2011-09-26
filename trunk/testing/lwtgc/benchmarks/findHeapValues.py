@@ -132,6 +132,7 @@ def fullParameters():
 							"Mandelbrot2": "mandelbrot-amd64", \
 							"TSP2": "tsp-amd64", \
 							"Nucleic": "nucleic-amd64", \
+							"MD5": "md5-amd64", \
 							"GameOfLife": "lifeM-amd64", \
 							"Mergesort": "mergesort-amd64", \
 							"Raytrace": "raytrace-amd64"}
@@ -142,6 +143,7 @@ def fullParameters():
 					"Mandelbrot2": "2048 128", \
 					"TSP2": "", \
 					"Nucleic": "512", \
+					"MD5": "16", \
 					"GameOfLife": "64 300", \
 					"Mergesort": "10000"}
 	numProcs = [16]

@@ -129,6 +129,7 @@ def fullParameters():
 							"KClustering": "kclustering-amd64", \
 							"TSP2": "tsp-amd64", \
 							"Nucleic": "nucleic-amd64", \
+							"MD5": "md5-amd64", \
 							"CountGraphs": "count-graphs-amd64", \
 							"GameOfLife": "lifeM-amd64", \
 							"Mergesort": "mergesort-amd64", \
@@ -139,6 +140,7 @@ def fullParameters():
 					"KClustering": "0 50 700 70 0", \
 					"TSP2": "", \
 					"Nucleic": "512",
+					"MD5": "16", \
 					"CountGraphs": "1", \
 					"GameOfLife": "64 300", \
 					"Mergesort": "10000", \

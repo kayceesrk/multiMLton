@@ -34,6 +34,7 @@ structure Controls =
       val detectOverflow = _command_line_const "MLton.detectOverflow": bool = true;
       val safe = _command_line_const "MLton.safe": bool = true;
       val bufSize = _command_line_const "TextIO.bufSize": Int32.int = 4096;
+      val wbUsesTypeInfo = _command_line_const "MLton.wbTypeInfo": bool = true;
    end
 
 structure Exn =
@@ -99,7 +100,7 @@ structure Ref =
                     (Lwtgc.isObjptrInLocalHeap v) andalso
                     (Lwtgc.isObjptrInSharedHeap r)
                  then
-                    (if Lwtgc.objectTypeInfo v then
+                    (if Controls.wbUsesTypeInfo andalso Lwtgc.objectTypeInfo v then
                       let val _ = Lwtgc.move (v, false, true) in v end
                      else
                       (Lwtgc.addToMoveOnWBA v;

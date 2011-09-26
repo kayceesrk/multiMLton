@@ -1103,6 +1103,10 @@ val warnAnn = control {name = "warn unrecognized annotation",
                        default = true,
                        toString = Bool.toString}
 
+val wbUsesTypeInfo = control {name = "whether WB uses object type info to prevent preemptions",
+                              default = true,
+                              toString = Bool.toString}
+
 val zoneCutDepth: int ref =
    control {name = "zone cut depth",
             default = 100,

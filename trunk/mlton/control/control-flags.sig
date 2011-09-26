@@ -381,6 +381,8 @@ signature CONTROL_FLAGS =
       (* version number *)
       val version: string
 
+      val wbUsesTypeInfo: bool ref
+
       val warnAnn: bool ref
 
       val zoneCutDepth: int ref
