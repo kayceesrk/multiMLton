@@ -1,0 +1,52 @@
+.TH RCCE 3  "September 2010" "RCCE MANPAGE" "RCCE Library"
+.SH NAME
+
+RCCE_shmalloc \- allocates size bytes of shared SCC memory that is not of type MPBT.   
+
+.SH SYNOPSIS
+.B #include <rcce.h>
+.sp
+
+.BI "volatile char * RCCE_shmalloc(size_t " size );
+
+.SH DESCRIPTION
+.BR RCCE_shmalloc 
+allocates size bytes of shared SCC memory that is not of type MPBT.  
+It returns a pointer to this memory
+The memory is allocated from off-chip DRAM. The data move between the registers 
+of a core and shared memory (that is, it bypasses the caches entirely) with 
+a granularity of 1, 2, 4 or 8 bytes. For these memory operations, 
+due to the restrictions of the P54C architecture, only one read or write 
+may be active at one time to an address. 
+.PP
+This is a collective call that should be issued by all participating cores. 
+All cores will allocate space that is exactly overlapping. 
+.PP
+RCCE_shmalloc() maintains a linked list of pointers to memory. Each pointer 
+has associated with it a field specifying whether that block of memory is 
+free or not.
+.PP
+Alternatively, you could use RCCE_shmalloc() to determine the beginning of 
+the off-chip shared memory on all cores and subsequently let just one core 
+do all the allocating and freeing. This core can then pass offsets to other 
+cores that need to know what shared memory regions were involved.
+
+.TP
+.B size
+Size in bytes of the requested space.
+
+.SH "RETURN VALUE"
+Upon successful completion
+.BR RCCE_shmalloc()
+returns a char * pointer to the start of the allocated bytes.
+.SH ERRORS
+Look in 
+.BR rcce.h
+for additional error codes.
+
+.SH "SEE ALSO"
+rcce.h(5)
+
+.SH EXAMPLE
+.PP
+To be supplied.

@@ -1,0 +1,36 @@
+.TH RCCE 3  2010-02-04 "RCCE MANPAGE" "RCCE Library"
+.SH NAME
+RCCE_comm_size \- stores the number of the calling UE. 
+.SH SYNOPSIS
+.B #include <rcce.h>
+.sp
+
+.BI "int RCCE_comm_size(RCCE_COMM " comm ", int * "rank );
+
+.SH DESCRIPTION
+.BR RCCE_comm_rank() 
+stores the number of UEs within communicator comm in th integer size.
+ 
+
+.TP 20
+.B comm
+The communicator whose size (number of UEs) the call returns.
+.TP
+.B size 
+The number of UEs in the communicator comm.
+
+.SH "RETURN VALUE"
+Upon successful completion
+.BR RCCE_comm_size()
+returns
+.BR RCCE_SUCCESS .
+
+.SH ERRORS
+Look in 
+.BR rcce.h
+for additional error codes.
+
+.SH "SEE ALSO"
+rcce.h(5)
+
+.SH EXAMPLE

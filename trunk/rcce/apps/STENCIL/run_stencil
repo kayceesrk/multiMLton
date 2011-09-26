@@ -1,0 +1,8 @@
+../../rccerun -nue 4 -clock 0.533 -f ../../hosts/rc.hosts stencil
+#this script cannot run as is, because the executable needs to be
+#started from the shared file system (/shared). Instead, do something
+like this:
+alias rccerun="<path_to_RCCE_library>/rccerun -f <path_to_RCCE_library>/hosts/rc.hosts"
+cp stencil /shared/<username>
+cd  /shared/<username>
+rccerun -nue 4 -clock 0.533 stencil

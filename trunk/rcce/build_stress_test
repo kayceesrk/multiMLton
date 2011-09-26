@@ -1,0 +1,79 @@
+#!/bin/bash
+#  
+#  Copyright 2010 Intel Corporation
+#  
+#     Licensed under the Apache License, Version 2.0 (the "License");
+#     you may not use this file except in compliance with the License.
+#     You may obtain a copy of the License at
+#  
+#         http://www.apache.org/licenses/LICENSE-2.0
+#  
+#     Unless required by applicable law or agreed to in writing, software
+#     distributed under the License is distributed on an "AS IS" BASIS,
+#     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#     See the License for the specific language governing permissions and
+#     limitations under the License.
+#  
+NUMPARS=$# 
+PWRMGMT=0
+
+SHARED=/shared/`whoami`
+BIN_STRESS=$SHARED/bin_stress
+PAR=1 
+while [ $PAR -le $NUMPARS ]; do 
+  eval OPT=\$$PAR 
+  case $OPT in 
+    -PWRMGMT  ) PWRMGMT=1                           ;; 
+    -CLEAN    ) rm -rf $BIN_STRESS           ; exit ;;
+     *        ) echo Error, wrong option $OPT; exit ;;
+  esac   
+  PAR=`expr $PAR + 1`                                                    
+done 
+
+if [ ! \( -d $SHARED \) ]; then 
+  echo Creating directory $SHARED
+  mkdir $SHARED 
+fi
+if [ ! \( -d $BIN_STRESS \) ]; then 
+  echo Creating directory $BIN_STRESS
+  mkdir $BIN_STRESS 
+fi
+
+cd apps/STENCIL
+  make stencil_synch;                  mv stencil_synch $BIN_STRESS/stencil
+  make SINGLEBITFLAGS=1 stencil_synch; mv stencil_synch $BIN_STRESS/stencil_1b
+cd -
+
+cd apps/PINGPONG; 
+  make pingpong; mv pingpong $BIN_STRESS
+cd -
+
+cd apps/NPB
+  make bt CLASS=S NPROCS=4;                   mv BT/bt.S.4  $BIN_STRESS/bt.S.4
+  make bt CLASS=W NPROCS=16;                  mv BT/bt.W.16 $BIN_STRESS/bt.W.16
+  make bt CLASS=W NPROCS=36;                  mv BT/bt.W.36 $BIN_STRESS/bt.W.36
+  make bt SINGLEBITFLAGS=1 CLASS=S NPROCS=4;  mv BT/bt.S.4  $BIN_STRESS/bt.S.4_1b
+  make bt SINGLEBITFLAGS=1 CLASS=W NPROCS=16; mv BT/bt.W.16 $BIN_STRESS/bt.W.16_1b
+  make bt SINGLEBITFLAGS=1 CLASS=W NPROCS=36; mv BT/bt.W.36 $BIN_STRESS/bt.W.36_1b
+cd -
+
+if [ $PWRMGMT -eq 1 ]; then
+  cd apps/STENCIL
+     make PWRMGMT=1 pstencil;    mv pstencil    $BIN_STRESS
+     make PWRMGMT=1 power_reset; mv power_reset $BIN_STRESS
+     make PWRMGMT=1 Fdiv;        mv Fdiv        $BIN_STRESS
+     make PWRMGMT=1 FV;          mv FV          $BIN_STRESS
+  cd -
+fi
+
+cp rccerun $BIN_STRESS
+cp hosts/rc.hosts $BIN_STRESS/allhosts
+cat hosts/rc.hosts | sort -r > $BIN_STRESS/allhosts_reverse
+echo 00 >  $BIN_STRESS/2hosts_1tile
+echo 01 >> $BIN_STRESS/2hosts_1tile
+echo 00 >  $BIN_STRESS/2hosts_nbr_tiles
+echo 02 >> $BIN_STRESS/2hosts_nbr_tiles
+echo 00 >  $BIN_STRESS/2hosts_faraway_tiles
+echo 47 >> $BIN_STRESS/2hosts_faraway_tiles
+
+

@@ -1,0 +1,26 @@
+.TH RCCE 3  2010-03-14 "RCCE MANPAGE" "RCCE Library"
+.SH NAME
+RCCE_ue \- returns the sequence number (rank) of a calling unit of execution (0 to (n-1)).
+
+.SH SYNOPSIS
+.B #include <rcce.h>
+.sp
+
+.BI "int RCCE_ue(void);
+
+.SH DESCRIPTION
+.BR RCCE_ue() 
+returns the sequence number (rank) of a calling unit of execution (0 to (n-1)).
+
+.SH "RETURN VALUE"
+An integer equal to the sequence number (rank) of a calling unit of execution (0 to (n-1)) 
+
+.SH ERRORS
+Look in 
+.BR rcce.h
+for additional error codes.
+
+.SH "SEE ALSO"
+rcce.h(5)
+
+.SH EXAMPLE

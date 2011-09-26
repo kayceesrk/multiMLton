@@ -1,0 +1,31 @@
+.TH RCCE 3  "September 2010"  "RCCE MANPAGE" "RCCE Library"
+.SH NAME
+
+RCCE_shflush \- ensures that the data in shared memory can be read and written 
+
+.SH SYNOPSIS
+.B #include <rcce.h>
+.sp
+
+.BI "void RCCE_shflush();"
+
+.SH DESCRIPTION
+.BR RCCE_shflush() 
+ensures that the data in shared memory can be read and written. For example, if 
+one core writes into shared memory, another core would issue a RCCE_shflush() 
+before reading from or writing to that shared memory. This ensures that the reading 
+core sees the updated contents.
+
+.SH "RETURN VALUE"
+None
+.SH ERRORS
+Look in 
+.BR rcce.h
+for additional error codes.
+
+.SH "SEE ALSO"
+rcce.h(5)
+
+.SH EXAMPLE
+.PP
+To be supplied.

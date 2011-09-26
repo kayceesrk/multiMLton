@@ -1,0 +1,37 @@
+.TH RCCE 3  2010-02-04 "RCCE MANPAGE" "RCCE Library"
+.SH NAME
+
+RCCE_fence \- defines a squence point in the program 
+
+.SH SYNOPSIS
+.B #include <rcce.h>
+.sp
+
+.BI "void RCCE_fence();"
+
+.SH DESCRIPTION
+.BR RCCE_fence() 
+defines a sequence point in the program at which the following conditions hold.
+
+.IP o
+A compiler can not reorder memory access operations across the RCCE_fence() function.
+.IP o
+All memory operations that occur in program-order prior to this statement must complete.
+.IP o
+No memory operations that follow this statement in program-order must begin before 
+returning from this function.  This behaves as an OpenMP flush construct without 
+an argument list clause. Note that we need the fence to apply to both private and MPB memory. 
+
+.SH "RETURN VALUE"
+None
+.SH ERRORS
+Look in 
+.BR rcce.h
+for additional error codes.
+
+.SH "SEE ALSO"
+rcce.h(5)
+
+.SH EXAMPLE
+.PP
+To be supplied.

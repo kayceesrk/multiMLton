@@ -1,0 +1,185 @@
+#! /bin/bash
+#  
+#  Copyright 2010 Intel Corporation
+#  
+#     Licensed under the Apache License, Version 2.0 (the "License");
+#     you may not use this file except in compliance with the License.
+#     You may obtain a copy of the License at
+#  
+#         http://www.apache.org/licenses/LICENSE-2.0
+#  
+#     Unless required by applicable law or agreed to in writing, software
+#     distributed under the License is distributed on an "AS IS" BASIS,
+#     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#     See the License for the specific language governing permissions and
+#     limitations under the License.
+#
+#set ECHO_COMAND to 1 to see what gets executed
+ECHO_COMMAND=1
+
+if [ $# -lt 3 ]; then
+  echo "Usage: \"$0 -nue <number of UEs> [-f HOSTFILE] [-clock GHz] <executable> [executable parameters]\""
+  exit 0
+fi
+
+# set defaults
+# NUESET:      set to 1 once number of UEs has been read
+# OMPEMULATOR: set to one if the emulator is to be used, zero otherwise
+# HOSTFILESET: set to 1 if a host file has been specified explicitly
+# MAXCORES:    maximum available number of cores on the chip
+# REFCLOCKGHZ: nominal frequency of chip in GHz
+# HOSTFILE:    name of file from which core IDs are read
+# STOP:        set to 1 once name of executable has been retrieved from command line
+NUESET=0
+OMPEMULATOR=_INSERT_EMVAL_INSERT_
+HOSTFILESET=0
+MAXCORES=48
+REFCLOCKGHZ=0.533
+HOSTFILE=hosts/rc.hosts
+STOP=0
+
+#store the PID for use in the creation of temporary files
+PID=$$
+
+#record number of command line parameters of the script
+NUMPARS=$#
+
+# process command line parameters (skip #0, i.e. name of this script)
+PAR=1
+while [ $PAR -le $NUMPARS ] && [ $STOP -ne 1 ]; do
+  eval OPT=\$$PAR
+  # determine if the parameter starts with a hyphen (i.e. it is a RCCE option)
+  STRIPOPT=`echo $OPT | sed -e 's/^-//'`
+  if [ $OPT != $STRIPOPT ]; then
+    OPTNAME=$STRIPOPT
+    if [ $OPTNAME != emulator ]; then
+      PAR=`expr $PAR + 1`
+      eval OPTVAL=\$$PAR
+    fi
+    case $OPTNAME in
+      nue      ) NUE=$OPTVAL; NUESET=1                     ;;
+      f        ) HOSTFILE=$OPTVAL; HOSTFILESET=1           ;;
+      clock    ) REFCLOCKGHZ=$OPTVAL                       ;;
+      emulator ) OMPEMULATOR=1                             ;;
+      *        ) echo Error: wrong option $OPTNAME; exit   ;;
+    esac
+  else
+    # if the parameter did not start with a hyphen, we have reached the
+    # place where an executable should be (implies NUE must have been set)
+    if [ $NUESET = 1 ]; then
+      EXE=$OPT
+      # PARSTART is sequence number of script parameters where parameters for executable start
+      PARSTART=`expr $PAR + 1`
+      STOP=1
+    else
+      echo Error: Did not find number of UEs ; exit
+    fi
+  fi
+  PAR=`expr $PAR + 1`
+done
+
+if [ $NUE -lt 1 ] || [ $NUE -gt $MAXCORES ]; then
+  echo Error: number of UEs invalid: $NUE
+  exit
+fi
+if [ $STOP -ne 1 ]; then
+  echo Error: no executable specified
+  exit
+fi
+
+# test whether the rc.hosts file exists. If it does, read as many 
+# lines from it as there are UEs requested for this run. Host file
+# should contain list of core IDs (one per line), no duplications, 
+# no empty lines.
+if [ ! -r $HOSTFILE ]; then
+  echo Error: Could not find or read hostfile
+  exit
+fi
+HOSTLINES=`wc -l $HOSTFILE | awk '{ print $1 }'`
+if [ $HOSTLINES -lt $NUE ]; then
+  echo Error: Number of UEs requested exceeds number of available UEs
+  exit
+fi
+
+# compose list of command line parameters for the executable
+# First three parameters are always the same, namely executable name, 
+# number of UEs, and reference clock frequency in GHz.
+
+ARGS="$NUE $REFCLOCKGHZ"
+
+# In the next loop we record the core IDs from the host file. 
+# Need to do some obscure redirecting to prevent starting subshells,
+# see page 48 of "Portable Shell Programming" by Bruce Blinn.
+# If we are not in OpenMP emulation mode, we also need to create a
+# (temporary) file with the right syntax to feed to the pssh
+# command. 
+if [ $OMPEMULATOR -eq 0 ]; then
+  TEMPFILE=PSSH_HOST_FILE.$PID
+  # if the file already exists, keep on padding its tail until
+  # a unique name is created
+  while [ -f $TEMPFILE ]; do
+    TEMPFILE=$TEMPFILE.$PID
+  done
+fi
+NUEaux=0
+exec 3<&0 < $HOSTFILE
+while read LINE && [ $NUEaux -lt $NUE ]; do
+  ARGS="$ARGS $LINE"
+  if [ $OMPEMULATOR -eq 0 ]; then
+    echo rck$LINE root >> $TEMPFILE
+  fi
+  NUEaux=`expr $NUEaux + 1`
+done
+# Undo obscure redirecting
+exec 0<&3 3<&-
+
+# add the parameters for the actual executable; to avoid running over
+# the maximum allowed number of arguments (10), we shift the parameter
+# list after each reading of a parameter
+PAR=$PARSTART
+while [ $PAR -le $NUMPARS ]; do
+  eval PARAMETER=\$$PARSTART
+  ARGS="$ARGS $PARAMETER"
+  shift
+  PAR=`expr $PAR + 1`
+done  
+
+if [ $OMPEMULATOR -eq 1 ]; then
+  # start single executable, which will be multithreaded inside the 
+  # OpenMP emulator
+
+  if [ $ECHO_COMMAND -eq 1 ]; then
+    echo  $EXE $ARGS
+  fi
+
+  $EXE $ARGS
+  EXITCODE=$?
+
+else
+  # clear the MPB and the test&set registers on the execution core set
+  
+  cp _INSERT_ROOTDIR_INSERT_/bin/_INSERT_BINDIR_INSERT_/mpb mpb.$PID
+  if [ $ECHO_COMMAND -eq 1 ]; then
+    echo pssh -h $TEMPFILE -t -1 -p $NUE `pwd`/mpb.$PID "< /dev/null"
+  fi
+
+  pssh -h $TEMPFILE -t -1 -p $NUE `pwd`/mpb.$PID < /dev/null
+  rm mpb.$PID
+
+  # run the code on the actual Rock Creek chip, using pssh. Make
+  # sure there is no timeout (-t -1), that the number of cores is
+  # set appropriately (-p $NUE), and that output is displayed (-P).
+  if [ $ECHO_COMMAND -eq 1 ]; then
+    echo pssh -h $TEMPFILE -t -1 -P -p $NUE `pwd`/$EXE $ARGS "< /dev/null"
+  fi
+
+  pssh -h $TEMPFILE -t -1 -P -p $NUE `pwd`/$EXE $ARGS < /dev/null
+
+  # EXITCODE below only returns status of pssh, not of the RCCE
+  # executable. would need to do substantial work to get more details
+  EXITCODE=$?
+
+  rm -f $TEMPFILE
+fi
+
+exit $EXITCODE

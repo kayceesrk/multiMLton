@@ -1,0 +1,23 @@
+BUILDING RCCE/HPL
+
+If the source for HPL did not get moved from its original location in the
+RCCE directory tree, and if Make.ia32.in provides the correct architecture
+dependent parameters, all the user needs to do is
+'configure' (this produces Make.ia32 out of Make.ia32.in)
+'make'
+To clean up (including archives): 
+'make veryclean'
+
+EXECUTING RCCE/HPL on N UEs (cores)
+
+cp `find . -name xhpl` /shared/YOUR_USER_NAME
+cp `find . -name HPL.dat` /shared/YOUR_USER_NAME
+cp runhpl /shared/YOUR_USER_NAME
+cd /shared/YOUR_USER_NAME
+
+edit script runhpl: make sure to insert the proper username
+edit data file HPL.dat: row of P's and row of Q's, if multiplied elementwise,
+                        should produce N each time
+
+rccerun -nue N -f <path to rc.hosts> runhpl 
+

@@ -1,0 +1,38 @@
+.TH RCCE 3  2010-06-27 "RCCE MANPAGE" "RCCE Library"
+.SH NAME
+
+RCCE_wait_power \- blocks the power domain master UE until the previously specified  power level has been reached 
+
+.SH SYNOPSIS
+.B #include <rcce.h>
+.sp
+
+.BI "int RCCE_wait_power(RCCE_REQUEST * " request );
+
+.SH DESCRIPTION
+.BR RCCE_wait_power() 
+blocks the power domain master UE until the previously specified  power level 
+has been reached (see RCCE_iset_power()). The supplied request parameter is reset 
+and can be used for a new power stepping command.
+
+.TP 10
+.B request
+Requested identifier.
+
+.SH "RETURN VALUE"
+Upon successful completion
+.BR RCCE_wait_power()
+returns
+.BR RCCE_SUCCESS .
+
+.SH ERRORS
+Look in 
+.BR rcce.h
+for additional error codes.
+
+.SH "SEE ALSO"
+rcce.h(5)
+
+.SH EXAMPLE
+.PP
+To be supplied.

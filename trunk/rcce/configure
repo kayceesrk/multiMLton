@@ -1,0 +1,90 @@
+#!/bin/bash
+#
+#  Copyright 2010 Intel Corporation
+#  
+#     Licensed under the Apache License, Version 2.0 (the "License");
+#     you may not use this file except in compliance with the License.
+#     You may obtain a copy of the License at
+#  
+#         http://www.apache.org/licenses/LICENSE-2.0
+#  
+#     Unless required by applicable law or agreed to in writing, software
+#     distributed under the License is distributed on an "AS IS" BASIS,
+#     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#     See the License for the specific language governing permissions and
+#     limitations under the License.
+#
+PID=$$
+if [ $# -lt 1 ]; then
+  echo "Usage: $0 emulator"
+  echo "       $0 SCC_LINUX"
+  echo "       $0 SCC_BAREMETAL"
+  echo "See README for power management options"
+  exit
+fi
+if [ "$1" = "SCC_LINUX" ] || [ "$1" = "SCC_BAREMETAL" ]; then
+  if [ "$1" = "SCC_LINUX" ]; then BAREMETAL=0; else BAREMETAL=1; fi
+  OMP_EMULATOR=0
+  MAKE_MPB="make mpb"
+else
+  MAKE_MPB=""
+  PSSH_MPB_C=""
+  PSSH_MPB_CL=""
+  if [ "$1" = "emulator" ]; then
+    OMP_EMULATOR=1
+  else
+    echo Incorrect platform: $1
+    exit 1
+  fi
+fi
+
+POWERPARS="0"
+if [ $# -eq 2 ] && [ "$2" = "ADD_POWER_API" ]; then
+  POWERPARS="0 1"
+fi
+
+ROOT=`pwd`
+COMFILE=common/symbols
+echo "#########################################################" >  $COMFILE
+echo "# DO NOT EDIT BY HAND!! This file gets overwritten each #" >> $COMFILE
+echo "# time the configure script is run. Insert any changes  #" >> $COMFILE
+echo "# in file common/symbols.in instead.                    #" >> $COMFILE
+echo "#########################################################" >> $COMFILE
+echo ""                                                          >> $COMFILE
+
+#note: must use colon for sed separator; slash conflicts with symbol(s) in path
+cat $COMFILE.in | sed "s:_INSERT_BMVAL_INSERT_:${BAREMETAL}:" | \
+                  sed "s:_INSERT_ROOTDIR_INSERT_:${ROOT}:" | \
+                  sed "s:_INSERT_EMVAL_INSERT_:${OMP_EMULATOR}:" >> $COMFILE
+
+RUNFILE=utils/rccerun
+cat $RUNFILE.in | sed "s:_INSERT_ROOTDIR_INSERT_:${ROOT}:" | \
+                  sed "s:_INSERT_BINDIR_INSERT_:$1:"       | \
+                  sed "s:_INSERT_EMVAL_INSERT_:${OMP_EMULATOR}:" > $RUNFILE
+chmod u+x $RUNFILE
+mv $RUNFILE .
+
+MAKEALL=utils/makeall
+cat $MAKEALL.in | sed "s:_INSERT_POWERPARS_INSERT_:${POWERPARS}:" | \
+                  sed "s:_INSERT_MAKE_MPB_:${MAKE_MPB}:" > $MAKEALL
+chmod u+x $MAKEALL
+mv $MAKEALL .
+
+#create scripts for killing processes on the cores and the MCPC containing a user specified string
+#note: this only makes sense on the SCC platform itself, not the emulator
+if [ "$OMP_EMULATOR" -eq 0 ]; then
+  SHARED=/shared/`whoami`
+  if [ ! \( -d $SHARED \) ]; then 
+    echo Creating directory $SHARED
+    mkdir $SHARED 
+  fi
+  
+  KILLIT=utils/killit
+  cat $KILLIT.in | sed "s:_INSERT_SHAREDDIR_INSERT_:${SHARED}:" > $KILLIT
+  KILLCORE=utils/killcorePIDs
+  cat $KILLCORE.in | sed "s:_INSERT_SHAREDDIR_INSERT_:${SHARED}:" > $KILLCORE
+  chmod u+x $KILLIT $KILLCORE
+  ALLHOSTS=utils/allhosts
+  mv $KILLIT $KILLCORE $SHARED
+  cp  $ALLHOSTS $SHARED
+fi

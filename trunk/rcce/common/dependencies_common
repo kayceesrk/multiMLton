@@ -1,0 +1,47 @@
+PARS=$(RCCEINCLUDE)/hardwired_argc.h $(RCCEINCLUDE)/hardwired_argv.h 
+RCCE_admin.o: $(RCCE_LIB_SRC)/RCCE_admin.c $(RCCEINCLUDE)/RCCE.h $(RCCEINCLUDE)/RCCE_lib.h $(RCCEINCLUDE)/config.h \
+        $(PARS)
+	$(CCOMPILE) -c $(CFLAGS) $(RCCE_LIB_SRC)/RCCE_admin.c  $(RCCE_FLAGS) 
+
+RCCE_power_management.o: $(RCCE_LIB_SRC)/RCCE_power_management.c $(RCCEINCLUDE)/RCCE.h $(RCCEINCLUDE)/RCCE_lib.h 
+	$(CCOMPILE) -c $(CFLAGS) $(RCCE_LIB_SRC)/RCCE_power_management.c  $(RCCE_FLAGS) 
+
+RCCE_debug.o: $(RCCE_LIB_SRC)/RCCE_debug.c $(RCCEINCLUDE)/RCCE.h $(RCCEINCLUDE)/RCCE_lib.h $(RCCEINCLUDE)/RCCE_debug.h
+	$(CCOMPILE) -c $(CFLAGS) $(RCCE_LIB_SRC)/RCCE_debug.c  $(RCCE_FLAGS)
+
+RCCE_comm.o: $(RCCE_LIB_SRC)/RCCE_comm.c $(RCCEINCLUDE)/RCCE.h $(RCCEINCLUDE)/RCCE_lib.h 
+	$(CCOMPILE) -c $(CFLAGS) $(RCCE_LIB_SRC)/RCCE_comm.c  $(RCCE_FLAGS)
+
+RCCE_sendrecv.o: $(RCCE_LIB_SRC)/RCCE_sendrecv.c $(RCCEINCLUDE)/RCCE.h $(RCCEINCLUDE)/RCCE_lib.h 
+	$(CCOMPILE) -c $(CFLAGS) $(RCCE_LIB_SRC)/RCCE_sendrecv.c  $(RCCE_FLAGS)
+
+RCCE_getput.o: $(RCCE_LIB_SRC)/RCCE_getput.c $(RCCEINCLUDE)/RCCE.h $(RCCEINCLUDE)/RCCE_lib.h 
+	$(CCOMPILE) -c $(CFLAGS) $(RCCE_LIB_SRC)/RCCE_getput.c  $(RCCE_FLAGS)
+
+RCCE_collective.o: $(RCCE_LIB_SRC)/RCCE_collective.c $(RCCEINCLUDE)/RCCE.h $(RCCEINCLUDE)/RCCE_lib.h 
+	$(CCOMPILE) -c $(CFLAGS) $(RCCE_LIB_SRC)/RCCE_collective.c  $(RCCE_FLAGS)
+
+RCCE_malloc.o: $(RCCE_LIB_SRC)/RCCE_malloc.c $(RCCEINCLUDE)/RCCE.h $(RCCEINCLUDE)/RCCE_lib.h 
+	$(CCOMPILE) -c $(CFLAGS) $(RCCE_LIB_SRC)/RCCE_malloc.c  $(RCCE_FLAGS)
+
+RCCE_qsort.o: $(RCCE_LIB_SRC)/RCCE_qsort.c $(RCCEINCLUDE)/RCCE.h $(RCCEINCLUDE)/RCCE_lib.h 
+	$(CCOMPILE) -c $(CFLAGS) $(RCCE_LIB_SRC)/RCCE_qsort.c  $(RCCE_FLAGS)
+
+RCCE_synch.o: $(RCCE_LIB_SRC)/RCCE_synch.c $(RCCEINCLUDE)/RCCE.h $(RCCEINCLUDE)/RCCE_lib.h 
+	$(CCOMPILE) -c $(CFLAGS) $(RCCE_LIB_SRC)/RCCE_synch.c  $(RCCE_FLAGS)
+
+RCCE_emulator_driver.o: $(RCCE_LIB_SRC)/RCCE_emulator_driver.c $(RCCEINCLUDE)/RCCE.h $(RCCEINCLUDE)/config.h \
+        $(PARS)
+	$(CCOMPILE) -c $(CFLAGS) $(RCCE_LIB_SRC)/RCCE_emulator_driver.c $(RCCE_FLAGS) 
+
+
+RCKAPI_bMC.o: $(RCCE_LIB_SRC)/RCKAPI_bMC.c
+	$(CCOMPILE) -c $(CFLAGS) $(RC_LIB_SRC)/RCKAPI_bMC.c
+
+config.o: $(RCKINCLUDE)/config.c
+	$(CCOMPILE) -c $(CFLAGS) $(RCKINCLUDE)/config.c
+
+$(BAREMETALROOT)/lib/src/%.o: $(BAREMETALROOT)/lib/src/%.c
+	$(CCOMPILE) -c $(CFLAGS) -I$(BAREMETALROOT)/eIA/include -I$(BAREMETALROOT)/eIA/include/c -o $@ $<
+
+

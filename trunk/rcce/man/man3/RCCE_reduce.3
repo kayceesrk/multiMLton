@@ -1,0 +1,57 @@
+.TH RCCE 3  2010-02-04 "RCCE MANPAGE" "RCCE Library"
+.SH NAME
+RCCE_reduce \- applies an element-wide reduction across UEs 
+
+.SH SYNOPSIS
+.B #include <rcce.h>
+.sp
+
+.BI "int RCCE_reduce(char* " inbuf ", char* " outbuf ",int " number ",int " datatype ",int " operation ",int " root ",RCCE_comm " comm ); 
+
+.SH DESCRIPTION
+.BR RCCE_reduce() 
+applies an element-wise reduction to an array of number 
+words across a collection of UEs and places the result in one UE.
+
+.TP 10
+.B inbuf
+Starting address of input array (private memory). 
+.TP
+.B outbuf
+Starting address of result array (private memory). 
+.TP
+.B number
+Length of array (words) of values to be reduced.
+.TP
+.B datatype
+Constant indicating the numerical data type. Choices are 
+RCCE_INT, RCCE_LONG, RCCE_FLOAT, and RCCE_DOUBLE. 
+.TP
+.B operation
+Constant indicating the reduction operation.  Choices are 
+RCCE_SUM, RCCE_MAX, RCCE_MIN, and RCCE_PROD. 
+.TP
+.B root
+Rank of the UE within communicator comm that receives the result 
+of the reduction operation.
+.TP
+.B comm
+Communicator whose UEs all contribute to the reduction. 
+
+.SH "RETURN VALUE"
+Upon successful completion
+.BR RCCE_reduce()
+returns
+.BR RCCE_SUCCESS .
+
+.SH ERRORS
+Look in 
+.BR rcce.h
+for additional error codes.
+
+.SH "SEE ALSO"
+rcce.h(5)
+
+.SH EXAMPLE
+.PP
+To be supplied.

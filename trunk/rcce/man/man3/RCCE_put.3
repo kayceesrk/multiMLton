@@ -1,0 +1,49 @@
+.TH RCCE 3  2010-06-27 "RCCE MANPAGE" "RCCE Library"
+.SH NAME
+RCCE_put \-  copies contents from src to target (GORY)
+
+.SH SYNOPSIS
+.B #include <rcce.h>
+.sp
+.BI "int RCCE_put(volatile char * " target ",volatile char * ",src ",int " num_bytes ",int " ID );
+
+.SH DESCRIPTION
+.BR RCCE_put()
+copies the contents of the buffer pointed to by src into the location pointed to by target.  
+
+.TP
+.B
+target
+An MPB address that will be converted to the appropriate address on UE with rank 
+ID that points to where the data will go. 
+.TP
+.B
+src
+The address in private memory or the local MPB of the calling UE 
+that points to the data to be put.
+.TP
+.B
+num_bytes
+Number of bytes to copy to the target.
+.TP
+.B
+ID
+Rank of the target UE.
+
+.SH "RETURN VALUE"
+Upon successful completion
+.BR RCCE_put()
+returns
+.BR RCCE_SUCCESS .
+
+.SH ERRORS
+Look in 
+.BR rcce.h
+for additional error codes.
+
+.SH "SEE ALSO"
+rcce.h(5)
+
+.SH EXAMPLE
+.PP
+To be supplied.

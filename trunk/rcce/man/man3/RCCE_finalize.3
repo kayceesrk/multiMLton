@@ -1,0 +1,33 @@
+.TH RCCE 3  2010-02-04 "RCCE MANPAGE" "RCCE Library"
+.SH NAME
+RCCE_finalize \- RCCE finalize function 
+
+.SH SYNOPSIS
+.B #include <rcce.h>
+.sp
+
+.BI "int RCCE_finalize(void);
+
+.SH DESCRIPTION
+The
+.BR RCCE_finalize() 
+is analogous to the MPI_finalize()routine and provides a place for any code needed 
+to cleanly shut down the RCCE environment. No RCCE statements may follow 
+.BR RCCE_finalize() .
+
+
+.SH "RETURN VALUE"
+Upon successful completion
+.BR RCCE_finalize()
+returns
+.BR RCCE_SUCCESS .
+
+.SH ERRORS
+Look in 
+.BR rcce.h
+for additional error codes.
+
+.SH "SEE ALSO"
+rcce.h(5)
+
+.SH EXAMPLE

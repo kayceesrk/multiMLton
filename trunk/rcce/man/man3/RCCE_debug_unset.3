@@ -1,0 +1,43 @@
+.TH RCCE 3  2010-03-14 "RCCE MANPAGE" "RCCE Library"
+.SH NAME
+RCCE_debug_unset \- enables runtime debug messages for RCCE library calls. 
+
+.SH SYNOPSIS
+.B #include <rcce.h>
+.sp
+.BI "int RCCE_debug_unset(int " dbg_disable );
+
+.SH DESCRIPTION
+.BR RCCE_debug_unset()
+disables runtime debug messages for RCCE library calls. 
+The parameter dbg_disable can take on the following values.
+
+.TP
+.B dbg_disable
+Disables runtime debug messages for RCCE library calls. The parameter dbg_disable can take on the following values.
+
+.BR RCCE_DEBUG_SYNCH	
+Ignore error messages concerning synchronization.
+.br
+.B RCCE_DEBUG_COMM	
+Ignore error messages concerning communication.
+.br
+.BR RCCE_DEBUG_RPC		
+Ignore error messages concerning power management.
+.br
+.BR RCCE_DEBUG_ALL		
+Ignore all error messages. Thisis the default.
+
+.SH "RETURN VALUE"
+Upon successful completion
+.BR RCCE_debug_unset ()
+returns
+.BR RCCE_SUCCESS .
+
+.SH ERRORS
+Look in 
+.BR rcce.h
+for additional error codes.
+.SH "SEE ALSO"
+rcce.h(5)
+.SH EXAMPLE

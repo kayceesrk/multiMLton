@@ -1,0 +1,2 @@
+source /shared/icc-8.1.038/bin/iccvars.sh
+source /shared/crosstool/crosstoolvars.sh

@@ -1,0 +1,39 @@
+This directory contains sources for two regular variations of
+the stencil code:
+1. RCCE_stencil.c uses the "gory" interface and (partly) unsynchronized
+   communications. Build it with:
+   make API=gory stencil
+2. RCCE_stencil_synch.c uses the basic interface and fully synchronized
+   communications. Build it with:
+   make stencil_synch
+
+In addition, the stencil code was modified to exercise the fine grain
+power management features of RCCE/SCC. 
+3. RCCE_Fdiv.c sets the tile clock frequency divider to a value
+   supplied by the user on the command line.
+4. RCCE_FV.c sets the tile clock frequency divider to a value
+   supplied by the user on the command line, and also sets the voltage
+   to a value that matches the tile clock divider.
+5. RCCE_power_reset.c sets the tile clock and voltage to their default
+   values.
+6. RCCE_pstencil.c gives an example of an application (stencil) with
+   power management calls inserted.
+
+
+#  
+#  Copyright 2010 Intel Corporation
+#  
+#     Licensed under the Apache License, Version 2.0 (the "License");
+#     you may not use this file except in compliance with the License.
+#     You may obtain a copy of the License at
+#  
+#         http://www.apache.org/licenses/LICENSE-2.0
+#  
+#     Unless required by applicable law or agreed to in writing, software
+#     distributed under the License is distributed on an "AS IS" BASIS,
+#     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#     See the License for the specific language governing permissions and
+#     limitations under the License.
+#  
+
+   

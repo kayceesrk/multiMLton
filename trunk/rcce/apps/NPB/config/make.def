@@ -1,0 +1,19 @@
+# this file is left over from the original NPB build process;
+# most of its contents are no longer used
+MPIF77   = 
+FMPI_LIB = 
+FLINK    = 
+FFLAGS   = 
+
+MPICC    = 
+CMPI_LIB = 
+CLINK    = 
+CFLAGS   = 
+
+CC       = $(CCOMPILE) -restrict
+BINDIR   = ../bin
+
+RAND   = 
+
+CONVERTFLAG = 
+

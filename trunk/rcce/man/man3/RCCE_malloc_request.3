@@ -1,0 +1,43 @@
+.TH RCCE 3  2010-02-04 "RCCE MANPAGE" "RCCE Library"
+.SH NAME
+
+RCCE_malloc_request \- returns a pointer to MPB space  (GORY)
+
+.SH SYNOPSIS
+.B #include <rcce.h>
+.sp
+
+.BI "volatile char * RCCE_malloc(size_t " request ",size_t * " result  );
+
+.SH DESCRIPTION
+.BR RCCE_malloc_request() 
+returns a pointer to MPB space. 
+
+.TP
+.B
+request
+Requested size in bytes (multiple of 32 bytes).
+.TP
+.B
+result
+Actually returned size in bytes (multiple of 32 bytes).
+
+
+
+
+.SH "RETURN VALUE"
+Upon successful completion
+.BR RCCE_malloc_request()
+returns a pointer to MPB space. 
+
+.SH ERRORS
+Look in 
+.BR rcce.h
+for additional error codes.
+
+.SH "SEE ALSO"
+rcce.h(5)
+
+.SH EXAMPLE
+.PP
+To be supplied.

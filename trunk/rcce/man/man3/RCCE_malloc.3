@@ -1,0 +1,36 @@
+.TH RCCE 3  2010-02-04 "RCCE MANPAGE" "RCCE Library"
+.SH NAME
+
+RCCE_malloc \- allocates bytes in the MPB (GORY)
+
+.SH SYNOPSIS
+.B #include <rcce.h>
+.sp
+
+.BI "volatile char * RCCE_malloc(size_t " size );
+
+.SH DESCRIPTION
+.BR RCCE_malloc 
+allocates size bytes in MPB in the address range assigned to the calling UE. 
+This is a collective routine that must be called jointly by all UEs. Size must 
+be a multiple of 32, and return values will be aligned on 32-byte boundaries.
+
+.TP
+.B size
+The number of bytes to allocate in memory.
+
+.SH "RETURN VALUE"
+Upon successful completion
+.BR RCCE_malloc()
+returns a char * pointer to the start of the allocated bytes.
+.SH ERRORS
+Look in 
+.BR rcce.h
+for additional error codes.
+
+.SH "SEE ALSO"
+rcce.h(5)
+
+.SH EXAMPLE
+.PP
+To be supplied.

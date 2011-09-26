@@ -1,0 +1,34 @@
+.TH RCCE 3  2010-02-04 "RCCE MANPAGE" "RCCE Library"
+.SH NAME
+
+RCCE_free \- deallocates previously allocated bytes in the MPB  (GORY)
+
+.SH SYNOPSIS
+.B #include <rcce.h>
+.sp
+
+.BI "void RCCE_free(volatile char * " ptr );
+
+.SH DESCRIPTION
+.BR RCCE_free()
+deallocates previously allocated space in the MPB at address ptr. This 
+is a collective routine that must be called jointly by all UEs
+
+.TP
+.B size
+The number of bytes to allocate in memory.
+
+.SH "RETURN VALUE"
+None.
+
+.SH ERRORS
+Look in 
+.BR rcce.h
+for additional error codes.
+
+.SH "SEE ALSO"
+rcce.h(5)
+
+.SH EXAMPLE
+.PP
+To be supplied.

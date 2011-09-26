@@ -1,0 +1,127 @@
+#!/bin/bash
+#  
+#  Copyright 2010 Intel Corporation
+#  
+#     Licensed under the Apache License, Version 2.0 (the "License");
+#     you may not use this file except in compliance with the License.
+#     You may obtain a copy of the License at
+#  
+#         http://www.apache.org/licenses/LICENSE-2.0
+#  
+#     Unless required by applicable law or agreed to in writing, software
+#     distributed under the License is distributed on an "AS IS" BASIS,
+#     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#     See the License for the specific language governing permissions and
+#     limitations under the License.
+#  
+NUMPARS=$# 
+PID=$$
+LOG=`pwd`/log.$PID
+SUM=`pwd`/summary.$PID
+SCRATCH=.scratch.$PID
+SIZE="UNKNOWN"
+PWRMGMT=0
+# change the tile clock frequency if using a tile clock divider other than 3
+GHZ=0.533
+
+PAR=1 
+while [ $PAR -le $NUMPARS ]; do 
+  eval OPT=\$$PAR 
+  case $OPT in 
+    -S        ) if [ $SIZE = "UNKNOWN" ]; then SIZE=SMALL;  fi ;; 
+    -M        ) if [ $SIZE = "UNKNOWN" ]; then SIZE=MEDIUM; fi ;; 
+    -L        ) if [ $SIZE = "UNKNOWN" ]; then SIZE=LARGE;  fi ;; 
+    -PWRMGMT  ) PWRMGMT=1     ;; 
+     *        ) echo Error, wrong option $OPT | tee -a $LOG      | tee -a $SUM 
+                exit ;;
+  esac                                                       
+  PAR=`expr $PAR + 1`
+done 
+
+if [ $SIZE = "UNKNOWN" ]; then 
+  echo ERROR: No size specified \(-S, -M, or -L\)  | tee -a $LOG | tee -a $SUM
+  exit
+else
+  echo Executing RCCE stress test of size $SIZE    | tee -a $LOG | tee -a $SUM
+fi
+
+BIN_STRESS=/shared/`whoami`/bin_stress
+if [ ! \( -d $BIN_STRESS \) ]; then
+  echo ERROR: No stress test directory  | tee -a $LOG | tee -a $SUM 
+  echo Please create and populate it by invoking \"build_stress_test\" \
+        | tee -a $LOG | tee -a $SUM
+  exit
+fi
+
+cd $BIN_STRESS
+
+for HXT in 1tile nbr_tiles faraway_tiles; do
+  case $SIZE in
+    SMALL  ) ITERS=10;;
+    MEDIUM ) ITERS=1000;;
+    LARGE  ) ITERS=100000;;
+  esac
+  echo ./rccerun -nue 2 -f 2hosts_$HXT -clock $GHZ pingpong $ITERS \
+             | tee -a $LOG | tee -a $SUM
+       ./rccerun -nue 2 -f 2hosts_$HXT -clock $GHZ pingpong $ITERS \
+             | tee -a $LOG | tee  $SCRATCH 
+  grep -i latency $SCRATCH >> $SUM 
+done
+
+for EXT in "" "_1b"; do
+  if [ "$EXT" = "_1b" ]; then
+    echo Using single bit flags | tee -a $LOG | tee -a $SUM
+  fi
+  for HOSTS in allhosts allhosts_reverse; do
+    case $SIZE in
+      SMALL  ) BTCORES=4;  CLASS=S; STCORES=4;  STITERS=10;;
+      MEDIUM ) BTCORES=16; CLASS=W; STCORES=16; STITERS=100;;
+      LARGE  ) BTCORES=36; CLASS=W; STCORES=48; STITERS=1000;;
+    esac
+
+    echo ./rccerun -nue $STCORES -f $HOSTS -clock $GHZ stencil$EXT $STITERS    \
+               | tee -a $LOG | tee -a $SUM
+         ./rccerun -nue $STCORES -f $HOSTS -clock $GHZ stencil$EXT $STITERS    \
+               | tee -a $LOG | tee  $SCRATCH 
+    grep Verification $SCRATCH | grep SUCCESSFUL >> $SUM 
+    echo ./rccerun -nue $BTCORES -f $HOSTS -clock $GHZ bt.$CLASS.$BTCORES$EXT  \
+               | tee -a $LOG | tee -a $SUM
+         ./rccerun -nue $BTCORES -f $HOSTS -clock $GHZ bt.$CLASS.$BTCORES$EXT  \
+               | tee -a $LOG | tee  $SCRATCH 
+    grep Verification $SCRATCH | grep SUCCESSFUL >> $SUM 
+  done
+  if [ "$EXT" = "_1b" ]; then
+    echo End using single bit flags | tee -a $LOG | tee -a $SUM
+  fi
+done
+
+if [ $PWRMGMT -eq 1 ]; then
+  case $SIZE in
+    SMALL  ) NC=1;;
+    MEDIUM ) NC=8 ;;
+    LARGE  ) NC=48 ;;
+  esac
+  echo ./rccerun -nue $NC -f allhosts Fdiv 4                        \
+             | tee -a $LOG | tee -a $SUM
+       ./rccerun -nue $NC -f allhosts Fdiv 4                        \
+             | tee -a $LOG | tee  $SCRATCH 
+  grep Verification $SCRATCH | grep SUCCESSFUL >> $SUM 
+  echo ./rccerun -nue $NC -f allhosts FV 3                          \
+             | tee -a $LOG | tee -a $SUM
+       ./rccerun -nue $NC -f allhosts FV 3                          \
+             | tee -a $LOG | tee  $SCRATCH 
+  grep Verification $SCRATCH | grep SUCCESSFUL >> $SUM 
+  echo ./rccerun -nue $NC -f allhosts power_reset                   \
+             | tee -a $LOG | tee -a $SUM
+       ./rccerun -nue $NC -f allhosts power_reset                   \
+             | tee -a $LOG | tee  $SCRATCH 
+  grep Verification $SCRATCH | grep SUCCESSFUL >> $SUM 
+  echo ./rccerun -nue $NC -f allhosts pstencil                      \
+             | tee -a $LOG | tee -a $SUM
+       ./rccerun -nue $NC -f allhosts pstencil                      \
+             | tee -a $LOG | tee  $SCRATCH 
+  grep Verification $SCRATCH | grep SUCCESSFUL >> $SUM 
+fi
+
+rm $SCRATCH
+

@@ -1,0 +1,10 @@
+echo killing local and remote processes that contain the string \"$1\"
+ext=`hostname`
+kill_list=_INSERT_SHAREDDIR_INSERT_/.kill_list.$ext
+ps -ef | grep $1 | awk "{ print \$2 }" > $kill_list
+while read LINE; do
+kill -9 $LINE
+done < $kill_list
+rm $kill_list
+echo done killing local processes
+pssh -P -h allhosts -p 48 -t -1 _INSERT_SHAREDDIR_INSERT_/killcorePIDs $1 < /dev/null

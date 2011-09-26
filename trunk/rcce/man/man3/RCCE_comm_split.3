@@ -1,0 +1,87 @@
+.TH RCCE 3  2010-02-04 "RCCE MANPAGE" "RCCE Library"
+
+.SH NAME
+RCCE_comm_split \- RCCE create communicator
+
+.SH SYNOPSIS
+.B #include <rcce.h>
+.sp
+
+.BI "int RCCE_comm_split(int(*" color ")int,void *), void* "aux ", RCCE_COMM*" comm );
+
+.SH DESCRIPTION
+
+.BR RCCE_comm_split()
+creates a new communicator, comm, based on the
+global communicator, RCCE_COMM_WORLD, the function color(), and
+any custom data the programmer wants to furnish.
+
+.PP
+color() is called as  color(rank, aux) and returns an integer.
+All UEs must call RCCE_comm_split() with identical arguments.
+
+.PP
+All UEs with the same return value for color() will be placed
+in the same communication group. The UEs inside that group are
+ranked in the order of their rank within the global communicator.
+
+.PP
+Note the differences between RCCE and MPI_Comm_split().
+RCCE_comm_split() has
+
+.IP * 2
+No input communicator; the global communicator is assumed.
+.IP * 
+No key value, the global rank is assumed.
+.IP * 
+No color value, but a uniform function to compute the color, based on global rank and (possibly) other attributes.
+
+.PP
+The current version of RCCE does not provide the ability to 
+delete RCCE communicators. However, if a communicator is 
+no longer needed, it can safely be overwritten by a new invocation 
+of RCCE_comm_split().
+
+.TP
+.B comm
+The new communicator, based on the global communicator, RCCE_COMM_WORLD.
+.TP
+.B color
+Function pointer to color().  All UEs with the same return value 
+for color() will be placed in the same communication group. 
+.TP
+.B aux
+Any custom data the programmer wants to furnish.
+
+.SH "RETURN VALUE"
+Upon successful completion
+.BR RCCE_comm_split()
+returns
+.BR RCCE_SUCCESS .
+
+.SH ERRORS
+Look in
+.BR rcce.h
+for additional error codes.
+
+.SH "SEE ALSO"
+rcce.h(5)
+.SH EXAMPLE
+.PP
+To be supplied.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

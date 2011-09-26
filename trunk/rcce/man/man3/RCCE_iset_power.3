@@ -1,0 +1,59 @@
+.TH RCCE 3  2010-06-27 "RCCE MANPAGE" "RCCE Library"
+.SH NAME
+
+RCCE_iset_power \- initiates a discrete stepping of the power and frequency within the power domain of the calling UE 
+
+.SH SYNOPSIS
+.B #include <rcce.h>
+.sp
+
+.BI "int RCCE_iset_power(int " Fdiv ", RCCE_REQUEST * " request ",int * " Fdiv_new ",int * " Vlevel_new  );
+
+.SH DESCRIPTION
+.BR RCCE_iset_power() 
+is a non-blocking function that initiates a discrete stepping of the power and frequency within 
+the power domain of the calling UE.   It only initiates a change in the power and the frequency 
+when called by the master of the power domain.  For other UEs in the power domain, the function 
+returns RCCE_SUCCESS immediately without issuing any power management commands.   
+
+The input to the function specifies the desired tile frequency divider (an integer ranging 
+from 2 to 16).  The function will determine the lowest voltage level that is consistent with 
+the input value of the frequency divider and initiate the voltage change. Output values define 
+the actual settings for the frequency divisor and the voltage level.   
+
+RCCE_iset_power() returns a request that is used in a call to RCCE_wait_power() to block the 
+issuing core until the target power level has been reached. There can only be a single power 
+change request in flight at any one time for each power domain. Additional requests are 
+denied, and the function returns an error code.
+
+.TP
+.B Fdiv
+The requested value for the frequency divisor
+.TP
+.B request
+Request identifier.
+.TP
+.B Fdiv_new
+The tile frequency divisor that will be active once the voltage change is complete.
+.TP
+.B Vlevel_new
+The voltage level (0 to 7) once the voltage change is complete. In volts, this equals (0.6 + Vlevel_new* 0.1).
+
+
+.SH "RETURN VALUE"
+Upon successful completion
+.BR RCCE_iset_power()
+returns
+.BR RCCE_SUCCESS .
+
+.SH ERRORS
+Look in 
+.BR rcce.h
+for additional error codes.
+
+.SH "SEE ALSO"
+rcce.h(5)
+
+.SH EXAMPLE
+.PP
+To be supplied.

@@ -1,0 +1,36 @@
+.TH RCCE 3  2010-06-27 "RCCE MANPAGE" "RCCE Library"
+.SH NAME
+
+RCCE_flag_alloc \- allocates a flag variable on the calling UE (GORY)
+
+.SH SYNOPSIS
+.B #include <rcce.h>
+.sp
+
+.BI "int RCCE_flag_alloc(RCCE_FLAG * " flag );
+
+.SH DESCRIPTION
+.BR RCCE_flag_alloc()
+allocates a flag variable on the calling UE. This is a collective routine that must be called jointly by all UEs.
+
+.TP
+.B flag
+Pointer to a flag in local MPB memory.
+
+.SH "RETURN VALUE"
+Upon successful completion
+.BR RCCE_flag_alloc()
+returns
+.BR RCCE_SUCCESS .
+
+.SH ERRORS
+Look in 
+.BR rcce.h
+for additional error codes.
+
+.SH "SEE ALSO"
+rcce.h(5)
+
+.SH EXAMPLE
+.PP
+To be supplied.

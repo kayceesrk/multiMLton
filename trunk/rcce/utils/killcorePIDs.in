@@ -1,0 +1,7 @@
+ext=`hostname`
+kill_list=_INSERT_SHAREDDIR_INSERT_/.kill_list.$ext
+ps | grep $1 | awk "{ print \$1 }" > $kill_list
+while read LINE; do
+kill -9 $LINE
+done < $kill_list
+rm $kill_list

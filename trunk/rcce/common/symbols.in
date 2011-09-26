@@ -1,0 +1,63 @@
+RCCEROOT=_INSERT_ROOTDIR_INSERT_
+RCCE_LIB_SRC=$(RCCEROOT)/src
+RCCEINCLUDE=$(RCCEROOT)/include
+
+OMP_EMULATOR=_INSERT_EMVAL_INSERT_
+BAREMETAL=_INSERT_BMVAL_INSERT_
+ifeq ($(OMP_EMULATOR),0)
+  ifeq ($(BAREMETAL),1) 
+    BMFLAG=-DMS_BAREMETAL
+    SUBDIR=SCC_BAREMETAL
+  else
+    SUBDIR=SCC_LINUX
+  endif
+#  CCOMPILE=icpc
+#  PLATFORMFLAGS=$(BMFLAG) -DSCC -static -mcpu=pentium -gcc-version=340 -I../include
+
+   CCOMPILE=icc
+#  PLATFORMFLAGS=$(BMFLAG) -DSCC -static -mcpu=pentium -gcc-version=340 -I../include
+   PLATFORMFLAGS=$(BMFLAG) -DSCC -DSHMADD -static -mcpu=pentium -gcc-version=340 -I../include
+#  PLATFORMFLAGS=$(BMFLAG) -DSCC -DSHMADD -DSHMADD_CACHEABLE -static -mcpu=pentium -gcc-version=340 -I../include
+
+#  CCOMPILE=gcc
+#  PLATFORMFLAGS=$(BMFLAG) -DSCC -static -march=pentium -mtune=pentium -I../include
+
+#  CCOMPILE=g++
+#  PLATFORMFLAGS=$(BMFLAG) -DSCC -static -march=pentium -mtune=pentium -I../include
+
+else
+   SUBDIR=OMP
+
+########## BEGIN OF USER-SPECIFIED VARIABLES ###############
+#  CCOMPILE=g++
+#  PLATFORMFLAGS=-fopenmp
+  CCOMPILE=icc
+  PLATFORMFLAGS=-openmp
+########### END OF USER-SPECIFIED VARIABLES ################
+endif
+
+ifeq ($(PWRMGMT),1)
+  powername=pwrmgmt
+  PWROPT=-DRC_POWER_MANAGEMENT
+else
+  powername=nopwrmgmt
+endif
+
+ifeq ($(SINGLEBITFLAGS),1)
+  FLAGOPT=-DSINGLEBITFLAGS
+  flagname=smallflags
+else
+  flagname=bigflags
+endif
+
+ifeq ($(API),gory)
+  apiname=gory
+  APIOPT=-DGORY
+else
+  apiname=nongory
+endif
+
+ARCHIVE=$(RCCEROOT)/bin/$(SUBDIR)/libRCCE_$(flagname)_$(apiname)_$(powername).a
+#CFLAGS=-O0 $(PLATFORMFLAGS) $(PWROPT) $(FLAGOPT) $(APIOPT) -I$(RCCEINCLUDE)
+CFLAGS=-O3 $(PLATFORMFLAGS) $(PWROPT) $(FLAGOPT) $(APIOPT) -I$(RCCEINCLUDE)  
+#CFLAGS=-O3 $(PLATFORMFLAGS) $(PWROPT) $(FLAGOPT) $(APIOPT) -I$(RCCEINCLUDE) -I$(RCK_LIB_SRC)

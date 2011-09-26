@@ -1,0 +1,39 @@
+.TH RCCE 3  2010-06-27 "RCCE MANPAGE" "RCCE Library"
+.SH NAME
+RCCE_wait_until \- blocks until the status of flag matches the input parameter (GORY) 
+.SH SYNOPSIS
+.B #include <rcce.h>
+.sp
+.BI "int RCCE_wait_until(RCCE_FLAG * " flag ",RCCE_FLAG_STATUS ",status );
+.SH DESCRIPTION
+.BR RCCE_flag_wait_until()
+blocks until the status of flag matches the input parameter.
+
+.TP
+.B
+flag
+Opaque data type representing a flag in MPB memory.
+.TP
+.B
+status
+Status value that must be matched by the status field of the synchronization flag. 
+Possible values are RCCE_FLAG_SET and RCCE_FLAG_UNSET. All flags have 
+status RCCE_FLAG_UNSET at program start.
+
+.SH "RETURN VALUE"
+Upon successful completion
+.BR RCCE_flag_write()
+returns
+.BR RCCE_SUCCESS .
+
+.SH ERRORS
+Look in 
+.BR rcce.h
+for additional error codes.
+
+.SH "SEE ALSO"
+rcce.h(5)
+
+.SH EXAMPLE
+.PP
+To be supplied.

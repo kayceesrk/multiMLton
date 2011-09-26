@@ -1,0 +1,46 @@
+.TH RCCE 3  2010-06-27 "RCCE MANPAGE" "RCCE Library"
+.SH NAME
+
+RCCE_set_frequncy_divider \- changes the frequency in the power domain of the calling UE  
+
+.SH SYNOPSIS
+.B #include <rcce.h>
+.sp
+
+.BI "int RCCE_set_frequency_divider(int " Fdiv ",int" Fdiv_new );
+
+.SH DESCRIPTION
+.BR RCCE_set_frequency_divider() 
+changes the frequency in the power domain of the calling UE without affecting the voltage. 
+This function only initiates the desired change in the frequency if called by the master UE 
+of the power domain.  For other UEs, the call returns immediately with a return code of 
+RCCE_SUCCESS.  Because frequency changes are almost instantaneous, RCCE does not  provide a 
+non-blocking version to hide latency. The RCCE_set_frequency_divider() function will not 
+allow a programmer to set a frequency divisor that results in a frequency too high for the 
+current voltage.
+
+.TP
+.B Fdiv
+The input requested value for the frequency divisor.
+.TP
+.B Fdiv_new
+The new value of the frequency divisor.
+
+
+.SH "RETURN VALUE"
+Upon successful completion
+.BR RCCE_set_frequency_divider()
+returns
+.BR RCCE_SUCCESS .
+
+.SH ERRORS
+Look in 
+.BR rcce.h
+for additional error codes.
+
+.SH "SEE ALSO"
+rcce.h(5)
+
+.SH EXAMPLE
+.PP
+To be supplied.

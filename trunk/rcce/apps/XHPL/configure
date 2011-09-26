@@ -1,0 +1,4 @@
+ROOT=`pwd`
+Makefile=Make.ia32
+#note: must use colon for sed separator; slash conflicts with symbol(s) in path
+cat $Makefile.in | sed "s:_INSERT_ROOTDIR_INSERT_:${ROOT}:" > $Makefile
