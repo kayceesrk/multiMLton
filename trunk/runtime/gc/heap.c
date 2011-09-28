@@ -144,7 +144,12 @@ void releaseHeap (GC_state s, GC_heap h) {
              (uintptr_t)(h->start),
              uintmaxToCommaString(h->size),
              uintmaxToCommaString(h->withMapsSize - h->size));
-  GC_release (h->start, h->withMapsSize);
+  if (h == s->sharedHeap || h == s->secondarySharedHeap) {
+    RCCE_shfree (h->start);
+    RCCE_shflush ();
+  }
+  else
+    GC_release (h->start, h->withMapsSize);
   initHeap (s, h, h->kind);
 }
 
@@ -172,13 +177,18 @@ void shrinkHeap (GC_state s, GC_heap h, size_t keepSize) {
                uintmaxToCommaString(keepWithMapsSize - keepSize));
     }
     assert (keepWithMapsSize <= h->withMapsSize);
-    GC_release (h->start + keepWithMapsSize, h->withMapsSize - keepWithMapsSize);
+
+    /* XXX KC we just ignore the request to shrink heap since shared heaps are
+     * allocated through malloc and not mmap. This prevents us from arbitrary
+     * position in the allocated space. */
+    if (h != s->sharedHeap && h != s->secondarySharedHeap)
+      GC_release (h->start + keepWithMapsSize, h->withMapsSize - keepWithMapsSize);
     h->size = keepSize;
     h->withMapsSize = keepWithMapsSize;
   }
 }
 
-/* createHeap (s, h, desiredSize, minSize)
+/* createHeap (s, h, kind, desiredSize, minSize)
  *
  * allocates a heap of the size necessary to work with desiredSize
  * live data, and ensures that at least minSize is available.  It
@@ -186,6 +196,7 @@ void shrinkHeap (GC_state s, GC_heap h, size_t keepSize) {
  * if it is unable.
  */
 bool createHeap (GC_state s, GC_heap h,
+                 GC_heapKind kind,
                  size_t desiredSize,
                  size_t minSize) {
   size_t backoff;
@@ -193,7 +204,7 @@ bool createHeap (GC_state s, GC_heap h,
   size_t newWithMapsSize;
   bool isShared = FALSE;
 
-  if (h == s->sharedHeap || h == s->secondarySharedHeap)
+  if (kind == SHARED_HEAP)
     isShared = TRUE;
   else
     isShared = FALSE;
@@ -246,7 +257,21 @@ bool createHeap (GC_state s, GC_heap h,
       if (i == count)
         address = 0;
 
-      newStart = GC_mmapAnon ((pointer)address, newWithMapsSize);
+      /* Try to get the addresses in disjoint address spaces. This will bring
+       * out errors and reduce the possibility of same pointers to be added to
+       * pointerToCoreMap. */
+      if (i < 5)
+        address = ((address & 0x03FFFFFF) | ((Proc_processorNumber (s) + 1) << 26));
+
+      if (!isShared)
+        newStart = GC_mmapAnon ((pointer)address, newWithMapsSize);
+      else {
+        newStart = GC_shmalloc (newWithMapsSize);
+        if (newStart == NULL) {
+          fprintf (stderr, "createHeap: GC_shmalloc failed.\n");
+          exit (1);
+        }
+      }
       unless ((void*)-1 == newStart) {
         direction = not direction;
         h->start = newStart;
@@ -294,7 +319,8 @@ bool createHeapSecondary (GC_state s, size_t desiredSize) {
       or (s->controls->maxHeapLocal > 0
           and s->heap->size + desiredSize > s->controls->maxHeapLocal))
     return FALSE;
-  return createHeap (s, s->secondaryLocalHeap, desiredSize, s->heap->oldGenSize);
+  return createHeap (s, s->secondaryLocalHeap, LOCAL_HEAP,
+                     desiredSize, s->heap->oldGenSize);
 }
 
 bool createSharedHeapSecondary (GC_state s, size_t desiredSize) {
@@ -303,7 +329,7 @@ bool createSharedHeapSecondary (GC_state s, size_t desiredSize) {
       or (s->controls->maxHeapShared > 0
           and s->sharedHeap->size + desiredSize > s->controls->maxHeapShared))
     return FALSE;
-  return createHeap (s, s->secondarySharedHeap,
+  return createHeap (s, s->secondarySharedHeap, SHARED_HEAP,
                      desiredSize, s->sharedHeap->oldGenSize);
 }
 
@@ -401,11 +427,13 @@ void growHeap (GC_state s, GC_heap h, size_t desiredSize, size_t minSize) {
   size_t liveSize;
 
   bool isShared = FALSE;
-
+  GC_heapKind kind = LOCAL_HEAP;
   char str[20];
+
   sprintf (str, "local");
   if (h == s->sharedHeap) {
     isShared = TRUE;
+    kind = SHARED_HEAP;
     sprintf (str, "shared");
   }
 
@@ -441,7 +469,7 @@ void growHeap (GC_state s, GC_heap h, size_t desiredSize, size_t minSize) {
     shrinkHeap (s, curHeapp, liveSize);
   initHeap (s, newHeapp, curHeapp->kind);
   /* Allocate a space of the desired size. */
-  if (createHeap (s, newHeapp, desiredSize, minSize)) {
+  if (createHeap (s, newHeapp, kind, desiredSize, minSize)) {
     pointer from;
     pointer to;
     size_t remaining;
@@ -456,6 +484,7 @@ copy:
             and to >= newHeapp->start);
     if (remaining < COPY_CHUNK_SIZE) {
       GC_memcpy (curHeapp->start, newHeapp->start, remaining);
+      RCCE_shflush ();
       releaseHeap (s, curHeapp);
     } else {
       remaining -= COPY_CHUNK_SIZE;
@@ -487,7 +516,7 @@ copy:
     }
     data = GC_diskBack_write (curHeapp->start, liveSize);
     releaseHeap (s, curHeapp);
-    if (createHeap (s, curHeapp, desiredSize, minSize)) {
+    if (createHeap (s, curHeapp, kind, desiredSize, minSize)) {
       if (DEBUG or s->controls->messages) {
         fprintf (stderr,
                  "[GC: Reading %s bytes of heap to "FMTPTR" from disk.]\n",
@@ -514,8 +543,20 @@ done:
   unless (origStart == h->start) {
     if (!isShared)
       translateHeap (s, origStart, h->start, h->oldGenSize);
-    else
-      translateSharedHeap (s, origStart, h->start, h->oldGenSize);
+    else {
+      pointer from = origStart;
+      pointer to = h->start;
+      size_t size = h->oldGenSize;
+      bool needsTranslateShared = TRUE;
+      /* for matching communication see performSharedGCCollective, after
+       * collection is done. */
+      RCCE_bcast ((char*)&needsTranslateShared, sizeof (bool), 0, RCCE_COMM_WORLD);
+      RCCE_bcast ((char*)&from, sizeof (pointer), 0, RCCE_COMM_WORLD);
+      RCCE_bcast ((char*)&to, sizeof (pointer), 0, RCCE_COMM_WORLD);
+      RCCE_bcast ((char*)&size, sizeof (size_t), 0, RCCE_COMM_WORLD);
+
+      translateSharedHeap (s, from, to, size);
+    }
   }
 }
 

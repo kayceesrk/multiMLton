@@ -2,7 +2,6 @@
 #if (defined (MLTON_GC_INTERNAL_BASIS))
 
 void Parallel_init (void);
-void Parallel_initResources (GC_state s);
 
 void Parallel_lock (Int32);
 void Parallel_unlock (Int32);
@@ -24,6 +23,7 @@ void Parallel_disablePreemption (void);
 void Parallel_enablePreemption (void);
 void Parallel_wait (void);
 void Parallel_wakeUpThread (Int32 p, Int32 dataIn);
+void Parallel_assistInit (GC_state s);
 
 long long
 timeval_diff(struct timeval *difference,

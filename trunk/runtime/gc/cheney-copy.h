@@ -6,11 +6,25 @@
  * See the file MLton-LICENSE for details.
  */
 
+#if (defined (MLTON_GC_INTERNAL_TYPES))
+
+struct __SharedMajorAssistInfo {
+  pointer forwardToStart;
+  pointer forwardToLimit;
+  pointer forwardBack;
+  objptr* opp;
+};
+
+typedef struct __SharedMajorAssistInfo SMAssistInfo;
+
+#endif
+
 #if (defined (MLTON_GC_INTERNAL_FUNCS))
 
 static inline void updateWeaksForCheneyCopy (GC_state s);
 static inline void swapHeapsForCheneyCopy (GC_state s);
 static inline void swapHeapsForSharedCheneyCopy (GC_state s);
+static void assistSharedToSpaceWalking (GC_state s);
 static void majorCheneyCopyGC (GC_state s);
 static void majorCheneyCopySharedGC (GC_state s);
 static void minorCheneyCopyGC (GC_state s);

@@ -53,8 +53,7 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
     GC_objectTypeTag tag;
     uint16_t bytesNonObjptrs, numObjptrs;
 
-    splitHeader(s, header, getHeaderp (p), &tag, NULL,
-                &bytesNonObjptrs, &numObjptrs, NULL, NULL);
+    splitHeader(s, header, getHeaderp (p), &tag, NULL, &bytesNonObjptrs, &numObjptrs, NULL, NULL);
 
     /* Compute the space taken by the header and object body. */
     if ((NORMAL_TAG == tag) or (WEAK_TAG == tag)) { /* Fixed size object. */
@@ -171,6 +170,10 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
       if (DEBUG_WEAK)
         fprintf (stderr, "forwarding weak "FMTPTR" ",
                  (uintptr_t)w);
+      objptr wopOld = w->objptr;
+      fixFwdObjptr (s, &w->objptr);
+      if (DEBUG_WEAK && wopOld != w->objptr)
+        fprintf (stderr, "--fixFwdObjptr weak-- ");
       if (isObjptr (w->objptr)
           and (not s->forwardState.amInMinorGC
                or isObjptrInNursery (s, s->heap, w->objptr))) {
@@ -202,7 +205,7 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
   *opp = *((objptr*)p);
   if (DEBUG_DETAILED)
     fprintf (stderr,
-             "forwardObjptr --> *opp = "FMTPTR"\n",
+             "forwardObjptrToSharedHeap --> *opp = "FMTPTR"\n",
              (uintptr_t)*opp);
   while (isObjptrInHeap (s, s->heap, *opp)) {
     /* This can happen in the presence of read barriers */
@@ -212,7 +215,86 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
     forwardObjptrToSharedHeap (s, opp);
   }
   assert (isObjptrInToSpace (s, *opp) || isObjptrInHeap (s, s->sharedHeap, *opp));
+  RCCE_shflush ();
 }
+
+/* copyObjptr (s, opp)
+ * Copies the object pointed to by *opp to the toSpace.
+ */
+void copyObjptr (GC_state s, objptr *opp) {
+  objptr op;
+  pointer p;
+  GC_header header;
+  GC_objectTypeTag tag;
+
+  fixFwdObjptr (s, opp);
+  op = *opp;
+  p = objptrToPointer (op, s->heap->start);
+  if (DEBUG_DETAILED)
+    fprintf (stderr,
+             "copyObjptr  opp = "FMTPTR"  op = "FMTOBJPTR"  p = "FMTPTR"\n",
+             (uintptr_t)opp, op, (uintptr_t)p);
+  header = getHeader (p);
+
+  size_t size;
+
+  size_t headerBytes, objectBytes;
+  uint16_t bytesNonObjptrs, numObjptrs;
+
+  splitHeader(s, header, getHeaderp (p), &tag, NULL, &bytesNonObjptrs, &numObjptrs, NULL, NULL);
+
+  /* Compute the space taken by the header and object body. */
+  if ((NORMAL_TAG == tag) or (WEAK_TAG == tag)) { /* Fixed size object. */
+    headerBytes = GC_NORMAL_HEADER_SIZE;
+    objectBytes = bytesNonObjptrs + (numObjptrs * OBJPTR_SIZE);
+  } else if (ARRAY_TAG == tag) {
+    headerBytes = GC_ARRAY_HEADER_SIZE;
+    objectBytes = sizeofArrayNoHeader (s, getArrayLength (p),
+                                        bytesNonObjptrs, numObjptrs);
+  } else { /* Stack. */
+    GC_stack stack;
+    assert (STACK_TAG == tag);
+    headerBytes = GC_STACK_HEADER_SIZE;
+    stack = (GC_stack)p;
+    objectBytes = sizeof (struct GC_stack) + stack->used;
+  }
+  size = headerBytes + objectBytes;
+  assert (s->forwardState.back + size <= s->forwardState.toLimit);
+  if (s->forwardState.back + size > s->forwardState.toLimit) {
+    fprintf (stderr, "copyObjptr: Ran out of space in toSpace\n");
+    exit (1);
+  }
+  /* Copy the object. */
+  GC_memcpy (p - headerBytes, s->forwardState.back, size);
+
+  /* If the object is a weak pointer, clear the weak pointer, since we do not
+   * know the property of the toSpace. XXX this might not be the correct thing
+   * to do. */
+  if ((WEAK_TAG == tag) and (numObjptrs == 1)) {
+    GC_weak w;
+    w = (GC_weak)(s->forwardState.back + GC_NORMAL_HEADER_SIZE + offsetofWeak (s));
+    *(getHeaderp((pointer)w - offsetofWeak (s))) = GC_WEAK_GONE_HEADER;
+    w->objptr = BOGUS_OBJPTR;
+  }
+
+  if (isPointerInToSpace (s, (pointer)opp)) {
+    *opp = pointerToObjptr (s->forwardState.back + headerBytes,
+                            s->forwardState.toStart);
+    if (DEBUG_DETAILED)
+      fprintf (stderr,
+              "copyObjptr --> *opp = "FMTPTR" [%d]\n",
+              (uintptr_t)*opp, s->procId);
+  }
+
+  //Remove lift bit
+  GC_header* headerp = ((GC_header*)(p - GC_HEADER_SIZE));
+  *headerp = header & (~(LIFT_MASK));
+
+  s->forwardState.back += size;
+  assert (isAligned ((size_t)s->forwardState.back + GC_NORMAL_HEADER_SIZE,
+                      s->alignment));
+}
+
 
 /* forward (s, opp)
  * Forwards the object pointed to by *opp and updates *opp to point to
@@ -250,8 +332,7 @@ void forwardObjptr (GC_state s, objptr *opp) {
     size_t headerBytes, objectBytes;
     uint16_t bytesNonObjptrs, numObjptrs;
 
-    splitHeader(s, header, getHeaderp (p), &tag, NULL,
-                &bytesNonObjptrs, &numObjptrs, NULL, NULL);
+    splitHeader(s, header, getHeaderp (p), &tag, NULL, &bytesNonObjptrs, &numObjptrs, NULL, NULL);
 
     /* Compute the space taken by the header and object body. */
     if ((NORMAL_TAG == tag) or (WEAK_TAG == tag)) { /* Fixed size object. */
@@ -304,10 +385,7 @@ void forwardObjptr (GC_state s, objptr *opp) {
       die ("Out of memory while lifting objects to the shared heap.");
     /* Copy the object. */
     GC_memcpy (p - headerBytes, s->forwardState.back, size);
-    if (oldReserved) {
-      GC_stack stk = (GC_stack)p;
-      stk->reserved = oldReserved;
-    }
+
     /* If the object has a valid weak pointer, link it into the weaks
      * for update after the copying GC is done.
      */
@@ -334,6 +412,11 @@ void forwardObjptr (GC_state s, objptr *opp) {
     *((GC_header*)(p - GC_HEADER_SIZE)) = GC_FORWARDED;
     *((objptr*)p) = pointerToObjptr (s->forwardState.back + headerBytes,
                                      s->forwardState.toStart);
+    if (oldReserved) {
+      GC_stack stk = (GC_stack)p;
+      stk->reserved = oldReserved;
+      updateStackIfDangling (s, (objptr)stk, *(objptr*)p);
+    }
     if (DEBUG_DETAILED) {
       fprintf (stderr, "Setting headerp ="FMTPTR" to "FMTHDR"\n",
                (uintptr_t)(p - GC_HEADER_SIZE), *((GC_header*)(p - GC_HEADER_SIZE)));
@@ -417,15 +500,16 @@ void forwardObjptrForSharedMarkCompact (GC_state s, objptr *opp) {
   }
 
   if (isPointerInHeap (s, s->sharedHeap, (pointer)opp) and isPointerInAnyLocalHeap (s, p)) {
-    //opp is in shared heap, and p is in any local heap.
-    GC_state r = getGCStateFromPointer (s, p);
+    assert (0);
+    GC_state r = /* getGCStateFromPointer (s, p); */ s;
+
+    assert (r != s);
     GC_objectTypeTag tag;
 
     GC_header header = getHeader (p);
     GC_header* headerp = getHeaderp (p);
 
-    splitHeader (r, getHeader (p), getHeaderp (p),
-                 &tag, NULL, NULL, NULL, NULL, NULL);
+    splitHeader (r, getHeader (p), getHeaderp (p), &tag, NULL, NULL, NULL, NULL, NULL);
 
     if (DEBUG_DETAILED)
       fprintf (stderr, "forwardObjptrForSharedMarkCompact: invariant breaking pointer opp="FMTPTR" p="FMTPTR" [%d]\n",
@@ -472,9 +556,38 @@ void forwardObjptrForSharedMarkCompact (GC_state s, objptr *opp) {
 static inline void forwardObjptrForSharedCheneyCopy (GC_state s, objptr *opp) {
   objptr op;
   pointer p;
+  SMAssistInfo assist;
 
   op = *opp;
   p = objptrToPointer (op, s->heap->start);
+
+  if (!isPointerInHeap (s, s->sharedHeap, p) &&
+      !isPointerInToSpace (s, p) &&
+      (isPointerInHeap (s, s->sharedHeap, (pointer)opp) ||
+       isPointerInToSpace (s, (pointer)opp))) {
+    /* p is in some local core. If p is in another core, We delegate this
+     * function to be performed by that core. See assistSharedToSpaceWalking
+     * for matching RCCE_ calls */
+    assist.forwardToLimit = s->forwardState.toLimit;
+    assist.forwardToStart = s->forwardState.toStart;
+    assist.forwardBack = s->forwardState.back;
+    assist.opp = opp;
+
+    uint32_t coreId = getCoreIdFromPointer (s, p);
+    if (coreId != Proc_processorNumber (s)) {
+      if (DEBUG_DETAILED)
+        fprintf (stderr, "forwardObjptrForSharedCheneyCopy: delegating to %d\n",
+                 coreId);
+      assert (Proc_processorNumber (s) == 0);
+      pointer back = BOGUS_POINTER;
+      RCCE_send ((char*)&assist, sizeof (SMAssistInfo), coreId);
+      RCCE_shflush ();
+      RCCE_recv ((char*)&back, sizeof (pointer), coreId);
+      assert (back != BOGUS_POINTER);
+      s->forwardState.back = back;
+      return;
+    }
+  }
 
   /* Shared heap collection could be invoked when other threads are in the middle of
    * moving a transitive closure to the shared heap. The closures could have been partially
@@ -490,7 +603,6 @@ static inline void forwardObjptrForSharedCheneyCopy (GC_state s, objptr *opp) {
     p = objptrToPointer (op, s->heap->start);
   }
   if (isPointerInHeap (s, s->sharedHeap, p)) {
-
     if (DEBUG_DETAILED)
       fprintf (stderr,
                "forwardObjptrForSharedCheneyCopy  opp = "FMTPTR"  op = "FMTOBJPTR"  p = "FMTPTR"\n",
@@ -518,12 +630,14 @@ static inline void forwardObjptrForSharedCheneyCopy (GC_state s, objptr *opp) {
                "forwardObjptrForSharedCheneyCopy: added header bit headerp="FMTPTR" header=("FMTHDR") [%d]\n",
                (uintptr_t)headerp, *headerp, s->procId);
   }
-  else if (isPointerInToSpace (s, (pointer)opp) and isPointerInAnyLocalHeap (s, p)) {
-    //opp is in shared heap, and p is in any local heap.
-    GC_state r = getGCStateFromPointer (s, p);
+  else if (isPointerInToSpace (s, (pointer)opp) &&
+           /* Pointer in some local heap */
+           !isPointerInToSpace (s, p) &&
+           /* Previous conditions are necessary for getCoreIdFromPointer to work */
+           Proc_processorNumber (s) == getCoreIdFromPointer (s, p))
+  {
     GC_objectTypeTag tag;
-    splitHeader (r, getHeader (p), getHeaderp (p), &tag,
-                 NULL, NULL, NULL, NULL, NULL);
+    splitHeader (s, getHeader (p), getHeaderp (p), &tag, NULL, NULL, NULL, NULL, NULL);
 
     if (DEBUG_DETAILED)
       fprintf (stderr, "forwardObjptrForSharedCheneyCopy: invariant breaking pointer opp="FMTPTR" p="FMTPTR" [%d]\n",
@@ -537,10 +651,14 @@ static inline void forwardObjptrForSharedCheneyCopy (GC_state s, objptr *opp) {
       assert (isObjptrInToSpace (s, stk->thread));
 
       if (DEBUG_DETAILED)
-        fprintf (stderr, "forwardObjptrForSharedCheneyCopy: invariant breaking pointer is stack. Stack->thread="FMTOBJPTR" [%d]\n",
-                 ((GC_stack)p)->thread, s->procId);
+        fprintf (stderr, "forwardObjptrForSharedCheneyCopy: invariant breaking pointer is stack."
+                         " &stack->thread="FMTPTR""
+                         " Stack->thread="FMTOBJPTR" [%d]\n",
+                 (uintptr_t)&stk->thread,
+                 ((GC_stack)p)->thread,
+                 s->procId);
 
-      addToDanglingStackList (r, pointerToObjptr (p, r->heap->start));
+      addToDanglingStackList (s, pointerToObjptr (p, s->heap->start));
     }
     else {
       //If the pointer is not a stack or if the stack is parasitic, then we are completing a closure
@@ -652,7 +770,17 @@ void restoreForwardState (GC_state s, struct GC_forwardState* fwd) {
 void fixFwdObjptr (GC_state s, objptr* opp) {
   if (isObjptr (*opp) && !(*opp == 0)) {
     pointer p = objptrToPointer (*opp, s->heap->start);
-    while (isObjptr (*opp) && getHeader (p) == GC_FORWARDED) {
+    while (isObjptr (*opp)) {
+
+      /* Avoid reading another cores's address */
+      if (s->pointerToCoreMap && isPointerInHeap (s, s->sharedHeap, (pointer)opp)) {
+        int coreId = getCoreIdFromPointer_safe (s, *opp);
+        if (coreId != -1 && coreId != Proc_processorNumber (s))
+          break;
+      }
+
+      if (getHeader (p) != GC_FORWARDED)
+        break;
       if (DEBUG_DETAILED or DEBUG_READ_BARRIER)
         fprintf (stderr,
                  "fixFwdObjptr  opp = "FMTPTR"  op = "FMTOBJPTR"  p = "FMTPTR"\n",

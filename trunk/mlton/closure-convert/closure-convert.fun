@@ -1087,6 +1087,16 @@ fun closureConvert
                                               v1 (coerce (convertVarInfo y,
                                                           VarInfo.value y, v)))
                                   end
+                             | RCCE_send =>
+                                 let
+                                   val y = varExpInfo (arg 0)
+                                   val v = Value.serialValue (Vector.sub (targs, 0))
+                                 in
+                                     primApp (v1 (valueType v),
+                                              v2 (coerce (convertVarInfo y,
+                                                          VarInfo.value y, v),
+                                                  convertVarExp (arg 1)))
+                                 end
                              | Weak_new =>
                                   let
                                      val y = varExpInfo (arg 0)

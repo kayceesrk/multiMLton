@@ -7,6 +7,7 @@
  */
 
 void enter (GC_state s) {
+  RCCE_shflush ();
   if (DEBUG_ENTER_LEAVE)
     fprintf (stderr, "enter [%d]\n", Proc_processorNumber (s));
   /* used needs to be set because the mutator has changed s->stackTop. */
@@ -36,11 +37,13 @@ void leave (GC_state s) {
   endAtomic (s);
   if (DEBUG_ENTER_LEAVE)
     fprintf (stderr, "leave unlocked [%d]\n", Proc_processorNumber (s));
+  RCCE_shflush ();
 }
 
 
 //Local enter and leave
 void enter_local (GC_state s) {
+  RCCE_shflush ();
   if (DEBUG_ENTER_LEAVE)
     fprintf (stderr, "enter_local [%d]\n", Proc_processorNumber (s));
   /* used needs to be set because the mutator has changed s->stackTop. */
@@ -62,4 +65,5 @@ void leave_local (GC_state s) {
     fprintf (stderr, "leave_local ok [%d]\n", Proc_processorNumber (s));
   //Proc_endCriticalSection(s);
   endAtomic (s);
+  RCCE_shflush ();
 }

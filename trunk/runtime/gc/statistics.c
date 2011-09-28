@@ -9,9 +9,6 @@
 void incSync (GC_state s) {
   switch (s->syncReason) {
     case SYNC_NONE:
-      fprintf (stderr, "Got to begin without a reason?\n");
-      assert (0);
-      exit (1);
       break;
     case SYNC_SIGNALS:
       break;
@@ -44,8 +41,5 @@ void incSync (GC_state s) {
       break;
     case SYNC_HELP:
       break;
-    default:
-      fprintf (stderr, "Unknown sync reason?\n");
-      exit (1);
   }
 }

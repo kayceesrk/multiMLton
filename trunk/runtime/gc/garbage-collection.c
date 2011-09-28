@@ -76,7 +76,17 @@ void growStackCurrent (GC_state s, bool allocInOldGen, size_t reservedNew) {
   if (DEBUG_STACKS)
     fprintf (stderr, "growStackCurrent: setting stack->thread pointer. stack="FMTPTR" and thread="FMTPTR"\n",
              (uintptr_t)stack, (uintptr_t)stack->thread);
+
+  /* If we are growing a stack that already exists, we will try to replace the
+   * old stack with the new (bigger) stack in the dangling stack list. */
   updateStackIfDangling (s, getStackCurrentObjptr (s), getThreadCurrent(s)->stack);
+
+  /* If the thread is in the shared heap and the new stack is not in the
+   * dangling stack list, add it. */
+  if (isPointerInHeap (s, s->sharedHeap, getThreadCurrent(s)) &&
+      !isInDanglingStackList (s, getThreadCurrent(s)->stack))
+    addToDanglingStackList (s, getThreadCurrent (s)->stack);
+
   markCard (s, objptrToPointer (getThreadCurrentObjptr(s), s->heap->start));
 }
 
@@ -194,8 +204,8 @@ void fixForwardingPointers (GC_state s, bool mayResize) {
       fprintf (stderr, "Finished fixForwardingPointers\n");
 }
 
-void performSharedGC (GC_state s,
-                      size_t bytesRequested) {
+void performSharedGCCollective (GC_state s,
+                                size_t bytesRequested) {
   size_t bytesFilled = 0;
 
   s->forwardState.amInMinorGC = FALSE;
@@ -222,7 +232,8 @@ void performSharedGC (GC_state s,
   }
   else { //XXX KC can the following walks be avoided, or atleast made cheaper??
     if (DEBUG)
-      fprintf (stderr, "performSharedGC: starting fixing forwarding pointers [%d]\n", s->procId);
+      fprintf (stderr, "performSharedGC: starting fixing forwarding pointers. Frontier = "FMTPTR" [%d]\n",
+               s->frontier, s->procId);
 
     //Fix up just the forwarding pointers
     foreachGlobalObjptrInScope (s, fixFwdObjptr);
@@ -237,8 +248,10 @@ void performSharedGC (GC_state s,
     clearRangeList (s);
 
     if (DEBUG)
-      fprintf (stderr, "performSharedGC: finished fixing forwarding pointers [%d]\n", s->procId);
+      fprintf (stderr, "performSharedGC: finished fixing forwarding pointers. Frontier = "FMTPTR" [%d]\n",
+               s->frontier, s->procId);
   }
+
 
 
   /* If we are not the last processor to sync, then someone else has to know
@@ -248,93 +261,119 @@ void performSharedGC (GC_state s,
   enterGC (s);
   ENTER0 (s);
 
-  bytesRequested = 0;
-  for (int proc=0; proc < s->numberOfProcs; proc++)
-    bytesRequested += getThreadCurrent(&s->procStates[proc])->bytesNeeded;
+  if (Proc_processorNumber (s) == 0) {
+    initPointerToCore (s, BUFFER_SIZE);
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "Core 0: letting other processors proceed\n");
+    RCCE_shflush ();
+    RCCE_barrier (&RCCE_COMM_WORLD);
+  }
 
-  size_t availableBytes =
-    (size_t)(s->sharedHeap->start + s->sharedHeap->availableSize - s->sharedHeap->frontier);
+  /* Add pointer->coreID location for the dangling stacks */
+  for (int i=0; i < s->danglingStackListSize; i++) {
+    pointer p = objptrToPointer (s->danglingStackList[i], s->heap->start);
+    insertPointerToCore (s, p, Proc_processorNumber (s), TRUE);
+  }
+  //Clear remembered stacks
+  clearDanglingStackList (s);
 
-  /* See if a GC has already been performed */
-  if (bytesRequested > availableBytes) {
-    /* perform GC */
+  /* perform GC */
+  bytesRequested = (s->controls->allocChunkSize + GC_BONUS_SLOP) * s->numberOfProcs;
 
-    //Clear remembered stacks
-    for (int proc=0; proc < s->numberOfProcs; proc++)
-      clearDanglingStackList (&s->procStates[proc]);
-    bytesRequested = (s->controls->allocChunkSize + GC_BONUS_SLOP) * s->numberOfProcs;
+  if ((DEBUG or s->controls->messages)) {
+      size_t nurserySize = s->sharedHeap->size - (s->sharedHeap->nursery - s->sharedHeap->start);
+      size_t nurseryUsed = s->sharedFrontier - s->sharedHeap->nursery;
+      fprintf (stderr,
+              "[GC: Starting shared heap gc #%s; requesting %s bytes,]\n",
+              uintmaxToCommaString(s->cumulativeStatistics->numCopyingSharedGCs +
+                                    s->cumulativeStatistics->numMarkCompactSharedGCs + 1),
+              uintmaxToCommaString(bytesRequested));
+      fprintf (stderr,
+              "[GC:\tshared heap at "FMTPTR" of size %s bytes,]\n",
+              (uintptr_t)(s->sharedHeap->start),
+              uintmaxToCommaString(s->sharedHeap->size));
+      fprintf (stderr,
+              "[GC:\twith nursery of size %s bytes (%.1f%% of heap),]\n",
+              uintmaxToCommaString(nurserySize),
+              100.0 * ((double)(nurserySize) / (double)(s->sharedHeap->size)));
+      fprintf (stderr,
+              "[GC:\tand old-gen of size %s bytes (%.1f%% of heap),]\n",
+              uintmaxToCommaString(s->sharedHeap->oldGenSize),
+              100.0 * ((double)(s->sharedHeap->oldGenSize) / (double)(s->sharedHeap->size)));
+      fprintf (stderr,
+              "[GC:\tand nursery using %s bytes (%.1f%% of heap, %.1f%% of nursery).]\n",
+              uintmaxToCommaString(nurseryUsed),
+              100.0 * ((double)(nurseryUsed) / (double)(s->sharedHeap->size)),
+              100.0 * ((double)(nurseryUsed) / (double)(nurserySize)));
+  }
 
-    if (DEBUG or s->controls->messages) {
-        size_t nurserySize = s->sharedHeap->size - (s->sharedHeap->nursery - s->sharedHeap->start);
-        size_t nurseryUsed = s->sharedFrontier - s->sharedHeap->nursery;
-        fprintf (stderr,
-                "[GC: Starting shared heap gc #%s; requesting %s bytes,]\n",
-                uintmaxToCommaString(s->cumulativeStatistics->numCopyingSharedGCs +
-                                     s->cumulativeStatistics->numMarkCompactSharedGCs + 1),
-                uintmaxToCommaString(bytesRequested));
-        fprintf (stderr,
-                "[GC:\tshared heap at "FMTPTR" of size %s bytes,]\n",
-                (uintptr_t)(s->sharedHeap->start),
-                uintmaxToCommaString(s->sharedHeap->size));
-        fprintf (stderr,
-                "[GC:\twith nursery of size %s bytes (%.1f%% of heap),]\n",
-                uintmaxToCommaString(nurserySize),
-                100.0 * ((double)(nurserySize) / (double)(s->sharedHeap->size)));
-        fprintf (stderr,
-                "[GC:\tand old-gen of size %s bytes (%.1f%% of heap),]\n",
-                uintmaxToCommaString(s->sharedHeap->oldGenSize),
-                100.0 * ((double)(s->sharedHeap->oldGenSize) / (double)(s->sharedHeap->size)));
-        fprintf (stderr,
-                "[GC:\tand nursery using %s bytes (%.1f%% of heap, %.1f%% of nursery).]\n",
-                uintmaxToCommaString(nurseryUsed),
-                100.0 * ((double)(nurseryUsed) / (double)(s->sharedHeap->size)),
-                100.0 * ((double)(nurseryUsed) / (double)(nurserySize)));
-    }
+  size_t oldGenSize = 0;
+  /* Add in the bonus slop now since we need to fill it */
+  s->sharedLimitPlusSlop += GC_BONUS_SLOP;
+  if (s->sharedLimitPlusSlop != s->sharedHeap->frontier) {
+    /* Fill to avoid an uninitialized gap in the middle of the heap */
+    bytesFilled += fillGap (s, s->sharedFrontier, s->sharedLimitPlusSlop);
+  }
+  else {
+    /* If this is at the end of the heap there is no need to fill the gap
+      -- there will be no break in the initialized portion of the
+      heap.  Also, this is the last chunk allocated in the nursery, so it is
+      safe to use the frontier from this processor as the global frontier.  */
+    oldGenSize = s->sharedFrontier - s->sharedHeap->start;
+  }
 
-    for (int proc = 0; proc < s->numberOfProcs; proc++) {
-      /* Add in the bonus slop now since we need to fill it */
-      s->procStates[proc].sharedLimitPlusSlop += GC_BONUS_SLOP;
-      if (s->procStates[proc].sharedLimitPlusSlop != s->sharedHeap->frontier) {
-        /* Fill to avoid an uninitialized gap in the middle of the heap */
-        bytesFilled += fillGap (s, s->procStates[proc].sharedFrontier,
-                                s->procStates[proc].sharedLimitPlusSlop);
-      }
-      else {
-        /* If this is at the end of the heap there is no need to fill the gap
-         -- there will be no break in the initialized portion of the
-         heap.  Also, this is the last chunk allocated in the nursery, so it is
-         safe to use the frontier from this processor as the global frontier.  */
-        s->sharedHeap->oldGenSize = s->procStates[proc].sharedFrontier - s->sharedHeap->start;
-      }
-    }
+  if (oldGenSize != 0) {
+    s->sharedHeap->oldGenSize = oldGenSize;
+    RCCE_shflush ();
+    RCCE_barrier (&RCCE_COMM_WORLD);
+  }
+  else {
+    RCCE_barrier (&RCCE_COMM_WORLD);
+    RCCE_shflush ();
+  }
+  assert (s->sharedHeap->oldGenSize != 0);
 
-    size_t maxBytes = s->lastSharedMajorStatistics->bytesLive + bytesRequested;
+  /* Estimate the maximum size of the heap after GC */
+  size_t maxBytes = 0;
+  size_t localMaxBytes = 0;
+  objptr liftOp = s->forwardState.liftingObject;
+  if (liftOp != BOGUS_OBJPTR)
+    localMaxBytes = estimateSizeForLifting (s, objptrToPointer (liftOp, s->heap->start));
+  if (Proc_processorNumber (s) == 0)
+    localMaxBytes += s->lastSharedMajorStatistics->bytesLive + bytesRequested;
 
-    /* This is the maximum size (over approximation) of the shared heap. We
-     * will resize the heap after collection to a reasonable size. */
-    for (int proc=0; proc < s->numberOfProcs; proc++) {
-      GC_state r = &s->procStates[proc];
-      objptr liftOp = r->forwardState.liftingObject;
-      if (liftOp != BOGUS_OBJPTR)
-        maxBytes += estimateSizeForLifting (r, objptrToPointer (liftOp, r->heap->start));
-    }
+  RCCE_allreduce ((char*)&localMaxBytes, (char*)&maxBytes, sizeof (size_t),
+                    RCCE_INT, RCCE_SUM, RCCE_COMM_WORLD);
 
-    /* We are being optimistic with desired size since maxBytes is an
-     * over-approzimation of live size */
-    size_t desiredSize =
-      ((s->controls->fixedHeap != 0 and maxBytes > s->controls->fixedHeap) or
-       (s->controls->maxHeapShared != 0 and maxBytes > s->controls->maxHeapShared))
-      ? maxBytes : sizeofHeapDesired (s, maxBytes, 0, SHARED_HEAP);
-    if (DEBUG)
-      fprintf (stderr, "performSharedGC: desiredSize=%s maxBytes=%s\n",
-               uintmaxToCommaString (desiredSize),
-               uintmaxToCommaString (maxBytes));
-    if (desiredSize > s->secondarySharedHeap->size)
-      resizeSharedHeapSecondary (s, desiredSize);
+
+  /* We are being optimistic with desired size since maxBytes is an
+    * over-approzimation of live size */
+  size_t desiredSize =
+    ((s->controls->fixedHeap != 0 and maxBytes > s->controls->fixedHeap) or
+      (s->controls->maxHeapShared != 0 and maxBytes > s->controls->maxHeapShared))
+    ? maxBytes : sizeofHeapDesired (s, maxBytes, 0, SHARED_HEAP);
+  if (DEBUG)
+    fprintf (stderr, "performSharedGC: desiredSize=%s maxBytes=%s\n",
+              uintmaxToCommaString (desiredSize),
+              uintmaxToCommaString (maxBytes));
+  /* Only the master (core 0) must perform global operations */
+  if (Proc_processorNumber (s) == 0 &&
+      desiredSize > s->secondarySharedHeap->size)
+    resizeSharedHeapSecondary (s, desiredSize);
+
+  RCCE_shflush ();
+  //This barrier is needed so that all cores see the effect of secondary shared heap resizing
+  RCCE_barrier (&RCCE_COMM_WORLD);
+  RCCE_shflush ();
+
+
+  /* Choose the kind of GC */
+  GC_majorKind kind;
+  if (Proc_processorNumber (s) == 0) {
     if (not FORCE_MARK_COMPACT
         and (s->secondarySharedHeap->size != 0
-             or createSharedHeapSecondary (s, desiredSize)))
-      majorCheneyCopySharedGC (s);
+            or createSharedHeapSecondary (s, desiredSize)))
+      kind = GC_COPYING;
     else {
       size_t newSize = 0;
       if (s->controls->fixedHeap != 0 and desiredSize > s->controls->fixedHeap)
@@ -347,22 +386,65 @@ void performSharedGC (GC_state s,
         assert (newSize >= s->sharedHeap->oldGenSize);
         resizeHeap (s, s->sharedHeap, newSize);
       }
-      majorMarkCompactSharedGC (s);
+      kind = GC_MARK_COMPACT;
     }
+  }
 
+  RCCE_bcast ((char*)&kind, sizeof (int), 0, RCCE_COMM_WORLD);
+
+  if (kind == GC_COPYING)
+    majorCheneyCopySharedGC (s);
+  else {
+    fprintf (stderr, "majorMarkCompactSharedGC: not ported\n");
+    exit (1);
+    majorMarkCompactSharedGC (s);
+  }
+
+  if (Proc_processorNumber (s) == 0) {
     s->lastSharedMajorStatistics->bytesLive = s->sharedHeap->oldGenSize;
     if (s->lastSharedMajorStatistics->bytesLive > s->cumulativeStatistics->maxSharedBytesLive)
       s->cumulativeStatistics->maxSharedBytesLive = s->lastSharedMajorStatistics->bytesLive;
+
+    pointer origStart = s->sharedHeap->start;
     resizeHeap (s, s->sharedHeap, s->lastSharedMajorStatistics->bytesLive + bytesRequested);
     resizeSharedHeapSecondary (s, s->sharedHeap->size);
+    if (origStart == s->sharedHeap->start) {
+      /* If we had not translated shared heap, the original start would be
+        * the same as current start. In that case, we will need to let the
+        * other cores know that their translation assistance is not needed. */
+      bool needsTranslateShared = FALSE;
+      RCCE_bcast ((char*)&needsTranslateShared, sizeof (bool), 0, RCCE_COMM_WORLD);
+    }
     assert (s->sharedHeap->oldGenSize + bytesRequested <= s->sharedHeap->size);
     setGCStateCurrentSharedHeap (s, 0, 0, FALSE);
     s->cumulativeStatistics->bytesFilled += bytesFilled;
     if (DEBUG)
       fprintf (stderr, "[GC: Finished shared heap gc #%s; oldGenSize is %s]\n",
-               uintmaxToCommaString(s->cumulativeStatistics->numCopyingSharedGCs +
+              uintmaxToCommaString(s->cumulativeStatistics->numCopyingSharedGCs +
                                     s->cumulativeStatistics->numMarkCompactSharedGCs),
-               uintmaxToCommaString (s->sharedHeap->oldGenSize));
+              uintmaxToCommaString (s->sharedHeap->oldGenSize));
+
+
+    finalizePointerToCore (s);
+    RCCE_shflush ();
+    RCCE_barrier (&RCCE_COMM_WORLD);
+  }
+  else {
+    bool needsTranslateShared = FALSE;
+    RCCE_bcast ((char*)&needsTranslateShared, sizeof (bool), 0, RCCE_COMM_WORLD);
+    if (needsTranslateShared) {
+      pointer from, to;
+      size_t size;
+      RCCE_bcast ((char*)&from, sizeof (pointer), 0, RCCE_COMM_WORLD);
+      RCCE_bcast ((char*)&to, sizeof (pointer), 0, RCCE_COMM_WORLD);
+      RCCE_bcast ((char*)&size, sizeof (size_t), 0, RCCE_COMM_WORLD);
+      translateSharedHeap (s, from, to, size);
+    }
+
+    bytesRequested = getThreadCurrent(s)->bytesNeeded;
+    RCCE_send ((char*)&bytesRequested, sizeof (size_t), 0);
+    RCCE_barrier (&RCCE_COMM_WORLD);
+    RCCE_shflush ();
   }
   LEAVE0 (s);
   leaveGC (s);
@@ -370,7 +452,6 @@ void performSharedGC (GC_state s,
     fprintf(stderr, "After performSharedGC: numDanglingStacks=%d [%d]\n",
             s->danglingStackListSize, s->procId);
 }
-
 
 void performGC (GC_state s,
                 size_t oldGenBytesRequested,
@@ -584,7 +665,7 @@ static bool allocChunkInSharedHeap (GC_state s,
     /* Perhaps there is not enough space in the nursery to satify this
        request; if that's true then we need to do a full collection */
     if (bytesRequested + GC_BONUS_SLOP > availableBytes) {
-      performSharedGC (s, bytesRequested + GC_BONUS_SLOP);
+      performSharedGCCollective (s, bytesRequested + GC_BONUS_SLOP);
       return TRUE;
     }
 
@@ -612,11 +693,11 @@ static bool allocChunkInSharedHeap (GC_state s,
       newStart = oldFrontier;
     }
 
-    if (__sync_bool_compare_and_swap (&s->sharedHeap->frontier,
-                                      oldFrontier, newHeapFrontier)) {
+    if (Parallel_compareAndSwap (&s->sharedHeap->frontier, oldFrontier, newHeapFrontier)) {
       if (DEBUG)
         fprintf (stderr, "[GC: Shared alloction of chunk @ "FMTPTR".] [%d]\n",
                  (uintptr_t)newProcFrontier, s->procId);
+      RCCE_shflush ();
 
       s->sharedStart = newStart;
       s->sharedFrontier = newProcFrontier;
@@ -691,8 +772,7 @@ static void maybeSatisfyAllocationRequestLocally (GC_state s,
       newStart = oldFrontier;
     }
 
-    if (__sync_bool_compare_and_swap (&s->heap->frontier,
-                                      oldFrontier, newHeapFrontier)) {
+    if (Parallel_compareAndSwap (&s->heap->frontier, oldFrontier, newHeapFrontier)) {
       if (DEBUG)
         fprintf (stderr, "[GC: Local alloction of chunk @ "FMTPTR".]\n",
                  (uintptr_t)newProcFrontier);

@@ -30,24 +30,18 @@ void translateObjptrLocal (GC_state s, objptr *opp) {
   if (DEBUG_DETAILED)
       fprintf (stderr, "translateObjptrLocal: Remapping pointer "FMTPTR" to "FMTPTR"\n",
                (uintptr_t)p, (uintptr_t)((p - s->translateState.from) + s->translateState.to));
-  p = (p - s->translateState.from) + s->translateState.to;
-  *opp = pointerToObjptr (p, s->translateState.to);
+  if (p >= s->translateState.from and
+      p < (s->translateState.from + s->translateState.size)) {
+    p = (p - s->translateState.from) + s->translateState.to;
+    *opp = pointerToObjptr (p, s->translateState.to);
+  }
 
   if (!isPointerInHeap (s, s->heap, p)) {
     if (DEBUG)
         fprintf (stderr, "translate: p="FMTPTR" not in new heap. [%d]\n",
                  (uintptr_t)p, s->procId);
-    assert (0);
+    exit (1);
   }
-//  GC_header header = getHeader (p);
-//  GC_objectTypeTag tag;
-//  splitHeader (s, header, getHeaderp (p), &tag, NULL, NULL, NULL);
-//  if (tag == STACK_TAG) {
-//      GC_stack stack = (GC_stack)p;
-//      if (DEBUG_TRANSLATE)
-//          fprintf (stderr, "translateObjptrLocal: Remapping stack->thread objptr\n");
-//      translateObjptrLocal (s, &stack->thread);
-//  }
 }
 
 /* translateHeap (s, from, to, size)
@@ -79,6 +73,43 @@ void translateHeap (GC_state s, pointer from, pointer to, size_t size) {
     fprintf (stderr, "[GC: Translating heap done.] [%d]\n", s->procId);
 }
 
+void translateObjptrInRange (GC_state s, objptr *opp) {
+  pointer p = objptrToPointer (*opp, s->translateState.from);
+
+  if (p >= s->translateState.from and
+      p < (s->translateState.from + s->translateState.size)) {
+    if (DEBUG_DETAILED)
+        fprintf (stderr, "translateObjptrInRange: Remapping pointer "FMTPTR" to "FMTPTR"\n",
+                (uintptr_t)p, (uintptr_t)((p - s->translateState.from) + s->translateState.to));
+    p = (p - s->translateState.from) + s->translateState.to;
+    *opp = pointerToObjptr (p, s->translateState.to);
+  }
+}
+
+void translateRange (GC_state s, pointer from, pointer to, size_t size) {
+  pointer limit;
+
+  if (from == to)
+    return;
+
+  if (DEBUG or s->controls->messages)
+    fprintf (stderr,
+             "[GC: Translating range at "FMTPTR" of size %s bytes from "FMTPTR".] [%d]\n",
+             (uintptr_t)to,
+             uintmaxToCommaString(size),
+             (uintptr_t)from, s->procId);
+  s->translateState.from = from;
+  s->translateState.to = to;
+  s->translateState.size = size;
+  limit = to + size;
+  foreachObjptrInRange (s, alignFrontier (s, to), &limit, translateObjptrInRange, FALSE);
+  s->translateState.from = BOGUS_POINTER;
+  s->translateState.to = BOGUS_POINTER;
+  s->translateState.size = 0;
+  if (DEBUG)
+    fprintf (stderr, "[GC: Translating range done.] [%d]\n", s->procId);
+}
+
 void translateObjptrShared (GC_state s, objptr* opp) {
   pointer p;
   bool done;
@@ -98,6 +129,17 @@ void translateObjptrShared (GC_state s, objptr* opp) {
         fprintf (stderr, "translateObjptrShared(2): old="FMTPTR" new="FMTPTR"\n",
                  (uintptr_t)oldP, (uintptr_t)p);
     }
+
+    if (!isPointerInHeap (s, s->sharedHeap, p) &&
+        isPointerInHeap (s, s->sharedHeap, (pointer)opp) &&
+        Proc_processorNumber (s) != getCoreIdFromPointer (s, p)) {
+      /* XXX the pointer is in some other local heap */
+      if (DEBUG_DETAILED || DEBUG_TRANSLATE)
+        fprintf (stderr, "translatedObjptrShared p="FMTPTR" in another core\n",
+                 (uintptr_t)p);
+      return;
+    }
+
     if (getHeader (p) == GC_FORWARDED) {
       if (DEBUG_DETAILED)
         fprintf (stderr, "translateObjptrShared saw forwarded pointer "FMTPTR"\n",
@@ -109,8 +151,7 @@ void translateObjptrShared (GC_state s, objptr* opp) {
 
   GC_header header = getHeader (p);
   GC_objectTypeTag tag;
-  splitHeader (s, header, getHeaderp (p), &tag, NULL,
-               NULL, NULL, NULL, NULL);
+  splitHeader (s, header, getHeaderp (p), &tag, NULL, NULL, NULL, NULL, NULL);
   if (tag == STACK_TAG) {
     GC_stack stack = (GC_stack)p;
     if (DEBUG_TRANSLATE)
@@ -136,18 +177,63 @@ void translateSharedHeap (GC_state s, pointer from, pointer to, size_t size) {
   s->translateState.from = from;
   s->translateState.to = to;
   s->translateState.size = size;
-  /* Translate globals and heap. */
-  foreachGlobalObjptr (s, translateObjptrShared);
-  limit = to + size;
 
-  for (int proc=0; proc < s->numberOfProcs; proc++) {
-    GC_state r = &s->procStates[proc];
-    pointer end = r->heap->start + r->heap->oldGenSize;
-    foreachObjptrInRange (s, r->heap->start, &end, translateObjptrShared, FALSE);
-    if (r->frontier > end)
-      foreachObjptrInRange (s, r->heap->nursery, &r->frontier, translateObjptrShared, FALSE);
+  int dummyInt = 0;
+  if (Proc_processorNumber (s) != 0) {
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "translateSharedHeap: waiting for value from %d[%d]\n",
+               Proc_processorNumber (s) - 1, Proc_processorNumber (s));
+    RCCE_recv ((char*)&dummyInt, sizeof (int), Proc_processorNumber (s) - 1);
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "translateSharedHeap: received value from %d[%d]\n",
+               Proc_processorNumber (s) - 1, Proc_processorNumber (s));
+  }
+
+  /* Translate globals and heap. */
+  RCCE_shflush ();
+  foreachGlobalObjptrInScope (s, translateObjptrShared);
+  limit = to + size;
+  RCCE_shflush ();
+
+  if (Proc_processorNumber (s) != s->numberOfProcs - 1) {
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "translateSharedHeap: sending value to %d[%d]\n",
+               Proc_processorNumber (s) + 1, Proc_processorNumber (s));
+    RCCE_send ((char*)&dummyInt, sizeof (int), Proc_processorNumber (s) + 1);
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "translateSharedHeap: sent value to %d[%d]\n",
+               Proc_processorNumber (s) + 1, Proc_processorNumber (s));
+  }
+
+
+  pointer end = s->heap->start + s->heap->oldGenSize;
+  foreachObjptrInRange (s, s->heap->start, &end, translateObjptrShared, FALSE);
+  if (s->frontier > end)
+    foreachObjptrInRange (s, s->heap->nursery, &s->frontier, translateObjptrShared, FALSE);
+
+  if (Proc_processorNumber (s) != 0) {
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "translateSharedHeap: waiting for value from %d[%d]\n",
+               Proc_processorNumber (s) - 1, Proc_processorNumber (s));
+    RCCE_recv ((char*)&dummyInt, sizeof (int), Proc_processorNumber (s) - 1);
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "translateSharedHeap: received value from %d[%d]\n",
+               Proc_processorNumber (s) - 1, Proc_processorNumber (s));
   }
   foreachObjptrInRange (s, alignFrontier (s, to), &limit, translateObjptrShared, FALSE);
+  if (Proc_processorNumber (s) != s->numberOfProcs - 1) {
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "translateSharedHeap: sending value to %d[%d]\n",
+               Proc_processorNumber (s) + 1, Proc_processorNumber (s));
+    RCCE_send ((char*)&dummyInt, sizeof (int), Proc_processorNumber (s) + 1);
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "translateSharedHeap: sent value to %d[%d]\n",
+               Proc_processorNumber (s) + 1, Proc_processorNumber (s));
+  }
+
+  RCCE_shflush ();
+  RCCE_barrier (&RCCE_COMM_WORLD);
+  RCCE_shflush ();
 
   s->translateState.from = BOGUS_POINTER;
   s->translateState.to = BOGUS_POINTER;

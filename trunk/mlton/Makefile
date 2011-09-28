@@ -55,28 +55,28 @@ else
 endif
 FLAGS += $(COMPILE_ARGS)
 
-SOURCES :=			\
-	$(FILE)			\
-	$(UP)			\
-	front-end/ml.lex.sml	\
+FRONT_END_SOURCES :=    \
+    front-end/ml.lex.sml	\
 	front-end/ml.grm.sig	\
 	front-end/ml.grm.sml	\
 	front-end/mlb.lex.sml	\
 	front-end/mlb.grm.sig	\
-	front-end/mlb.grm.sml	\
+	front-end/mlb.grm.sml
+
+
+SOURCES :=			\
+	$(FILE)			\
+	$(UP)			\
+    $(FRONT_END_SOURCES)    \
 	$(shell if [ -r $(FILE) ]; then mlton -stop f $(FILE); fi)
 
 .PHONY: all
 all: $(AOUT)
 
-front-end/ml.lex.sml: front-end/ml.lex
-	$(MAKE) -C front-end ml.lex.sml
-front-end/ml.grm.sig front-end/ml.grm.sml: front-end/ml.grm
-	$(MAKE) -C front-end ml.grm.sig ml.grm.sml
-front-end/mlb.lex.sml: front-end/mlb.lex
-	$(MAKE) -C front-end mlb.lex.sml
-front-end/mlb.grm.sig front-end/mlb.grm.sml: front-end/mlb.grm
-	$(MAKE) -C front-end mlb.grm.sig mlb.grm.sml
+front-end/%.lex.sml: front-end/%.lex
+	$(MAKE) -C front-end $(@F)
+front-end/%.grm.sig front-end/%.grm.sml: front-end/%.grm
+	$(MAKE) -C front-end $(<F).sig $(<F).sml
 
 $(AOUT): $(SOURCES)
 	rm -f $(UP)
@@ -110,7 +110,7 @@ clean:
 SML	:= sml
 
 .PHONY: nj-mlton
-nj-mlton: $(SOURCES)
+nj-mlton: $(FRONT_END_SOURCES)
 	(									\
 		echo 'SMLofNJ.Internals.GC.messages false;';			\
 		echo '#set CM.Control.verbose false;';				\

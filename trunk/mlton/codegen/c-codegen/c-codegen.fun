@@ -219,6 +219,35 @@ fun outputIncludes (includes, print) =
 fun declareProfileLabel (l, print) =
    C.call ("DeclareProfileLabel", [ProfileLabel.toString l], print)
 
+fun declareCreateGlobals (print) =
+   let
+     val _ = List.foreach (CType.all, fn t =>
+                if (CType.isObjptr t) then
+                  print (concat ["uint32_t globalsLength = ",
+                                 C.int (Global.numberOfType t), ";\n"])
+                else
+                  ())
+     val _ = print "PUBLIC void createGlobals () {\n"
+     val _ = List.foreach
+             (CType.all, fn t =>
+              let
+                val s = CType.toString t
+              in
+                if (Global.numberOfType t > 0) then
+                  print (concat ["\tglobal", s, " = RCCE_shmalloc (sizeof(",
+                                s, ") * ", C.int (Global.numberOfType t),
+                                ");\n"])
+                else
+                  ()
+              end)
+     val _ = print (concat ["\tglobalObjptrNonRoot = RCCE_shmalloc (sizeof (Pointer) * ",
+                            C.int (Global.numberOfNonRoot ()), ");\n"])
+     val _ = print "}\n"
+   in
+     ()
+   end
+
+
 fun declareGlobals (prefix: string, print) =
    let
       (* gcState can't be static because stuff in mlton-lib.c refers to
@@ -231,13 +260,10 @@ fun declareGlobals (prefix: string, print) =
           let
              val s = CType.toString t
           in
-             print (concat [prefix, s, " global", s,
-                            " [", C.int (Global.numberOfType t), "];\n"])
+             print (concat [prefix, s, " *global", s, ";\n"])
           end)
       val _ =
-         print (concat [prefix, "Pointer globalObjptrNonRoot [",
-                        C.int (Global.numberOfNonRoot ()),
-                        "];\n"])
+         print (concat [prefix, "Pointer *globalObjptrNonRoot;\n"])
    in
       ()
    end
@@ -445,7 +471,7 @@ fun outputDeclarations
       fun declareMain () =
          if !Control.emitMain andalso !Control.format = Control.Executable
             then List.foreach
-                 (["int main (int argc, char* argv[]) {",
+                 (["int RCCE_APP(int argc, char* argv[]) {",
                    "return (MLton_main (argc, argv));",
                    "}"], fn s => (print s; print "\n"))
          else ()
@@ -485,6 +511,7 @@ fun outputDeclarations
    in
       outputIncludes (includes, print)
       ; declareGlobals ("PRIVATE ", print)
+      ; declareCreateGlobals (print)
       ; declareExports ()
       ; declareLoadSaveGlobals ()
       ; declareIntInfs ()
@@ -1223,7 +1250,7 @@ fun output {program as Machine.Program.T {chunks,
                 print (concat ["#define ", name, " ",
                                Bytes.toString (GCField.offset f), "\n"]))
          in
-            outputIncludes (["c-chunk.h"], print)
+            outputIncludes (["c-chunk.h", "RCCE.h"], print)
             ; outputOffsets ()
             ; declareGlobals ("PRIVATE extern ", print)
             ; declareFFI (chunk, {print = print})
@@ -1267,7 +1294,7 @@ fun output {program as Machine.Program.T {chunks,
           ; print "};\n")
       val _ =
          outputDeclarations {additionalMainArgs = additionalMainArgs,
-                             includes = ["c-main.h"],
+                             includes = ["c-main.h", "RCCE.h"],
                              program = program,
                              print = print,
                              rest = rest}

@@ -8,3 +8,4 @@
 
 PRIVATE void GC_done (GC_state s);
 PRIVATE void GC_summaryWrite (void);
+void doneAssist (GC_state s);

@@ -8,6 +8,15 @@
 
 #if (defined (MLTON_GC_INTERNAL_TYPES))
 
+typedef enum {
+  NOT_INITIALIZED,
+  DEFAULT,
+  NEEDS_BARRIER,
+  IN_CRITICAL_SECTION,
+  EXIT
+} GC_barrierInfo;
+
+
 struct GC_state {
   /* These fields are at the front because they are the most commonly
    * referenced, and having them at smaller offsets may decrease code
@@ -24,7 +33,6 @@ struct GC_state {
 
   /* ML arrays and queues */
   SchedulerQueue* schedulerQueue;
-  Lock* schedulerLocks;
 
   objptr* moveOnWBA;
   int32_t moveOnWBASize;
@@ -80,6 +88,7 @@ struct GC_state {
   struct GC_lastMajorStatistics *lastMajorStatistics;
   struct GC_lastSharedMajorStatistics *lastSharedMajorStatistics;
   pointer limitPlusSlop; /* limit + GC_HEAP_LIMIT_SLOP */
+  bool selectiveDebug;
   pointer sharedLimitPlusSlop;
   pointer start; /* Like heap->nursery but per processor.  nursery <= start <= frontier */
   pointer sharedStart;
@@ -87,6 +96,8 @@ struct GC_state {
   uint32_t magic; /* The magic number for this executable. */
   uint32_t maxFrameSize;
   bool mutatorMarksCards;
+  /* points to a shared memory locationis that is used to signal other processors */
+  GC_barrierInfo* needsBarrier;
   /* For PCML */
   pthread_t pthread;
   int32_t timeInterval; /* In milliseconds */
@@ -98,8 +109,8 @@ struct GC_state {
   GC_objectHashTable objectHashTable;
   GC_objectType objectTypes; /* Array of object types. */
   uint32_t objectTypesLength; /* Cardinality of objectTypes array. */
-  /* States for each processor */
-  GC_state procStates;
+  PointerToCoreMap* pointerToCoreMap;
+  GC_state procStates; /* States for each processor */
   struct GC_profiling profiling;
   GC_frameIndex (*returnAddressToFrameIndex) (GC_returnAddress ra);
   uint32_t returnToC;
@@ -148,8 +159,6 @@ static void setGCStateCurrentLocalHeap (GC_state s,
                                         size_t oldGenBytesRequested,
                                         size_t nurseryBytesRequested);
 
-static GC_state getGCStateFromPointer (GC_state s, pointer p);
-
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */
 
@@ -178,7 +187,6 @@ PRIVATE void GC_setSignalHandlerThread (GC_state *gs, pointer p);
 
 PRIVATE void GC_print (int);
 PRIVATE inline pointer GC_forwardBase (const GC_state s, const pointer p);
-PRIVATE inline pointer GC_forwardBaseWorking (const GC_state s, const pointer p);
 
 #endif /* (defined (MLTON_GC_INTERNAL_BASIS)) */
 

@@ -24,8 +24,6 @@ struct
   val pri = 0
   val sec = 1
 
-  val _ = PrimSQ.createQueues ()
-
   fun enqueHost (rthrd as RHOST (tid, t), prio) =
   let
     val _ = Assert.assertAtomic (fn () => "enqueHost", NONE)

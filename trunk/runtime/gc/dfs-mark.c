@@ -47,6 +47,7 @@ size_t dfsMarkByMode (GC_state s, pointer root,
                       bool shouldLinkWeaks,
                       bool ignoreSharedHeap,
                       bool sizeEstimationForLifting) {
+  bool shouldAssert = TRUE;
   GC_header mark; /* Used to set or clear the mark bit. */
   size_t size; /* Total number of bytes marked. */
   pointer cur; /* The current object being marked. */
@@ -109,6 +110,14 @@ markNext:
              "  prev = "FMTPTR"  todo = "FMTPTR"\n",
              (uintptr_t)cur, (uintptr_t)next,
              (uintptr_t)prev, (uintptr_t)todo);
+  if (!isPointerInHeap (s, s->heap, next) &&
+      !isPointerInHeap (s, s->sharedHeap, next) &&
+      sizeEstimationForLifting) {
+    if (DEBUG_DFS_MARK)
+      fprintf (stderr, "next = "FMTPTR" in another local heap. Skipping..\n",
+               (uintptr_t)next);
+    goto ret;
+  }
   assert (not isPointerMarkedByMode (next, mode));
   assert (nextHeaderp == getHeaderp (next));
   assert (nextHeader == getHeader (next));
@@ -125,6 +134,26 @@ mark:
     fprintf (stderr, "mark  cur = "FMTPTR"  prev = "FMTPTR"  mode = %s\n",
              (uintptr_t)cur, (uintptr_t)prev,
              (mode == MARK_MODE) ? "mark" : "unmark");
+
+    /* We can afford to be lenient here by not walking the stack. But we MUST
+     * not walk other heaps */
+    if (sizeEstimationForLifting &&
+        /* cur (stack) is parasitic. If it had been a dangling stack, we would
+         * have found if in the pointerToCoreIdMap. */
+        getCoreIdFromPointer_safe (s, cur) != -1 &&
+        /* Make sure it is infact a stack */
+        testPointerIsDanglingStack (s, cur)) {
+      if (DEBUG_DFS_MARK)
+        fprintf (stderr, "dfsMark-sizeEstimationForLifting: skipping dangling stack "FMTPTR"\n",
+                 (uintptr_t)cur);
+      shouldAssert = FALSE;
+      goto ret;
+    }
+  if (sizeEstimationForLifting &&
+      !isPointerInHeap (s, s->sharedHeap, cur)) {
+    insertPointerToCore (s, cur, Proc_processorNumber (s), FALSE);
+  }
+
   /* cur is the object to mark.
    * prev is the mark stack.
    * headerp points to the header of cur.
@@ -164,8 +193,15 @@ markInNormal:
     // next = *(pointer*)todo;
     next = fetchObjptrToPointer (s, todo, s->heap->start);
     if ((not isPointer (next)) or
-        (ignoreSharedHeap and isPointerInHeap (s, s->sharedHeap, next))) {
+        (ignoreSharedHeap and isPointerInHeap (s, s->sharedHeap, next)) or
+        (sizeEstimationForLifting &&
+         isPointerInHeap (s, s->sharedHeap, todo) &&
+         isPointerInAnotherCore (s, todo, next))) {
+      if (DEBUG_DFS_MARK)
+        fprintf (stderr, "markInNormal: skipping todo="FMTPTR" next="FMTPTR"\n",
+                 (uintptr_t)todo, (uintptr_t)next);
 markNextInNormal:
+      assert (objptrIndex < numObjptrs);
       assert (objptrIndex < numObjptrs);
       objptrIndex++;
       if (objptrIndex == numObjptrs) {
@@ -341,7 +377,11 @@ ret:
   if (DEBUG_DFS_MARK)
     fprintf (stderr, "return  cur = "FMTPTR"  prev = "FMTPTR"\n",
              (uintptr_t)cur, (uintptr_t)prev);
-  assert (isPointerMarkedByMode (cur, mode));
+
+  if (shouldAssert)
+    assert (isPointerMarkedByMode (cur, mode));
+  else
+    shouldAssert = TRUE;
   if (NULL == prev)
     return size;
   next = cur;

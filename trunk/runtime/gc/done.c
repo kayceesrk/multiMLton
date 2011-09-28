@@ -463,8 +463,30 @@ void GC_summaryWrite (void) {
 void GC_done (GC_state s) {
   //XXX KC this gc causes segfault
   //minorGC (s);
-  GC_summaryWrite ();
+  if (Proc_processorNumber (s) != 0) {
+    fprintf (stderr, "GC_done: Must only be called by core 0\n");
+    exit (1);
+  }
 
+  GC_summaryWrite ();
+  *s->needsBarrier = EXIT;
   releaseHeap (s, s->heap);
   releaseHeap (s, s->secondaryLocalHeap);
+
+  RCCE_barrier (&RCCE_COMM_WORLD); //Matches with GC_doneAssist
+  releaseHeap (s, s->sharedHeap);
+  releaseHeap (s, s->secondarySharedHeap);
+  RCCE_barrier (&RCCE_COMM_WORLD); //Matches with GC_doneAssist
+}
+
+void GC_doneAssist (GC_state s) {
+  if (Proc_processorNumber (s) == 0) {
+    fprintf (stderr, "GC_done: Must not be called by core 0\n");
+    exit (1);
+  }
+  releaseHeap (s, s->heap);
+  releaseHeap (s, s->secondaryLocalHeap);
+  RCCE_barrier (&RCCE_COMM_WORLD); //Matches with GC_done
+  RCCE_barrier (&RCCE_COMM_WORLD); //Matches with GC_done
+  exit (0);
 }

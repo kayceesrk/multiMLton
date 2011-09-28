@@ -27,8 +27,10 @@ typedef GC_state GCState_t;
 
 #include "gc/align.h"
 #include "gc/model.h"
+#include "gc/shmemory.h"
 #include "gc/pointer.h"
 #include "gc/objptr.h"
+#include "gc/pointer-location.h"
 #include "gc/object.h"
 #include "gc/array.h"
 #include "gc/frame.h"
@@ -52,6 +54,7 @@ typedef GC_state GCState_t;
 #include "gc/cheney-copy.h"
 #include "gc/hash-cons.h"
 #include "gc/dfs-mark.h"
+#include "gc/rcce-wrapper.h"
 #include "gc/mark-compact.h"
 #include "gc/invariant.h"
 #include "gc/atomic.h"

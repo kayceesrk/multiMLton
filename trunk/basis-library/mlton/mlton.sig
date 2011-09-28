@@ -45,6 +45,7 @@ signature MLTON =
       structure LargeReal: MLTON_REAL
       structure LargeWord: MLTON_WORD
       structure Pacml: MLTON_PACML
+      structure Rcce: MLTON_RCCE
       structure Platform: MLTON_PLATFORM
       structure Pointer: MLTON_POINTER
       structure ProcEnv: MLTON_PROC_ENV

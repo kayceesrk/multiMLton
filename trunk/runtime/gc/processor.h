@@ -15,7 +15,11 @@ bool Proc_isInitialized (GC_state s);
 /* Synchronize all processors */
 void Proc_beginCriticalSection (GC_state s);
 void Proc_endCriticalSection (GC_state s);
-bool Proc_threadInSection (__attribute__ ((unused)) GC_state s);
-bool Proc_executingInSection (__attribute__ ((unused)) GC_state s);
+bool Proc_threadInSection (GC_state s);
+bool Proc_executingInSection (GC_state s);
+bool Proc_mustExit (GC_state s);
+
+/* Address translation */
+int32_t Proc_addrToCoreId (pointer p);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

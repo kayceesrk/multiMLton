@@ -6,16 +6,6 @@
  * See the file MLton-LICENSE for details.
  */
 
-GC_state getGCStateFromPointer (GC_state s, pointer p) {
-  for (int proc=0; proc < s->numberOfProcs; proc++) {
-    GC_state r = &s->procStates[proc];
-    if (isPointerInHeap (r, r->heap, p))
-      return r;
-  }
-  assert (0 and "getGCStateFromPointer: pointer location unknown");
-  die ("getGCStateFromPointer: pointer location unknown");
-}
-
 void displayGCState (GC_state s, FILE *stream) {
   fprintf (stream,
            "GC state\n");
@@ -63,6 +53,16 @@ void setGCStateCurrentThreadAndStack (GC_state s) {
     fprintf (stderr, "setGCStateCurrentThreadAndStack: thread = "FMTPTR" stack = "FMTPTR" [%d]\n",
              (uintptr_t)thread, (uintptr_t)stack, s->procId);
   markCard (s, (pointer)stack);
+
+  if (isPointerInHeap (s, s->sharedHeap, thread) &&
+      !isInDanglingStackList (s, stack)) {
+    assert (0);
+    fprintf (stderr, "thread="FMTPTR" stack="FMTPTR"\n",
+             thread, stack);
+    exit (1);
+  }
+  //Fixing forwarding pointers in the stack
+  foreachObjptrInObject (s, (pointer)stack, fixFwdObjptr, TRUE);
 }
 
 void setGCStateCurrentLocalHeap (GC_state s,
@@ -210,10 +210,17 @@ void setGCStateCurrentSharedHeap (GC_state s,
 
   if (not duringInit) {
     for (int proc = 0; proc < s->numberOfProcs; proc++) {
+      size_t bytesNeededOther = 0;
+      if (proc == 0) {
+        bytesNeededOther = getThreadCurrent (s)->bytesNeeded;
+      }
+      else {
+        /* Matches with RCCE_send in performSharedGCCOllective */
+        RCCE_recv ((char*)&bytesNeededOther, sizeof (size_t), proc);
+      }
       assert (isFrontierAligned (s, frontier));
       s->procStates[proc].sharedStart = s->procStates[proc].sharedFrontier = frontier;
-      s->procStates[proc].sharedLimitPlusSlop = s->procStates[proc].sharedStart +
-        getThreadCurrent(&s->procStates[proc])->bytesNeeded;
+      s->procStates[proc].sharedLimitPlusSlop = s->procStates[proc].sharedStart + bytesNeededOther;
       s->procStates[proc].sharedLimit = s->procStates[proc].sharedLimitPlusSlop - GC_HEAP_LIMIT_SLOP;
       assert (s->procStates[proc].sharedFrontier <= s->procStates[proc].sharedLimitPlusSlop);
       /* XXX clearCardMap (?) */
@@ -264,6 +271,7 @@ void setGCStateCurrentSharedHeap (GC_state s,
     assert (hasHeapBytesFree (s, s->sharedHeap, oldGenBytesRequested, nurseryBytesRequested));
   }
   assert (isFrontierAligned (s, s->sharedFrontier));
+  RCCE_shflush ();
 }
 
 bool GC_getIsPCML (void) {
@@ -365,27 +373,28 @@ void GC_setSavedThread (__attribute__ ((unused)) GC_state *gs,
   s->savedThread = op;
 }
 
-void GC_setSignalHandlerThread (__attribute__ ((unused)) GC_state *gs, pointer p) {
-  GC_state s = pthread_getspecific (gcstate_key);
-  objptr op = pointerToObjptr (p, s->heap->start);
-  s->signalHandlerThread = op;
+void GC_setSignalHandlerThread (__attribute__ ((unused)) GC_state *gs,
+                                __attribute__((unused)) pointer p) {
+  //GC_state s = pthread_getspecific (gcstate_key);
+  //objptr op = pointerToObjptr (p, s->heap->start);
+  //s->signalHandlerThread = op;
 
   /* Move the object pointers in call-from-c-handler stack to the shared heap in
    * preparation for copying this stack to each processor */
-  {
-    GC_thread thrd = (GC_thread) objptrToPointer (s->signalHandlerThread, s->heap->start);
-    pointer stk = objptrToPointer (thrd->stack, s->heap->start);
-    moveEachObjptrInObject (s, stk);
-  }
+  //{
+  //  GC_thread thrd = (GC_thread) objptrToPointer (s->signalHandlerThread, s->heap->start);
+  //  pointer stk = objptrToPointer (thrd->stack, s->heap->start);
+  //  moveEachObjptrInObject (s, stk);
+  //}
 
   /* Copy the mlton signal handler thread to all gcStates */
-  for (int proc = 0; proc < s->numberOfProcs; proc++) {
-    s->procStates[proc].signalHandlerThread =
-      pointerToObjptr( copyThreadTo (s, &s->procStates[proc],
-                                     objptrToPointer(s->signalHandlerThread,
-                                                     s->heap->start)),
-                       s->heap->start);
-  }
+  //for (int proc = 0; proc < s->numberOfProcs; proc++) {
+  //  s->procStates[proc].signalHandlerThread =
+  //    pointerToObjptr( copyThreadTo (s, &s->procStates[proc],
+  //                                   objptrToPointer(s->signalHandlerThread,
+  //                                                   s->heap->start)),
+  //                     s->heap->start);
+  //}
 }
 
 sigset_t* GC_getSignalsHandledAddr (__attribute__ ((unused)) GC_state *gs) {
@@ -428,18 +437,7 @@ pointer GC_forwardBase (const GC_state s, const pointer p) {
     return p;
 
   if (*(GC_header*)(p - GC_HEADER_SIZE) == GC_FORWARDED) {
-      fprintf (stderr, "GC_forwardBase: forwarding "FMTPTR" to "FMTPTR" [%d]\n",
-               (uintptr_t)p, (uintptr_t)*(pointer*)p, s->procId);
-    return *(pointer*)p;
-  }
-  return p;
-}
-
-pointer GC_forwardBaseWorking (const GC_state s, const pointer p) {
-  if (!isPointer (p) || p == (pointer)s->generationalMaps.cardMapAbsolute)
-    return p;
-
-  if (*(GC_header*)(p - GC_HEADER_SIZE) == GC_FORWARDED) {
+    RCCE_shflush ();
     if (DEBUG_READ_BARRIER)
       fprintf (stderr, "GC_forwardBase: forwarding "FMTPTR" to "FMTPTR" [%d]\n",
                (uintptr_t)p, (uintptr_t)*(pointer*)p, s->procId);

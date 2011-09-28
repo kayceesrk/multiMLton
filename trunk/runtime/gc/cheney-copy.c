@@ -112,118 +112,203 @@ void majorCheneyCopyGC (GC_state s) {
              uintmaxToCommaString(bytesCopied), s->procId);
 }
 
+static void assistSharedToSpaceWalking (GC_state s) {
+  SMAssistInfo assist;
+  pointer back;
+
+  while (1) {
+    RCCE_recv ((char*)&assist, sizeof(SMAssistInfo), 0);
+    RCCE_shflush ();
+    if ((objptr)assist.opp == BOGUS_OBJPTR)
+      return;
+    s->forwardState.toStart = assist.forwardToStart;
+    s->forwardState.toLimit = assist.forwardToLimit;
+    s->forwardState.back = assist.forwardBack;
+
+    forwardObjptrForSharedCheneyCopy (s, assist.opp);
+    RCCE_shflush ();
+    back = s->forwardState.back;
+    RCCE_send ((char*)&back, sizeof(pointer), 0);
+  }
+}
+
+
 void majorCheneyCopySharedGC (GC_state s) {
   size_t bytesCopied;
   struct rusage ru_start;
   pointer toStart;
 
-  assert (s->secondarySharedHeap->size >= s->sharedHeap->oldGenSize);
-  if (detailedGCTime (s))
-    startTiming (&ru_start);
-  s->cumulativeStatistics->numCopyingSharedGCs++;
   s->forwardState.amInMinorGC = FALSE;
-  if (DEBUG or s->controls->messages) {
-    fprintf (stderr,
-             "[GC: Starting shared major Cheney-copy] [%d]\n", s->procId);
-    fprintf (stderr,
-             "[GC:\tfrom heap at "FMTPTR" of size %s bytes,] [%d]\n",
-             (uintptr_t)(s->sharedHeap->start),
-             uintmaxToCommaString(s->sharedHeap->size), s->procId);
-    fprintf (stderr,
-             "[GC:\tto heap at "FMTPTR" of size %s bytes.] [%d]\n",
-             (uintptr_t)(s->secondarySharedHeap->start),
-             uintmaxToCommaString(s->secondarySharedHeap->size), s->procId);
+
+  if (Proc_processorNumber (s) == 0) {
+    assert (s->secondarySharedHeap->size >= s->sharedHeap->oldGenSize);
+    if (detailedGCTime (s))
+      startTiming (&ru_start);
+    s->cumulativeStatistics->numCopyingSharedGCs++;
+    if (DEBUG or s->controls->messages) {
+      fprintf (stderr,
+              "[GC: Starting shared major Cheney-copy] [%d]\n", s->procId);
+      fprintf (stderr,
+              "[GC:\tfrom heap at "FMTPTR" of size %s bytes,] [%d]\n",
+              (uintptr_t)(s->sharedHeap->start),
+              uintmaxToCommaString(s->sharedHeap->size), s->procId);
+      fprintf (stderr,
+              "[GC:\tto heap at "FMTPTR" of size %s bytes.] [%d]\n",
+              (uintptr_t)(s->secondarySharedHeap->start),
+              uintmaxToCommaString(s->secondarySharedHeap->size), s->procId);
+    }
   }
 
   //Set up forwarding state
   toStart = alignFrontier (s, s->secondarySharedHeap->start);
-  for (int proc=0; proc < s->numberOfProcs; proc++) {
-    s->procStates[proc].forwardState.toStart = s->secondarySharedHeap->start;
-    s->procStates[proc].forwardState.toLimit =
-      s->secondarySharedHeap->start + s->secondarySharedHeap->size;
-    s->procStates[proc].forwardState.back = toStart;
-    s->procStates[proc].forwardState.forceStackForwarding = TRUE;
+  s->forwardState.toStart = s->secondarySharedHeap->start;
+  s->forwardState.toLimit = s->secondarySharedHeap->start + s->secondarySharedHeap->size;
+  s->forwardState.back = toStart;
+  s->forwardState.forceStackForwarding = TRUE;
 
-    assert (!s->procStates[proc].forwardState.rangeListCurrent);
-    assert (!s->procStates[proc].forwardState.rangeListFirst);
-    assert (!s->procStates[proc].forwardState.rangeListLast);
-  }
+  assert (!s->forwardState.rangeListCurrent);
+  assert (!s->forwardState.rangeListFirst);
+  assert (!s->forwardState.rangeListLast);
   assert (s->secondarySharedHeap->start);
   assert (s->secondarySharedHeap->size >= s->sharedHeap->oldGenSize);
 
-  // Walk the local heaps and forward objptrs
-  for (int proc=0; proc < s->numberOfProcs; proc++) {
-    GC_state r = &(s->procStates[proc]);
+  /* Walk the local heaps and forward objptrs. This has to occur in a phased
+   * manner since forwardObjptrForSharedCheneyCopy cannot occur in parallel.
+   * Hence, we let core 0 proceed first, followed by core 1 and so on. At the
+   * end of each phase, we propagate the forwardState.back to the next
+   * processor. */
+  pointer forwardStateBack = BOGUS_POINTER;
+  if (Proc_processorNumber (s) != 0) {
     if (DEBUG_DETAILED)
-      fprintf (stderr, "majorCheneyCopySharedGC: walking local heaps (1) [%d]\n",
-               proc);
-    pointer end = r->heap->start + r->heap->oldGenSize;
-
-    /* See foreachObjptrInObject():STACK for the details of skipStackToThreadTracing variable */
-    skipStackToThreadTracing = TRUE;
-    foreachObjptrInRangeWithFill (r, r->heap->start, &end, forwardObjptrForSharedCheneyCopy, TRUE, TRUE);
-    if (r->frontier > r->heap->start + r->heap->oldGenSize)
-      foreachObjptrInRangeWithFill (r, r->heap->nursery, &r->frontier, forwardObjptrForSharedCheneyCopy, TRUE, TRUE);
-    skipStackToThreadTracing = FALSE;
-
+      fprintf (stderr, "majorCheneyCopySharedGC: waiting for value from %d[%d]\n",
+               Proc_processorNumber (s) - 1, Proc_processorNumber (s));
+    RCCE_recv ((char*)&forwardStateBack, sizeof (pointer), Proc_processorNumber (s) - 1);
+    assert (forwardStateBack != BOGUS_POINTER);
+    s->forwardState.back = forwardStateBack;
     if (DEBUG_DETAILED)
-      fprintf (stderr, "majorCheneyCopySharedGC: walking local heaps (2) [%d]\n",
-               proc);
-    callIfIsObjptr (r, forwardObjptrForSharedCheneyCopy, &r->forwardState.liftingObject);
-    pointer back = r->forwardState.back;
-    for (int i=0; i < s->numberOfProcs; i++)
-      s->procStates[i].forwardState.back = back;
+      fprintf (stderr, "majorCheneyCopySharedGC: received value from %d. forwardStateBack="FMTPTR"[%d]\n",
+               Proc_processorNumber (s) - 1, (uintptr_t)forwardStateBack, Proc_processorNumber (s));
   }
 
+  {
+  if (DEBUG_DETAILED)
+    fprintf (stderr, "majorCheneyCopySharedGC: walking local heaps (1) [%d]\n",
+             Proc_processorNumber (s));
+  pointer end = s->heap->start + s->heap->oldGenSize;
+
+  /* See foreachObjptrInObject():STACK for the details of skipStackToThreadTracing variable */
+  skipStackToThreadTracing = TRUE;
+  foreachObjptrInRangeWithFill (s, s->heap->start, &end, forwardObjptrForSharedCheneyCopy, TRUE, TRUE);
+  if (s->frontier > s->heap->start + s->heap->oldGenSize)
+    foreachObjptrInRangeWithFill (s, s->heap->nursery, &s->frontier, forwardObjptrForSharedCheneyCopy, TRUE, TRUE);
+  skipStackToThreadTracing = FALSE;
+
+  if (DEBUG_DETAILED)
+    fprintf (stderr, "majorCheneyCopySharedGC: walking local heaps (2) [%d]\n",
+             Proc_processorNumber (s));
+  callIfIsObjptr (s, forwardObjptrForSharedCheneyCopy, &s->forwardState.liftingObject);
+  RCCE_shflush ();
+  }
+
+  if (Proc_processorNumber (s) != s->numberOfProcs - 1) {
+    forwardStateBack = s->forwardState.back;
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "majorCheneyCopySharedGC: sending value to %d. forwardStateBack = "FMTPTR"[%d]\n",
+               Proc_processorNumber (s) + 1, (uintptr_t)forwardStateBack, Proc_processorNumber (s));
+    RCCE_send ((char*)&forwardStateBack, sizeof (pointer), Proc_processorNumber (s) + 1);
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "majorCheneyCopySharedGC: sent value to %d[%d]\n",
+               Proc_processorNumber (s) + 1, Proc_processorNumber (s));
+  }
+
+  /* The last processor must broadcast the forwardState.back value so that
+   * everyone gets the most updated values */
+  {
+  forwardStateBack = BOGUS_OBJPTR;
+  if (Proc_processorNumber (s) == (s->numberOfProcs - 1))
+    forwardStateBack = s->forwardState.back;
+  RCCE_bcast ((char*)&forwardStateBack, sizeof (pointer),
+              s->numberOfProcs - 1, RCCE_COMM_WORLD);
+  assert (forwardStateBack != BOGUS_POINTER);
+  s->forwardState.back = forwardStateBack;
+  }
+
+  forwardStateBack = BOGUS_POINTER;
+  if (Proc_processorNumber (s) != 0) {
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "majorCheneyCopySharedGC: waiting for value from %d[%d]\n",
+               Proc_processorNumber (s) - 1, Proc_processorNumber (s));
+    RCCE_recv ((char*)&forwardStateBack, sizeof (pointer), Proc_processorNumber (s) - 1);
+    assert (forwardStateBack != BOGUS_POINTER);
+    s->forwardState.back = forwardStateBack;
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "majorCheneyCopySharedGC: received value from %d. forwardStateBack="FMTPTR"[%d]\n",
+               Proc_processorNumber (s) - 1, (uintptr_t)forwardStateBack, Proc_processorNumber (s));
+  }
+
+  {
   //Forward Globals -- must come after walking local heaps for correct forwarding state
-  foreachGlobalObjptr (s, forwardObjptrForSharedCheneyCopy);
-
-  if (DEBUG_DETAILED)
-    fprintf (stderr, "majorCheneyCopySharedGC: walking to space (1) [%d]\n",
-              s->procId);
-  foreachObjptrInRange (s, toStart, &s->forwardState.back, forwardObjptrForSharedCheneyCopy, TRUE);
-  if (DEBUG_DETAILED)
-    fprintf (stderr, "majorCheneyCopySharedGC: walking to space (2) [%d]\n",
-              s->procId);
-
-  updateWeaksForCheneyCopy (s);
-  s->secondarySharedHeap->oldGenSize = s->forwardState.back - s->secondarySharedHeap->start;
-  bytesCopied = s->secondarySharedHeap->oldGenSize;
-  s->cumulativeStatistics->bytesCopiedShared += bytesCopied;
-  swapHeapsForSharedCheneyCopy (s);
-  s->lastSharedMajorStatistics->kind = GC_COPYING;
-  if (detailedGCTime (s))
-    stopTiming (&ru_start, &s->cumulativeStatistics->ru_gcCopyingShared);
-
-  #if 0
-  fprintf (stderr, "DEBUG MODE CHECK\n");
-  if (DEBUG)
-    fprintf (stderr, "Starting shared heap checks [%d]\n", s->procId);
-
-  pointer end = s->sharedHeap->start + s->sharedHeap->oldGenSize;
-  foreachObjptrInRange (s, s->sharedHeap->start, &end, assertLiftedObjptr, TRUE);
-
-  if (DEBUG)
-    fprintf (stderr, "Ending shared heap checks [%d]\n", s->procId);
-
-  for (int proc=0; proc < s->numberOfProcs; proc++) {
-    if (DEBUG)
-      fprintf (stderr, "Starting local heap %d check [%d]\n", proc, s->procId);
-
-    GC_state r = &s->procStates[proc];
-    end = r->heap->start + r->heap->oldGenSize;
-    foreachObjptrInRange (r, r->heap->start, &end, assertIsObjptrInFromSpaceOrLifted, TRUE);
-    foreachObjptrInRange (r, r->heap->nursery, &r->frontier, assertIsObjptrInFromSpaceOrLifted, TRUE);
-
-    if (DEBUG)
-      fprintf (stderr, "Ending local heap %d check [%d]\n", proc, s->procId);
+  RCCE_shflush ();
+  foreachGlobalObjptrInScope (s, forwardObjptrForSharedCheneyCopy);
+  RCCE_shflush ();
   }
-  #endif
 
-  if (DEBUG or s->controls->messages)
-    fprintf (stderr,
-             "[GC: Finished shared major Cheney-copy; copied %s bytes.] [%d]\n",
-             uintmaxToCommaString(bytesCopied), s->procId);
+  if (Proc_processorNumber (s) != s->numberOfProcs - 1) {
+    forwardStateBack = s->forwardState.back;
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "majorCheneyCopySharedGC: sending value to %d. forwardStateBack = "FMTPTR"[%d]\n",
+               Proc_processorNumber (s) + 1, (uintptr_t)forwardStateBack, Proc_processorNumber (s));
+    RCCE_send ((char*)&forwardStateBack, sizeof (pointer), Proc_processorNumber (s) + 1);
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "majorCheneyCopySharedGC: sent value to %d[%d]\n",
+               Proc_processorNumber (s) + 1, Proc_processorNumber (s));
+  }
+
+  /* The last processor must broadcast the forwardState.back value so that
+   * everyone gets the most updated values */
+  {
+  forwardStateBack = BOGUS_OBJPTR;
+  if (Proc_processorNumber (s) == (s->numberOfProcs - 1))
+    forwardStateBack = s->forwardState.back;
+  RCCE_bcast ((char*)&forwardStateBack, sizeof (pointer),
+              s->numberOfProcs - 1, RCCE_COMM_WORLD);
+  assert (forwardStateBack != BOGUS_POINTER);
+  s->forwardState.back = forwardStateBack;
+  }
+
+  if (Proc_processorNumber (s) == 0) {
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "majorCheneyCopySharedGC: walking to space (1) [%d]\n",
+                s->procId);
+    foreachObjptrInRange (s, toStart, &s->forwardState.back, forwardObjptrForSharedCheneyCopy, TRUE);
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "majorCheneyCopySharedGC: walking to space (2) [%d]\n",
+                s->procId);
+
+    updateWeaksForCheneyCopy (s);
+    s->secondarySharedHeap->oldGenSize = s->forwardState.back - s->secondarySharedHeap->start;
+    bytesCopied = s->secondarySharedHeap->oldGenSize;
+    s->cumulativeStatistics->bytesCopiedShared += bytesCopied;
+    swapHeapsForSharedCheneyCopy (s);
+    s->lastSharedMajorStatistics->kind = GC_COPYING;
+
+    if (detailedGCTime (s))
+      stopTiming (&ru_start, &s->cumulativeStatistics->ru_gcCopyingShared);
+
+    if (DEBUG or s->controls->messages)
+      fprintf (stderr,
+              "[GC: Finished shared major Cheney-copy; copied %s bytes.] [%d]\n",
+              uintmaxToCommaString(bytesCopied), s->procId);
+
+    /* force all cores out of assistSharedToSpaceWalking loop */
+    SMAssistInfo assist;
+    assist.opp = (objptr*)BOGUS_OBJPTR;
+    for (int proc=1; proc < s->numberOfProcs; proc++)
+      RCCE_send ((char*)&assist, sizeof (SMAssistInfo), proc);
+  }
+  else {
+    assistSharedToSpaceWalking (s);
+  }
 }
 
 

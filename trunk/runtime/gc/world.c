@@ -61,13 +61,16 @@ void loadWorldFromFILE (GC_state s, FILE *f) {
   loadCircularBuffer (s->schedulerQueue->primary, f);
   loadCircularBuffer (s->schedulerQueue->secondary, f);
 
-  createHeap (s, s->heap, sizeofHeapDesired (s, s->heap->oldGenSize, 0, LOCAL_HEAP), s->heap->oldGenSize);
+  createHeap (s, s->heap, LOCAL_HEAP,
+              sizeofHeapDesired (s, s->heap->oldGenSize, 0, LOCAL_HEAP),
+              s->heap->oldGenSize);
   setCardMapAndCrossMap (s);
   if (s->sharedHeap->oldGenSize == 0) {
-    createHeap (s, s->sharedHeap, 1024, 1024);
+    createHeap (s, s->sharedHeap, SHARED_HEAP, 1024, 1024);
   }
   else {
-    createHeap (s, s->sharedHeap, sizeofHeapDesired (s, s->sharedHeap->oldGenSize, 0, SHARED_HEAP),
+    createHeap (s, s->sharedHeap, SHARED_HEAP,
+                sizeofHeapDesired (s, s->sharedHeap->oldGenSize, 0, SHARED_HEAP),
                 s->sharedHeap->oldGenSize);
   }
   fread_safe (s->heap->start, 1, s->heap->oldGenSize, f);
@@ -104,7 +107,7 @@ int saveWorldToFILE (GC_state s, FILE *f) {
   if (DEBUG_WORLD)
     fprintf (stderr, "saveWorldToFILE\n");
   /* Compact the heap. */
-  performSharedGC (s, 0);
+  performSharedGCCollective (s, 0);
   snprintf (buf, cardof(buf),
             "Heap file created by MLton.\nheap->start = "FMTPTR"\nbytesLive = %"PRIuMAX"\n",
             (uintptr_t)s->heap->start,

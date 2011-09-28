@@ -91,6 +91,7 @@ structure Process = MLtonProcess
 (* structure Ptrace = MLtonPtrace *)
 structure Profile = MLtonProfile
 structure Random = MLtonRandom
+structure Rcce = MLtonRcce
 structure Real =
    struct
       open Real

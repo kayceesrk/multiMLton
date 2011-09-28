@@ -146,7 +146,7 @@ void initWorld (GC_state s) {
     s->globals[i] = BOGUS_OBJPTR;
   s->lastSharedMajorStatistics->bytesLive = sizeofInitialBytesLive (s);
   minSize = s->lastSharedMajorStatistics->bytesLive;
-  createHeap (s, s->sharedHeap, sizeofHeapDesired (s, minSize, 0, SHARED_HEAP), minSize);
+  createHeap (s, s->sharedHeap, SHARED_HEAP, sizeofHeapDesired (s, minSize, 0, SHARED_HEAP), minSize);
 
   //set up shared heap
   start = alignFrontier (s, s->sharedHeap->start);
@@ -159,7 +159,7 @@ void initWorld (GC_state s) {
   setGCStateCurrentSharedHeap (s, 0, 0, true);
 
   //set up local heap
-  createHeap (s, s->heap, sizeofHeapDesired (s, 65536, 0, LOCAL_HEAP), 0);
+  createHeap (s, s->heap, LOCAL_HEAP, sizeofHeapDesired (s, 65536, 0, LOCAL_HEAP), 0);
   setCardMapAndCrossMap (s);
   start = alignFrontier (s, s->heap->start);
   s->start = s->frontier = start;
@@ -168,7 +168,6 @@ void initWorld (GC_state s) {
   assert ((size_t)(s->frontier - start) <= s->lastMajorStatistics->bytesLive);
   s->heap->oldGenSize = s->frontier - s->heap->start;
   setGCStateCurrentLocalHeap (s, 0, 0);
-
 
   thread = newThread (s, sizeofStackInitialReserved (s));
   switchToThread (s, pointerToObjptr((pointer)thread - offsetofThread (s), s->heap->start));
@@ -182,7 +181,7 @@ void duplicateWorld (GC_state d, GC_state s) {
   //set up local heap
   d->heap = (GC_heap) malloc (sizeof (struct GC_heap));
   initHeap (d, d->heap, LOCAL_HEAP);
-  createHeap (d, d->heap, sizeofHeapDesired (s, 65536, 0, LOCAL_HEAP), 0);
+  createHeap (d, d->heap, LOCAL_HEAP, sizeofHeapDesired (s, 65536, 0, LOCAL_HEAP), 0);
   start = alignFrontier (d, d->heap->start);
   d->start = d->frontier = start;
   d->limitPlusSlop = d->heap->start + d->heap->size - GC_BONUS_SLOP;

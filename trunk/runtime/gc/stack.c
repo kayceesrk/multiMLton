@@ -245,6 +245,8 @@ void copyStack (GC_state s, GC_stack from, GC_stack to) {
 }
 
 void clearDanglingStackList (GC_state s) {
+  if (DEBUG_STACKS)
+    fprintf (stderr, "clearDanglingStackList\n");
   s->danglingStackListSize = 0;
 }
 
@@ -252,6 +254,12 @@ void addToDanglingStackList (GC_state s, objptr op) {
   if (DEBUG_STACKS)
     fprintf (stderr, "addToDanglingStackList "FMTOBJPTR" [%d]\n",
              op, s->procId);
+  if (isInDanglingStackList (s, op)) {
+    if (DEBUG_STACKS)
+      fprintf (stderr, "op="FMTOBJPTR" already in dangling stack list\n",
+               op);
+    return;
+  }
   ++(s->danglingStackListSize);
   if (s->danglingStackListSize > s->danglingStackListMaxSize) {
     s->danglingStackListMaxSize *= 2;
@@ -266,7 +274,8 @@ void addToDanglingStackList (GC_state s, objptr op) {
 bool updateStackIfDangling (GC_state s, objptr old, objptr new) {
   for (int i=0; i < s->danglingStackListSize; i++) {
     if (s->danglingStackList[i] == old) {
-      fprintf (stderr, "updating dangling stack old="FMTOBJPTR" new="FMTOBJPTR" [%d]\n", old, new, s->procId);
+      if (DEBUG_STACKS)
+        fprintf (stderr, "updating dangling stack old="FMTOBJPTR" new="FMTOBJPTR" [%d]\n", old, new, s->procId);
       s->danglingStackList[i] = new;
       return TRUE;
     }

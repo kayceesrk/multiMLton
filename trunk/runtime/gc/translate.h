@@ -22,5 +22,8 @@ static void translateObjptrLocal (GC_state s, objptr *opp);
 static void translateHeap (GC_state s, pointer from, pointer to, size_t size);
 static void translateObjptrShared (GC_state s, objptr *opp);
 static void translateSharedHeap (GC_state s, pointer from, pointer to, size_t size);
+static void translateObjptrInRange (GC_state s, objptr *opp);
+static void translateRange (GC_state s, pointer from, pointer to, size_t size);
+
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

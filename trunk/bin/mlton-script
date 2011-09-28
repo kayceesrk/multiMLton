@@ -86,7 +86,10 @@ doit "$lib" \
         -cc-opt-quote "-I$lib/include"                           \
         -cc-opt '-O1 -fno-common'                                \
         -cc-opt '-fno-strict-aliasing -fomit-frame-pointer -w'   \
-        -link-opt '-lm -lgmp'                                    \
+        -cc-opt '-I/shared/chandras/rcce/include'                \
+        -link-opt '-L/shared/chandras/rcce/lib'                  \
+        -link-opt '-L/shared/chandras/gmp5/lib'                  \
+        -link-opt '-lm -lgmp -lrcce -static'                     \
         -mlb-path-map "$lib/mlb-path-map"                        \
         -target-as-opt amd64 '-m64'                              \
         -target-as-opt x86 '-m32'                                \

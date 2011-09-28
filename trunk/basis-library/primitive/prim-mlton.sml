@@ -148,6 +148,17 @@ struct
   val compareAndSwap = _import "Parallel_compareAndSwap": Int32.int ref * Int32.int * Int32.int -> bool;
 end
 
+structure Rcce =
+struct
+  val send = _prim "RCCE_send": 'a * Int32.int -> unit;
+  val recv = _prim "RCCE_recv": Int32.int -> 'a;
+
+  (* redefine send such that it always sees a heap object *)
+  val send = fn (x, i) => send (ref x, i)
+  val recv = fn i => Ref.deref (recv i)
+end
+
+
 structure Platform =
    struct
       structure Arch =

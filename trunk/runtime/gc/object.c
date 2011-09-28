@@ -62,6 +62,9 @@ void splitHeader(GC_state s, GC_header header, __attribute__((unused)) GC_header
   GC_header* headerp = NULL;
 
   assert (header != GC_FORWARDED);
+  assert (headerp == NULL ||
+          isPointerInHeap (s, s->heap, headerp) ||
+          isPointerInHeap (s, s->sharedHeap, headerp));
   header &= ~(LIFT_MASK);
 
   if (DEBUG_DETAILED)

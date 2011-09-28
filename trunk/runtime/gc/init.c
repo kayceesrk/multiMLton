@@ -65,6 +65,10 @@ static size_t stringToBytes (char *s) {
   case 'M':
     factor = 1024 * 1024;
     break;
+  case 'b':
+  case 'B':
+    factor = 1;
+    break;
   default:
     goto bad;
   }
@@ -293,15 +297,6 @@ int processAtMLton (GC_state s, int argc, char **argv,
         } else if (0 == strcmp (arg, "use-mmap")) {
           i++;
           GC_setCygwinUseMmap (TRUE);
-        } else if (0 == strcmp (arg, "number-processors")) {
-          i++;
-          if (i == argc)
-            die ("@MLton number-processors missing argument.");
-          if (!s->amOriginal)
-            die ("@MLton number-processors incompatible with loaded worlds.");
-          s->numberOfProcs = stringToFloat (argv[i++]) + s->numIOThreads;
-          /* Turn off loaded worlds -- they are unsuppoed in multi-proc mode */
-          s->controls->mayLoadWorld = FALSE;
         } else if (0 == strcmp (arg, "io-threads")) {
           i++;
           if (i == argc)
@@ -408,10 +403,32 @@ static inline void* initLastMajorStatistics (void) {
 
 static inline void* initLastSharedMajorStatistics (void) {
   struct GC_lastSharedMajorStatistics* cumul =
-    (struct GC_lastSharedMajorStatistics*) malloc (sizeof (struct GC_lastSharedMajorStatistics));
+    (struct GC_lastSharedMajorStatistics*) GC_shmalloc (sizeof (struct GC_lastSharedMajorStatistics));
   cumul->bytesLive = 0;
   cumul->kind = GC_COPYING;
   return (void*)cumul;
+}
+
+static inline void createAuxDataStructures (GC_state s) {
+  assert (s->procStates);
+  for (int proc=0; proc < s->numberOfProcs; proc++) {
+    GC_state r = &s->procStates[proc];
+    r->danglingStackList = (objptr*) GC_shmalloc (sizeof (objptr) * BUFFER_SIZE);
+    r->danglingStackListSize = 0;
+    r->danglingStackListMaxSize = BUFFER_SIZE;
+
+    r->moveOnWBA = (objptr*) GC_shmalloc (sizeof (objptr) * BUFFER_SIZE);
+    r->moveOnWBASize = 0;
+    r->moveOnWBAMaxSize = BUFFER_SIZE;
+
+    r->preemptOnWBA = (PreemptThread*) GC_shmalloc (sizeof (PreemptThread) * BUFFER_SIZE);
+    r->preemptOnWBASize = 0;
+    r->preemptOnWBAMaxSize = BUFFER_SIZE;
+
+    r->spawnOnWBA = (SpawnThread*) GC_shmalloc (sizeof (SpawnThread) * BUFFER_SIZE);
+    r->spawnOnWBASize = 0;
+    r->spawnOnWBAMaxSize = BUFFER_SIZE;
+  }
 }
 
 
@@ -425,7 +442,7 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->amOriginal = TRUE;
   s->atomicState = 0;
   s->callFromCHandlerThread = BOGUS_OBJPTR;
-  s->controls = (struct GC_controls *) malloc (sizeof (struct GC_controls));
+  s->controls = (struct GC_controls *) GC_shmalloc (sizeof (struct GC_controls));
   s->controls->fixedHeap = 0;
   s->controls->maxHeapLocal = 0;
   s->controls->maxHeapShared = 0;
@@ -454,7 +471,6 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->controls->ratios.stackCurrentShrink = 0.5;
   s->controls->ratios.stackMaxReserved = 8.0;
   s->controls->ratios.stackShrink = 0.5;
-  s->controls->selectiveDebug = FALSE;
   s->controls->summary = SUMMARY_NONE;
   s->forwardState.liftingObject = BOGUS_OBJPTR;
 
@@ -467,28 +483,32 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->lastMajorStatistics = (struct GC_lastMajorStatistics*)initLastMajorStatistics ();
   s->lastSharedMajorStatistics = (struct GC_lastSharedMajorStatistics*)initLastSharedMajorStatistics ();
   s->currentThread = BOGUS_OBJPTR;
+  s->selectiveDebug = FALSE;
   s->danglingStackList = NULL;
   s->hashConsDuringGC = FALSE;
   s->heap = (GC_heap) malloc (sizeof (struct GC_heap));
   initHeap (s, s->heap, LOCAL_HEAP);
-  s->numberOfProcs = 1;
+  s->numberOfProcs = RCCE_num_ues ();
   s->numIOThreads = 0;
   s->enableTimer = FALSE;
   s->timeInterval = 200;
   s->copiedSize = -1;
   s->procStates = NULL;
+  s->pointerToCoreMap = NULL;
   s->roots = NULL;
   s->rootsLength = 0;
   s->savedThread = BOGUS_OBJPTR;
   s->savedClosure = BOGUS_OBJPTR;
   s->pacmlThreadId = BOGUS_OBJPTR;
+  s->needsBarrier = (int32_t*) GC_shmalloc (sizeof (GC_barrierInfo));
+  *s->needsBarrier = NOT_INITIALIZED;
   s->secondaryLocalHeap = (GC_heap) malloc (sizeof (struct GC_heap));
   initHeap (s, s->secondaryLocalHeap, LOCAL_HEAP);
-  s->sharedHeap = (GC_heap) malloc (sizeof (struct GC_heap));
+  s->sharedHeap = (GC_heap) GC_shmalloc (sizeof (struct GC_heap));
   initHeap (s, s->sharedHeap, SHARED_HEAP);
   s->sharedHeapStart = 0;
   s->sharedHeapEnd = 0;
-  s->secondarySharedHeap = (GC_heap) malloc (sizeof (struct GC_heap));
+  s->secondarySharedHeap = (GC_heap) GC_shmalloc (sizeof (struct GC_heap));
   initHeap (s, s->secondarySharedHeap, SHARED_HEAP);
   s->signalHandlerThread = BOGUS_OBJPTR;
   s->signalsInfo.amInSignalHandler = FALSE;
@@ -506,27 +526,8 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->profiling.isProfilingTimeOn = false;
 
   s->schedulerQueue = NULL;
-  s->schedulerLocks = NULL;
 
-  s->danglingStackList = (objptr*) malloc (sizeof (objptr) * BUFFER_SIZE);
-  s->danglingStackListSize = 0;
-  s->danglingStackListMaxSize = BUFFER_SIZE;
 
-  s->moveOnWBA = (objptr*) malloc (sizeof (objptr) * BUFFER_SIZE);
-  s->moveOnWBASize = 0;
-  s->moveOnWBAMaxSize = BUFFER_SIZE;
-
-  s->preemptOnWBA = (PreemptThread*) malloc (sizeof (PreemptThread) * BUFFER_SIZE);
-  s->preemptOnWBASize = 0;
-  s->preemptOnWBAMaxSize = BUFFER_SIZE;
-
-  s->spawnOnWBA = (SpawnThread*) malloc (sizeof (SpawnThread) * BUFFER_SIZE);
-  s->spawnOnWBASize = 0;
-  s->spawnOnWBAMaxSize = BUFFER_SIZE;
-
-  s->tmpBool = FALSE;
-  s->tmpPointer = BOGUS_POINTER;
-  s->tmpInt = -1;
 
   s->translateState.from = BOGUS_POINTER;
   s->translateState.to = BOGUS_POINTER;
@@ -549,8 +550,6 @@ int GC_init (GC_state s, int argc, char **argv) {
           <= s->controls->ratios.stackCurrentMaxReserved)
     die ("Ratios must satisfy stack-current-permit-reserved <= stack-current-max-reserved.");
 
-  Parallel_initResources (s);
-  GC_sqCreateQueues (s);
   /* We align s->ram by pageSize so that we can test whether or not we
    * we are using mark-compact by comparing heap size to ram size.  If
    * we didn't round, the size might be slightly off.
@@ -589,6 +588,8 @@ void GC_lateInit (GC_state s) {
 
   initProfiling (s);
 
+  GC_sqCreateQueues (s);
+  createAuxDataStructures (s);
   if (s->amOriginal) {
     initWorld (s);
     /* The mutator stack invariant doesn't hold,
@@ -621,10 +622,13 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->numberOfProcs = s->numberOfProcs;
   d->numIOThreads = s->numIOThreads;
   d->enableTimer = s->enableTimer;
+  d->needsBarrier = s->needsBarrier;
+  d->selectiveDebug = FALSE;
   d->timeInterval = s->timeInterval;
   d->sharedHeapStart = s->sharedHeapStart;
   d->sharedHeapEnd = s->sharedHeapEnd;
   d->roots = NULL;
+  d->pointerToCoreMap = NULL;
   d->rootsLength = 0;
   d->savedThread = BOGUS_OBJPTR;
   d->savedClosure = BOGUS_OBJPTR;
@@ -643,23 +647,7 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->weaks = s->weaks;
   d->copiedSize = s->copiedSize;
   d->saveWorldStatus = s->saveWorldStatus;
-
   d->forwardState.liftingObject = BOGUS_OBJPTR;
-
-  d->schedulerLocks = NULL;
-  d->schedulerQueue = NULL;
-  d->moveOnWBA = (objptr*) malloc (sizeof (objptr) * BUFFER_SIZE);
-  d->moveOnWBASize = 0;
-  d->moveOnWBAMaxSize = BUFFER_SIZE;
-  d->danglingStackList = (objptr*) malloc (sizeof (objptr) * BUFFER_SIZE);
-  d->danglingStackListSize = 0;
-  d->danglingStackListMaxSize = BUFFER_SIZE;
-  d->preemptOnWBA = (PreemptThread*) malloc (sizeof (PreemptThread) * BUFFER_SIZE);
-  d->preemptOnWBASize = 0;
-  d->preemptOnWBAMaxSize = BUFFER_SIZE;
-  d->spawnOnWBA = (SpawnThread*) malloc (sizeof (SpawnThread) * BUFFER_SIZE);
-  d->spawnOnWBASize = 0;
-  d->spawnOnWBAMaxSize = BUFFER_SIZE;
   d->translateState.from = BOGUS_POINTER;
   d->translateState.to = BOGUS_POINTER;
   d->translateState.size = 0;

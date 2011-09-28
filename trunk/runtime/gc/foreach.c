@@ -88,7 +88,7 @@ void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f) {
 void foreachGlobalObjptrInScope (GC_state s, GC_foreachObjptrFun f) {
   for (unsigned int i = 0; i < s->globalsLength; ++i) {
     if (DEBUG_DETAILED)
-      fprintf (stderr, "foreachGlobal %u\n", i);
+      fprintf (stderr, "foreachGlobal %u = "FMTOBJPTR"\n", i, s->globals[i]);
     callIfIsObjptr (s, f, &s->globals [i]);
   }
   if (DEBUG_DETAILED)
@@ -359,6 +359,9 @@ pointer foreachObjptrInRangeWithFill (GC_state s, pointer front, pointer *back,
 
       //Skip over forwarded object and may be fill the gap
       if (getHeader (p) == GC_FORWARDED) {
+        if (DEBUG_DETAILED)
+          fprintf (stderr, "foreachObjptrInRangeWithFill: p = "FMTPTR" is a forwarded object\n",
+                   (uintptr_t)p);
         objptr op = (objptr)p;
         pointer realP;
         do {

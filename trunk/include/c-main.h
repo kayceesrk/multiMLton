@@ -11,6 +11,8 @@
 
 #include "common-main.h"
 #include "c-common.h"
+#include "RCCE.h"
+#include <unistd.h>
 
 static GC_frameIndex returnAddressToFrameIndex (GC_returnAddress ra) {
         return (GC_frameIndex)ra;
@@ -58,7 +60,6 @@ void runProfHandler (void* arg) {                                       \
             fprintf (stderr, "Running runProfHandler..\n");             \
         /* Save our state locally */                                    \
         GC_state s = (GC_state)arg;                                     \
-        pthread_setspecific (gcstate_key, s);                           \
                                                                         \
         /* Block all signals */                                         \
         sigset_t blockSet;                                              \
@@ -178,14 +179,9 @@ void runAlrmHandler (void *arg) {                                       \
 void run (void *arg) {                                                  \
         struct cont cont;                                               \
         GC_state s = (GC_state)arg;                                     \
-        uint32_t num = Proc_processorNumber (s)                         \
-                * s->controls->affinityStride                           \
-                + s->controls->affinityBase;                            \
-         int numCompute = s->numberOfProcs - s->numIOThreads;           \
-         set_cpu_affinity(num);                                         \
+        pthread_setspecific (gcstate_key, s);                           \
                                                                         \
         /* Save our state locally */                                    \
-        pthread_setspecific (gcstate_key, s);                           \
         s->pthread = pthread_self ();                                   \
                                                                         \
         /* Mask ALRM and PROF signal */                                 \
@@ -198,7 +194,7 @@ void run (void *arg) {                                                  \
             sigaddset (&blockSet, SIGPROF);                             \
         pthread_sigmask (SIG_SETMASK, &blockSet, NULL);                 \
                                                                         \
-        if (s->amOriginal) {                                            \
+        if (Proc_amPrimary (s)) {                                       \
                 real_Init();                                            \
                 PrepFarJump(cont, mc, ml);                              \
         } else {                                                        \
@@ -221,63 +217,59 @@ void run (void *arg) {                                                  \
                 }                                                       \
         }                                                               \
         else {                                                          \
+                Parallel_assistInit (s);                                \
                 Proc_waitForInitialization (s);                         \
                 Parallel_run ();                                        \
         }                                                               \
 }                                                                       \
 PUBLIC int MLton_main (int argc, char* argv[]) {                        \
-        int procNo;                                                     \
         pthread_t *threads;                                             \
         pthread_t alrmHandlerThread;                                    \
         pthread_t profHandlerThread;                                    \
-        {                                                               \
-                struct GC_state s;                                      \
-                /* Initialize with a generic state to read in @MLtons, etc */ \
-                Initialize (s, al, mg, mfs, mmc, pk, ps, gnr);          \
-                                                                        \
-                threads = (pthread_t *) malloc ((s.numberOfProcs-1) * sizeof (pthread_t)); \
-                gcState = (GC_state) malloc ((s.numberOfProcs+1) * sizeof (struct GC_state)); \
-                /* Create key */                                        \
-                if (pthread_key_create(&gcstate_key, NULL)) {           \
-                        fprintf (stderr, "pthread_key_create failed: %s\n", strerror (errno)); \
-                        exit (1);                                       \
-                }                                                       \
-                /* Now copy initialization to the first processor state */      \
-                memcpy (&gcState[0], &s, sizeof (struct GC_state));     \
-                gcState[0].procStates = gcState;                        \
-                gcState[0].procId = 0;                                  \
-                GC_lateInit (&gcState[0]);                              \
+        printf ("MLton_main\n");                                        \
+        RCCE_init (&argc, &argv);                                       \
+        printf ("NumUES=%d\n", RCCE_num_ues ());                        \
+        dup2(STDOUT_FILENO, STDERR_FILENO);                             \
+        RCCE_barrier (&RCCE_COMM_WORLD);                                \
+        if (pthread_key_create (&gcstate_key, NULL)) {                  \
+          fprintf (stderr, "pthread_key_create failed\n");              \
+          exit (1);                                                     \
         }                                                               \
-        /* Fill in per-processor data structures */                     \
-        for (procNo = 1; procNo <= gcState[0].numberOfProcs; procNo++) { \
-                Duplicate (&gcState[procNo], &gcState[0]);              \
-                gcState[procNo].procStates = gcState;                   \
-                gcState[procNo].procId = procNo;                        \
-                if (procNo == gcState[0].numberOfProcs)                 \
-                    gcState[procNo].atomicState = 0;                    \
+        struct GC_state s;                                              \
+        gcState = (GC_state) RCCE_shmalloc ((RCCE_num_ues ()) * sizeof (struct GC_state)); \
+        createGlobals ();                                               \
+        fprintf (stderr, "gcState = %p\n", gcState);                    \
+        if (RCCE_ue () == 0) {                                          \
+          /* Initialize with a generic state to read in @MLtons, etc */ \
+          Initialize (s, al, mg, mfs, mmc, pk, ps, gnr);                \
+          /* Now copy initialization to the first processor state */    \
+          memcpy (&gcState[0], &s, sizeof (struct GC_state));           \
+          gcState[0].procStates = gcState;                              \
+          gcState[0].procId = 0;                                        \
+          GC_lateInit (&gcState[0]);                                    \
+          /* Fill in per-processor data structures */                   \
+          for (int procNo = 1; procNo < gcState[0].numberOfProcs; procNo++) { \
+            gcState[procNo].procStates = gcState;                       \
+            gcState[procNo].procId = procNo;                            \
+          }                                                             \
+          RCCE_shflush ();                                              \
+          printf ("Before 1[%d]\n", RCCE_ue ());                        \
+          RCCE_barrier (&RCCE_COMM_WORLD);                              \
+          printf ("After  1[%d]\n", RCCE_ue ());                        \
         }                                                               \
-        /* Now create the threads */                                    \
-        for (procNo = 1; procNo < gcState[0].numberOfProcs; procNo++) { \
-                if (pthread_create (&threads[procNo - 1], NULL, &run, (void *)&gcState[procNo])) { \
-                        fprintf (stderr, "pthread_create failed: %s\n", strerror (errno)); \
-                        exit (1);                                       \
-                }                                                       \
+        else {                                                          \
+          printf ("Before 1[%d]\n", RCCE_ue ());                        \
+          RCCE_barrier (&RCCE_COMM_WORLD);                              \
+          printf ("After  1[%d]\n", RCCE_ue ());                        \
+          RCCE_shflush ();                                              \
+          Duplicate (&gcState[RCCE_ue ()], &gcState[0]);                \
         }                                                               \
-        /* Create the alrmHandler thread */                             \
-        if(gcState[0].enableTimer) {                                    \
-            if(pthread_create (&alrmHandlerThread, NULL, &runAlrmHandler, (void*)&gcState[gcState[0].numberOfProcs])) { \
-                    fprintf (stderr, "pthread_create failed: %s\n", strerror (errno)); \
-                    exit (1);                                           \
-            }                                                           \
-        }                                                               \
-        if(gcState[0].profiling.kind == PROFILE_TIME_LABEL ||           \
-           gcState[0].profiling.kind == PROFILE_TIME_FIELD) {           \
-             if(pthread_create (&profHandlerThread, NULL, &runProfHandler, (void*)&gcState[0])) { \
-                    fprintf (stderr, "pthread_create failed: %s\n", strerror (errno)); \
-                    exit (1);                                           \
-            }                                                           \
-        }                                                               \
-        run ((void *)&gcState[0]);                                      \
+        RCCE_shflush ();                                                \
+        printf ("Before 2[%d]\n", RCCE_ue ());                          \
+        RCCE_barrier (&RCCE_COMM_WORLD);                                \
+        printf ("After  2[%d]\n", RCCE_ue ());                          \
+        RCCE_shflush ();                                                \
+        run ((void *)&gcState[RCCE_ue ()]);                             \
 }
 
 /*XXX KC : Not sure if gcState is correct*/

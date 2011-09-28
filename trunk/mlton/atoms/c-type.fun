@@ -5,7 +5,7 @@
  * See the file MLton-LICENSE for details.
  *)
 
-functor CType (S: C_TYPE_STRUCTS): C_TYPE = 
+functor CType (S: C_TYPE_STRUCTS): C_TYPE =
 struct
 
 open S
@@ -156,5 +156,10 @@ val objptrHeader =
 
 val bool = word (WordSize.bool, {signed = true})
 val shiftArg = word (WordSize.shiftArg, {signed = false})
+
+fun isObjptr ty =
+  case ty of
+       Objptr => true
+     | _ => false
 
 end

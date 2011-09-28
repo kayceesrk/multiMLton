@@ -468,6 +468,40 @@ structure CFunction =
             target = Direct "GC_sqIsEmpty",
             writesStackTop = true}
 
+      fun rcceSend t =
+         T {args = Vector.new3 (Type.gcState (), t, Type.cint ()),
+            bytesNeeded = NONE,
+            convention = Cdecl,
+            ensuresBytesFree = false,
+            mayGC = false,
+            maySwitchThreads = false,
+            modifiesFrontier = false,
+            prototype = (Vector.new3 (CType.gcState,
+                                      CType.cpointer,
+                                      CType.cint ()),
+                         NONE),
+            readsStackTop = false,
+            return = Type.unit,
+            symbolScope = Private,
+            target = Direct "MLton_RCCE_send",
+            writesStackTop = false}
+
+      fun rcceRecv t =
+         T {args = Vector.new2 (Type.gcState (), Type.cint ()),
+            bytesNeeded = NONE,
+            convention = Cdecl,
+            ensuresBytesFree = false,
+            mayGC = true,
+            maySwitchThreads = false,
+            modifiesFrontier = true,
+            prototype = (Vector.new2 (CType.gcState, CType.cint ()),
+                         SOME CType.cpointer),
+            readsStackTop = true,
+            return = t,
+            symbolScope = Private,
+            target = Direct "MLton_RCCE_recv",
+            writesStackTop = true}
+
 
       fun sqEnque t =
          T {args = Vector.new4 (Type.gcState (), t, Type.cint (), Type.cint ()),
@@ -1936,6 +1970,20 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                | MLton_installSignalHandler => none ()
                                | MLton_parInit =>
                                    simpleCCall (CFunction.parallelInit ())
+                               | RCCE_send =>
+                                   (case toRtype (varType (arg 0)) of
+                                        NONE => Error.bug "RCCE_send saw unit"
+                                      | SOME t =>
+                                          if not (Type.isObjptr t) then
+                                            Error.bug "RCCE_send saw non-objptr"
+                                          else
+                                            simpleCCallWithGCState
+                                            (CFunction.rcceSend (Operand.ty (a 0))))
+                               | RCCE_recv =>
+                                   (case toRtype ty of
+                                         NONE => (* dummy *)
+                                           simpleCCallWithGCState (CFunction.rcceRecv Type.bool)
+                                       | SOME t => simpleCCallWithGCState (CFunction.rcceRecv t))
                                | SQ_acquireLock =>
                                    simpleCCallWithGCState (CFunction.sqAcquireLock ())
                                | SQ_releaseLock =>

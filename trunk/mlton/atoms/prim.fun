@@ -121,6 +121,8 @@ datatype 'a t =
  | MLton_move
  | MLton_size (* ssa to rssa *)
  | MLton_touch (* backend *)
+ | RCCE_send (* ssa to rssa *)
+ | RCCE_recv (* ssa to rssa *)
  | Real_Math_acos of RealSize.t (* codegen *)
  | Real_Math_asin of RealSize.t (* codegen *)
  | Real_Math_atan of RealSize.t (* codegen *)
@@ -318,6 +320,8 @@ fun toString (n: 'a t): string =
        | MLton_move => "MLton_move"
        | MLton_size => "MLton_size"
        | MLton_touch => "MLton_touch"
+       | RCCE_send => "RCCE_send"
+       | RCCE_recv => "RCCE_recv"
        | Real_Math_acos s => real (s, "Math_acos")
        | Real_Math_asin s => real (s, "Math_asin")
        | Real_Math_atan s => real (s, "Math_atan")
@@ -487,6 +491,8 @@ val equals: 'a t * 'a t -> bool =
     | (MLton_move, MLton_move) => true
     | (MLton_size, MLton_size) => true
     | (MLton_touch, MLton_touch) => true
+    | (RCCE_send, RCCE_send) => true
+    | (RCCE_recv, RCCE_recv) => true
     | (Real_Math_acos s, Real_Math_acos s') => RealSize.equals (s, s')
     | (Real_Math_asin s, Real_Math_asin s') => RealSize.equals (s, s')
     | (Real_Math_atan s, Real_Math_atan s') => RealSize.equals (s, s')
@@ -679,6 +685,8 @@ val map: 'a t * ('a -> 'b) -> 'b t =
     | MLton_move => MLton_move
     | MLton_size => MLton_size
     | MLton_touch => MLton_touch
+    | RCCE_send => RCCE_send
+    | RCCE_recv => RCCE_recv
     | Real_Math_acos z => Real_Math_acos z
     | Real_Math_asin z => Real_Math_asin z
     | Real_Math_atan z => Real_Math_atan z
@@ -956,6 +964,8 @@ val kind: 'a t -> Kind.t =
        | MLton_move=> SideEffect
        | MLton_size => DependsOnState
        | MLton_touch => SideEffect
+       | RCCE_send => SideEffect
+       | RCCE_recv => SideEffect
        | Real_Math_acos _ => DependsOnState (* depends on rounding mode *)
        | Real_Math_asin _ => DependsOnState (* depends on rounding mode *)
        | Real_Math_atan _ => DependsOnState (* depends on rounding mode *)
@@ -1184,6 +1194,8 @@ in
        MLton_move,
        MLton_size,
        MLton_touch,
+       RCCE_send,
+       RCCE_recv,
        Ref_assign,
        Ref_deref,
        Ref_ref,
@@ -1472,6 +1484,8 @@ fun 'a checkApp (prim: 'a t,
        | MLton_move => oneTarg (fn t => (threeArgs (t, bool, bool), t))
        | MLton_size => oneTarg (fn t => (oneArg t, csize))
        | MLton_touch => oneTarg (fn t => (oneArg t, unit))
+       | RCCE_send => oneTarg (fn t => (twoArgs (t, cint), unit))
+       | RCCE_recv => oneTarg (fn t => (oneArg cint, t))
        | Real_Math_acos s => realUnary s
        | Real_Math_asin s => realUnary s
        | Real_Math_atan s => realUnary s
@@ -1630,6 +1644,8 @@ fun ('a, 'b) extractTargs (prim: 'b t,
        | MLton_move => one (arg 0)
        | MLton_size => one (arg 0)
        | MLton_touch => one (arg 0)
+       | RCCE_send => one (arg 0)
+       | RCCE_recv => one result
        | Ref_assign => one (deRef (arg 0))
        | Ref_deref => one (deRef (arg 0))
        | Ref_ref => one (deRef result)

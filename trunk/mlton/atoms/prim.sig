@@ -111,6 +111,8 @@ signature PRIM =
              | MLton_move
              | MLton_size (* ssa to rssa *)
              | MLton_touch (* backend *)
+             | RCCE_send (* ssa to rssa *)
+             | RCCE_recv (* ssa to rssa *)
              | Real_Math_acos of RealSize.t (* codegen *)
              | Real_Math_asin of RealSize.t (* codegen *)
              | Real_Math_atan of RealSize.t (* codegen *)

@@ -41,7 +41,6 @@
 
 #define C(ty, x) (*(ty*)(x))
 
-#define G(ty, i) (global##ty [i])
 #define GPNR(i) (((Pointer*)(GCState + GlobalObjptrNonRootOffset))[i])
 
 
@@ -49,7 +48,10 @@ PRIVATE extern Pointer GC_forwardBase (struct GC_state* s, Pointer b);
 
 #define FWD(x) (GC_forwardBase (GCState, (x)))
 
+
 #ifdef DEBUG_MEMORY
+    #define G(ty, i) (fprintf (stderr, "%s:%d globalXXX [%d] = %018p\n", __FILE__, __LINE__, \
+                                        i, (void*) (global##ty [i])), global##ty [i])
     #define O_RB(ty, b, o) (fprintf (stderr, "%s:%d O_RB: Addr=%018p Val=%018p\n", __FILE__, __LINE__, \
                                      (void*)((b) + (o)), \
                                      FWD (*((ty*)((b) + (o))))), \
@@ -76,6 +78,7 @@ PRIVATE extern Pointer GC_forwardBase (struct GC_state* s, Pointer b);
                         (ty*)(StackTop + (i))))
 
 #else
+    #define G(ty, i) (global##ty [i])
     #define O_RB(ty, b, o) (FWD (*(ty*)((b) + (o))))
     #define O(ty, b, o) (*((ty*)((b) + (o))))
     #define X_RB(ty, b, i, s, o) (FWD (*((ty*)((b) + ((i) * (s)) + (o)))))
@@ -118,20 +121,24 @@ PRIVATE extern Pointer GC_forwardBase (struct GC_state* s, Pointer b);
 #define FlushFrontier()                         \
         do {                                    \
                 FrontierMem = Frontier;         \
+                RCCE_shflush ();                \
         } while (0)
 
 #define FlushStackTop()                         \
         do {                                    \
                 StackTopMem = StackTop;         \
+                RCCE_shflush ();                \
         } while (0)
 
 #define CacheFrontier()                         \
         do {                                    \
+                RCCE_shflush ();                \
                 Frontier = FrontierMem;         \
         } while (0)
 
 #define CacheStackTop()                         \
         do {                                    \
+                RCCE_shflush ();                \
                 StackTop = StackTopMem;         \
         } while (0)
 
@@ -161,6 +168,9 @@ PRIVATE extern Pointer GC_forwardBase (struct GC_state* s, Pointer b);
                                         __FILE__, __LINE__, n, (int)l_nextFun); \
                 CacheFrontier();                                        \
                 CacheStackTop();                                        \
+                if (DEBUG_CCODEGEN)                                     \
+                        fprintf (stderr, "%s:%d: entering chunk %d  l_nextFun = %d\n", \
+                                        __FILE__, __LINE__, n, (int)l_nextFun); \
                 while (1) {                                             \
                 top:                                                    \
                 switch (l_nextFun) {

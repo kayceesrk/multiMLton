@@ -137,6 +137,7 @@ COMPILE_TIME_ASSERT(sizeof_double__is_eight, sizeof(double) == 8);
 #endif
 
 #include "gmp.h"
+#include "RCCE.h"
 #include "export.h"
 
 COMPILE_TIME_ASSERT(sizeof_uintptr_t__is__sizeof_voidStar,

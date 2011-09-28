@@ -3,70 +3,55 @@
 #include <time.h>
 #include "platform.h"
 
-/* num of holding thread or -1 if no one*/
-volatile int32_t *Parallel_mutexes;
-pthread_mutex_t *waitMutex;
-pthread_cond_t *waitCondVar;
-bool* dataInMutatorQ;
-
-void Parallel_initResources (GC_state s) {
-  Parallel_mutexes = (int32_t *) malloc (s->numberOfProcs * sizeof (int32_t));
-  waitMutex = (pthread_mutex_t*) malloc (s->numberOfProcs * sizeof (pthread_mutex_t));
-  waitCondVar = (pthread_cond_t*) malloc (s->numberOfProcs * sizeof (pthread_cond_t));
-  dataInMutatorQ = (bool*) malloc (s->numberOfProcs * sizeof(bool));
-  for (int proc = 0; proc < s->numberOfProcs; proc++) {
-    Parallel_mutexes[proc] = -1;
-    pthread_mutex_init (&waitMutex[proc], NULL);
-    pthread_cond_init (&waitCondVar[proc], NULL);
-    /* To be on the safe side initialize dataInMutatorQ with true. This will be cleared
-     * on the first iteration if it is a false positive */
-    dataInMutatorQ[proc] = TRUE;
-  }
-}
-
 void Parallel_init (void) {
   GC_state s = pthread_getspecific (gcstate_key);
 
-  if (!Proc_isInitialized (s)) {
-    /* Move the object pointers in call-from-c-handler stack to the shared heap in
-     * preparation for copying this stack to each processor */
-    {
-      GC_thread thrd = (GC_thread) objptrToPointer (s->callFromCHandlerThread, s->heap->start);
-      pointer stk = objptrToPointer (thrd->stack, s->heap->start);
-      moveEachObjptrInObject (s, stk);
-    }
-
-    /* Set up call-back state in each worker thread */
-    /* XXX hack copy the call-from-c-handler into the worker threads
-       assumes this is called by the primary thread */
-    for (int proc = 0; proc < s->numberOfProcs; proc++)
-      s->procStates[proc].callFromCHandlerThread =
-        pointerToObjptr (copyThreadTo (s, &s->procStates[proc],
-                                       objptrToPointer(s->callFromCHandlerThread, s->heap->start)), s->heap->start);
-
-    /* Lift all objects from local heap of processor 0 to the shared heap. This
-     * must come before waking up the processors */
-    if (s->numberOfProcs != 1)
-      liftAllObjectsDuringInit (s);
-
-    /* Now wake them up! */
-    Proc_signalInitialization (s);
+  /* Move the object pointers in call-from-c-handler stack to the shared heap in
+    * preparation for copying this stack to each processor */
+  {
+    GC_thread thrd = (GC_thread) objptrToPointer (s->callFromCHandlerThread, s->heap->start);
+    pointer stk = objptrToPointer (thrd->stack, s->heap->start);
+    moveEachObjptrInObject (s, stk);
   }
+
+  /* Set up call-back state in each worker threadi. Will match with Parallel_assist (). */
+  GC_thread thrd = (GC_thread) objptrToPointer (s->callFromCHandlerThread, s->heap->start);
+  GC_stack stk = (GC_stack) objptrToPointer (thrd->stack, s->heap->start);
+  pointer bottom = getStackBottom (s, stk);
+  RCCE_bcast ((char*)&stk->used, sizeof (size_t), 0, RCCE_COMM_WORLD);
+  RCCE_bcast ((char*)bottom, stk->used, 0, RCCE_COMM_WORLD);
+
+  /* Lift all objects from local heap of processor 0 to the shared heap. This
+    * must come before waking up the processors */
+  if (s->numberOfProcs != 1)
+    liftAllObjectsDuringInit (s);
+
+  /* Now wake them up! */
+  Proc_signalInitialization (s);
+}
+
+/* Matches with bcasts in Parallel_init */
+void Parallel_assistInit (GC_state s) {
+  size_t reserved;
+  RCCE_bcast ((char*)&reserved, sizeof (size_t), 0, RCCE_COMM_WORLD);
+  GC_thread thrd = newThread (s, alignStackReserved (s, reserved));
+  GC_stack stk = (GC_stack) objptrToPointer (thrd->stack, s->heap->start);
+  pointer bottom = getStackBottom (s, stk);
+  RCCE_bcast ((char*)bottom, reserved, 0, RCCE_COMM_WORLD);
+  stk->used = reserved;
+  s->callFromCHandlerThread = pointerToObjptr (thrd, s->heap->start);
 }
 
 Int32 Parallel_processorNumber (void) {
-  GC_state s = pthread_getspecific (gcstate_key);
-  return Proc_processorNumber (s);
+  return RCCE_ue ();
 }
 
 Int32 Parallel_numberOfProcessors (void) {
-  GC_state s = pthread_getspecific (gcstate_key);
-  return s->numberOfProcs;
+  return RCCE_num_ues ();
 }
 
 Int32 Parallel_numIOThreads (void) {
-  GC_state s = pthread_getspecific (gcstate_key);
-  return s->numIOThreads;
+  return 0;
 }
 
 Word64 Parallel_maxBytesLive (void) {
@@ -82,7 +67,10 @@ void Parallel_resetBytesLive (void) {
 void maybeWaitForGC (GC_state s) {
   if (Proc_threadInSection (s)) {
     s->syncReason = SYNC_HELP;
-    performSharedGC (s, 0);
+    performSharedGCCollective (s, 0);
+  }
+  else if (Proc_mustExit (s)) {
+    GC_doneAssist (s);
   }
 }
 
@@ -91,71 +79,73 @@ void Parallel_maybeWaitForGC (void) {
   maybeWaitForGC (s);
 }
 
-
-
 //struct rusage ru_lock;
 
 void Parallel_lock (Int32 p) {
-  GC_state s = pthread_getspecific (gcstate_key);
-  int32_t myNumber = Proc_processorNumber (s);
-
-  //fprintf (stderr, "lock\n");
-
-  /*
-  if (needGCTime (s))
-    startTiming (&ru_lock);
-  */
-
-  do {
-  AGAIN:
-    Parallel_maybeWaitForGC ();
-    if (Parallel_mutexes[p] >= 0)
-      goto AGAIN;
-  } while (not __sync_bool_compare_and_swap (&Parallel_mutexes[p],
-                                             -1,
-                                             myNumber));
-  /*
-  if (needGCTime (s))
-    stopTiming (&ru_lock, &s->cumulativeStatistics->ru_lock);
-  */
+  /* This flush will ensure that global data read within the locked region is
+   * upto date */
+  RCCE_shflush ();
+  RCCE_acquire_lock (p);
+  RCCE_shflush ();
 }
 
 void Parallel_unlock (Int32 p) {
-  GC_state s = pthread_getspecific (gcstate_key);
-  int32_t myNumber = Proc_processorNumber (s);
-
-  //fprintf (stderr, "unlock %d\n", Parallel_holdingMutex);
-
-  if (not __sync_bool_compare_and_swap (&Parallel_mutexes[p],
-                                        myNumber,
-                                        -1)) {
-    fprintf (stderr, "can't unlock if you don't hold the lock\n");
-  }
+  /* This flush will ensure that global data written within the locked region is
+   * flushed */
+  RCCE_shflush ();
+  RCCE_release_lock (p);
+  RCCE_shflush ();
 }
 
 Int32 Parallel_fetchAndAdd (pointer p, Int32 v) {
-  //fprintf (stderr, "fetchAndAdd\n");
-
-  Int32 res = __sync_fetch_and_add ((Int32 *)p, v);
-  /*
-  asm volatile ("mfence");
-  */
-  /*
-  asm volatile ("lock; xaddl %0,%1"
-                : "+q" (v) // output
-                : "m" (*p) // input
-                : "memory"); // clobbered
-  //  asm volatile ("mfence");
-  */
-  return res;
+  int coreId = Proc_addrToCoreId (p);
+  Parallel_lock (coreId);
+  int result = *(int*)p;
+  *(int*)p = *(int*)p + v;
+  Parallel_unlock (coreId);
+  return result;
 }
 
 bool Parallel_compareAndSwap (pointer p, Int32 old, Int32 new) {
-  return __sync_bool_compare_and_swap ((Int32 *)p, old, new);
+  int* ip = (int*)p;
+  int i = *ip;
+  if (i != old)
+    return FALSE;
+
+  int coreId = Proc_addrToCoreId (p);
+  bool result;
+  Parallel_lock (coreId);
+  i = *ip;
+  if (i != old)
+    result = FALSE;
+  else {
+    *ip = new;
+    result = TRUE;
+  }
+  Parallel_unlock (coreId);
+
+  return result;
 }
 
 Int32 Parallel_vCompareAndSwap (pointer p, Int32 old, Int32 new) {
-    return __sync_val_compare_and_swap ((Int32 *)p, old, new);
+  int* ip = (int*)p;
+  int i = *ip;
+  if (i != old)
+    return i;
+
+  int coreId = Proc_addrToCoreId (p);
+  int result;
+  Parallel_lock (coreId);
+  i = *ip;
+  if (i != old)
+    result = i;
+  else {
+    *ip = new;
+    result = old;
+  }
+  Parallel_unlock (coreId);
+
+  return result;
 }
 
 void Parallel_enablePreemption (void)
@@ -198,31 +188,9 @@ timeval_diff(struct timeval *difference,
 
 } /* timeval_diff() */
 
-void Parallel_wait (void) {
-    GC_state s = pthread_getspecific (gcstate_key);
-    int p = Parallel_processorNumber ();
-    sigset_t set;
-    sigemptyset (&set);
-    sigaddset (&set, SIGUSR2);
-    //struct timeval starttime,endtime,timediff;
 
-    //gettimeofday(&starttime,0x0);
-    pthread_mutex_lock (&waitMutex[p]);
-    if (!(Proc_threadInSection (s) || dataInMutatorQ[p])) {
-        pthread_sigmask (SIG_BLOCK, &set, NULL);
-        pthread_cond_wait (&waitCondVar[p], &waitMutex[p]);
-        pthread_sigmask (SIG_UNBLOCK, &set, NULL);
-    }
-    dataInMutatorQ[p] = FALSE;
-    pthread_mutex_unlock (&waitMutex[p]);
-    //gettimeofday(&endtime,0x0);
-    //long long diff = timeval_diff(&timediff,&endtime,&starttime);
-    //fprintf(stderr, "Diff %lld[%d]\n", diff, Parallel_processorNumber ());
+void Parallel_wait () {
 }
 
-void Parallel_wakeUpThread (Int32 p, Int32 dataIn) {
-    pthread_mutex_lock (&waitMutex[p]);
-    if (dataIn == 1) dataInMutatorQ[p] = TRUE;
-    pthread_cond_signal (&waitCondVar[p]);
-    pthread_mutex_unlock (&waitMutex[p]);
+void Parallel_wakeUpThread (__attribute__((unused)) Int32 p, __attribute__((unused)) Int32 dataIn) {
 }

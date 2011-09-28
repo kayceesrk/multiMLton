@@ -21,6 +21,10 @@ struct GC_forwardState {
   pointer back;
   pointer toStart;
   pointer toLimit;
+
+  /* The following options are relevant only for forwarding objects to the
+   * shared heap. */
+
   /* Used when moving objects to shared heap to represent the parts
    * of the sharedHeap allocated to other mutators.
    */
@@ -36,8 +40,9 @@ struct GC_forwardState {
   bool forceStackForwarding;
 
   /* This indicates the object being lifted if forwardState is being used in an
-   * transitive closure lift operation. If the shared heap GC finishes the
-   * lifting, the thread performing the lifting process, aborts lifting.
+   * transitive closure lift operation to sharedHeap. If the shared heap GC
+   * finishes the lifting, the thread performing the lifting process, aborts
+   * lifting.
    */
   objptr liftingObject;
 
@@ -46,8 +51,6 @@ struct GC_forwardState {
    */
   jmp_buf returnLocation;
   bool isReturnLocationSet;
-
-  /* used to indicate if a GC would be required to fix the heap */
 };
 
 #define GC_FORWARDED ~((GC_header)0)
@@ -59,7 +62,8 @@ struct GC_forwardState {
 static inline bool isPointerInToSpace (GC_state s, pointer p);
 static inline bool isObjptrInToSpace (GC_state s, objptr op);
 
-static inline void forwardObjptr (GC_state s, objptr *opp);
+static void forwardObjptr (GC_state s, objptr *opp);
+static void copyObjptr (GC_state s, objptr *opp);
 static void forwardObjptrToSharedHeap (GC_state s, objptr *opp);
 static inline void forwardObjptrIfInNursery (GC_state s, objptr *opp);
 static inline void forwardObjptrIfInLocalHeap (GC_state s, objptr *opp);

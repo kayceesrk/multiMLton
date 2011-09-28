@@ -41,7 +41,7 @@ PRIVATE Pointer gcStateAddress;
         s.frameLayouts = frameLayouts;                            \
         s.frameLayoutsLength = cardof(frameLayouts);              \
         s.globals = (objptr*)globalObjptr;                        \
-        s.globalsLength = cardof(globalObjptr);                   \
+        s.globalsLength = globalsLength;                          \
         s.intInfInits = intInfInits;                              \
         s.intInfInitsLength = cardof(intInfInits);                \
         s.loadGlobals = loadGlobals;                              \
@@ -67,7 +67,7 @@ PRIVATE Pointer gcStateAddress;
         s.profiling.kind = pk;                                    \
         s.profiling.stack = ps;                                   \
         s.profiling.isProfilingTimeOn = false;                    \
-        s.globalObjptrNonRoot = (Pointer *) malloc (gnr * sizeof (Pointer));  \
+        s.globalObjptrNonRoot = (Pointer *) RCCE_shmalloc (gnr * sizeof (Pointer));  \
         MLton_init (argc, argv, &s);                              \
 
 #define LIB_PASTE(x,y) x ## y

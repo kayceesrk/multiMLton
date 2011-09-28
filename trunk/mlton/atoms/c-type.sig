@@ -5,13 +5,13 @@
  * See the file MLton-LICENSE for details.
  *)
 
-signature C_TYPE_STRUCTS = 
+signature C_TYPE_STRUCTS =
    sig
       structure RealSize: REAL_SIZE
       structure WordSize: WORD_SIZE
    end
 
-signature C_TYPE = 
+signature C_TYPE =
    sig
       include C_TYPE_STRUCTS
 
@@ -49,4 +49,5 @@ signature C_TYPE =
       val thread: t
       val toString: t -> string
       val word: WordSize.t * {signed: bool} -> t
+      val isObjptr: t -> bool
    end

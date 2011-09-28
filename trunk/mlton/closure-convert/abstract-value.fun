@@ -428,6 +428,13 @@ fun primApply {prim: Type.t Prim.t, args: t vector, resultTy: Type.t}: t =
             in coerce {from = arg, to = serialValue (ty arg)}
                ; result ()
             end
+       | RCCE_send =>
+           let val (r, i) = twoArgs ()
+           in
+             coerce {from = r, to = serialValue (ty r)}
+             ; result ()
+           end
+       | RCCE_recv => serialValue resultTy
        | Lwtgc_needPreemption =>
             let val (r, x) = twoArgs ()
             in (case dest r of
