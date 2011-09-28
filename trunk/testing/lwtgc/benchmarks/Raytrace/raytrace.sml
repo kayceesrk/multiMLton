@@ -2374,7 +2374,7 @@ structure Main =
      fun doit n =
        (fn () =>
         let
-          val p = Program.read (TextIO.openIn "chess.gml")
+          val p = Program.read (TextIO.openIn "/shared/chandras/testingWB/cylinder.gml")
           val _ = List.tabulate (n, fn _ => ignore (MLton.Pacml.spawn (fn () => Eval.f (p) handle _ => ())))
           val _ = Eval.f p
         in
