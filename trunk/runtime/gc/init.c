@@ -473,6 +473,9 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->controls->ratios.stackShrink = 0.5;
   s->controls->summary = SUMMARY_NONE;
   s->forwardState.liftingObject = BOGUS_OBJPTR;
+  s->forwardState.rangeListCurrent = NULL;
+  s->forwardState.rangeListLast = NULL;
+  s->forwardState.rangeListFirst = NULL;
 
   // While the following asserts are manifestly true,
   // they check the asserts in sizeofThread and sizeofWeak.
@@ -615,6 +618,9 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->controls = s->controls;
   d->cumulativeStatistics = initCumulativeStatistics ();
   d->forwardState.liftingObject = BOGUS_OBJPTR;
+  d->forwardState.rangeListCurrent = NULL;
+  d->forwardState.rangeListLast = NULL;
+  d->forwardState.rangeListFirst = NULL;
   d->lastMajorStatistics = initLastMajorStatistics ();
   d->lastSharedMajorStatistics = s->lastSharedMajorStatistics;
   d->currentThread = BOGUS_OBJPTR;

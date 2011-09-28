@@ -32,6 +32,7 @@ static inline GC_intInf toBignum (GC_state s, objptr arg) {
   bp = (GC_intInf)(objptrToPointer(arg, s->heap->start)
                    - offsetof(struct GC_intInf, obj.body.isneg));
   h = bp->header & (~LIFT_MASK);
+  h = bp->header & (~VIRGIN_MASK);
   if (DEBUG_INT_INF)
     fprintf (stderr, "bp->header = "FMTHDR"\n", h);
   assert (h == GC_INTINF_HEADER);

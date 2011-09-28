@@ -728,7 +728,7 @@ signature PROGRAM =
 
       datatype k =
          Acos | Addi | Addf | Apply | Asin | Clampf | Cone | Cos | Cube
-       | Cylinder | Difference | Divi | Divf | Eqi | Eqf | Floor | Frac
+       | cube | Difference | Divi | Divf | Eqi | Eqf | Floor | Frac
        | Get | Getx | Gety | Getz | If | Intersect | Length | Lessi | Lessf
        | Light | Modi | Muli | Mulf | Negi | Negf | Plane | Point
        | Pointlight | Real | Render | Rotatex | Rotatey | Rotatez | Scale
@@ -819,7 +819,7 @@ open Caml
 
 datatype k =
     Acos | Addi | Addf | Apply | Asin | Clampf | Cone | Cos | Cube
-  | Cylinder | Difference | Divi | Divf | Eqi | Eqf | Floor | Frac
+  | cube | Difference | Divi | Divf | Eqi | Eqf | Floor | Frac
   | Get | Getx | Gety | Getz | If | Intersect | Length | Lessi | Lessf
   | Light | Modi | Muli | Mulf | Negi | Negf | Plane | Point
   | Pointlight | Real | Render | Rotatex | Rotatey | Rotatez | Scale
@@ -914,7 +914,7 @@ val keywords(*, keyword_name)*) =
       ("cone", Prim Cone),
       ("cos", Prim Cos),
       ("cube", Prim Cube),
-      ("cylinder", Prim Cylinder),
+      ("cube", Prim cube),
       ("difference", Prim Difference),
       ("divi", Prim Divi),
       ("divf", Prim Divf),
@@ -1157,7 +1157,7 @@ fun plane_eq(m, v) =
 
 val origin = ( 0.0, 0.0, 0.0, 1.0 )
 val cube_center = ( 0.5, 0.5, 0.5, 1.0 )
-val cylinder_center = ( 0.0, 0.5, 0.0, 1.0 )
+val cube_center = ( 0.0, 0.5, 0.0, 1.0 )
 val cone_center = ( 0.0, 1.0, 0.0, 1.0 )
 
 fun intern_obj(m, m1, scale, isom, ob) =
@@ -1193,7 +1193,7 @@ fun intern_obj(m, m1, scale, isom, ob) =
          val (n, n') = plane_eq(m, (0.0, 1.0, 0.0, 0.0))
          val c = SObj (SCylind n', f, m)
       in
-         SBound (c, vmul(m1, cylinder_center), scale * scale * 1.25)
+         SBound (c, vmul(m1, cube_center), scale * scale * 1.25)
       end
   | OObj (OCone, f) =>
       let
@@ -1634,7 +1634,7 @@ fun ellipsoid (orig, dir, scene, m): (float * scene * float * scene) list =
          end
    end
 
-fun cylinder (orig, dir, scene, m): (float * scene * float * scene) list =
+fun cube (orig, dir, scene, m): (float * scene * float * scene) list =
    let
       val x = vmul (m, orig)
       val v = vmul (m, dir)
@@ -1718,7 +1718,7 @@ fun find_all (orig, dir, scene) =
   | SObj (SCube _, _, m) =>
       cube (orig, dir, scene, m)
   | SObj (SCylind _, _, m) =>
-      cylinder (orig, dir, scene, m)
+      cube (orig, dir, scene, m)
   | SObj (SCone _, _, m) =>
       cone (orig, dir, scene, m)
   | SObj (SPlane (eq, _), _, m) =>
@@ -1768,7 +1768,7 @@ fun hit(orig, dir, scene, bounded) =
                SSphere (x, r2) => sphere (orig, dir, scene, x, r2)
              | SEllips         => ellipsoid (orig, dir, scene, m)
              | SCube _         => cube (orig, dir, scene, m)
-             | SCylind _       => cylinder (orig, dir, scene, m)
+             | SCylind _       => cube (orig, dir, scene, m)
              | SCone _         => cone (orig, dir, scene, m)
              | SPlane (eq, _)  => plane (orig, dir, scene, eq)) of
                [] => false
@@ -2272,7 +2272,7 @@ fun eval (env, st, p) =
       eval(env, (VObj (OObj (OSphere, ref (Unopt f))) :: st'), r)
   | ((f as VClos _) :: st', Prim' Cube :: r    ) =>
       eval(env, (VObj (OObj (OCube, ref (Unopt f)))   :: st'), r)
-  | ((f as VClos _) :: st', Prim' Cylinder :: r) =>
+  | ((f as VClos _) :: st', Prim' cube :: r) =>
       eval(env, (VObj (OObj (OCylind, ref (Unopt f))) :: st'), r)
   | ((f as VClos _) :: st', Prim' Cone :: r    ) =>
       eval(env, (VObj (OObj (OCone, ref (Unopt f)))   :: st'), r)
@@ -2374,7 +2374,7 @@ structure Main =
      fun doit n =
        (fn () =>
         let
-          val p = Program.read (TextIO.openIn "/shared/chandras/testingWB/cylinder.gml")
+          val p = Program.read (TextIO.openIn "/shared/chandras/testingWB/cube.gml")
           val _ = List.tabulate (n, fn _ => ignore (MLton.Pacml.spawn (fn () => Eval.f (p) handle _ => ())))
           val _ = Eval.f p
         in

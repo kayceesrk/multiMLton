@@ -49,6 +49,7 @@ def run(directory, prog, numProcs, pargs, timeout):
 	print ("\tSetting timeout to " + str (timeout))
 	try:
 		proc = subprocess.Popen (args, cwd="/shared/chandras")
+		proc.communicate()
 		signal.alarm(0)
 	except Alarm:
 		print "\tTimeout!!"
@@ -59,7 +60,7 @@ def run(directory, prog, numProcs, pargs, timeout):
 def main ():
 	program = "raytrace-scc"
 	directory = "testingWB"
-	timeout = 10
+	timeout = 80
 
 	#Parse options
 	parser = OptionParser()
@@ -67,6 +68,10 @@ def main ():
 	parser.add_option("-n", "--numProcs", dest="numProcs", help="number of processors", default =1)
 	(options, args) = parser.parse_args()
 
-	run(directory, program, options.numProcs, options.args, timeout)
+	if (options.numProcs):
+		run(directory, program, options.numProcs, options.args, timeout)
+	else:
+		for n in [1, 2, 4, 6, 8]:
+			run(directory, program, n, options.args, timeout)
 
 main ()
