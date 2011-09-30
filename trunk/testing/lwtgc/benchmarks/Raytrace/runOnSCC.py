@@ -20,7 +20,7 @@ def alarm_handler(signum, frame):
 def wipeProcess(prog):
 	#wipeProcess may get stuck. Hence, install signal handler
 		signal.signal(signal.SIGALRM, alarm_handler)
-		signal.alarm(20)
+		signal.alarm(5)
 		try:
 			log ("\tstarting wipeProcess: " + str(prog))
 			args = "./killit " + str(prog)
@@ -48,7 +48,7 @@ def run(directory, prog, numProcs, pargs, timeout):
 	signal.alarm(int(timeout))
 	print ("\tSetting timeout to " + str (timeout))
 	try:
-		proc = subprocess.Popen (args, cwd="/shared/chandras")
+		proc = subprocess.Popen (args, cwd="/shared/chandras", stderr = subprocess.STDOUT)
 		proc.communicate()
 		signal.alarm(0)
 	except Alarm:
@@ -68,10 +68,6 @@ def main ():
 	parser.add_option("-n", "--numProcs", dest="numProcs", help="number of processors", default =1)
 	(options, args) = parser.parse_args()
 
-	if (options.numProcs):
-		run(directory, program, options.numProcs, options.args, timeout)
-	else:
-		for n in [1, 2, 4, 6, 8]:
-			run(directory, program, n, options.args, timeout)
+	run(directory, program, options.numProcs, options.args, timeout)
 
 main ()

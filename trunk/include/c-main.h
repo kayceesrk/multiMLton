@@ -176,8 +176,22 @@ void runAlrmHandler (void *arg) {                                       \
         }                                                               \
 }                                                                       \
                                                                         \
+                                                                        \
+void segvHandler (int sig) {                                            \
+  void* tracePtrs[100];                                                 \
+  int count = backtrace( tracePtrs, 100 );                              \
+  char** funcNames = backtrace_symbols( tracePtrs, count );             \
+  /* Print the stack trace */                                           \
+  for( int ii = 0; ii < count; ii++ )                                   \
+        printf( "%s\n", funcNames[ii] );                                \
+  /* Free the string pointers */                                        \
+  free( funcNames );                                                    \
+  exit (0);                                                             \
+}                                                                       \
+                                                                        \
 void run (void *arg) {                                                  \
         struct cont cont;                                               \
+        signal (SIGSEGV, segvHandler);                                  \
         GC_state s = (GC_state)arg;                                     \
         pthread_setspecific (gcstate_key, s);                           \
                                                                         \

@@ -149,7 +149,7 @@ void releaseHeap (GC_state s, GC_heap h) {
     RCCE_shflush ();
   }
   else
-    GC_release (h->start, h->withMapsSize);
+    releaseNonOverlapping (s, h->start, h->withMapsSize);
   initHeap (s, h, h->kind);
 }
 
@@ -182,7 +182,7 @@ void shrinkHeap (GC_state s, GC_heap h, size_t keepSize) {
      * allocated through malloc and not mmap. This prevents us from arbitrary
      * position in the allocated space. */
     if (h != s->sharedHeap && h != s->secondarySharedHeap)
-      GC_release (h->start + keepWithMapsSize, h->withMapsSize - keepWithMapsSize);
+      releaseNonOverlapping (s, h->start + keepWithMapsSize, h->withMapsSize - keepWithMapsSize);
     h->size = keepSize;
     h->withMapsSize = keepWithMapsSize;
   }
@@ -257,14 +257,8 @@ bool createHeap (GC_state s, GC_heap h,
       if (i == count)
         address = 0;
 
-      /* Try to get the addresses in disjoint address spaces. This will bring
-       * out errors and reduce the possibility of same pointers to be added to
-       * pointerToCoreMap. */
-      if (i < 5)
-        address = ((address & 0x03FFFFFF) | ((Proc_processorNumber (s) + 1) << 26));
-
       if (!isShared)
-        newStart = GC_mmapAnon ((pointer)address, newWithMapsSize);
+        newStart = mmapAnonNonOverlapping (s, (pointer)address, newWithMapsSize);
       else {
         newStart = GC_shmalloc (newWithMapsSize);
         if (newStart == NULL) {
@@ -348,6 +342,7 @@ bool remapHeap (GC_state s, GC_heap h,
   if (h == s->sharedHeap || h == s->secondarySharedHeap)
     isShared = TRUE;
 
+  assert (!isShared);
 #if not HAS_REMAP
   return FALSE;
 #endif
@@ -367,29 +362,51 @@ bool remapHeap (GC_state s, GC_heap h,
   origWithMapsSize = origSize + sizeofCardMapAndCrossMap (s, origSize);
   newSize = desiredSize;
   do {
-    pointer newStart;
+    const unsigned int countLog2 = 5;
+    const unsigned int count = 0x1 << countLog2;
+    const size_t step = (size_t)0x1 << (ADDRESS_BITS - countLog2);
+#if ADDRESS_BITS == POINTER_BITS
+    const size_t address_end = 0;
+#else
+    const size_t address_end = (size_t)0x1 << ADDRESS_BITS;
+#endif
+
+    bool direction = TRUE;
+    unsigned int i;
 
     newWithMapsSize = newSize + sizeofCardMapAndCrossMap (s, newSize);
 
     assert (isAligned (newWithMapsSize, s->sysvals.pageSize));
 
-    newStart = GC_mremap (h->start, origWithMapsSize, newWithMapsSize);
-    unless ((void*)-1 == newStart) {
-      h->start = newStart;
-      h->size = newSize;
-      h->withMapsSize = newWithMapsSize;
-      if (!isShared && h->size > s->cumulativeStatistics->maxHeapSize)
-        s->cumulativeStatistics->maxHeapSize = h->size;
-      if (isShared && h->size > s->cumulativeStatistics->maxSharedHeapSize)
-        s->cumulativeStatistics->maxSharedHeapSize = h->size;
-      assert (minSize <= h->size and h->size <= desiredSize);
-      if (DEBUG or s->controls->messages)
-        fprintf (stderr,
-                 "[GC: Remapped heap at "FMTPTR" to size %s bytes (+ %s bytes card/cross map).]\n",
-                 (uintptr_t)(h->start),
-                 uintmaxToCommaString(h->size),
-                 uintmaxToCommaString(h->withMapsSize - h->size));
-      return TRUE;
+    for (i = 1; i <= count; i++) {
+      size_t address;
+      pointer newStart;
+
+      address = (size_t)i * step;
+      if (direction)
+        address = address_end - address;
+      /* Always use 0 in the last step. */
+      if (i == count)
+        address = 0;
+
+      newStart = mremapNonOverlapping (s, h->start, origWithMapsSize, newWithMapsSize, address);
+      unless ((void*)-1 == newStart) {
+        h->start = newStart;
+        h->size = newSize;
+        h->withMapsSize = newWithMapsSize;
+        if (!isShared && h->size > s->cumulativeStatistics->maxHeapSize)
+          s->cumulativeStatistics->maxHeapSize = h->size;
+        if (isShared && h->size > s->cumulativeStatistics->maxSharedHeapSize)
+          s->cumulativeStatistics->maxSharedHeapSize = h->size;
+        assert (minSize <= h->size and h->size <= desiredSize);
+        if (DEBUG or s->controls->messages)
+          fprintf (stderr,
+                  "[GC: Remapped heap at "FMTPTR" to size %s bytes (+ %s bytes card/cross map).]\n",
+                  (uintptr_t)(h->start),
+                  uintmaxToCommaString(h->size),
+                  uintmaxToCommaString(h->withMapsSize - h->size));
+        return TRUE;
+      }
     }
     if (s->controls->messages) {
       fprintf (stderr,
@@ -637,3 +654,90 @@ void resizeSharedHeapSecondary (GC_state s, size_t primarySize) {
   assert (0 == s->secondarySharedHeap->size
           or primarySize == s->secondarySharedHeap->size);
 }
+
+static void removeFromUsedHeaps (GC_state s, void* p) {
+  bool found = FALSE;
+  Parallel_lock (0);
+  UsedHeapStarts* u = s->usedHeapStarts;
+  for (int i =0; i < u->size; i++) {
+    if (!found && u->buffer[i] == p) {
+      fprintf (stderr, "removeFromUsedHeap: found "FMTPTR" at %d\n",
+               (uintptr_t)p, i);
+      found = TRUE;
+    }
+    else if (found)
+      u->buffer[i-1] = u->buffer[i];
+  }
+  assert (found);
+  if (!found) {
+    fprintf (stderr, "removeFromUsedHeaps: "FMTPTR" not found in usedHeapStarts\n",
+            (uintptr_t)p);
+    *s->needsBarrier = EXIT;
+    exit (0);
+  }
+  else
+    u->size--;
+  Parallel_unlock (0);
+}
+
+static bool addToUsedHeaps (GC_state s, void* p) {
+  bool isAddressOK = TRUE;
+  Parallel_lock (0);
+  UsedHeapStarts* u = s->usedHeapStarts;
+  for (int i = 0; i < u->size; i++) {
+    if (u->buffer[i] == p) {
+      isAddressOK = FALSE;
+      break;
+    }
+  }
+  if (isAddressOK) {
+    assert (u->size < u->maxSize);
+    if (u->size == u->maxSize) {
+      fprintf (stderr, "addToUsedHeaps: buffer is full\n");
+      *s->needsBarrier = EXIT;
+      exit (0);
+    }
+    fprintf (stderr, "addToUsedHeaps: adding "FMTPTR" at %d\n",
+             (uintptr_t)p, u->size);
+    u->buffer [u->size++] = p;
+  }
+  Parallel_unlock (0);
+
+  return isAddressOK;
+}
+
+/* Returns (void*)-1 if the address has already been taken. Otherwise
+ * returns GC_mmapAnon (p, size) */
+static void* mmapAnonNonOverlapping (GC_state s, void* p, size_t size) {
+  bool isAddressOK = addToUsedHeaps (s, p);
+  if (isAddressOK) {
+    void* result = GC_mmapAnon (p, size);
+    if (result == -1)
+      removeFromUsedHeaps (s, p);
+    else
+      fprintf (stderr, "mmapAnonNonOverlapping: inserting "FMTPTR"\n", (uintptr_t)p);
+    return result;
+  }
+  else
+    return (void*)-1;
+}
+
+static void releaseNonOverlapping (GC_state s, void* p, size_t size) {
+  removeFromUsedHeaps (s, p);
+  fprintf (stderr, "releseNonOverlapping: found "FMTPTR"\n", (uintptr_t)p);
+  GC_release (p, size);
+}
+
+static void* mremapNonOverlapping (GC_state s, void* oldAddress, size_t oldSize, size_t newSize, void* newAddress) {
+  removeFromUsedHeaps (s, oldAddress);
+  void* result = GC_mremap (oldAddress, oldSize, newSize, newAddress);
+  bool isAddressOK = addToUsedHeaps (s, result);
+  if (!isAddressOK) {
+    fprintf (stderr, "mremapNonOverlapping: remapped address "FMTPTR" already taken\n", (uintptr_t)result);
+    assert (isAddressOK);
+    *s->needsBarrier = EXIT;
+    exit (0);
+  }
+  return result;
+}
+

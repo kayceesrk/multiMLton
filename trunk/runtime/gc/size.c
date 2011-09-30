@@ -17,11 +17,11 @@ size_t GC_sizeInLocalHeap (GC_state s, pointer root) {
   s->syncReason = SYNC_MISC;
   ENTER_LOCAL0 (s);
 
-  if (DEBUG_SIZE)
+  if ((DEBUG_SIZE or s->selectiveDebug))
     fprintf (stderr, "GC_sizeInLocalHeap marking\n");
   res = dfsMarkByMode (s, root, emptyForeachObjectFun, MARK_MODE,
                        FALSE, FALSE, TRUE, FALSE);
-  if (DEBUG_SIZE)
+  if ((DEBUG_SIZE or s->selectiveDebug))
     fprintf (stderr, "GC_sizeInLocalHeap unmarking\n");
   dfsMarkByMode (s, root, emptyForeachObjectFun, UNMARK_MODE,
                  FALSE, FALSE, TRUE, FALSE);
@@ -39,18 +39,30 @@ size_t GC_sizeInLocalHeap (GC_state s, pointer root) {
  */
 size_t estimateSizeForLifting (GC_state s, pointer root) {
   size_t res;
+  bool ignoreSharedHeap = FALSE;
 
   s->syncReason = SYNC_MISC;
   ENTER_LOCAL0 (s);
 
-  if (DEBUG_SIZE)
+  if (isPointerInHeap (s, s->sharedHeap, root)) {
+    ignoreSharedHeap = FALSE;
+    if ((DEBUG_SIZE or s->selectiveDebug))
+      fprintf (stderr, "estimateSizeForLifting: not ignoring shared heap\n");
+  }
+  else {
+    ignoreSharedHeap = TRUE;
+    if ((DEBUG_SIZE or s->selectiveDebug))
+      fprintf (stderr, "estimateSizeForLifting: ignoring shared heap\n");
+  }
+
+  if ((DEBUG_SIZE or s->selectiveDebug))
     fprintf (stderr, "estimateSizeForLifting marking\n");
   res = dfsMarkByMode (s, root, emptyForeachObjectFun, MARK_MODE,
-                       FALSE, FALSE, FALSE, TRUE);
-  if (DEBUG_SIZE)
+                       FALSE, FALSE, ignoreSharedHeap, TRUE);
+  if ((DEBUG_SIZE or s->selectiveDebug))
     fprintf (stderr, "estimateSizeForLifting unmarking\n");
   dfsMarkByMode (s, root, emptyForeachObjectFun, UNMARK_MODE,
-                 FALSE, FALSE, FALSE, TRUE);
+                 FALSE, FALSE, ignoreSharedHeap, TRUE);
 
   LEAVE_LOCAL0 (s);
   return res;

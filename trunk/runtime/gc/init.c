@@ -482,6 +482,10 @@ int GC_init (GC_state s, int argc, char **argv) {
   assert (sizeofThread (s) == sizeofThread (s));
   assert (sizeofWeak (s) == sizeofWeak (s));
 
+  s->usedHeapStarts = (UsedHeapStarts*) GC_shmalloc (sizeof (pointer) * BUFFER_SIZE + sizeof (UsedHeapStarts));
+  s->usedHeapStarts->size = 0;
+  s->usedHeapStarts->maxSize = BUFFER_SIZE;
+
   s->cumulativeStatistics = (struct GC_cumulativeStatistics*)initCumulativeStatistics ();
   s->lastMajorStatistics = (struct GC_lastMajorStatistics*)initLastMajorStatistics ();
   s->lastSharedMajorStatistics = (struct GC_lastSharedMajorStatistics*)initLastSharedMajorStatistics ();
@@ -614,6 +618,7 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->amInGC = s->amInGC;
   d->amOriginal = s->amOriginal;
   d->atomicState = 0;
+  d->usedHeapStarts = s->usedHeapStarts;
   d->callFromCHandlerThread = BOGUS_OBJPTR;
   d->controls = s->controls;
   d->cumulativeStatistics = initCumulativeStatistics ();

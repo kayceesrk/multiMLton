@@ -84,6 +84,7 @@ struct GC_state {
   bool hashConsDuringGC;
   struct GC_heap *heap;
   struct GC_intInfInit *intInfInits;
+  UsedHeapStarts* usedHeapStarts;
   uint32_t intInfInitsLength;
   struct GC_lastMajorStatistics *lastMajorStatistics;
   struct GC_lastSharedMajorStatistics *lastSharedMajorStatistics;

@@ -333,12 +333,49 @@ void performSharedGCCollective (GC_state s,
   }
   assert (s->sharedHeap->oldGenSize != 0);
 
-  /* Estimate the maximum size of the heap after GC */
   size_t maxBytes = 0;
   size_t localMaxBytes = 0;
+
+  /***************************************************
+   * PHASED EXECUTION START
+   ***************************************************/
+  int temp = 0;
+  if (Proc_processorNumber (s) != 0) {
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "performSharedGC: waiting for value from %d[%d]\n",
+               Proc_processorNumber (s) - 1, Proc_processorNumber (s));
+    RCCE_recv ((char*)&temp, sizeof (int), Proc_processorNumber (s) - 1);
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "performSharedGC: received value from %d[%d]\n",
+               Proc_processorNumber (s) - 1, Proc_processorNumber (s));
+  }
+
+  {
+  /* Estimate the maximum size of the heap after GC */
   objptr liftOp = s->forwardState.liftingObject;
-  if (liftOp != BOGUS_OBJPTR)
+  if (liftOp != BOGUS_OBJPTR) {
+    s->selectiveDebug = TRUE;
+    fprintf (stderr, "heapStart: "FMTPTR" heapEnd: "FMTPTR"\n", (uintptr_t) s->heap->start,
+             (uintptr_t)(s->heap->start + s->heap->size));
     localMaxBytes = estimateSizeForLifting (s, objptrToPointer (liftOp, s->heap->start));
+    s->selectiveDebug = FALSE;
+  }
+  }
+
+  if (Proc_processorNumber (s) != s->numberOfProcs - 1) {
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "majorCheneyCopySharedGC: sending value to %d[%d]\n",
+               Proc_processorNumber (s) + 1, Proc_processorNumber (s));
+    RCCE_send ((char*)&temp, sizeof (int), Proc_processorNumber (s) + 1);
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "majorCheneyCopySharedGC: sent value to %d[%d]\n",
+               Proc_processorNumber (s) + 1, Proc_processorNumber (s));
+  }
+  /***************************************************
+   * PHASED EXECUTION END
+   ***************************************************/
+
+
   if (Proc_processorNumber (s) == 0)
     localMaxBytes += s->lastSharedMajorStatistics->bytesLive + bytesRequested;
 
