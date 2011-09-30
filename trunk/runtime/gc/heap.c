@@ -729,8 +729,11 @@ static void releaseNonOverlapping (GC_state s, void* p, size_t size) {
 }
 
 static void* mremapNonOverlapping (GC_state s, void* oldAddress, size_t oldSize, size_t newSize, void* newAddress) {
-  removeFromUsedHeaps (s, oldAddress);
+  //XXX TODO This function is broken
   void* result = GC_mremap (oldAddress, oldSize, newSize, newAddress);
+  //Result can be -1
+  assert (result != -1);
+  //Should not add if result is -1
   bool isAddressOK = addToUsedHeaps (s, result);
   if (!isAddressOK) {
     fprintf (stderr, "mremapNonOverlapping: remapped address "FMTPTR" already taken\n", (uintptr_t)result);
@@ -738,6 +741,8 @@ static void* mremapNonOverlapping (GC_state s, void* oldAddress, size_t oldSize,
     *s->needsBarrier = EXIT;
     exit (0);
   }
+  else
+    removeFromUsedHeaps (s, oldAddress);
   return result;
 }
 
