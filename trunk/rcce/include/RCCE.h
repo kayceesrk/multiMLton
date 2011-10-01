@@ -28,7 +28,7 @@
 #endif
 
 // modify next line for Intel BareMetal, which supports stdout, but not stdferr
-#define STDERR                             stdout
+#define STDERR                             stderr
 
 #define LOG2_LINE_SIZE                     5
 #define RCCE_LINE_SIZE                     (1<<LOG2_LINE_SIZE)

@@ -332,10 +332,10 @@ int RCCE_init(
 #ifdef SHMADD
 
   RCCE_shmalloc_init(RC_SHM_BUFFER_START()+RCCE_SHM_BUFFER_offset ,RCCE_SHM_SIZE_MAX);
-//#ifdef SHMDBG
-  printf("\n%d:%s:%d: RCCE_SHM_BUFFER_offset, RCCE_SHM_SIZE_MAX: % x %x\n", RCCE_IAM,
-    __FILE__,__LINE__,RCCE_SHM_BUFFER_offset ,RCCE_SHM_SIZE_MAX);
-//#endif
+#ifdef SHMDBG
+  fprintf(stderr, "\n%d: RCCE_SHM_BUFFER_offset, RCCE_SHM_SIZE_MAX: % x %x\n", RCCE_IAM,
+         RCCE_SHM_BUFFER_offset ,RCCE_SHM_SIZE_MAX);
+#endif
 #else
   RCCE_shmalloc_init(RC_SHM_BUFFER_START(),RCCE_SHM_SIZE_MAX);
 #endif

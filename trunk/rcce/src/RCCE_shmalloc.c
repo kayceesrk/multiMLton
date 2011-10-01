@@ -53,10 +53,10 @@ void RCCE_shmalloc_init(
   RCCE_spacep->tail->space = mem;
   /* make a circular list by connecting tail to itself */
   RCCE_spacep->tail->next = RCCE_spacep->tail;
-//#ifdef SHMDBG
-printf("%s: %d: RCCE_spacep->tail->free_size, RCCE_spacep->tail->space: %x %x\n",
-__FILE__, __LINE__,RCCE_spacep->tail->free_size, RCCE_spacep->tail->space);
-//#endif
+#ifdef SHMDBG
+fprintf(stderr, "RCCE_spacep->tail->free_size, RCCE_spacep->tail->space: %x %x\n",
+        RCCE_spacep->tail->free_size, RCCE_spacep->tail->space);
+#endif
 }
 
 //--------------------------------------------------------------------------------------

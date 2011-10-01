@@ -268,16 +268,16 @@ void SHMalloc(t_vcharp *SHM) {
   unsigned int alignedAddr = (SHM_ADDR) & (~(PAGE_SIZE-1));
   unsigned int pageOffset = (SHM_ADDR) - alignedAddr;
 
-//#ifdef SHMDBG
-printf("%s:%d: SHMSIZE: %x\n",__FILE__,__LINE__,SHMSIZE);
-//#endif
+#ifdef SHMDBG
+  fprintf(stderr, "SHMSIZE: %x\n",SHMSIZE);
+#endif
 
 #ifdef SHMADD_CACHEABLE
   MappedAddr = (t_vcharp) mmap((void*)0x97f00000, SHMSIZE, PROT_WRITE|PROT_READ,
                                MAP_SHARED | MAP_FIXED, DCMDeviceFD, alignedAddr);
-//#ifdef SHMDBG
-  printf("Opened CACHEABLE\n");
-//#endif
+#ifdef SHMDBG
+  fprintf(stderr, "Opened CACHEABLE\n");
+#endif
   if (MappedAddr == (void*)0x97f00000)
   {
           perror("mmap");
@@ -286,9 +286,9 @@ printf("%s:%d: SHMSIZE: %x\n",__FILE__,__LINE__,SHMSIZE);
 #else
   MappedAddr = (t_vcharp) mmap((void*)0x97f00000, SHMSIZE, PROT_WRITE|PROT_READ,
                                MAP_SHARED | MAP_FIXED, NCMDeviceFD, alignedAddr);
-//#ifdef SHMDBG
-  printf("Opened NONCACHEABLE\n");
-//#endif
+#ifdef SHMDBG
+  fprintf(stderr, "Opened NONCACHEABLE\n");
+#endif
   if (MappedAddr != (void*)0x97f00000)
   {
           perror("mmap");
