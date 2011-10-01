@@ -1,5 +1,5 @@
 //***************************************************************************************
-// Administrative routines. 
+// Administrative routines.
 //***************************************************************************************
 //
 // Author: Rob F. Van der Wijngaart
@@ -9,21 +9,21 @@
 //
 //***************************************************************************************
 //
-// 
+//
 // Copyright 2010 Intel Corporation
-// 
+//
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
 //    You may obtain a copy of the License at
-// 
+//
 //        http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 //    Unless required by applicable law or agreed to in writing, software
 //    distributed under the License is distributed on an "AS IS" BASIS,
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-// 
+//
 
 #include "RCCE_lib.h"
 #ifdef RC_POWER_MANAGEMENT
@@ -49,7 +49,7 @@
 int       RCCE_NP;               // number of participating cores
 double    RC_REFCLOCKGHZ;        // baseline CPU frequency (GHz)
 int       RC_MY_COREID;          // physical ID of calling core
-int       RC_COREID[RCCE_MAXNP]; // array of physical core IDs for all participating 
+int       RC_COREID[RCCE_MAXNP]; // array of physical core IDs for all participating
                                  // cores, sorted by rank
 int       RCCE_IAM=-1;           // rank of calling core (invalid by default)
 RCCE_COMM RCCE_COMM_WORLD;       // predefined global communicator
@@ -117,8 +117,8 @@ t_vcharp RC_COMM_BUFFER_START(int ue){
 #ifdef SCC
   // "Allocate" MPB, using memory mapping of physical addresses
   t_vcharp retval;
-  MPBalloc(&retval, X_PID(RC_COREID[ue]), Y_PID(RC_COREID[ue]), Z_PID(RC_COREID[ue]), 
-           (X_PID(RC_COREID[ue]) == X_PID(RC_COREID[RCCE_IAM])) && 
+  MPBalloc(&retval, X_PID(RC_COREID[ue]), Y_PID(RC_COREID[ue]), Z_PID(RC_COREID[ue]),
+           (X_PID(RC_COREID[ue]) == X_PID(RC_COREID[RCCE_IAM])) &&
            (Y_PID(RC_COREID[ue]) == Y_PID(RC_COREID[RCCE_IAM]))
           );
   return retval;
@@ -160,7 +160,7 @@ int MYCOREID() {
   // the COREIDs are read into the main program in potentially random order.
   // Each core can access its own Core ID. We simulate that by selecting
   // the value in the list of coreids that corresponds to the sequence
-  // number of the OpenMP thread number                                  
+  // number of the OpenMP thread number
   return RC_COREID[omp_get_thread_num()];
 #endif
 }
@@ -228,38 +228,38 @@ int RCCE_init(
   unsigned int RCCE_SHM_BUFFER_offset ,result, rd_slot_nbr, wr_slot_nbr;
 #endif
   void *nothing = NULL;
-  
+
 #ifdef SCC
   // Copperridge specific initialization...
   InitAPI(0);fflush(0);
-#endif  
+#endif
 
   // save pointer to executable name for later insertion into the argument list
   char *executable_name = (*argv)[0];
 
-  RCCE_NP        = atoi(*(++(*argv)));  
-  RC_REFCLOCKGHZ = atof(*(++(*argv)));  
+  RCCE_NP        = atoi(*(++(*argv)));
+  RC_REFCLOCKGHZ = atof(*(++(*argv)));
 
-  // put the participating core ids (unsorted) into an array             
+  // put the participating core ids (unsorted) into an array
   for (ue=0; ue<RCCE_NP; ue++) {
     RC_COREID[ue] = atoi(*(++(*argv)));
   }
 
 #ifndef SCC
-  // if using the functional emulator, must make sure to have read all command line 
+  // if using the functional emulator, must make sure to have read all command line
   // parameters up to now before overwriting (shifted) first one with executable
-  // name; even though argv is made firstprivate, that applies only the pointer to 
+  // name; even though argv is made firstprivate, that applies only the pointer to
   // the arguments, not the actual data
   #pragma omp barrier
 #endif
-  // make sure executable name is as expected                 
+  // make sure executable name is as expected
   (*argv)[0] = executable_name;
 
   RC_MY_COREID = MYCOREID();
 
-  // adjust apparent number of command line arguments, so it will appear to main 
+  // adjust apparent number of command line arguments, so it will appear to main
   // program that number of UEs, clock frequency, and core ID list were not on
-  // command line        
+  // command line
   *argc -= RCCE_NP+2;
 
   // sort array of participating phyical core IDs to determine their ranks
@@ -296,8 +296,8 @@ int RCCE_init(
     return(RCCE_error_return(RCCE_debug_comm,RCCE_ERROR_CORE_NOT_IN_HOSTFILE));
 
 #ifdef SCC
-  // compute and memory map addresses of test&set registers for all participating cores 
-  for (ue=0; ue<RCCE_NP; ue++) { 
+  // compute and memory map addresses of test&set registers for all participating cores
+  for (ue=0; ue<RCCE_NP; ue++) {
     z = Z_PID(RC_COREID[ue]);
     x = X_PID(RC_COREID[ue]);
     y = Y_PID(RC_COREID[ue]);
@@ -311,7 +311,7 @@ int RCCE_init(
   // of single-byte MPB access
   RCCE_fool_write_combine_buffer = RC_COMM_BUFFER_START(RCCE_IAM);
 
-  for (ue=0; ue<RCCE_NP; ue++) 
+  for (ue=0; ue<RCCE_NP; ue++)
     RCCE_comm_buffer[ue] = RC_COMM_BUFFER_START(ue) + RCCE_LINE_SIZE;
 
   // gross MPB size is set equal to maximum
@@ -321,7 +321,7 @@ int RCCE_init(
 #ifndef SCC
   // always store RPC queue data structure at beginning of usable MPB, so allocatable
   // storage needs to skip it. Only need to do this for functional emulator
-  for (ue=0; ue<RCCE_NP; ue++) 
+  for (ue=0; ue<RCCE_NP; ue++)
     RCCE_comm_buffer[ue] += REGULATOR_LENGTH;
   RCCE_BUFF_SIZE -= REGULATOR_LENGTH;
 #endif
@@ -332,35 +332,35 @@ int RCCE_init(
 #ifdef SHMADD
 
   RCCE_shmalloc_init(RC_SHM_BUFFER_START()+RCCE_SHM_BUFFER_offset ,RCCE_SHM_SIZE_MAX);
-#ifdef SHMDBG
-  printf("\n%d:%s:%d: RCCE_SHM_BUFFER_offset, RCCE_SHM_SIZE_MAX: % x %x\n", RCCE_IAM, 
+//#ifdef SHMDBG
+  printf("\n%d:%s:%d: RCCE_SHM_BUFFER_offset, RCCE_SHM_SIZE_MAX: % x %x\n", RCCE_IAM,
     __FILE__,__LINE__,RCCE_SHM_BUFFER_offset ,RCCE_SHM_SIZE_MAX);
-#endif
+//#endif
 #else
   RCCE_shmalloc_init(RC_SHM_BUFFER_START(),RCCE_SHM_SIZE_MAX);
 #endif
 
   // initialize the (global) flag bookkeeping data structure
-  for (loc=0; loc<RCCE_FLAGS_PER_LINE; loc++) 
+  for (loc=0; loc<RCCE_FLAGS_PER_LINE; loc++)
     RCCE_flags.flag[loc] = (char)((unsigned int)0);
   RCCE_flags.line_address = NULL;
   RCCE_flags.members=0;
   RCCE_flags.next=NULL;
 
-  // create global communicator (equivalent of MPI_COMM_WORLD); this will also allocate 
-  // the two synchronization flags associated with the global barrier 
+  // create global communicator (equivalent of MPI_COMM_WORLD); this will also allocate
+  // the two synchronization flags associated with the global barrier
   RCCE_comm_split(RCCE_global_color, nothing, &RCCE_COMM_WORLD);
 
-  // if power management is enabled, initialize more stuff; this includes two more 
+  // if power management is enabled, initialize more stuff; this includes two more
   // communicators (for voltage and frequency domains), plus two synchronization flags
-  // associated with the barrier for each communicator       
+  // associated with the barrier for each communicator
 #ifdef RC_POWER_MANAGEMENT
-  if (error=RCCE_init_RPC(RC_COREID, RCCE_IAM, RCCE_NP)) 
+  if (error=RCCE_init_RPC(RC_COREID, RCCE_IAM, RCCE_NP))
        return(RCCE_error_return(RCCE_debug_RPC,error));
 #endif
 
 #ifndef GORY
-  // if we use the simplified API, we need to define more flags upfront  
+  // if we use the simplified API, we need to define more flags upfront
   for (ue=0; ue<RCCE_NP; ue++) {
     if (error=RCCE_flag_alloc(&RCCE_sent_flag[ue]))
       return(RCCE_error_return(RCCE_debug_synch,error));
@@ -392,7 +392,7 @@ int RCCE_finalize(void){
 //    MPBunalloc(&(RCCE_comm_buffer[ue]));
   RCCE_release_lock(RCCE_IAM);
   // each core needs to unmap all special memory locations
-  for (ue=0; ue<RCCE_NP; ue++) { 
+  for (ue=0; ue<RCCE_NP; ue++) {
     FreeConfigReg((int *)(virtual_lockaddress[ue]));
   }
   fflush(NULL);
@@ -423,7 +423,7 @@ int RCCE_ue(void) {return(RCCE_IAM);}
 //--------------------------------------------------------------------------------------
 // FUNCTION: RCCE_num_ues
 //--------------------------------------------------------------------------------------
-// return total number of participating UEs              
+// return total number of participating UEs
 //--------------------------------------------------------------------------------------
 int RCCE_num_ues(void) {return(RCCE_NP);}
 

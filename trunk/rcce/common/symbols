@@ -4,7 +4,7 @@
 # in file common/symbols.in instead.                    #
 #########################################################
 
-RCCEROOT=/home/chandras/multiMLton/trunk/rcce
+RCCEROOT=/home/chandras/multiMLton-WB/trunk/rcce
 RCCE_LIB_SRC=$(RCCEROOT)/src
 RCCEINCLUDE=$(RCCEROOT)/include
 
@@ -26,7 +26,7 @@ ifeq ($(OMP_EMULATOR),0)
 #  PLATFORMFLAGS=$(BMFLAG) -DSCC -DSHMADD -DSHMADD_CACHEABLE -static -mcpu=pentium -gcc-version=340 -I../include
 
   CCOMPILE=gcc
-  PLATFORMFLAGS=$(BMFLAG) -DSHMADD -DSCC -static -march=pentium -mtune=pentium -I../include
+  PLATFORMFLAGS=$(BMFLAG) -DSHMADD -DSCC -DSHMDBG -static -march=pentium -mtune=pentium -I../include
 
 #  CCOMPILE=g++
 #  PLATFORMFLAGS=$(BMFLAG) -DSCC -static -march=pentium -mtune=pentium -I../include

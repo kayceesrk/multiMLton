@@ -158,7 +158,7 @@ if [ $OMPEMULATOR -eq 1 ]; then
 else
   # clear the MPB and the test&set registers on the execution core set
   
-  cp /home/chandras/multiMLton/trunk/rcce/bin/SCC_LINUX/mpb mpb.$PID
+  cp /home/chandras/multiMLton-WB/trunk/rcce/bin/SCC_LINUX/mpb mpb.$PID
   if [ $ECHO_COMMAND -eq 1 ]; then
     echo pssh -h $TEMPFILE -t -1 -p $NUE `pwd`/mpb.$PID "< /dev/null"
   fi

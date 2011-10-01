@@ -1,9 +1,9 @@
 //***************************************************************************************
-// Reduction functions. 
+// Reduction functions.
 //***************************************************************************************
-// Since reduction is the only message passing operation that depends on the data type, 
+// Since reduction is the only message passing operation that depends on the data type,
 // it is carried as a parameter. Also, since only collective operations require
-// communication domains, they are the only ones that use communicators. All collectives 
+// communication domains, they are the only ones that use communicators. All collectives
 // implementations are naive, linear operations. There may not be any overlap between
 // target and source.
 //
@@ -12,21 +12,21 @@
 // Date:   12/22/2010
 //
 //**************************************************************************************
-// 
+//
 // Copyright 2010 Intel Corporation
-// 
+//
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
 //    You may obtain a copy of the License at
-// 
+//
 //        http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 //    Unless required by applicable law or agreed to in writing, software
 //    distributed under the License is distributed on an "AS IS" BASIS,
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-// 
+//
 #include "RCCE_lib.h"
 #define MIN(x,y) ( (x) < (y) ? (x) : (y) )
 #define MAX(x,y) ( (x) > (y) ? (x) : (y) )
@@ -66,21 +66,21 @@ static int RCCE_reduce_general(
   return(1);
 #else
   switch (op) {
-     case RCCE_SUM:  
-     case RCCE_MAX:  
-     case RCCE_MIN:  
+     case RCCE_SUM:
+     case RCCE_MAX:
+     case RCCE_MIN:
      case RCCE_PROD: break;
      default:  return(RCCE_ERROR_ILLEGAL_OP);
   }
 
   switch (type) {
-    case RCCE_INT:    type_size = sizeof(int);    
+    case RCCE_INT:    type_size = sizeof(int);
                       break;
-    case RCCE_LONG:   type_size = sizeof(long);   
+    case RCCE_LONG:   type_size = sizeof(long);
                       break;
-    case RCCE_FLOAT:  type_size = sizeof(float);  
+    case RCCE_FLOAT:  type_size = sizeof(float);
                       break;
-    case RCCE_DOUBLE: type_size = sizeof(double); 
+    case RCCE_DOUBLE: type_size = sizeof(double);
                       break;
     default: return(RCCE_ERROR_ILLEGAL_TYPE);
   }
@@ -99,7 +99,7 @@ static int RCCE_reduce_general(
     for (ue=0; ue<comm.size; ue++) if (ue != root) {
       if (ierr=RCCE_recv(inbuf, num*type_size, comm.member[ue]))
         return(ierr);
-      
+
       // use combination of operation and data type to reduce number of switch statements
       switch (op+(RCCE_NUM_OPS)*(type)) {
 
@@ -131,7 +131,7 @@ static int RCCE_reduce_general(
                 return(ierr);
   }
   return(RCCE_SUCCESS);
-#endif GORY
+#endif //GORY
 }
 
 //---------------------------------------------------------------------------------------
@@ -170,7 +170,7 @@ int RCCE_reduce(
 
   int ue, all = 0;
   // check to make sure root is member of the communicator
-  if (root<0 || root >= comm.size) 
+  if (root<0 || root >= comm.size)
   return(RCCE_error_return(RCCE_debug_comm,RCCE_ERROR_ID));
 
   return(RCCE_error_return(RCCE_debug_comm,

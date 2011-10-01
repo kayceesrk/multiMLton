@@ -73,7 +73,7 @@ void GC_setSigProfHandler (struct sigaction *sa) {
 #define MREMAP_MAYMOVE 1
 #define MREMAP_FIXED 2
 
-void *GC_mremap (void *start, size_t oldLength, size_t newLength, void* newAddress) {
+void *GC_mremap (void *start, size_t oldLength, size_t newLength) {
         return mremap (start, oldLength, newLength, MREMAP_MAYMOVE);
 }
 

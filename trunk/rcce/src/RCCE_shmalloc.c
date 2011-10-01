@@ -1,5 +1,5 @@
 //***************************************************************************************
-// Off-chip shared memory allocation routines. 
+// Off-chip shared memory allocation routines.
 //***************************************************************************************
 //
 // Author: Rob F. Van der Wijngaart
@@ -7,21 +7,21 @@
 // Date:   12/22/2010
 //
 //***************************************************************************************
-// 
+//
 // Copyright 2010 Intel Corporation
-// 
+//
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
 //    You may obtain a copy of the License at
-// 
+//
 //        http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 //    Unless required by applicable law or agreed to in writing, software
 //    distributed under the License is distributed on an "AS IS" BASIS,
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-// 
+//
 #include "RCCE_lib.h"
 
 //......................................................................................
@@ -53,10 +53,10 @@ void RCCE_shmalloc_init(
   RCCE_spacep->tail->space = mem;
   /* make a circular list by connecting tail to itself */
   RCCE_spacep->tail->next = RCCE_spacep->tail;
-#ifdef SHMDBG 
+//#ifdef SHMDBG
 printf("%s: %d: RCCE_spacep->tail->free_size, RCCE_spacep->tail->space: %x %x\n",
 __FILE__, __LINE__,RCCE_spacep->tail->free_size, RCCE_spacep->tail->space);
-#endif
+//#endif
 }
 
 //--------------------------------------------------------------------------------------
@@ -77,15 +77,15 @@ t_vcharp RCCE_shmalloc(
 
   // simple memory allocator, loosely based on public domain code developed by
   // Michael B. Allen and published on "The Scripts--IT /Developers Network".
-  // Approach: 
+  // Approach:
   // - maintain linked list of pointers to memory. A block is either completely
   //   malloced (free_size = 0), or completely free (free_size > 0).
   //   The space field always points to the beginning of the block
-  // - malloc: traverse linked list for first block that has enough space    
-  // - free: Check if pointer exists. If yes, check if the new block should be 
+  // - malloc: traverse linked list for first block that has enough space
+  // - free: Check if pointer exists. If yes, check if the new block should be
   //         merged with neighbors. Could be one or two neighbors.
 
-  RCCE_BLOCK *b1, *b2, *b3;   // running pointers for blocks              
+  RCCE_BLOCK *b1, *b2, *b3;   // running pointers for blocks
 
   // Unlike the MPB, the off-chip shared memory is uncached by default, so can
   // be allocated in any increment, not just the cache line size
@@ -93,40 +93,40 @@ t_vcharp RCCE_shmalloc(
 
   // always first check if the tail block has enough space, because that
   // is the most likely. If it does and it is exactly enough, we still
-  // create a new block that will be the new tail, whose free space is 
-  // zero. This acts as a marker of where free space of predecessor ends   
+  // create a new block that will be the new tail, whose free space is
+  // zero. This acts as a marker of where free space of predecessor ends
 //printf("RCCE_spacep->tail: %x\n",RCCE_spacep->tail);
   b1 = RCCE_spacep->tail;
   if (b1->free_size >= size) {
-    // need to insert new block; new order is: b1->b2 (= new tail)         
+    // need to insert new block; new order is: b1->b2 (= new tail)
     b2 = (RCCE_BLOCK *) malloc(sizeof(RCCE_BLOCK));
     b2->next      = b1->next;
     b1->next      = b2;
     b2->free_size = b1->free_size-size;
     b2->space     = b1->space + size;
     b1->free_size = 0;
-    // need to update the tail                                             
+    // need to update the tail
     RCCE_spacep->tail = b2;
     return(b1->space);
   }
 
-  // tail didn't have enough space; loop over whole list from beginning    
+  // tail didn't have enough space; loop over whole list from beginning
   while (b1->next->free_size < size) {
     if (b1->next == RCCE_spacep->tail) {
-      return NULL; // we came full circle 
+      return NULL; // we came full circle
     }
     b1 = b1->next;
   }
 
   b2 = b1->next;
-  if (b2->free_size > size) { // split block; new block order: b1->b2->b3  
+  if (b2->free_size > size) { // split block; new block order: b1->b2->b3
     b3            = (RCCE_BLOCK *) malloc(sizeof(RCCE_BLOCK));
-    b3->next      = b2->next; // reconnect pointers to add block b3        
-    b2->next      = b3;       //     "         "     "  "    "    "        
-    b3->free_size = b2->free_size - size; // b3 gets remainder free space  
-    b3->space     = b2->space + size; // need to shift space pointer       
-  } 
-  b2->free_size = 0;          // block b2 is completely used               
+    b3->next      = b2->next; // reconnect pointers to add block b3
+    b2->next      = b3;       //     "         "     "  "    "    "
+    b3->free_size = b2->free_size - size; // b3 gets remainder free space
+    b3->space     = b2->space + size; // need to shift space pointer
+  }
+  b2->free_size = 0;          // block b2 is completely used
   return (b2->space);
 }
 
@@ -139,48 +139,48 @@ void RCCE_shfree(
   t_vcharp ptr // pointer to data to be freed
   ) {
 
-  RCCE_BLOCK *b1, *b2, *b3;   // running block pointers                    
-  int j1, j2;                 // booleans determining merging of blocks    
+  RCCE_BLOCK *b1, *b2, *b3;   // running block pointers
+  int j1, j2;                 // booleans determining merging of blocks
 
-  // loop over whole list from the beginning until we locate space ptr     
+  // loop over whole list from the beginning until we locate space ptr
   b1 = RCCE_spacep->tail;
-  while (b1->next->space != ptr && b1->next != RCCE_spacep->tail) { 
+  while (b1->next->space != ptr && b1->next != RCCE_spacep->tail) {
     b1 = b1->next;
   }
 
-  // b2 is target block whose space must be freed    
-  b2 = b1->next;              
-  // tail either has zero free space, or hasn't been malloc'ed             
-  if (b2 == RCCE_spacep->tail) return;      
+  // b2 is target block whose space must be freed
+  b2 = b1->next;
+  // tail either has zero free space, or hasn't been malloc'ed
+  if (b2 == RCCE_spacep->tail) return;
 
-  // reset free space for target block (entire block)                      
+  // reset free space for target block (entire block)
   b3 = b2->next;
   b2->free_size = b3->space - b2->space;
 
-  // determine with what non-empty blocks the target block can be merged   
-  j1 = (b1->free_size>0 && b1!=RCCE_spacep->tail); // predecessor block    
-  j2 = (b3->free_size>0 || b3==RCCE_spacep->tail); // successor block      
+  // determine with what non-empty blocks the target block can be merged
+  j1 = (b1->free_size>0 && b1!=RCCE_spacep->tail); // predecessor block
+  j2 = (b3->free_size>0 || b3==RCCE_spacep->tail); // successor block
 
   if (j1) {
-    if (j2) { // splice all three blocks together: (b1,b2,b3) into b1      
+    if (j2) { // splice all three blocks together: (b1,b2,b3) into b1
       b1->next = b3->next;
       b1->free_size +=  b3->free_size + b2->free_size;
       if (b3==RCCE_spacep->tail) RCCE_spacep->tail = b1;
       free(b3);
-    } 
-    else {    // only merge (b1,b2) into b1                                
+    }
+    else {    // only merge (b1,b2) into b1
       b1->free_size += b2->free_size;
       b1->next = b3;
     }
     free(b2);
-  } 
+  }
   else {
-    if (j2) { // only merge (b2,b3) into b2                                
+    if (j2) { // only merge (b2,b3) into b2
       b2->next = b3->next;
       b2->free_size += b3->free_size;
       if (b3==RCCE_spacep->tail) RCCE_spacep->tail = b2;
       free(b3);
-    } 
+    }
   }
 }
 
@@ -196,5 +196,5 @@ void RCCE_shflush() {
 #else
 
 #endif
-}  
+}
 

@@ -151,6 +151,7 @@ mark:
     }
   if (sizeEstimationForLifting &&
       !ignoreSharedHeap &&
+      (mode == MARK_MODE) &&
       !isPointerInHeap (s, s->sharedHeap, cur)) {
     fprintf (stderr, "insertPointerToCore prev="FMTPTR" cur="FMTPTR"\n",
             (uintptr_t)prev, (uintptr_t)cur);

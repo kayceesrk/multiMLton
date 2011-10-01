@@ -192,6 +192,7 @@ void segvHandler (int sig) {                                            \
 void run (void *arg) {                                                  \
         struct cont cont;                                               \
         signal (SIGSEGV, segvHandler);                                  \
+        signal (SIGABRT, segvHandler);                                  \
         GC_state s = (GC_state)arg;                                     \
         pthread_setspecific (gcstate_key, s);                           \
                                                                         \

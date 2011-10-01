@@ -33,12 +33,6 @@ typedef enum {
   MANY
 } GC_numReferences;
 
-typedef struct {
-  size_t size;
-  size_t maxSize;
-  pointer buffer[];
-} UsedHeapStarts;
-
 typedef struct GC_heap {
   GC_heapKind kind;
   pointer nursery; /* start of nursery */
@@ -87,9 +81,5 @@ static void resizeHeap (GC_state s, GC_heap h, size_t minSize);
 static void resizeLocalHeapSecondary (GC_state s);
 static void resizeSharedHeapSecondary (GC_state s, size_t primarySize);
 static inline bool isObjectLifted (GC_header header);
-
-static void releaseNonOverlapping (GC_state s, void* p, size_t length);
-static void* mmapAnonNonOverlapping (GC_state s, void* p, size_t length);
-static void* mremapNonOverlapping (GC_state s, void* oldAddress, size_t oldSize, size_t newSize, void* newAddress);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

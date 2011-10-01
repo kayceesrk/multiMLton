@@ -1,18 +1,18 @@
-// 
+//
 // Copyright 2010 Intel Corporation
-// 
+//
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
 //    You may obtain a copy of the License at
-// 
+//
 //        http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 //    Unless required by applicable law or agreed to in writing, software
 //    distributed under the License is distributed on an "AS IS" BASIS,
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-// 
+//
 #ifndef RCCE_H
 #define RCCE_H
 
@@ -20,32 +20,32 @@
 #include <stdio.h>
 
 #define RCCE_VERSION "1.0.13.x"
-#define _RCCE 
+#define _RCCE
 // little trick to allow the application to be called "RCCE_APP" under
-// OpenMP, and "main" otherwise 
+// OpenMP, and "main" otherwise
 #ifndef _OPENMP
   #define RCCE_APP main
 #endif
 
-// modify next line for Intel BareMetal, which supports stdout, but not stdferr 
+// modify next line for Intel BareMetal, which supports stdout, but not stdferr
 #define STDERR                             stdout
 
 #define LOG2_LINE_SIZE                     5
 #define RCCE_LINE_SIZE                     (1<<LOG2_LINE_SIZE)
-// RCCE_BUFF_SIZE_MAX is space per UE, which is half of the space per tile 
+// RCCE_BUFF_SIZE_MAX is space per UE, which is half of the space per tile
 #define RCCE_BUFF_SIZE_MAX                 (1<<13)
 
 #ifdef SHMADD
 //64MB
-//#define RCCE_SHM_SIZE_MAX                      0x4000000 
+//#define RCCE_SHM_SIZE_MAX                      0x4000000
 // 128MB
-//#define RCCE_SHM_SIZE_MAX                      0x8000000 
+//#define RCCE_SHM_SIZE_MAX                      0x8000000
 // 256MB
-//#define RCCE_SHM_SIZE_MAX                      0x10000000 
+//#define RCCE_SHM_SIZE_MAX                      0x10000000
 // 512MB
-#define RCCE_SHM_SIZE_MAX                      0x20000000 
+#define RCCE_SHM_SIZE_MAX                      0x20000000
 // 960MB
-//#define RCCE_SHM_SIZE_MAX                      0x3C000000 
+//#define RCCE_SHM_SIZE_MAX                      0x3C000000
 #else
 // 64MB
 #define RCCE_SHM_SIZE_MAX                  (1<<26)
@@ -139,7 +139,7 @@ int RCCE_wait_power(RCCE_REQUEST *);
 int RCCE_set_frequency_divider(int, int *);
 int RCCE_power_domain_master(void);
 int RCCE_power_domain_size(void);
-#endif  
+#endif
 
 int    RCCE_init(int *, char***);
 int    RCCE_finalize(void);
@@ -161,7 +161,7 @@ int    RCCE_flag_write(RCCE_FLAG *, RCCE_FLAG_STATUS, int);
 int    RCCE_flag_read(RCCE_FLAG, RCCE_FLAG_STATUS *, int);
 int    RCCE_send(char *, t_vcharp, size_t, RCCE_FLAG *, RCCE_FLAG *, size_t, int);
 int    RCCE_recv(char *, t_vcharp, size_t, RCCE_FLAG *, RCCE_FLAG *, size_t, int);
-int    RCCE_recv_test(char *, t_vcharp, size_t, RCCE_FLAG *, RCCE_FLAG *, 
+int    RCCE_recv_test(char *, t_vcharp, size_t, RCCE_FLAG *, RCCE_FLAG *,
                       size_t, int, int *);
 #else
 int    RCCE_send(char *, size_t, int);

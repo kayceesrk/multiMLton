@@ -23,7 +23,7 @@ def wipeProcess(prog):
 		signal.alarm(5)
 		try:
 			log ("\tstarting wipeProcess: " + str(prog))
-			args = "./killit " + str(prog)
+			args = "./wipe " + str(prog)
 			log ("\t" + args)
 			args = shlex.split (args)
 			proc = subprocess.Popen (args, cwd="/shared/chandras", \
@@ -53,6 +53,7 @@ def run(directory, prog, numProcs, pargs, timeout):
 		signal.alarm(0)
 	except Alarm:
 		print "\tTimeout!!"
+		proc.kill ()
 		wipeProcess(prog)
 		return run (directory, prog, numProcs, pargs, int (timeout) * 2)
 
