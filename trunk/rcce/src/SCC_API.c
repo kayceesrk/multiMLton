@@ -274,7 +274,7 @@ void SHMalloc(t_vcharp *SHM) {
 
 #ifdef SHMADD_CACHEABLE
   MappedAddr = (t_vcharp) mmap((void*)0x97f00000, SHMSIZE, PROT_WRITE|PROT_READ,
-                               MAP_SHARED | MAP_FIXED, DCMDeviceFD, alignedAddr);
+                               MAP_SHARED, DCMDeviceFD, alignedAddr);
 #ifdef SHMDBG
   fprintf(stderr, "Opened CACHEABLE\n");
 #endif
@@ -285,7 +285,7 @@ void SHMalloc(t_vcharp *SHM) {
   }
 #else
   MappedAddr = (t_vcharp) mmap((void*)0x97f00000, SHMSIZE, PROT_WRITE|PROT_READ,
-                               MAP_SHARED | MAP_FIXED, NCMDeviceFD, alignedAddr);
+                               MAP_SHARED, NCMDeviceFD, alignedAddr);
 #ifdef SHMDBG
   fprintf(stderr, "Opened NONCACHEABLE\n");
 #endif

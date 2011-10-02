@@ -342,8 +342,10 @@ bool remapHeap (GC_state s, GC_heap h,
   if (h == s->sharedHeap || h == s->secondarySharedHeap)
     isShared = TRUE;
 
- if (isShared)
+ if (isShared) {
+   fprintf (stderr, "remapSharedHeap.. skipping..\n");
    return FALSE;
+ }
 #if not HAS_REMAP
   return FALSE;
 #endif

@@ -1,31 +1,31 @@
-// 
+//
 // Copyright 2010 Intel Corporation
-// 
+//
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
 //    You may obtain a copy of the License at
-// 
+//
 //        http://www.apache.org/licenses/LICENSE-2.0
-// 
+//
 //    Unless required by applicable law or agreed to in writing, software
 //    distributed under the License is distributed on an "AS IS" BASIS,
 //    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
-// 
+//
 // Project       : bareMetal BIOS
 // File name     : config.h
 // Author        : mriepen
 // Date          : 2008-06-24
 // Revision      : 1.01
-// 
+//
 // Description   : Header file for config.c
-// 
+//
 // Revision history:
-// 
+//
 // mri 1.01 2008-06-24
 // - Initial implementation
-// 
+//
 // ------------------------------------------------------------------------------------------------
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
@@ -37,11 +37,11 @@
 //  ___) | |_| | | | | | | |_) | (_) | \__ \
 // |____/ \__, |_| |_| |_|_.__/ \___/|_|___/
 //        |___/
-// 
+//
 // #########################################################################################
 
-// Define start address of pagetable (PAGE_DIR_BASE should be equal to or above to STACK_TOP setting 
-// in "../../bootcode/bootImage/defines.h" and needs to be 1025*4KB below the max private address) 
+// Define start address of pagetable (PAGE_DIR_BASE should be equal to or above to STACK_TOP setting
+// in "../../bootcode/bootImage/defines.h" and needs to be 1025*4KB below the max private address)
 // and the number of available private slots... E.g.:
 // Private space for 2 cores on 1GB of memory (MCEMU single node): 0x00000000 to 0x29ffffffff (30 slots = 480MB)
 // Private space for 8 cores on 1GB of memory (MCEMU multi  node): 0x00000000 to 0x05ffffffff ( 6 slots =  96MB)
@@ -54,18 +54,18 @@
 
 #ifdef SHMADD
 // 64MB
-//#define SHMADDRBITS 26
+#define SHMADDRBITS 26
 // 128MB
 //#define SHMADDRBITS 27
 // 256MB
 //#define SHMADDRBITS 28
 // 512MB
-#define SHMADDRBITS 29
+//#define SHMADDRBITS 29
 
 #define SHMSIZE     (1<<SHMADDRBITS)
 
 // 960MB
-//#define SHMSIZE 0x3C000000 
+//#define SHMSIZE 0x3C000000
 #else
 #define SHMADDRBITS 26
 #define SHMSIZE     (1<<SHMADDRBITS)
@@ -252,76 +252,76 @@
 // | |_ | | | | '_ \ / __| __| |/ _ \| '_ \/ __|
 // |  _|| |_| | | | | (__| |_| | (_) | | | \__ \
 // |_|   \__,_|_| |_|\___|\__|_|\___/|_| |_|___/
-// 
+//
 // #########################################################################################
 
 // InitAPI opens the RCKMEM device drivers. This routine needs to be invoked
 // once before using any other API functions! The successmessage can be disabled.
-// 
+//
 // Parameter: printMessages (0: No messages / 1: Messages enabled)
 // Return value: %
-// 
+//
 void InitAPI(int printMessages);
 
 // SetConfigBit writes a bit to a specified config register using read-modify-write. Only use
 // function to access memory locations that are not (!) performance critical (e.g. Tile-ID).
 // Use MallocConfigReg() function for performance critical memory locations!
-// 
+//
 // Parameter: ConfigAddr                - Address of configuration register...
 //            BitPos                    - Bit position within config register to set/reset
 //            BitValue                  - Value to write to specified bit...
-// 
+//
 void SetConfigBit(unsigned int ConfigAddr, int BitPos, int BitValue);
 
 // SetConfigReg writes a value to a specified config register using a single write. Only use
 // function to access memory locations that are not (!) performance critical (e.g. Tile-ID).
 // Use MallocConfigReg() function for performance critical memory locations!
-// 
+//
 // Parameter: ConfigAddr                - Address of configuration register...
 //            RegValue                  - Value to write to specified register...
-// 
+//
 void SetConfigReg(unsigned int ConfigAddr, int RegValue);
 
 // ReadConfigReg reads a value from a specified config register using a single read. Only use
 // function to access memory locations that are not (!) performance critical (e.g. Tile-ID).
 // Use MallocConfigReg() function for performance critical memory locations!
-// 
+//
 // Parameter: ConfigAddr                - Address of configuration register...
 //            BitPos                    - Bit position within config register to set/reset
 //            BitValue                  - Value to write to specified bit...
-// 
+//
 int ReadConfigReg(unsigned int ConfigAddr);
 
 // MallocConfigReg performs a memory map operation on ConfigAddr (physical address) and
 // returns a virtual address that can be used in the application. Use this function to
 // allocate memory locations that you access frequently!
-// 
+//
 // Parameter: ConfigAddr                - Physical address of configuration register.
-// 
+//
 // Return value: ConfigRegVirtualAddr   - Virtual address of configuration register.
-// 
+//
 int* MallocConfigReg(unsigned int ConfigAddr);
 
 // FreeConfigReg unmaps a memory location that has been mapped with the MallocConfigReg()
 // function...
-// 
+//
 // Parameter: ConfigRegVirtualAddr      - Virtual address of configuration register.
-// 
+//
 void FreeConfigReg(int* ConfigRegVirtualAddr);
 
 // MPBalloc allocates MPBSIZE bytes of MessagePassing buffer Memory at MPB_ADDR(x,y,core).
-// 
+//
 // Parameter: MPB                   - Pointer to MPB area (return value, virtal address)
 //            x,y,core              - Position of tile (x,y) and core...
-// 
+//
 //#ifdef SCC
 void MPBalloc(t_vcharp *MPB, int x, int y, int core, int isOwnMPB);
 void SHMalloc(t_vcharp *SHM);
 //#endif
 // MPBunalloc unallocates an allocated MPB area.
-// 
+//
 // Parameter: MPB             - Pointer to MPB area (virtual address)
-// 
+//
 void MPBunalloc(t_vcharp *MPB);
 void SHMunalloc(t_vcharp *SHM);
 

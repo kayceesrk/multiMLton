@@ -380,6 +380,12 @@ void forwardObjptr (GC_state s, objptr *opp) {
         fprintf (stderr, "[GC: Forwarding stack. stack->thread is "FMTOBJPTR"\n", stack->thread);
     }
     size = headerBytes + objectBytes;
+    if (s->forwardState.back + size + skip > s->forwardState.toLimit) {
+      fprintf (stderr, "start: "FMTPTR" end: "FMTPTR" size: %ld\n",
+               (uintptr_t)s->forwardState.toStart, (uintptr_t)s->forwardState.back,
+               s->forwardState.back - s->forwardState.toStart);
+
+    }
     assert (s->forwardState.back + size + skip <= s->forwardState.toLimit);
     if (s->forwardState.back + size + skip > s->forwardState.toLimit)
       die ("Out of memory while lifting objects to the shared heap.");
