@@ -354,10 +354,7 @@ void performSharedGCCollective (GC_state s,
   /* Estimate the maximum size of the heap after GC */
   objptr liftOp = s->forwardState.liftingObject;
   if (liftOp != BOGUS_OBJPTR) {
-    fprintf (stderr, "heapStart: "FMTPTR" heapEnd: "FMTPTR"\n", (uintptr_t) s->heap->start,
-             (uintptr_t)(s->heap->start + s->heap->size));
     localMaxBytes = estimateSizeForLifting (s, objptrToPointer (liftOp, s->heap->start));
-    fprintf (stderr, "localMaxBytes: %ld\n", localMaxBytes);
   }
   }
 
@@ -378,9 +375,10 @@ void performSharedGCCollective (GC_state s,
   if (Proc_processorNumber (s) == 0)
     localMaxBytes += s->lastSharedMajorStatistics->bytesLive + bytesRequested;
 
-  RCCE_allreduce ((char*)&localMaxBytes, (char*)&maxBytes, sizeof (size_t),
-                    RCCE_INT, RCCE_SUM, RCCE_COMM_WORLD);
+  RCCE_allreduce ((char*)&localMaxBytes, (char*)&maxBytes, 1,
+                  RCCE_INT, RCCE_SUM, RCCE_COMM_WORLD);
 
+  assert (maxBytes >= localMaxBytes);
 
   /* We are being optimistic with desired size since maxBytes is an
     * over-approzimation of live size */

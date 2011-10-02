@@ -36,8 +36,6 @@ void finalizePointerToCore (GC_state s) {
 
 /* We will only remember pointers p in local heap, whose opp is in shared heap. */
 void insertPointerToCore (GC_state s, pointer p, uint32_t core, bool isDanglingStack) {
-  fprintf (stderr, "insertPointerToCore: pointer="FMTPTR" core=%d isBoolToString=%d\n",
-           (uintptr_t)p, core, isDanglingStack);
   Parallel_lock (0);
   assert (isPointerInHeap (s, s->heap, p));
   PointerToCoreMap* map = s->pointerToCoreMap;

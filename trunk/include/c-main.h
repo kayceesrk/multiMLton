@@ -241,7 +241,6 @@ PUBLIC int MLton_main (int argc, char* argv[]) {                        \
         dup2(STDOUT_FILENO, STDERR_FILENO);                             \
         RCCE_init (&argc, &argv);                                       \
         fprintf (stderr, "RCCE_init done: %d\n", RCCE_ue());            \
-        sleep (1);                                                      \
         RCCE_barrier (&RCCE_COMM_WORLD);                                \
         pthread_t *threads;                                             \
         pthread_t alrmHandlerThread;                                    \
