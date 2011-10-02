@@ -2112,7 +2112,7 @@ fun f (amb, lights, obj, depth: int, fov, wid, ht, file) =
               in
                  Ppm.setp (img, i, j, conv r, conv g, conv b)
               end))
-      ; Ppm.dump (file, img)
+      (* ; Ppm.dump (file, img) *)
    end
 
 end

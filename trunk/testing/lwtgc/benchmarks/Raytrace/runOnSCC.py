@@ -61,7 +61,7 @@ def run(directory, prog, numProcs, pargs, timeout):
 def main ():
 	program = "raytrace-scc"
 	directory = "testingWB"
-	timeout = 80
+	timeout = 600
 
 	#Parse options
 	parser = OptionParser()
@@ -69,6 +69,7 @@ def main ():
 	parser.add_option("-n", "--numProcs", dest="numProcs", help="number of processors", default =1)
 	(options, args) = parser.parse_args()
 
-	run(directory, program, options.numProcs, options.args, timeout)
+	for n in [8, 16, 32]:
+		run(directory, program, n, options.args, timeout)
 
 main ()
