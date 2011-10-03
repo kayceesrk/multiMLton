@@ -321,9 +321,9 @@ int processAtMLton (GC_state s, int argc, char **argv,
   return i;
 }
 
-static inline void* initCumulativeStatistics (GC_state s, int procId) {
+static inline void* initCumulativeStatistics (void) {
   struct GC_cumulativeStatistics* cumul =
-      (struct GC_cumulativeStatistics *) GC_shmalloc (sizeof (struct GC_cumulativeStatistics));
+      (struct GC_cumulativeStatistics *) malloc (sizeof (struct GC_cumulativeStatistics));
   cumul->bytesAllocated = 0;
   cumul->bytesFilled = 0;
   cumul->bytesCopied = 0;
@@ -482,7 +482,7 @@ int GC_init (GC_state s, int argc, char **argv) {
   assert (sizeofThread (s) == sizeofThread (s));
   assert (sizeofWeak (s) == sizeofWeak (s));
 
-  s->cumulativeStatistics = (struct GC_cumulativeStatistics*)initCumulativeStatistics (RCCE_ue());
+  s->cumulativeStatistics = (struct GC_cumulativeStatistics*)initCumulativeStatistics ();
   s->lastMajorStatistics = (struct GC_lastMajorStatistics*)initLastMajorStatistics ();
   s->lastSharedMajorStatistics = (struct GC_lastSharedMajorStatistics*)initLastSharedMajorStatistics ();
   s->currentThread = BOGUS_OBJPTR;
@@ -616,7 +616,7 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->atomicState = 0;
   d->callFromCHandlerThread = BOGUS_OBJPTR;
   d->controls = s->controls;
-  d->cumulativeStatistics = initCumulativeStatistics (RCCE_ue ());
+  d->cumulativeStatistics = initCumulativeStatistics ();
   d->forwardState.liftingObject = BOGUS_OBJPTR;
   d->forwardState.rangeListCurrent = NULL;
   d->forwardState.rangeListLast = NULL;

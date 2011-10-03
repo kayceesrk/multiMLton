@@ -85,7 +85,6 @@ void Parallel_lock (Int32 p) {
   /* This flush will ensure that global data read within the locked region is
    * upto date */
   RCCE_shflush ();
-  fprintf (stderr, "Parallel_lock: %d\n", p);
   RCCE_acquire_lock (p);
   RCCE_shflush ();
 }
