@@ -77,6 +77,11 @@ void growStackCurrent (GC_state s, bool allocInOldGen, size_t reservedNew) {
     fprintf (stderr, "growStackCurrent: setting stack->thread pointer. stack="FMTPTR" and thread="FMTPTR"\n",
              (uintptr_t)stack, (uintptr_t)stack->thread);
   updateStackIfDangling (s, getStackCurrentObjptr (s), getThreadCurrent(s)->stack);
+  /* If the thread is in the shared heap and the new stack is not in the
+   * dangling stack list, add it. */
+  if (isPointerInHeap (s, s->sharedHeap, getThreadCurrent(s)) &&
+      !isInDanglingStackList (s, getThreadCurrent(s)->stack))
+    addToDanglingStackList (s, getThreadCurrent (s)->stack);
   markCard (s, objptrToPointer (getThreadCurrentObjptr(s), s->heap->start));
 }
 
