@@ -268,21 +268,15 @@ PUBLIC int MLton_main (int argc, char* argv[]) {                        \
             gcState[procNo].procId = procNo;                            \
           }                                                             \
           RCCE_shflush ();                                              \
-          printf ("Before 1[%d]\n", RCCE_ue ());                        \
           RCCE_barrier (&RCCE_COMM_WORLD);                              \
-          printf ("After  1[%d]\n", RCCE_ue ());                        \
         }                                                               \
         else {                                                          \
-          printf ("Before 1[%d]\n", RCCE_ue ());                        \
           RCCE_barrier (&RCCE_COMM_WORLD);                              \
-          printf ("After  1[%d]\n", RCCE_ue ());                        \
           RCCE_shflush ();                                              \
           Duplicate (&gcState[RCCE_ue ()], &gcState[0]);                \
         }                                                               \
         RCCE_shflush ();                                                \
-        printf ("Before 2[%d]\n", RCCE_ue ());                          \
         RCCE_barrier (&RCCE_COMM_WORLD);                                \
-        printf ("After  2[%d]\n", RCCE_ue ());                          \
         RCCE_shflush ();                                                \
         run ((void *)&gcState[RCCE_ue ()]);                             \
 }

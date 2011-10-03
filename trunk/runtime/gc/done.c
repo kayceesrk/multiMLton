@@ -340,7 +340,7 @@ void GC_summaryWrite (void) {
     initStat (&cumul);
     if (s->controls->summary == SUMMARY_INDIVIDUAL) {
       for (int proc=0; proc < s->numberOfProcs; proc++) {
-        sprintf (fname, "gc-summary.%d.out", proc);
+        sprintf (fname, "/shared/chandras/gc-summary.%d.out", proc);
         out = fopen_safe (fname, "wb");
         summaryWrite (s, s->procStates[proc].cumulativeStatistics, out, FALSE);
         fclose_safe (out);
@@ -453,7 +453,7 @@ void GC_summaryWrite (void) {
       timevalPlusMax (&cumul.tv_rt, &d->tv_rt, &cumul.tv_rt);
     }
 
-    sprintf (fname, "gc-summary.cumul.out");
+    sprintf (fname, "/shared/chandras/gc-summary.cumul.out");
     out = fopen_safe (fname, "wb");
     summaryWrite (s, &cumul, out, TRUE);
     fclose_safe (out);
