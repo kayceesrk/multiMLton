@@ -504,6 +504,7 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->weaks = NULL;
   s->saveWorldStatus = true;
   s->profiling.isProfilingTimeOn = false;
+  s->objectSharingInfo = NULL;
 
   s->schedulerQueue = NULL;
   s->schedulerLocks = NULL;
@@ -643,6 +644,7 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->weaks = s->weaks;
   d->copiedSize = s->copiedSize;
   d->saveWorldStatus = s->saveWorldStatus;
+  d->objectSharingInfo = NULL;
 
   d->forwardState.liftingObject = BOGUS_OBJPTR;
 

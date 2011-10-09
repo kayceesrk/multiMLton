@@ -199,6 +199,53 @@ void fixForwardingPointers (GC_state s, bool mayResize) {
       fprintf (stderr, "Finished fixForwardingPointers\n");
 }
 
+void addToObjectSharingInfoIfObjptrInSharedHeap (GC_state s, objptr* opp) {
+  if (not isObjptr(*opp))
+    return;
+  pointer object = objptrToPointer (*opp, s->heap->start);
+  if (isPointerInHeap (s, s->sharedHeap, object)) {
+    GC_objectSharingInfo e;
+    HASH_FIND_PTR (s->objectSharingInfo, (void*)object, e);
+    if (not e) {
+      //We did not find the object in the hash table. Hence, insert it.
+      e = (GC_objectSharingInfo) malloc (sizeof (struct GC_objectSharingInfo));
+      e->key = (void*)object;
+      e->coreId = (int32_t) s->procId;
+      HASH_ADD_PTR (s->objectSharingInfo, objectLocation, e);
+    }
+  }
+}
+
+//The following variables are accessed only in a critical section. So it is ok have them as globals.
+GC_objectSharingInfo globalHashTable;
+int32_t currentCoreId;
+
+UT_icd pointer_icd = {sizeof(void*), NULL, NULL, NULL};
+UT_array toBeFreed;
+
+void addToObjectSharingInfoWalkingShared (GC_state s, objptr* opp) {
+  if (not isObjptr(*opp))
+    return;
+  pointer object = objptrToPointer (*opp, s->heap->start);
+  if (isPointerInHeap (s, s->sharedHeap, object)) {
+    GC_objectSharingInfo e;
+    HASH_FIND_PTR (globalHashTable, (void*)object, e);
+    if (not e) {
+      //We did not find the object in the hash table. Hence, insert it.
+      e = (GC_objectSharingInfo) malloc (sizeof (struct GC_objectSharingInfo));
+      e->key = (void*)object;
+      e->coreId = currentCoreId;
+      HASH_ADD_PTR (globalHashTable, objectLocation, e);
+      //Add to the toBeFreed list so that we can clean up later
+      utarrary_push_back (toBeFreed, (void*)&e);
+    }
+    //the shared heap object is not exlusive to a single core
+    else if (e->coreId != currentCoreId) {
+      e->coreId = -1;
+    }
+  }
+}
+
 void performSharedGC (GC_state s,
                       size_t bytesRequested) {
   size_t bytesFilled = 0;
@@ -369,8 +416,96 @@ void performSharedGC (GC_state s,
                                     s->cumulativeStatistics->numMarkCompactSharedGCs),
                uintmaxToCommaString (s->sharedHeap->oldGenSize));
   }
+
   LEAVE0 (s);
   leaveGC (s);
+
+  s->syncReason = SYNC_MISC;
+  ENTER_LOCAL0 (s);
+  if (s->heap->start + s->heap->oldGenSize == s->heap->nursery)
+    foreachObjptrInRange (s, s->heap->start, &s->frontier, addToObjectSharingInfoIfObjptrInSharedHeap, FALSE);
+  else {
+    pointer end = s->heap->start + s->heap->oldGenSize;
+    foreachObjptrInRange (s, s->heap->start, &end, addToObjectSharingInfoIfObjptrInSharedHeap, FALSE);
+    foreachObjptrInRange (s, s->nursery, &s->frontier, addToObjectSharingInfoIfObjptrInSharedHeap, FALSE);
+  }
+  LEAVE_LOCAL0 (s);
+
+
+  s->syncReason = SYNC_MISC;
+  ENTER0 (s);
+
+ globalHashTable = NULL;
+ GC_objectSharingInfo globalE = NULL;
+ assert (toBeFreed = NULL);
+
+ if (Proc_processorNumber (s) == 0) {
+    //For each processor
+    for (int proc=0; proc < s->numberOfProcs; proc++) {
+      GC_objectSharingInfo e;
+      //For each element in the local hashtable
+      for (e = s->procStates[proc].objectSharingInfo; e != NULL; e = e->hh.next) {
+        HASH_FIND_PTR (globalHashTable, e->objectLocation, globalE);
+        //If element present in globalHashTable and shared heap object is not exclusive to a single core
+        if (globalE and globalE->coreId != e->coreId) {
+          globalE->coreId = -1;
+        }
+        //If the element is not in globalHashTable
+        else if (not globalE) {
+          HASH_ADD_PTR (globalHashTable, objectLocal, e);
+        }
+      }
+    }
+
+    {
+      utarray_new (toBeFreed, &pointer_icd);
+      pointer front = s->sharedHeap->start;
+      pointer back = s->sharedFrontier;
+      int32_t currentCoreId;
+
+      assert (front <= back);
+      while (front < back) {
+        pointer p = advanceToObjectData (s, front);
+        HASH_FIND_PTR (globalHashTable, (void*)p, globalE);
+        if (not globalE)
+          currentCoreId = -1;
+        else
+          currentCoreId = globalE->coreId;
+        front = foreachObjptrInObject (s, p, addToObjectSharingInfoWalkingShared, FALSE);
+      }
+    }
+
+    size_t totalObjects = HASH_COUNT (globalHashTable);
+    size_t totalExclusive = 0;
+    for (globalE = globalHashTable; globalE != NULL; globalE = globalE->hh.next) {
+      if (globalE->coreId != -1)
+        totalExclusive++;
+    }
+
+    fprintf (stderr, "Total objects in the shared heap: %zu\n", totalObjects);
+    fprintf (stderr, "exclusive objects: %zu\n", totalExclusive);
+
+    //clean up
+    //Free the objectSharedInfo structs added as a part of the local heap walks
+    for (int proc=0; proc < s->numberOfProcs; proc++) {
+      GC_objectSharingInfo e, tmp;
+      HASH_ITER (hh, s->objectSharingInfo, e, tmp) {
+        HASH_DEL (s->objectSharingInfo, e);
+        free (e);
+      }
+    }
+    //Free the objectSharedInfo structs added as a part of the shared heap walk
+    void** p;
+    for (p=(void**)utarray_front (toBeFreed); p != NULL; p = (void**)utarray_next (toBeFreed, p)) {
+      assert (*p);
+      free (*p);
+    }
+    //Free the array
+    utarray_free (toBeFreed);
+    toBeFreed = NULL;
+  }
+  LEAVE0 (s);
+
   if (DEBUG)
     fprintf(stderr, "After performSharedGC: numDanglingStacks=%d [%d]\n",
             s->danglingStackListSize, s->procId);
