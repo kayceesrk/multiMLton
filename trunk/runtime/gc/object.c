@@ -193,6 +193,8 @@ bool GC_objectTypeInfo (GC_state s, pointer p) {
                      hasIdentityTransitive, isUnbounded, objectTypeIndex,
                      isClosureVirgin, s->tmpInt);
   }
+
+  //XXX kC Is this needed?
   if (isClosureVirgin) {
     s->syncReason = SYNC_MISC;
     ENTER_LOCAL0(s);
