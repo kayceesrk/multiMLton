@@ -77,11 +77,6 @@ void growStackCurrent (GC_state s, bool allocInOldGen, size_t reservedNew) {
     fprintf (stderr, "growStackCurrent: setting stack->thread pointer. stack="FMTPTR" and thread="FMTPTR"\n",
              (uintptr_t)stack, (uintptr_t)stack->thread);
   updateStackIfDangling (s, getStackCurrentObjptr (s), getThreadCurrent(s)->stack);
-  /* If the thread is in the shared heap and the new stack is not in the
-   * dangling stack list, add it. */
-  if (isPointerInHeap (s, s->sharedHeap, getThreadCurrent(s)) &&
-      !isInDanglingStackList (s, getThreadCurrent(s)->stack))
-    addToDanglingStackList (s, getThreadCurrent (s)->stack);
   markCard (s, objptrToPointer (getThreadCurrentObjptr(s), s->heap->start));
 }
 
@@ -209,7 +204,7 @@ void addToObjectSharingInfoIfObjptrInSharedHeap (GC_state s, objptr* opp) {
     if (not e) {
       //We did not find the object in the hash table. Hence, insert it.
       e = (GC_objectSharingInfo) malloc (sizeof (struct GC_objectSharingInfo));
-      e->key = (void*)object;
+      e->objectLocation = (void*)object;
       e->coreId = (int32_t) s->procId;
       HASH_ADD_PTR (s->objectSharingInfo, objectLocation, e);
     }
@@ -219,9 +214,8 @@ void addToObjectSharingInfoIfObjptrInSharedHeap (GC_state s, objptr* opp) {
 //The following variables are accessed only in a critical section. So it is ok have them as globals.
 GC_objectSharingInfo globalHashTable;
 int32_t currentCoreId;
-
 UT_icd pointer_icd = {sizeof(void*), NULL, NULL, NULL};
-UT_array toBeFreed;
+UT_array* toBeFreed;
 
 void addToObjectSharingInfoWalkingShared (GC_state s, objptr* opp) {
   if (not isObjptr(*opp))
@@ -233,11 +227,11 @@ void addToObjectSharingInfoWalkingShared (GC_state s, objptr* opp) {
     if (not e) {
       //We did not find the object in the hash table. Hence, insert it.
       e = (GC_objectSharingInfo) malloc (sizeof (struct GC_objectSharingInfo));
-      e->key = (void*)object;
+      e->objectLocation = (void*)object;
       e->coreId = currentCoreId;
       HASH_ADD_PTR (globalHashTable, objectLocation, e);
       //Add to the toBeFreed list so that we can clean up later
-      utarrary_push_back (toBeFreed, (void*)&e);
+      utarray_push_back (toBeFreed, (void*)&e);
     }
     //the shared heap object is not exlusive to a single core
     else if (e->coreId != currentCoreId) {
@@ -420,6 +414,8 @@ void performSharedGC (GC_state s,
   LEAVE0 (s);
   leaveGC (s);
 
+#if 0
+
   s->syncReason = SYNC_MISC;
   ENTER_LOCAL0 (s);
   if (s->heap->start + s->heap->oldGenSize == s->heap->nursery)
@@ -427,7 +423,7 @@ void performSharedGC (GC_state s,
   else {
     pointer end = s->heap->start + s->heap->oldGenSize;
     foreachObjptrInRange (s, s->heap->start, &end, addToObjectSharingInfoIfObjptrInSharedHeap, FALSE);
-    foreachObjptrInRange (s, s->nursery, &s->frontier, addToObjectSharingInfoIfObjptrInSharedHeap, FALSE);
+    foreachObjptrInRange (s, s->heap->nursery, &s->frontier, addToObjectSharingInfoIfObjptrInSharedHeap, FALSE);
   }
   LEAVE_LOCAL0 (s);
 
@@ -437,7 +433,6 @@ void performSharedGC (GC_state s,
 
  globalHashTable = NULL;
  GC_objectSharingInfo globalE = NULL;
- assert (toBeFreed = NULL);
 
  if (Proc_processorNumber (s) == 0) {
     //For each processor
@@ -452,7 +447,7 @@ void performSharedGC (GC_state s,
         }
         //If the element is not in globalHashTable
         else if (not globalE) {
-          HASH_ADD_PTR (globalHashTable, objectLocal, e);
+          HASH_ADD_PTR (globalHashTable, objectLocation, e);
         }
       }
     }
@@ -461,7 +456,6 @@ void performSharedGC (GC_state s,
       utarray_new (toBeFreed, &pointer_icd);
       pointer front = s->sharedHeap->start;
       pointer back = s->sharedFrontier;
-      int32_t currentCoreId;
 
       assert (front <= back);
       while (front < back) {
@@ -505,6 +499,8 @@ void performSharedGC (GC_state s,
     toBeFreed = NULL;
   }
   LEAVE0 (s);
+
+#endif
 
   if (DEBUG)
     fprintf(stderr, "After performSharedGC: numDanglingStacks=%d [%d]\n",

@@ -33,6 +33,8 @@ static bool allocChunkInSharedHeap (GC_state s,
                                     size_t nurseryBytesRequested);
 static void fixForwardingPointers (GC_state s, bool mayResize);
 
+static void addToObjectSharingInfoIfObjptrInSharedHeap (GC_state s, objptr* opp);
+void addToObjectSharingInfoWalkingShared (GC_state s, objptr* opp);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */
 
