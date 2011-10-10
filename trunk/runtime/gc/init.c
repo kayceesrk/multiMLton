@@ -225,6 +225,11 @@ int processAtMLton (GC_state s, int argc, char **argv,
           if (i == argc)
             die ("@MLton may-page-heap missing argument.");
           s->controls->mayPageHeap = stringToBool (argv[i++]);
+        } else if (0 == strcmp (arg, "reclaim-objects")) {
+          i++;
+          if (i == argc)
+            die ("@MLton may-page-heap missing argument.");
+          s->controls->reclaimObjects = stringToBool (argv[i++]);
         } else if (0 == strcmp (arg, "no-load-world")) {
           i++;
           s->controls->mayLoadWorld = FALSE;
@@ -456,6 +461,8 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->controls->ratios.stackShrink = 0.5;
   s->controls->selectiveDebug = FALSE;
   s->controls->summary = SUMMARY_NONE;
+  s->controls->reclaimObjects = FALSE;
+
   s->forwardState.liftingObject = BOGUS_OBJPTR;
 
   // While the following asserts are manifestly true,

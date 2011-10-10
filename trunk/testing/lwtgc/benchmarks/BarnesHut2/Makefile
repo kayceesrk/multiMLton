@@ -39,7 +39,7 @@ LIBS = -L$(MMPATH)/trunk/build/lib/self -lmlton -lgdtoa \
 
 .SECONDEXPANSION:
 %-cnd : $$(subst .c,.o,$$(wildcard $$(subst -cnd,,$$@).*.c))
-	gcc -o $(subst -c,,$@) $^ $(LIBS)
+	gcc -o $(subst -cnd,,$@) $^ $(LIBS)
 
 
 .SECONDEXPANSION:

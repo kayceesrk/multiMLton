@@ -274,6 +274,21 @@ bool updateStackIfDangling (GC_state s, objptr old, objptr new) {
   return FALSE;
 }
 
+void refreshDanglingStackList (GC_state s) {
+  int count = 0;
+  objptr* newDanglingStackList = (objptr*) malloc (sizeof (objptr) * s->danglingStackListMaxSize);
+  for (int i=0; i < s->danglingStackListSize; i++) {
+    GC_stack stk = (GC_stack) objptrToPointer (s->danglingStackList[i], s->heap->start);
+    fixFwdObjptr (s, &stk->thread);
+    if (not isPointerInHeap (s, s->heap, (pointer)stk->thread)) {
+      newDanglingStackList[count++] = s->danglingStackList[i];
+    }
+  }
+  free (s->danglingStackList);
+  s->danglingStackList = newDanglingStackList;
+  s->danglingStackListSize = count;
+}
+
 bool isInDanglingStackList (GC_state s, objptr p) {
   for (int i=0; i < s->danglingStackListSize; i++) {
     if (s->danglingStackList[i] == p)

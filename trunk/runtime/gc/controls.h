@@ -50,6 +50,7 @@ struct GC_controls {
   bool mayPageHeap; /* Permit paging heap to disk during GC */
   bool mayProcessAtMLton;
   bool messages; /* Print a message at the start and end of each gc. */
+  bool reclaimObjects;
   size_t oldGenArraySize; /* Arrays larger are allocated in old gen, if possible. */
   size_t allocChunkSize; /* Minimum size reserved for any allocation request. */
   int32_t affinityBase; /* First processor to use when setting affinity */
