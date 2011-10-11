@@ -206,13 +206,14 @@ void addToObjectSharingInfoIfObjptrInSharedHeap (GC_state s, objptr* opp) {
       e = (GC_objectSharingInfo) malloc (sizeof (struct GC_objectSharingInfo));
       e->objectLocation = (void*)object;
       e->coreId = (int32_t) s->procId;
+      e->front = BOGUS_POINTER;
       HASH_ADD_PTR (s->objectSharingInfo, objectLocation, e);
     }
   }
 }
 
 volatile GC_objectSharingInfo globalHashTable;
-int32_t currentCoreId;
+volatile int32_t currentCoreId;
 
 void addToObjectSharingInfoWalkingShared (GC_state s, objptr* opp) {
   if (not isObjptr(*opp))
@@ -226,10 +227,11 @@ void addToObjectSharingInfoWalkingShared (GC_state s, objptr* opp) {
       e = (GC_objectSharingInfo) malloc (sizeof (struct GC_objectSharingInfo));
       e->objectLocation = (void*)object;
       e->coreId = currentCoreId;
+      e->front = BOGUS_POINTER;
       HASH_ADD_PTR (globalHashTable, objectLocation, e);
     }
-    //the shared heap object is not exlusive to a single core
     else if (e->coreId != currentCoreId) {
+      //the shared heap object is not exlusive to a single core
       e->coreId = -1;
     }
   }
@@ -282,6 +284,15 @@ void reclaimObjects (GC_state s) {
         pointer end = s->heap->start + s->heap->oldGenSize;
         foreachObjptrInRange (s, s->heap->start, &end, fixFwdObjptr, FALSE);
         foreachObjptrInRange (s, s->heap->nursery, &s->frontier, fixFwdObjptr, FALSE);
+      }
+
+      for (globalE = globalHashTable; globalE != NULL; globalE = globalE->hh.next) {
+        if ((uint32_t)globalE->coreId == s->procId) {
+          pointer p = (pointer)globalE->objectLocation;
+          pointer front = (pointer)globalE->front;
+          assert (front != BOGUS_POINTER);
+          fillGap (s, front, front + sizeofObject (s, p));
+        }
       }
     }
   }
@@ -479,8 +490,15 @@ void performSharedGC (GC_state s,
     s->syncReason = SYNC_MISC;
     ENTER0 (s);
     if (Proc_processorNumber (s) == 0) {
+
       GC_objectSharingInfo globalE = NULL;
       globalHashTable = NULL;
+
+      //For globals
+      currentCoreId = -1;
+      for (unsigned int i = 0; i < s->globalsLength; ++i)
+        addToObjectSharingInfoWalkingShared (s, &s->globals[i]);
+
       //For each processor
       for (int proc=0; proc < s->numberOfProcs; proc++) {
         GC_objectSharingInfo e, tmp;
@@ -496,6 +514,7 @@ void performSharedGC (GC_state s,
             globalE = (GC_objectSharingInfo) malloc (sizeof (struct GC_objectSharingInfo));
             globalE->objectLocation = location;
             globalE->coreId = proc;
+            globalE->front = BOGUS_POINTER;
             HASH_ADD_PTR (globalHashTable, objectLocation, globalE);
           }
           HASH_DEL (s->procStates[proc].objectSharingInfo, e);
@@ -504,6 +523,7 @@ void performSharedGC (GC_state s,
         s->procStates[proc].objectSharingInfo = NULL;
       }
 
+      //Walking the shared heap
       {
         pointer front = s->sharedHeap->start;
         pointer back = s->sharedFrontier;
@@ -512,13 +532,20 @@ void performSharedGC (GC_state s,
         while (front < back) {
           pointer p = advanceToObjectData (s, front);
           HASH_FIND_PTR (globalHashTable, &p, globalE);
-          if (not globalE)
+          if (not globalE) {
             currentCoreId = -1;
-          else
+            objptr o = pointerToObjptr (p, s->sharedHeap->start);
+            addToObjectSharingInfoWalkingShared (s, &o);
+          }
+          else {
             currentCoreId = globalE->coreId;
+            globalE->front = front;
+          }
           front = foreachObjptrInObject (s, p, addToObjectSharingInfoWalkingShared, FALSE);
         }
       }
+
+
 
       size_t totalObjects = HASH_COUNT (globalHashTable);
       size_t totalExclusive = 0;

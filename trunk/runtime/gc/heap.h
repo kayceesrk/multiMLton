@@ -54,6 +54,8 @@ typedef struct GC_objectSharingInfo {
   //If the object is exclusively pointed from a single local heap, then this is
   //the core id of the local heap. Otherwise, this is -1.
   int32_t coreId;
+  //Front of the object
+  pointer front;
   UT_hash_handle hh;
 } *GC_objectSharingInfo;
 

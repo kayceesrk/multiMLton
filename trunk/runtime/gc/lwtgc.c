@@ -9,10 +9,7 @@
 /* Move an object from local heap to the shared heap */
 static inline void liftObjptr (GC_state s, objptr *opp) {
 
-  pointer p = objptrToPointer (*opp, s->heap->start);
-  if (getHeader (p) == GC_FORWARDED) {
-    *opp = *(objptr*)p;
-  }
+  fixFwdObjptr (s, opp);
   /* If pointer has already been forwarded, skip setting lift bit */
   if (isObjptrInHeap (s, s->sharedHeap, *opp)) {
     if (DEBUG_LWTGC) {
