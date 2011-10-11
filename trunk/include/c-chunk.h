@@ -41,6 +41,12 @@
 
 #define C(ty, x) (*(ty*)(x))
 
+/* #define C(ty, x) (*((fprintf (stderr, "%s:%d C: Addr=%018p Val=%018p\n", __FILE__, __LINE__, \
+                                           (void*)(x), \
+                                           *((ty*)(x)))), \
+                                 ((ty*)(x)))) */
+
+
 #define G(ty, i) (global##ty [i])
 #define GPNR(i) (((Pointer*)(GCState + GlobalObjptrNonRootOffset))[i])
 

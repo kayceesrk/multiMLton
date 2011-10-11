@@ -64,7 +64,7 @@ static inline void liftObjptrAndFillOrig (GC_state s, objptr *opp) {
   if (isPointerInHeap (s, s->sharedHeap, new_p) && (typeIndex != threadTypeIndex)) {
     size_t objSize = sizeofObject (s, new_p);
     old_p -= sizeofObjectHeader (s, getHeader (new_p));
-    if (DEBUG_DETAILED)
+    if ((DEBUG_DETAILED or s->controls->selectiveDebug))
       fprintf (stderr, "\t filling Gap between "FMTPTR" and "FMTPTR" of size %ld [%d]\n",
                (uintptr_t)old_p, (uintptr_t)(old_p + objSize), objSize, s->procId);
     fillGap (s, old_p, old_p + objSize);
@@ -78,12 +78,12 @@ static inline void assertLiftedObjptr (GC_state s, objptr *opp) {
   objptr op = *opp;
   bool stackType = FALSE;
 
-  if (DEBUG_DETAILED)
+  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
     fprintf (stderr, "assertLiftedObjptr ("FMTOBJPTR") [%d]\n", *opp, s->procId);
 
   GC_header h = getHeader (objptrToPointer (op, s->heap->start));
   if (h == GC_FORWARDED) {
-    if (DEBUG_DETAILED)
+    if ((DEBUG_DETAILED or s->controls->selectiveDebug))
       fprintf (stderr, "assertLiftedObjptr: forwarding [%d]\n", s->procId);
     fixFwdObjptr (s, opp);
     op = *opp;
@@ -151,7 +151,7 @@ void liftAllObjectsDuringInit (GC_state s) {
   if (DEBUG_LWTGC)
     fprintf (stderr, "liftAllObjectsDuringInit: foreachGlobalObjptr\n");
   for (unsigned int i = 0; i < s->globalsLength; ++i) {
-    if (DEBUG_DETAILED)
+    if ((DEBUG_DETAILED or s->controls->selectiveDebug))
       fprintf (stderr, "foreachGlobal %u [%d]\n", i, s->procId);
     callIfIsObjptr (s, liftObjptr, &s->globals [i]);
   }
