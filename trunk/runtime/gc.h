@@ -60,6 +60,7 @@ typedef GC_state GCState_t;
 #include "gc/handler.h"
 #include "gc/switch-thread.h"
 #include "gc/threadlet.h"
+#include "gc/reclaim.h"
 #include "gc/garbage-collection.h"
 #include "gc/new-object.h"
 #include "gc/array-allocate.h"
