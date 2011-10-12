@@ -197,6 +197,7 @@ void fixForwardingPointers (GC_state s, bool mayResize) {
 void addToObjectSharingInfoIfObjptrInSharedHeap (GC_state s, objptr* opp) {
   if (not isObjptr(*opp))
     return;
+  fixFwdObjptr (s, opp);
   pointer object = objptrToPointer (*opp, s->heap->start);
   if (isPointerInHeap (s, s->sharedHeap, object)) {
     GC_objectSharingInfo e;
@@ -207,6 +208,7 @@ void addToObjectSharingInfoIfObjptrInSharedHeap (GC_state s, objptr* opp) {
       e->objectLocation = (void*)object;
       e->coreId = (int32_t) s->procId;
       e->front = BOGUS_POINTER;
+      fprintf (stderr, "HASH_ADD: "FMTPTR" coreId=%d [%d]\n", (uintptr_t)object, s->procId, s->procId);
       HASH_ADD_PTR (s->objectSharingInfo, objectLocation, e);
     }
   }
@@ -218,6 +220,7 @@ volatile int32_t currentCoreId;
 void addToObjectSharingInfoWalkingShared (GC_state s, objptr* opp) {
   if (not isObjptr(*opp))
     return;
+  fixFwdObjptr (s, opp);
   pointer object = objptrToPointer (*opp, s->heap->start);
   if (isPointerInHeap (s, s->sharedHeap, object)) {
     GC_objectSharingInfo e;
@@ -228,10 +231,12 @@ void addToObjectSharingInfoWalkingShared (GC_state s, objptr* opp) {
       e->objectLocation = (void*)object;
       e->coreId = currentCoreId;
       e->front = BOGUS_POINTER;
+      fprintf (stderr, "HASH_ADD: "FMTPTR" coreId=%d [%d]\n", (uintptr_t)object, currentCoreId, s->procId);
       HASH_ADD_PTR (globalHashTable, objectLocation, e);
     }
     else if (e->coreId != currentCoreId) {
       //the shared heap object is not exlusive to a single core
+      fprintf (stderr, "HASH_MODIFY(1): "FMTPTR" coreId=%d [%d]\n", (uintptr_t)object, -1, s->procId);
       e->coreId = -1;
     }
   }
@@ -251,7 +256,6 @@ void reclaimObjects (GC_state s) {
 
     fprintf (stderr, "totalSize = %s [%d]\n", uintmaxToCommaString (totalSize), s->procId);
     if (totalSize) {
-      s->controls->selectiveDebug = TRUE;
       //Ensure space in the localheap old gen
       ensureHasHeapBytesFreeAndOrInvariantForMutator (s, FALSE, FALSE, FALSE, totalSize, 0, FALSE, 0);
 
@@ -271,10 +275,12 @@ void reclaimObjects (GC_state s) {
           GC_header h = getHeader (p);
           *hp = h & ~LIFT_MASK;
           objptr op = pointerToObjptr (p, s->sharedHeap->start);
+          fprintf (stderr, "RECLAIMING: p="FMTPTR" ", (uintptr_t)p);
           forwardObjptr (s, &op);
+          fprintf (stderr, "newP="FMTPTR"\n", (uintptr_t)op);
         }
       }
-      s->controls->selectiveDebug = FALSE;
+      assert (totalSize == (s->forwardState.back - s->forwardState.toStart));
       s->heap->oldGenSize += (s->forwardState.back - s->forwardState.toStart);
 
       //Fix the forwarding pointers
@@ -289,7 +295,6 @@ void reclaimObjects (GC_state s) {
         foreachObjptrInRange (s, s->heap->nursery, &s->frontier, fixFwdObjptr, FALSE);
       }
 
-      s->controls->selectiveDebug = TRUE;
       for (globalE = globalHashTable; globalE != NULL; globalE = globalE->hh.next) {
         if ((uint32_t)globalE->coreId == s->procId) {
           pointer p = (pointer)globalE->objectLocation;
@@ -298,14 +303,13 @@ void reclaimObjects (GC_state s) {
           fillGap (s, front, front + sizeofObject (s, p));
         }
       }
-      s->controls->selectiveDebug = FALSE;
+      s->controls->selectiveDebug = TRUE;
     }
-    assert (invariantForGC(s));
   }
 }
 
-void performSharedGC (GC_state s,
-                      size_t bytesRequested) {
+void performSharedGC (GC_state s, size_t bytesRequested, bool recursive) {
+  fprintf (stderr, "PERFORM SHARED GC -- RECURSIVE %d\n", recursive);
   size_t bytesFilled = 0;
 
   s->forwardState.amInMinorGC = FALSE;
@@ -320,6 +324,7 @@ void performSharedGC (GC_state s,
     if (DEBUG)
       fprintf (stderr, "performSharedGC: starting local GC [%d]\n", s->procId);
 
+    s->syncReason = SYNC_MISC;
     ENTER_LOCAL0 (s);
     minorCheneyCopyGC (s);
     majorGC (s, GC_HEAP_LIMIT_SLOP, TRUE, FALSE);
@@ -365,10 +370,7 @@ void performSharedGC (GC_state s,
   size_t availableBytes =
     (size_t)(s->sharedHeap->start + s->sharedHeap->availableSize - s->sharedHeap->frontier);
 
-  /* See if a GC has already been performed */
-  if (bytesRequested > availableBytes) {
-    /* perform GC */
-
+  if (Proc_processorNumber (s) == 0) {
     //Clear remembered stacks
     for (int proc=0; proc < s->numberOfProcs; proc++)
       clearDanglingStackList (&s->procStates[proc]);
@@ -478,9 +480,10 @@ void performSharedGC (GC_state s,
   LEAVE0 (s);
   leaveGC (s);
 
-  if (s->controls->reclaimObjects) {
+  if (s->controls->reclaimObjects && !recursive) {
     s->syncReason = SYNC_MISC;
     ENTER_LOCAL0 (s);
+    assert (s->objectSharingInfo == NULL);
     foreachGlobalObjptrInScope (s, addToObjectSharingInfoIfObjptrInSharedHeap);
     if (s->heap->start + s->heap->oldGenSize == s->heap->nursery) {
       foreachObjptrInRange (s, s->heap->start, &s->frontier, addToObjectSharingInfoIfObjptrInSharedHeap, FALSE);
@@ -513,6 +516,7 @@ void performSharedGC (GC_state s,
           HASH_FIND_PTR (globalHashTable, &location, globalE);
           //If element present in globalHashTable and shared heap object is not exclusive to a single core
           if (globalE && globalE->coreId != e->coreId) {
+            fprintf (stderr, "HASH_MODIFY(2): "FMTPTR" coreId=%d [%d]\n", (uintptr_t)location, -1, s->procId);
             globalE->coreId = -1;
           }
           //If the element is not in globalHashTable
@@ -521,6 +525,7 @@ void performSharedGC (GC_state s,
             globalE->objectLocation = location;
             globalE->coreId = proc;
             globalE->front = BOGUS_POINTER;
+            fprintf (stderr, "HASH_ADD: "FMTPTR" coreId=%d [%d]\n", (uintptr_t)location, proc, s->procId);
             HASH_ADD_PTR (globalHashTable, objectLocation, globalE);
           }
           HASH_DEL (s->procStates[proc].objectSharingInfo, e);
@@ -551,8 +556,6 @@ void performSharedGC (GC_state s,
         }
       }
 
-
-
       size_t totalObjects = HASH_COUNT (globalHashTable);
       size_t totalExclusive = 0;
       for (globalE = globalHashTable; globalE != NULL; globalE = globalE->hh.next) {
@@ -579,6 +582,8 @@ void performSharedGC (GC_state s,
         }
     }
     LEAVE0 (s);
+
+    performSharedGC (s, 0, TRUE);
   }
 
   if (DEBUG)
@@ -752,12 +757,9 @@ size_t fillGap (__attribute__ ((unused)) GC_state s, pointer start, pointer end)
       exit (1);
     }
 
-    /* XXX debug only */
-    /*
     while (start < end) {
       *(start++) = 0xDF;
     }
-    */
 
     return diff;
   }
@@ -799,7 +801,7 @@ static bool allocChunkInSharedHeap (GC_state s,
     /* Perhaps there is not enough space in the nursery to satify this
        request; if that's true then we need to do a full collection */
     if (bytesRequested + GC_BONUS_SLOP > availableBytes) {
-      performSharedGC (s, bytesRequested + GC_BONUS_SLOP);
+      performSharedGC (s, bytesRequested + GC_BONUS_SLOP, FALSE);
       return TRUE;
     }
 

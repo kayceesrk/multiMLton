@@ -14,6 +14,7 @@
 #include "ml-types.h"
 #include "c-types.h"
 #include "c-common.h"
+#include <assert.h>
 
 #ifndef TRUE
 #define TRUE 1
@@ -41,12 +42,6 @@
 
 #define C(ty, x) (*(ty*)(x))
 
-/* #define C(ty, x) (*((fprintf (stderr, "%s:%d C: Addr=%018p Val=%018p\n", __FILE__, __LINE__, \
-                                           (void*)(x), \
-                                           *((ty*)(x)))), \
-                                 ((ty*)(x)))) */
-
-
 #define G(ty, i) (global##ty [i])
 #define GPNR(i) (((Pointer*)(GCState + GlobalObjptrNonRootOffset))[i])
 
@@ -56,46 +51,28 @@ PRIVATE extern Pointer GC_forwardBase (struct GC_state* s, Pointer b);
 #define FWD(x) (GC_forwardBase (GCState, (x)))
 
 #ifdef DEBUG_MEMORY
-    #define O_RB(ty, b, o) (fprintf (stderr, "%s:%d O_RB: Addr=%018p Val=%018p\n", __FILE__, __LINE__, \
-                                     (void*)((b) + (o)), \
-                                     FWD (*((ty*)((b) + (o))))), \
-                            FWD (*((ty*)((b) + (o)))))
     #define O(ty, b, o) (*((fprintf (stderr, "%s:%d O: Addr=%018p Val=%018p\n", __FILE__, __LINE__, \
                                            (void*)((b) + (o)), \
                                            *((ty*)((b) + (o))))), \
                                  ((ty*)((b) + (o)))))
-    #define X_RB(ty, b, i, s, o) (fprintf (stderr, "%s:%d X_RB: Addr=%018p Val=%018p\n", __FILE__, __LINE__, \
-                                           (void*)((b) + ((i) * (s)) + (o)), \
-                                           FWD (*(ty*)((b) + ((i) * (s)) + (o)))), \
-                                  FWD (*(ty*)((b) + ((i) * (s)) + (o))))
     #define X(ty, b, i, s, o) (*((fprintf (stderr, "%s:%d X: Addr=%018p Val=%018p\n", __FILE__, __LINE__, \
                                                  (void*)((b) + ((i) * (s)) + (o)), \
                                                  *(ty*)((b) + ((i) * (s)) + (o)))), \
                                        ((ty*)((b) + ((i) * (s)) + (o)))))
-    #define S_RB(ty, i) ((fprintf (stderr, "%s:%d S_RB: Addr=%018p Val=%018p\n", __FILE__, __LINE__, \
-                                  (void*)(StackTop + (i)), \
-                                  FWD (*(ty*)(StackTop + (i))))), \
-                        FWD (*(ty*)(StackTop + (i))))
     #define S(ty, i) (*((fprintf (stderr, "%s:%d S: Addr=%018p Val=%018p\n", __FILE__, __LINE__, \
                                (void*)(StackTop + (i)), \
                                *(ty*)(StackTop + (i)))) , \
                         (ty*)(StackTop + (i))))
 
 #else
-    #define O_RB(ty, b, o) (FWD (*(ty*)((b) + (o))))
-    #define O(ty, b, o) (*((ty*)((b) + (o))))
-    #define X_RB(ty, b, i, s, o) (FWD (*((ty*)((b) + ((i) * (s)) + (o)))))
-    #define X(ty, b, i, s, o) (*((ty*)((b) + ((i) * (s)) + (o))))
-    #define S_RB(ty, i)  (FWD (*(ty*)(StackTop + (i))))
+    #define O(ty, b, o) (*(checkHeader (GCState, b, __FILE__, __LINE__), ((ty*)((b) + (o)))))
+    #define X(ty, b, i, s, o) (*(checkHeader (GCState, (b) + ((i) * (s)), __FILE__, __LINE__), ((ty*)((b) + ((i) * (s)) + (o)))))
     #define S(ty, i) (*((ty*)(StackTop + (i))))
 #endif
 
 //For debugging with gdb
-#define O_RB_(ty, b, o) (FWD (*(ty*)((b) + (o))))
 #define O_(ty, b, o) (*((ty*)((b) + (o))))
-#define X_RB_(ty, b, i, s, o) (FWD (*((ty*)((b) + ((i) * (s)) + (o)))))
 #define X_(ty, b, i, s, o) (*((ty*)((b) + ((i) * (s)) + (o))))
-#define S_RB_(ty, i)  (FWD (*(ty*)(StackTop + (i))))
 #define S_(ty, i) (*((ty*)(StackTop + (i))))
 
 

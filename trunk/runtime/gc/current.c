@@ -36,5 +36,6 @@ objptr getStackCurrentObjptr (GC_state s) {
 
 GC_stack getStackCurrent (GC_state s) {
   pointer p = objptrToPointer(getStackCurrentObjptr(s), s->heap->start);
+  assert ((getHeader (p) & ~(LIFT_MASK | VIRGIN_MASK)) == (GC_header)0x1);
   return (GC_stack)p;
 }

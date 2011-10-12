@@ -193,5 +193,6 @@ static inline void isObjectPointerVirgin (GC_state s, pointer p);
 static inline void doesPointToTmpPointer (GC_state s, objptr* opp);
 
 PRIVATE bool GC_objectTypeInfo (GC_state s, pointer p);
+PRIVATE void checkHeader (GC_state s, pointer p, char* file, int line);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

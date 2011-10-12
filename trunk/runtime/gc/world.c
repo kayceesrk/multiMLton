@@ -104,7 +104,7 @@ int saveWorldToFILE (GC_state s, FILE *f) {
   if (DEBUG_WORLD)
     fprintf (stderr, "saveWorldToFILE\n");
   /* Compact the heap. */
-  performSharedGC (s, 0);
+  performSharedGC (s, 0, FALSE);
   snprintf (buf, cardof(buf),
             "Heap file created by MLton.\nheap->start = "FMTPTR"\nbytesLive = %"PRIuMAX"\n",
             (uintptr_t)s->heap->start,
