@@ -35,6 +35,11 @@ void majorGC (GC_state s, size_t bytesRequested, bool mayResize, bool liftWBAs) 
     majorCheneyCopyGC (s);
   else
     majorMarkCompactGC (s);
+
+  //Reclaim objects if present
+  if (s->reachable)
+    reclaimObjects (s);
+
   s->hashConsDuringGC = FALSE;
   s->lastMajorStatistics->bytesLive = s->heap->oldGenSize;
   if (s->lastMajorStatistics->bytesLive > s->cumulativeStatistics->maxBytesLive)
@@ -49,6 +54,8 @@ void majorGC (GC_state s, size_t bytesRequested, bool mayResize, bool liftWBAs) 
     setCardMapAndCrossMap (s);
   }
   resizeLocalHeapSecondary (s);
+
+
   assert (s->heap->oldGenSize + bytesRequested <= s->heap->size);
 }
 
@@ -158,6 +165,10 @@ void performSharedGC (GC_state s, size_t bytesRequested, bool recursive) {
   size_t bytesFilled = 0;
 
   s->forwardState.amInMinorGC = FALSE;
+  if (s->reachable)
+    utarray_free (s->reachable);
+  s->reachable = NULL;
+
   objptr op = s->forwardState.liftingObject;
 
   if (DEBUG)

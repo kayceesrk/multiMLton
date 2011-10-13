@@ -6,72 +6,81 @@
  * See the file MLton-LICENSE for details.
  */
 
-void reclaimObjects (GC_state s, GC_objectSharingInfo globalHashTable) {
-  GC_objectSharingInfo globalE = NULL;
+
+UT_icd icd = {sizeof(pointer), NULL, NULL, NULL};
+
+void reclaimObjects (GC_state s) {
+  assert (s->reachable);
+
   size_t totalSize = 0;
-  assert (globalHashTable);
-  for (globalE = globalHashTable; globalE != NULL; globalE = globalE->hh.next) {
-    if ((uint32_t)globalE->coreId == s->procId) {
-      pointer p = (pointer)globalE->objectLocation;
-      totalSize += sizeofObject (s, p);
-    }
+  size_t totalObjects = utarray_len (s->reachable);
+  fprintf (stderr, "totalObjects = %zu [%d]\n", totalObjects, s->procId);
+  pointer* iter = NULL;
+
+  for (iter = (pointer*)utarray_front (s->reachable);
+        iter != NULL;
+        iter = (pointer*)utarray_next (s->reachable, iter)) {
+    pointer p = *iter;
+    totalSize += sizeofObject (s, p);
   }
 
   if (DEBUG_RECLAIM || TRUE)
     fprintf (stderr, "totalSize = %s [%d]\n", uintmaxToCommaString (totalSize), s->procId);
   if (totalSize) {
-    if (s->forwardState.liftingObject == BOGUS_OBJPTR) {
-      //Ensure space in the localheap old gen
-      ensureHasHeapBytesFreeAndOrInvariantForMutator (s, FALSE, FALSE, FALSE, totalSize, 0, FALSE, 0);
+    //Move to oldGen
+    //--------------
+    //setup forwarding state
+    s->forwardState.toStart = s->heap->start + s->heap->oldGenSize;
 
-      //Move to oldGen
-      //--------------
+    //XXX see gc_state.c:setGCStateCurrentLocalHeap
+    s->forwardState.toLimit = s->heap->start + s->heap->size - GC_HEAP_LIMIT_SLOP;
 
-      //setup forwarding state
-      s->forwardState.toStart = s->heap->start + s->heap->oldGenSize;
-      s->forwardState.toLimit = s->heap->start + s->heap->oldGenSize + totalSize;
-      s->forwardState.back = s->forwardState.toStart;
-      s->forwardState.forceStackForwarding = TRUE;
+    s->forwardState.back = s->forwardState.toStart;
+    s->forwardState.forceStackForwarding = TRUE;
 
-      for (globalE = globalHashTable; globalE != NULL; globalE = globalE->hh.next) {
-        if ((uint32_t)globalE->coreId == s->procId) {
-          pointer p = (pointer)globalE->objectLocation;
-          GC_header* hp = getHeaderp (p);
-          GC_header h = getHeader (p);
-          *hp = h & ~LIFT_MASK;
-          objptr op = pointerToObjptr (p, s->sharedHeap->start);
-          if (DEBUG_RECLAIM)
-            fprintf (stderr, "RECLAIMING: p="FMTPTR" ", (uintptr_t)p);
-          forwardObjptr (s, &op);
-          if (DEBUG_RECLAIM)
-            fprintf (stderr, "newP="FMTPTR"\n", (uintptr_t)op);
-        }
-      }
-      assert (totalSize == (size_t)(s->forwardState.back - s->forwardState.toStart));
-      s->heap->oldGenSize += (s->forwardState.back - s->forwardState.toStart);
+    size_t numReclaimed = 0;
+    for (iter = (pointer*)utarray_front (s->reachable);
+         iter != NULL;
+         iter = (pointer*)utarray_next (s->reachable, iter)) {
+      pointer p = *iter;
+      size_t size = sizeofObject (s, p);
 
-      //Fix the forwarding pointers
-      foreachGlobalObjptrInScope (s, fixFwdObjptr);
-      refreshDanglingStackList (s);
-      if (s->heap->start + s->heap->oldGenSize == s->heap->nursery) {
-        foreachObjptrInRange (s, s->heap->start, &s->frontier, fixFwdObjptr, FALSE);
-      }
-      else {
-        pointer end = s->heap->start + s->heap->oldGenSize;
-        foreachObjptrInRange (s, s->heap->start, &end, fixFwdObjptr, FALSE);
-        foreachObjptrInRange (s, s->heap->nursery, &s->frontier, fixFwdObjptr, FALSE);
-      }
+      if ((size_t) (s->forwardState.toLimit - s->forwardState.back) <= size)
+        break;
 
-      //Fill reclaimedObjects
-      for (globalE = globalHashTable; globalE != NULL; globalE = globalE->hh.next) {
-        if ((uint32_t)globalE->coreId == s->procId) {
-          pointer p = (pointer)globalE->objectLocation;
-          pointer front = getBeginningOfObject (s, p);
-          assert (front != BOGUS_POINTER);
-          fillGap (s, front, front + sizeofObject (s, p));
-        }
-      }
+      numReclaimed++;
+      GC_header* hp = getHeaderp (p);
+      GC_header h = getHeader (p);
+      *hp = h & ~LIFT_MASK;
+      objptr op = pointerToObjptr (p, s->sharedHeap->start);
+
+      forwardObjptr (s, &op);
+      if (DEBUG_RECLAIM)
+        fprintf (stderr, "RECLAIMING: p="FMTPTR" newP="FMTPTR" [%d]\n", (uintptr_t)p, (uintptr_t)op, s->procId);
+
     }
+    s->heap->oldGenSize += (s->forwardState.back - s->forwardState.toStart);
+
+    //Fix the forwarding pointers
+    foreachGlobalObjptrInScope (s, fixFwdObjptr);
+    refreshDanglingStackList (s);
+    pointer end = s->heap->start + s->heap->oldGenSize;
+    foreachObjptrInRange (s, s->heap->start, &end, fixFwdObjptr, FALSE);
+
+    //Fill reclaimedObjects
+    for (size_t i=0; i < numReclaimed; i++) {
+      pointer p = *(pointer*) utarray_eltptr (s->reachable, i);
+      pointer front = getBeginningOfObject (s, p);
+      assert (front != BOGUS_POINTER);
+      fillGap (s, front, front + sizeofObject (s, p));
+    }
+
+    if (numReclaimed == totalObjects) {
+      utarray_free (s->reachable);
+      s->reachable = NULL;
+    }
+    else
+      utarray_erase (s->reachable, 0, numReclaimed);
   }
 }
 
@@ -120,17 +129,26 @@ void reclaim (GC_state s) {
   s->syncReason = SYNC_MISC;
   ENTER0 (s);
 
-  UT_icd icd = {sizeof(pointer), NULL, NULL, NULL};
 
   if (Proc_processorNumber (s) == 0) {
     //Globals
     UT_array* globalReachable = NULL;
     utarray_new (s->reachable, &icd);
 
+    //Globals -- MARK
     for (unsigned int i = 0; i < s->globalsLength; ++i)
       dfsMarkReachable (s, &s->globals[i]);
+    for (int proc = 0; proc < s->numberOfProcs; proc++) {
+      GC_state r = &s->procStates[proc];
+      foreachObjptrInExportableWBAs (r, dfsMarkReachable);
+    }
+    //Globals -- UNMARK
     for (unsigned int i = 0; i < s->globalsLength; ++i)
       dfsUnmarkReachable (s, &s->globals[i]);
+    for (int proc = 0; proc < s->numberOfProcs; proc++) {
+      GC_state r = &s->procStates[proc];
+      foreachObjptrInExportableWBAs (r, dfsUnmarkReachable);
+    }
     globalReachable = s->reachable;
 
     //For local heaps
@@ -178,14 +196,18 @@ void reclaim (GC_state s) {
       fprintf (stderr, "Exclusive objects are %.1f%% of total shared heap objects [%zu]\n",
               (100.0 * ((double)totalExclusive/(double)totalObjects)), totalObjects);
 
-    //Reclaim
-    for (int proc=0; proc < s->numberOfProcs; proc++)
-      reclaimObjects (&s->procStates[proc], globalMap);
-
-    //FREE
+    //Add to local reachable lists and free hash table elements
     {
       GC_objectSharingInfo e, tmp;
       HASH_ITER (hh, globalMap, e, tmp) {
+        if (e->coreId != -1) {
+          GC_state r = &s->procStates[e->coreId];
+          if (!(r->reachable))
+            utarray_new (r->reachable, &icd);
+          pointer p = (pointer)e->objectLocation;
+          utarray_push_back (r->reachable, &p);
+          fprintf (stderr, "PUSH_BACK: p="FMTPTR" coreId=%d\n", (uintptr_t)p, e->coreId);
+        }
         HASH_DEL (globalMap, e);
         free (e);
       }

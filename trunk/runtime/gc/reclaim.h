@@ -9,7 +9,7 @@
 #if (defined (MLTON_GC_INTERNAL_FUNCS))
 
 void addToObjectSharingInfoWalkingShared (GC_state s, objptr* opp);
-static void reclaimObjects (GC_state s, GC_objectSharingInfo map);
+void reclaimObjects (GC_state s);
 void reclaim (GC_state s);
 
 

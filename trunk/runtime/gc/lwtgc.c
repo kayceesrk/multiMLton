@@ -491,6 +491,13 @@ static inline void foreachObjptrInWBAs (GC_state s, GC_state fromState, GC_forea
     callIfIsObjptr (s, f, &((fromState->spawnOnWBA [i]).op));
 }
 
+static inline void foreachObjptrInExportableWBAs (GC_state s, GC_foreachObjptrFun f) {
+  for (int i=0; i < s->moveOnWBASize; i++)
+    callIfIsObjptr (s, f, &(s->moveOnWBA [i]));
+  for (int i=0; i < s->spawnOnWBASize; i++)
+    callIfIsObjptr (s, f, &((s->spawnOnWBA [i]).op));
+}
+
 void jumpToReturnLocation (GC_state s) {
   assert (s->forwardState.isReturnLocationSet);
   s->forwardState.isReturnLocationSet = FALSE;

@@ -41,5 +41,6 @@ void jumpToReturnLocation (GC_state s) __attribute__((noreturn));
 
 static inline void foreachObjptrInWBAs (GC_state s, GC_state fromState,
                                         GC_foreachObjptrFun f);
+static inline void foreachObjptrInExportableWBAs (GC_state s, GC_foreachObjptrFun f);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */
