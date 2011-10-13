@@ -228,9 +228,7 @@ bool GC_objectTypeInfo (GC_state s, pointer p) {
   return isClosureVirgin;
 }
 
-void checkHeader (GC_state s, pointer p, char* file, int line) {
-  if (s->controls->selectiveDebug)
-    fprintf (stderr, "%s:%d P = "FMTPTR" [%d]\n", file, line, (uintptr_t)p, s->procId);
+void checkHeader (__attribute__((unused)) GC_state s, pointer p, char* file, int line) {
   if ((getHeader (p) & ~(VIRGIN_MASK | LIFT_MASK)) == (GC_header)0x11) {
     fprintf (stderr, "%s:%d P = "FMTPTR"\n", file, line, (uintptr_t)p);
   }

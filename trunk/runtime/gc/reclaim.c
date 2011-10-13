@@ -10,17 +10,17 @@ void reclaimObjects (GC_state s, GC_objectSharingInfo globalHashTable) {
   GC_objectSharingInfo globalE = NULL;
   size_t totalSize = 0;
   assert (globalHashTable);
-  if (s->forwardState.liftingObject == BOGUS_OBJPTR) {
-    for (globalE = globalHashTable; globalE != NULL; globalE = globalE->hh.next) {
-      if ((uint32_t)globalE->coreId == s->procId) {
-        pointer p = (pointer)globalE->objectLocation;
-        totalSize += sizeofObject (s, p);
-      }
+  for (globalE = globalHashTable; globalE != NULL; globalE = globalE->hh.next) {
+    if ((uint32_t)globalE->coreId == s->procId) {
+      pointer p = (pointer)globalE->objectLocation;
+      totalSize += sizeofObject (s, p);
     }
+  }
 
-    if (DEBUG_RECLAIM || TRUE)
-      fprintf (stderr, "totalSize = %s [%d]\n", uintmaxToCommaString (totalSize), s->procId);
-    if (totalSize) {
+  if (DEBUG_RECLAIM || TRUE)
+    fprintf (stderr, "totalSize = %s [%d]\n", uintmaxToCommaString (totalSize), s->procId);
+  if (totalSize) {
+    if (s->forwardState.liftingObject == BOGUS_OBJPTR) {
       //Ensure space in the localheap old gen
       ensureHasHeapBytesFreeAndOrInvariantForMutator (s, FALSE, FALSE, FALSE, totalSize, 0, FALSE, 0);
 
@@ -62,6 +62,7 @@ void reclaimObjects (GC_state s, GC_objectSharingInfo globalHashTable) {
         foreachObjptrInRange (s, s->heap->nursery, &s->frontier, fixFwdObjptr, FALSE);
       }
 
+      //Fill reclaimedObjects
       for (globalE = globalHashTable; globalE != NULL; globalE = globalE->hh.next) {
         if ((uint32_t)globalE->coreId == s->procId) {
           pointer p = (pointer)globalE->objectLocation;
@@ -70,7 +71,6 @@ void reclaimObjects (GC_state s, GC_objectSharingInfo globalHashTable) {
           fillGap (s, front, front + sizeofObject (s, p));
         }
       }
-      s->controls->selectiveDebug = TRUE;
     }
   }
 }
