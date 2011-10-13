@@ -135,6 +135,28 @@ pointer advanceToObjectData (__attribute__ ((unused)) GC_state s, pointer p) {
   return res;
 }
 
+pointer getBeginningOfObject (GC_state s, pointer p) {
+  GC_header header;
+  pointer res;
+  GC_objectTypeTag tag;
+
+  assert (isFrontierAligned (s, p));
+  objptr op = pointerToObjptr (p, s->heap->start);
+  fixFwdObjptr (s, &op);
+  header = getHeader ((pointer)op);
+
+  splitHeader (s, header, getHeaderp (p), &tag, NULL, NULL, NULL, NULL, NULL);
+  if (tag == ARRAY_TAG)
+    res = p - GC_ARRAY_HEADER_SIZE;
+  else
+    res = p - GC_NORMAL_HEADER_SIZE;
+  assert (isAligned ((uintptr_t)res, s->alignment));
+  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+    fprintf (stderr, FMTPTR" = getBeginningOfObject ("FMTPTR")\n",
+             (uintptr_t)res, (uintptr_t)p);
+  return res;
+}
+
 
 /* isObjectPointerVirgin (s, p)
  *

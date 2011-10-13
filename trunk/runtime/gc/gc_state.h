@@ -128,6 +128,7 @@ struct GC_state {
   struct GC_vectorInit *vectorInits;
   uint32_t vectorInitsLength;
   GC_objectSharingInfo objectSharingInfo;
+  UT_array* reachable;
   GC_weak weaks; /* Linked list of (live) weak pointers */
   char *worldFile;
 

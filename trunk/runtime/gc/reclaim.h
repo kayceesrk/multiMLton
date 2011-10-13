@@ -8,9 +8,14 @@
 
 #if (defined (MLTON_GC_INTERNAL_FUNCS))
 
-static void addToObjectSharingInfoIfObjptrInSharedHeap (GC_state s, objptr* opp);
 void addToObjectSharingInfoWalkingShared (GC_state s, objptr* opp);
-static void reclaimObjects (GC_state s);
+static void reclaimObjects (GC_state s, GC_objectSharingInfo map);
 void reclaim (GC_state s);
+
+
+static void addToReachableArray (GC_state s, pointer p);
+static void dfsMarkReachable (GC_state s, objptr* opp);
+static void dfsUnmarkReachable (GC_state s, objptr* opp);
+static GC_objectSharingInfo addToHashTable (GC_state s, GC_objectSharingInfo map, pointer p, int coreId);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */
