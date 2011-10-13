@@ -14,8 +14,6 @@ void reclaimObjects (GC_state s) {
 
   size_t totalSize = 0;
   size_t totalObjects = utarray_len (s->reachable);
-  UT_array* ignoreArray = NULL;
-  utarray_new (ignoreArray, &icd);
 
   fprintf (stderr, "totalObjects = %zu [%d]\n", totalObjects, s->procId);
   pointer* iter = NULL;
@@ -39,7 +37,7 @@ void reclaimObjects (GC_state s) {
     s->forwardState.toLimit = s->heap->start + s->heap->size - GC_HEAP_LIMIT_SLOP;
 
     s->forwardState.back = s->forwardState.toStart;
-    s->forwardState.forceStackForwarding = TRUE;
+    s->forwardState.forceStackForwarding = FALSE;
 
     //Set nursery to toLimit. Nursery is broken at this point anyway. This is
     //needed to prevent infinitely triggering recursive forwarding.
@@ -56,50 +54,38 @@ void reclaimObjects (GC_state s) {
         break;
 
       numReclaimed++;
+      objptr op = pointerToObjptr (p, s->sharedHeap->start);
       GC_header* hp = getHeaderp (p);
       GC_header h = getHeader (p);
-      objptr op = pointerToObjptr (p, s->sharedHeap->start);
-      fixFwdObjptr (s, &op);
+      *hp = h & ~(LIFT_MASK);
 
-      //Ignore reclaiming thread objects
-      if ((h & ~(LIFT_MASK | VIRGIN_MASK)) == (GC_header)0x3) {
-        if (DEBUG_RECLAIM)
-          fprintf (stderr, "RECLAIMING ignores thread "FMTPTR" [%d]\n", (uintptr_t)p, s->procId);
-        utarray_push_back (ignoreArray, &p);
+      if ((h & ~(LIFT_MASK | VIRGIN_MASK)) == 0x3) {
+        fprintf (stderr, "THREAD\n");
+        GC_thread thrd = (GC_thread)p;
+        assert (isPointerInHeap (s, s->heap, (pointer)thrd->stack));
+        thrd = thrd;
       }
-      else {
-        *hp = h & ~LIFT_MASK;
-        forwardObjptr (s, &op);
-        assert ((getHeader ((pointer)op) & ~(LIFT_MASK | VIRGIN_MASK)) != (GC_header)0x3);
-        if (DEBUG_RECLAIM)
-          fprintf (stderr, "RECLAIMING: p="FMTPTR" newP="FMTPTR" [%d]\n", (uintptr_t)p, (uintptr_t)op, s->procId);
-      }
+      forwardObjptr (s, &op);
+
+      if (DEBUG_RECLAIM)
+        fprintf (stderr, "RECLAIMING: p="FMTPTR" newP="FMTPTR" [%d]\n", (uintptr_t)p, (uintptr_t)op, s->procId);
     }
     s->heap->oldGenSize += (s->forwardState.back - s->forwardState.toStart);
 
     //Fix the forwarding pointers
+    s->selectiveDebug = TRUE;
     foreachGlobalObjptrInScope (s, fixFwdObjptr);
     refreshDanglingStackList (s);
     pointer end = s->heap->start + s->heap->oldGenSize;
     foreachObjptrInRange (s, s->heap->start, &end, fixFwdObjptr, FALSE);
+    s->selectiveDebug = FALSE;
 
     //Fill reclaimedObjects
     for (size_t i=0; i < numReclaimed; i++) {
       pointer p = *(pointer*) utarray_eltptr (s->reachable, i);
-      pointer* ip = (pointer*)utarray_front (ignoreArray);
-
-      if (ip && p == *ip) {
-        if (DEBUG_RECLAIM)
-          fprintf (stderr, "RECLAIMING ignores fill "FMTPTR" [%d]\n", (uintptr_t)p, s->procId);
-        utarray_erase (ignoreArray, 0, 1);
-      }
-      else {
-        pointer front = getBeginningOfObject (s, p);
-        fillGap (s, front, front + sizeofObject (s, p));
-      }
+      pointer front = getBeginningOfObject (s, p);
+      fillGap (s, front, front + sizeofObject (s, p));
     }
-    assert (utarray_len (ignoreArray) == 0);
-    utarray_free (ignoreArray);
 
     if (numReclaimed == totalObjects) {
       utarray_free (s->reachable);
@@ -111,7 +97,9 @@ void reclaimObjects (GC_state s) {
 }
 
 void addToReachableArray (GC_state s, pointer p) {
+  assert (s->reachable);
   if (isPointerInHeap (s, s->sharedHeap, p)) {
+    fprintf (stderr, "addToReachableArray "FMTPTR"\n", (uintptr_t)p);
     utarray_push_back (s->reachable, &p);
   }
 }
@@ -153,10 +141,16 @@ GC_objectSharingInfo addToHashTable (GC_state s, GC_objectSharingInfo map, point
 
 void reclaim (GC_state s) {
   s->syncReason = SYNC_MISC;
-  ENTER0 (s);
   s->selectiveDebug = TRUE;
+  ENTER0 (s);
+
 
   if (Proc_processorNumber (s) == 0) {
+    for (int proc=0; proc < s->numberOfProcs; proc++) {
+      GC_state r = &s->procStates[proc];
+      r->reachable = NULL;
+    }
+
     //Globals
     UT_array* globalReachable = NULL;
     utarray_new (s->reachable, &icd);
@@ -166,14 +160,14 @@ void reclaim (GC_state s) {
       dfsMarkReachable (s, &s->globals[i]);
     for (int proc = 0; proc < s->numberOfProcs; proc++) {
       GC_state r = &s->procStates[proc];
-      foreachObjptrInExportableWBAs (r, dfsMarkReachable);
+      foreachObjptrInExportableWBAs (s, r, dfsMarkReachable);
     }
     //Globals -- UNMARK
     for (unsigned int i = 0; i < s->globalsLength; ++i)
       dfsUnmarkReachable (s, &s->globals[i]);
     for (int proc = 0; proc < s->numberOfProcs; proc++) {
       GC_state r = &s->procStates[proc];
-      foreachObjptrInExportableWBAs (r, dfsUnmarkReachable);
+      foreachObjptrInExportableWBAs (s, r, dfsUnmarkReachable);
     }
     globalReachable = s->reachable;
 
@@ -240,6 +234,6 @@ void reclaim (GC_state s) {
     }
   }
 
-  s->selectiveDebug = FALSE;
   LEAVE0 (s);
+  s->selectiveDebug = FALSE;
 }

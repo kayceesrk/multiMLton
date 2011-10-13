@@ -55,9 +55,10 @@ void majorGC (GC_state s, size_t bytesRequested, bool mayResize, bool liftWBAs) 
     resizeHeap (s, s->heap, s->lastMajorStatistics->bytesLive + bytesRequested);
     setCardMapAndCrossMap (s);
   }
+  resizeLocalHeapSecondary (s);
+
   if (s->selectiveDebug)
     s->selectiveDebug = FALSE;
-  resizeLocalHeapSecondary (s);
 
 
   assert (s->heap->oldGenSize + bytesRequested <= s->heap->size);
