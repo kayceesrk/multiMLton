@@ -87,6 +87,7 @@ struct GC_state {
   uint32_t magic; /* The magic number for this executable. */
   uint32_t maxFrameSize;
   bool mutatorMarksCards;
+  bool selectiveDebug;
   /* For PCML */
   pthread_t pthread;
   int32_t timeInterval; /* In milliseconds */

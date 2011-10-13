@@ -59,7 +59,7 @@ void setGCStateCurrentThreadAndStack (GC_state s) {
   s->stackBottom = getStackBottom (s, stack);
   s->stackTop = getStackTop (s, stack);
   s->stackLimit = getStackLimit (s, stack);
-  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+  if ((DEBUG_DETAILED or s->selectiveDebug))
     fprintf (stderr, "setGCStateCurrentThreadAndStack: thread = "FMTPTR" stack = "FMTPTR" [%d]\n",
              (uintptr_t)thread, (uintptr_t)stack, s->procId);
   markCard (s, (pointer)stack);
@@ -74,7 +74,7 @@ void setGCStateCurrentLocalHeap (GC_state s,
   pointer genNursery;
   size_t genNurserySize;
 
-  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+  if ((DEBUG_DETAILED or s->selectiveDebug))
     fprintf (stderr, "setGCStateCurrentLocalHeap(%s, %s)\n",
              uintmaxToCommaString(oldGenBytesRequested),
              uintmaxToCommaString(nurseryBytesRequested));
@@ -142,7 +142,7 @@ void setGCStateCurrentSharedHeap (GC_state s,
   pointer frontier;
   size_t bonus = GC_BONUS_SLOP * s->numberOfProcs;
 
-  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+  if ((DEBUG_DETAILED or s->selectiveDebug))
     fprintf (stderr, "setGCStateCurrentSharedHeap(%s, %s)\n",
              uintmaxToCommaString(oldGenBytesRequested),
              uintmaxToCommaString(nurseryBytesRequested));

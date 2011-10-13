@@ -72,7 +72,7 @@ size_t dfsMarkByMode (GC_state s, pointer root,
     return 0;
 
   if (getHeader (root) == GC_FORWARDED) {
-    if ((DEBUG_DFS_MARK or s->controls->selectiveDebug))
+    if ((DEBUG_DFS_MARK or s->selectiveDebug))
       fprintf (stderr, "dfsMarkByMode saw forwarded object "FMTPTR" [%d]\n",
                (uintptr_t)root, s->procId);
     objptr op = pointerToObjptr (root, s->heap->start);
@@ -102,7 +102,7 @@ markNext:
    * nextHeader is the header of next.
    * todo is a pointer to the pointer inside cur that points to next.
    */
-  if ((DEBUG_DFS_MARK or s->controls->selectiveDebug))
+  if ((DEBUG_DFS_MARK or s->selectiveDebug))
     fprintf (stderr,
              "markNext"
              "  cur = "FMTPTR"  next = "FMTPTR
@@ -121,7 +121,7 @@ markNext:
   prev = cur;
   cur = next;
 mark:
-  if ((DEBUG_DFS_MARK or s->controls->selectiveDebug))
+  if ((DEBUG_DFS_MARK or s->selectiveDebug))
     fprintf (stderr, "mark  cur = "FMTPTR"  prev = "FMTPTR"  mode = %s\n",
              (uintptr_t)cur, (uintptr_t)prev,
              (mode == MARK_MODE) ? "mark" : "unmark");
@@ -158,7 +158,7 @@ normalDone:
     todo = cur + bytesNonObjptrs;
     objptrIndex = 0;
 markInNormal:
-    if ((DEBUG_DFS_MARK or s->controls->selectiveDebug))
+    if ((DEBUG_DFS_MARK or s->selectiveDebug))
       fprintf (stderr, "markInNormal  objptrIndex = %"PRIu32"\n", objptrIndex);
     assert (objptrIndex < numObjptrs);
     // next = *(pointer*)todo;
@@ -235,7 +235,7 @@ markArrayElt:
     /* Skip to the first pointer. */
     todo += bytesNonObjptrs;
 markInArray:
-    if ((DEBUG_DFS_MARK or s->controls->selectiveDebug))
+    if ((DEBUG_DFS_MARK or s->selectiveDebug))
       fprintf (stderr, "markInArray arrayIndex = %"PRIxARRCTR" objptrIndex = %"PRIu32"\n",
                arrayIndex, objptrIndex);
     assert (arrayIndex < getArrayLength (cur));
@@ -288,7 +288,7 @@ markInStack:
      * to be marked.
      */
     assert (getStackBottom (s, (GC_stack)cur) <= top);
-    if ((DEBUG_DFS_MARK or s->controls->selectiveDebug))
+    if ((DEBUG_DFS_MARK or s->selectiveDebug))
       fprintf (stderr, "markInStack  top = %"PRIuMAX"\n",
                (uintmax_t)(top - getStackBottom (s, (GC_stack)cur)));
     if (top == getStackBottom (s, (GC_stack)(cur)))
@@ -310,7 +310,7 @@ markInFrame:
     todo = top - frameLayout->size + frameOffsets [objptrIndex + 1];
     // next = *(pointer*)todo;
     next = fetchObjptrToPointer (s, todo, s->heap->start);
-    if ((DEBUG_DFS_MARK or s->controls->selectiveDebug))
+    if ((DEBUG_DFS_MARK or s->selectiveDebug))
       fprintf (stderr,
                "    offset %u  todo "FMTPTR"  next = "FMTPTR"\n",
                frameOffsets [objptrIndex + 1],
@@ -338,7 +338,7 @@ ret:
    * Need to set the pointer in the prev object that pointed to cur
    * to point back to prev, and restore prev.
    */
-  if ((DEBUG_DFS_MARK or s->controls->selectiveDebug))
+  if ((DEBUG_DFS_MARK or s->selectiveDebug))
     fprintf (stderr, "return  cur = "FMTPTR"  prev = "FMTPTR"\n",
              (uintptr_t)cur, (uintptr_t)prev);
   assert (isPointerMarkedByMode (cur, mode));

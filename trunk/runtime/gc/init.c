@@ -459,7 +459,7 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->controls->ratios.stackCurrentShrink = 0.5;
   s->controls->ratios.stackMaxReserved = 8.0;
   s->controls->ratios.stackShrink = 0.5;
-  s->controls->selectiveDebug = FALSE;
+  s->selectiveDebug = FALSE;
   s->controls->summary = SUMMARY_NONE;
   s->controls->reclaimObjects = FALSE;
 
@@ -615,6 +615,7 @@ void GC_lateInit (GC_state s) {
 
 void GC_duplicate (GC_state d, GC_state s) {
   // GC_init
+  d->selectiveDebug = FALSE;
   d->amInGC = s->amInGC;
   d->amOriginal = s->amOriginal;
   d->atomicState = 0;

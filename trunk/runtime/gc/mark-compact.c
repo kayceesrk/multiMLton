@@ -425,7 +425,7 @@ unmark:
           stack->thread = *(objptr*)thrd;
         }
 
-        if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+        if ((DEBUG_DETAILED or s->selectiveDebug))
           fprintf (stderr, "[GC: Sliding stack. stack->thread is "FMTOBJPTR"]\n", stack->thread);
       }
       size = headerBytes + objectBytes;
@@ -587,27 +587,27 @@ void majorMarkCompactSharedGC (GC_state s) {
    * stacks if they are either pointed to by global pointers (currentThread,
    * signalHandlerThread, etc.) or if the thread is pointed to by some other
    * live object */
-  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+  if ((DEBUG_DETAILED or s->selectiveDebug))
     fprintf (stderr, "majorMarkCompactSharedGC(1)\n");
   foreachGlobalObjptr (s, dfsMarkTraceShared);
 
-  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+  if ((DEBUG_DETAILED or s->selectiveDebug))
     fprintf (stderr, "majorMarkCompactSharedGC(2)\n");
   for (int proc=0; proc < s->numberOfProcs; proc++) {
     GC_state r = &s->procStates[proc];
     updateWeaksForMarkCompact (r);
   }
 
-  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+  if ((DEBUG_DETAILED or s->selectiveDebug))
     fprintf (stderr, "majorMarkCompactSharedGC(3)\n");
   foreachGlobalObjptr (s, threadInternalObjptrIfInSharedHeap);
 
-  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+  if ((DEBUG_DETAILED or s->selectiveDebug))
     fprintf (stderr, "majorMarkCompactSharedGC(4)\n");
   //Walk local heaps threading pointers to shared heap
   for (int proc=0; proc < s->numberOfProcs; proc++) {
     GC_state r = &s->procStates[proc];
-    if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+    if ((DEBUG_DETAILED or s->selectiveDebug))
       fprintf (stderr, "majorMarkCompactSharedGC(5) [%d]\n", r->procId);
     updateForwardPointersForMarkCompact (r, r->heap, alignFrontier (r, r->heap->start),
                                          r->heap->start + r->heap->oldGenSize,
@@ -617,7 +617,7 @@ void majorMarkCompactSharedGC (GC_state s) {
                                            r->frontier, currentStacks, TRUE);
   }
 
-  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+  if ((DEBUG_DETAILED or s->selectiveDebug))
     fprintf (stderr, "majorMarkCompactSharedGC(6)\n");
 
   //Walk the shared heap threading pointers. At the end of this phase, all
@@ -626,7 +626,7 @@ void majorMarkCompactSharedGC (GC_state s) {
   updateForwardPointersForMarkCompact (s, s->sharedHeap, alignFrontier (s, s->sharedHeap->start),
                                        s->sharedHeap->start + s->sharedHeap->oldGenSize, currentStacks, TRUE);
 
-  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+  if ((DEBUG_DETAILED or s->selectiveDebug))
     fprintf (stderr, "majorMarkCompactSharedGC(7)\n");
   updateBackwardPointersAndSlideForMarkCompact (s, s->sharedHeap, currentStacks, TRUE);
 
@@ -634,7 +634,7 @@ void majorMarkCompactSharedGC (GC_state s) {
   s->forwardState.toLimit = s->sharedHeap->start + s->sharedHeap->size;
   s->forwardState.back = s->sharedHeap->start + s->sharedHeap->oldGenSize;
 
-  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+  if ((DEBUG_DETAILED or s->selectiveDebug))
     fprintf (stderr, "majorMarkCompactSharedGC(8)\n");
   /* Walk the shared heap recreating danglingStackList and lifting partially
    * lifted closures. This also unmarks the danglingStacks and lifted objects.
@@ -642,7 +642,7 @@ void majorMarkCompactSharedGC (GC_state s) {
   foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, forwardObjptrForSharedMarkCompact, TRUE);
   s->sharedHeap->oldGenSize = s->forwardState.back - s->forwardState.toStart;
 
-  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+  if ((DEBUG_DETAILED or s->selectiveDebug))
     fprintf (stderr, "majorMarkCompactSharedGC(9)\n");
   //Now, unmark the live local heap objects
   foreachGlobalObjptr (s, dfsUnmark);
@@ -656,7 +656,7 @@ void majorMarkCompactSharedGC (GC_state s) {
   if (detailedGCTime (s))
     stopTiming (&ru_start, &s->cumulativeStatistics->ru_gcMarkCompactShared);
 
-  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+  if ((DEBUG_DETAILED or s->selectiveDebug))
     fprintf (stderr, "majorMarkCompactSharedGC(10)\n");
 
   #if ASSERT

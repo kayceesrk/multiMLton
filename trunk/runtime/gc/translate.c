@@ -11,7 +11,7 @@
 /* ---------------------------------------------------------------- */
 
 
-//TODO KC merge local and shared translateions, use information in
+//TODO KC merge local and shared translations, use information in
 //translateState to decide if a pointer needs to be tranalated
 
 void translateObjptrLocal (GC_state s, objptr *opp) {
@@ -21,13 +21,13 @@ void translateObjptrLocal (GC_state s, objptr *opp) {
 
   /* Do not translate pointers that does not belong to your heap */
   if (isPointerInHeap (s, s->sharedHeap, p)) {
-      if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+      if ((DEBUG_DETAILED or s->selectiveDebug))
           fprintf (stderr, "translateObjptrLocal: shared heap pointer "FMTPTR" translation skipped.\n",
                    (uintptr_t)p);
       return;
   }
 
-  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+  if ((DEBUG_DETAILED or s->selectiveDebug))
       fprintf (stderr, "translateObjptrLocal: Remapping pointer "FMTPTR" to "FMTPTR"\n",
                (uintptr_t)p, (uintptr_t)((p - s->translateState.from) + s->translateState.to));
   p = (p - s->translateState.from) + s->translateState.to;
@@ -87,19 +87,19 @@ void translateObjptrShared (GC_state s, objptr* opp) {
     p = objptrToPointer (*opp, s->sharedHeap->start);
     pointer oldP = p;
 
-    if ((DEBUG_DETAILED or s->controls->selectiveDebug) || DEBUG_TRANSLATE)
+    if ((DEBUG_DETAILED or s->selectiveDebug) || DEBUG_TRANSLATE)
       fprintf (stderr, "translateObjptrShared(1) "FMTPTR"\n", (uintptr_t)p);
     //Only translate the pointers that are in the fromSpace
     if (p >= s->translateState.from and
         p < (s->translateState.from + s->translateState.size)) {
       p = (p - s->translateState.from) + s->translateState.to;
       *opp = pointerToObjptr (p, s->translateState.to);
-      if ((DEBUG_DETAILED or s->controls->selectiveDebug) or DEBUG_TRANSLATE)
+      if ((DEBUG_DETAILED or s->selectiveDebug) or DEBUG_TRANSLATE)
         fprintf (stderr, "translateObjptrShared(2): old="FMTPTR" new="FMTPTR"\n",
                  (uintptr_t)oldP, (uintptr_t)p);
     }
     if (getHeader (p) == GC_FORWARDED) {
-      if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+      if ((DEBUG_DETAILED or s->selectiveDebug))
         fprintf (stderr, "translateObjptrShared saw forwarded pointer "FMTPTR"\n",
                  (uintptr_t)p);
       done = FALSE;

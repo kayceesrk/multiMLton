@@ -286,7 +286,7 @@ void foreachObjptrInSQ (GC_state s, SchedulerQueue* sq, GC_foreachObjptrFun f) {
     uint32_t rp = cq->readPointer;
     uint32_t wp = cq->writePointer;
 
-    if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+    if ((DEBUG_DETAILED or s->selectiveDebug))
       fprintf (stderr, "foreachObjptrInSQ sq="FMTPTR" q=%d rp=%d wp=%d [%d]\n",
                 (uintptr_t)sq, i, rp, wp, s->procId);
     while (rp != wp) {

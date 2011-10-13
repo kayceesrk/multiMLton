@@ -14,6 +14,9 @@ void reclaimObjects (GC_state s) {
 
   size_t totalSize = 0;
   size_t totalObjects = utarray_len (s->reachable);
+  UT_array* ignoreArray = NULL;
+  utarray_new (ignoreArray, &icd);
+
   fprintf (stderr, "totalObjects = %zu [%d]\n", totalObjects, s->procId);
   pointer* iter = NULL;
 
@@ -36,7 +39,11 @@ void reclaimObjects (GC_state s) {
     s->forwardState.toLimit = s->heap->start + s->heap->size - GC_HEAP_LIMIT_SLOP;
 
     s->forwardState.back = s->forwardState.toStart;
-    s->forwardState.forceStackForwarding = TRUE;
+    s->forwardState.forceStackForwarding = FALSE;
+
+    //Set nursery to toLimit. Nursery is broken at this point anyway. This is
+    //needed to prevent infinitely triggering recursive forwarding.
+    s->heap->nursery = s->forwardState.toLimit;
 
     size_t numReclaimed = 0;
     for (iter = (pointer*)utarray_front (s->reachable);
@@ -54,10 +61,17 @@ void reclaimObjects (GC_state s) {
       *hp = h & ~LIFT_MASK;
       objptr op = pointerToObjptr (p, s->sharedHeap->start);
 
-      forwardObjptr (s, &op);
-      if (DEBUG_RECLAIM)
-        fprintf (stderr, "RECLAIMING: p="FMTPTR" newP="FMTPTR" [%d]\n", (uintptr_t)p, (uintptr_t)op, s->procId);
-
+      //Ignore reclaiming thread objects
+      if ((h & ~(LIFT_MASK | VIRGIN_MASK)) != (GC_header)0x3) {
+        if (DEBUG_RECLAIM)
+          fprintf (stderr, "RECLAIMING ignores thread "FMTPTR" [%d]\n", (uintptr_t)p, s->procId);
+        utarray_push_back (ignoreArray, &p);
+      }
+      else {
+        forwardObjptr (s, &op);
+        if (DEBUG_RECLAIM)
+          fprintf (stderr, "RECLAIMING: p="FMTPTR" newP="FMTPTR" [%d]\n", (uintptr_t)p, (uintptr_t)op, s->procId);
+      }
     }
     s->heap->oldGenSize += (s->forwardState.back - s->forwardState.toStart);
 
@@ -70,10 +84,19 @@ void reclaimObjects (GC_state s) {
     //Fill reclaimedObjects
     for (size_t i=0; i < numReclaimed; i++) {
       pointer p = *(pointer*) utarray_eltptr (s->reachable, i);
-      pointer front = getBeginningOfObject (s, p);
-      assert (front != BOGUS_POINTER);
-      fillGap (s, front, front + sizeofObject (s, p));
+      pointer toIgnore = *(pointer*)utarray_front (ignoreArray);
+
+      if (p == toIgnore) {
+        if (DEBUG_RECLAIM)
+          fprintf (stderr, "RECLAIMING ignores fill "FMTPTR" [%d]\n", (uintptr_t)p, s->procId);
+        utarray_erase (ignoreArray, 0, 1);
+      }
+      else {
+        pointer front = getBeginningOfObject (s, p);
+        fillGap (s, front, front + sizeofObject (s, p));
+      }
     }
+    utarray_free (ignoreArray);
 
     if (numReclaimed == totalObjects) {
       utarray_free (s->reachable);
@@ -128,7 +151,7 @@ GC_objectSharingInfo addToHashTable (GC_state s, GC_objectSharingInfo map, point
 void reclaim (GC_state s) {
   s->syncReason = SYNC_MISC;
   ENTER0 (s);
-
+  s->selectiveDebug = TRUE;
 
   if (Proc_processorNumber (s) == 0) {
     //Globals
@@ -214,5 +237,6 @@ void reclaim (GC_state s) {
     }
   }
 
+  s->selectiveDebug = FALSE;
   LEAVE0 (s);
 }

@@ -20,11 +20,11 @@ void callIfIsObjptr (GC_state s, GC_foreachObjptrFun f, objptr *opp) {
  */
 void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f) {
   for (unsigned int i = 0; i < s->globalsLength; ++i) {
-    if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+    if ((DEBUG_DETAILED or s->selectiveDebug))
       fprintf (stderr, "foreachGlobal %u [%d]\n", i, s->procId);
     callIfIsObjptr (s, f, &s->globals [i]);
   }
-  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+  if ((DEBUG_DETAILED or s->selectiveDebug))
     fprintf (stderr, "foreachGlobal threads [%d]\n", s->procId);
   if (s->procStates) {
     for (int proc = 0; proc < s->numberOfProcs; proc++) {
@@ -51,7 +51,7 @@ void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f) {
         if (s->translateState.from == BOGUS_POINTER)
           thrd = (GC_thread) objptrToPointer (stk->thread, s->sharedHeap->start);
 
-        if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+        if ((DEBUG_DETAILED or s->selectiveDebug))
           fprintf (stderr, "foreachDanlingStack(1) i=%d stack="FMTPTR" [%d]\n",
                    i, (uintptr_t)s->procStates[proc].danglingStackList[i], s->procId);
         callIfIsObjptr (s, f, &(s->procStates[proc].danglingStackList[i]));
@@ -64,7 +64,7 @@ void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f) {
         }
 
 
-        if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+        if ((DEBUG_DETAILED or s->selectiveDebug))
           fprintf (stderr, "foreachDanlingStack(2) thrd="FMTPTR" i=%d [%d]\n",
                    (uintptr_t)thrd, i, s->procId);
 
@@ -87,11 +87,11 @@ void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f) {
  */
 void foreachGlobalObjptrInScope (GC_state s, GC_foreachObjptrFun f) {
   for (unsigned int i = 0; i < s->globalsLength; ++i) {
-    if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+    if ((DEBUG_DETAILED or s->selectiveDebug))
       fprintf (stderr, "foreachGlobal %u\n", i);
     callIfIsObjptr (s, f, &s->globals [i]);
   }
-  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+  if ((DEBUG_DETAILED or s->selectiveDebug))
     fprintf (stderr, "foreachGlobal threads\n");
   callIfIsObjptr (s, f, &s->callFromCHandlerThread);
   callIfIsObjptr (s, f, &s->currentThread);
@@ -116,7 +116,7 @@ void foreachGlobalObjptrInScope (GC_state s, GC_foreachObjptrFun f) {
     if (s->translateState.from == BOGUS_POINTER)
       thrd = (GC_thread) objptrToPointer (stk->thread, s->sharedHeap->start);
 
-    if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+    if ((DEBUG_DETAILED or s->selectiveDebug))
       fprintf (stderr, "foreachDanlingStack(1) i=%d stack="FMTPTR" [%d]\n",
                i, (uintptr_t)s->danglingStackList[i], s->procId);
     callIfIsObjptr (s, f, &s->danglingStackList[i]);
@@ -129,7 +129,7 @@ void foreachGlobalObjptrInScope (GC_state s, GC_foreachObjptrFun f) {
       thrd = (GC_thread) objptrToPointer (stk->thread, s->sharedHeap->start);
     }
 
-    if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+    if ((DEBUG_DETAILED or s->selectiveDebug))
       fprintf (stderr, "foreachDanlingStack(2) thrd="FMTPTR" i=%d [%d]\n",
                (uintptr_t)thrd, i, s->procId);
 
@@ -158,7 +158,7 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
   header = getHeader (p);
   splitHeader(s, header, getHeaderp (p), &tag, NULL,
               &bytesNonObjptrs, &numObjptrs, NULL, NULL);
-  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+  if ((DEBUG_DETAILED or s->selectiveDebug))
     fprintf (stderr,
              "foreachObjptrInObject ("FMTPTR")"
              "  header = "FMTHDR
@@ -172,7 +172,7 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
     pointer max = p + (numObjptrs * OBJPTR_SIZE);
     /* Apply f to all internal pointers. */
     for ( ; p < max; p += OBJPTR_SIZE) {
-      if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+      if ((DEBUG_DETAILED or s->selectiveDebug))
         fprintf (stderr,
                  "  p = "FMTPTR"  *p = "FMTOBJPTR"\n",
                  (uintptr_t)p, *(objptr*)p);
@@ -207,7 +207,7 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
       if (0 == bytesNonObjptrs)
         /* Array with only pointers. */
         for ( ; p < last; p += OBJPTR_SIZE) {
-          if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+          if ((DEBUG_DETAILED or s->selectiveDebug))
             fprintf (stderr,
                      "  p = "FMTPTR"  *p = "FMTOBJPTR"\n",
                      (uintptr_t)p, *(objptr*)p);
@@ -228,7 +228,7 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
           next = p + bytesObjptrs;
           /* For each internal pointer. */
           for ( ; p < next; p += OBJPTR_SIZE) {
-            if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+            if ((DEBUG_DETAILED or s->selectiveDebug))
               fprintf (stderr,
                        "  p = "FMTPTR"  *p = "FMTOBJPTR"\n",
                        (uintptr_t)p, *(objptr*)p);
@@ -259,19 +259,19 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
      * skipStackToThreadTracing variable in majorCheneyCopySharedGC for
      * details. */
     if (!skipStackToThreadTracing) {
-      if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+      if ((DEBUG_DETAILED or s->selectiveDebug))
         fprintf (stderr, "  &stack->thread="FMTPTR" stack->thread="FMTPTR"\n",
                  (uintptr_t)&stack->thread, (uintptr_t)stack->thread);
       callIfIsObjptr (s, f, (objptr*)&(stack->thread));
     }
     else {
-      if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+      if ((DEBUG_DETAILED or s->selectiveDebug))
         fprintf (stderr, "  skipping &stack->thread="FMTPTR"\n", (uintptr_t)&stack->thread);
       if (!isObjptrInHeap (s, s->heap, stack->thread))
         stack->thread = BOGUS_OBJPTR;
     }
 
-    if ((DEBUG_DETAILED or s->controls->selectiveDebug)) {
+    if ((DEBUG_DETAILED or s->selectiveDebug)) {
       fprintf (stderr, "  bottom = "FMTPTR"  top = "FMTPTR"\n",
                (uintptr_t)bottom, (uintptr_t)top);
     }
@@ -280,7 +280,7 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
     while (top > bottom) {
       /* Invariant: top points just past a "return address". */
       returnAddress = *((GC_returnAddress*)(top - GC_RETURNADDRESS_SIZE));
-      if ((DEBUG_DETAILED or s->controls->selectiveDebug)) {
+      if ((DEBUG_DETAILED or s->selectiveDebug)) {
         fprintf (stderr, "  top = "FMTPTR"  return address = "FMTRA"\n",
                  (uintptr_t)top, returnAddress);
       }
@@ -288,7 +288,7 @@ pointer foreachObjptrInObject (GC_state s, pointer p,
       frameOffsets = frameLayout->offsets;
       top -= frameLayout->size;
       for (i = 0 ; i < frameOffsets[0] ; ++i) {
-        if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+        if ((DEBUG_DETAILED or s->selectiveDebug))
           fprintf(stderr, "  offset %"PRIx16"  address "FMTOBJPTR"\n",
                   frameOffsets[i + 1], *(objptr*)(top + frameOffsets[i + 1]));
         callIfIsObjptr (s, f, (objptr*)(top + frameOffsets[i + 1]));
@@ -333,7 +333,7 @@ pointer foreachObjptrInRangeWithFill (GC_state s, pointer front, pointer *back,
   pointer b;
 
   assert (isFrontierAligned (s, front));
-  if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+  if ((DEBUG_DETAILED or s->selectiveDebug))
     fprintf (stderr,
              "foreachObjptrInRange  front = "FMTPTR"  *back = "FMTPTR" [%d]\n",
              (uintptr_t)front, (uintptr_t)(*back), s->procId);
@@ -343,14 +343,14 @@ pointer foreachObjptrInRangeWithFill (GC_state s, pointer front, pointer *back,
     while (front < b) {
       if (s->forwardState.rangeListCurrent &&
           s->forwardState.rangeListCurrent->start == front) {
-        if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+        if ((DEBUG_DETAILED or s->selectiveDebug))
           fprintf (stderr, "foreachObjptrInRangeWithFill: skipping range from "FMTPTR" to "FMTPTR" [%d]\n",
                    (uintptr_t)front, (uintptr_t)s->forwardState.rangeListCurrent->end, s->procId);
         front = s->forwardState.rangeListCurrent->end;
         s->forwardState.rangeListCurrent = s->forwardState.rangeListCurrent->next;
       }
       assert (isAligned ((size_t)front, GC_MODEL_MINALIGN));
-      if ((DEBUG_DETAILED or s->controls->selectiveDebug))
+      if ((DEBUG_DETAILED or s->selectiveDebug))
         fprintf (stderr,
                  "  front = "FMTPTR"  *back = "FMTPTR" [%d]\n",
                  (uintptr_t)front, (uintptr_t)(*back), s->procId);
