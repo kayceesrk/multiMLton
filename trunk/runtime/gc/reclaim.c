@@ -39,7 +39,7 @@ void reclaimObjects (GC_state s) {
     s->forwardState.toLimit = s->heap->start + s->heap->size - GC_HEAP_LIMIT_SLOP;
 
     s->forwardState.back = s->forwardState.toStart;
-    s->forwardState.forceStackForwarding = FALSE;
+    s->forwardState.forceStackForwarding = TRUE;
 
     //Set nursery to toLimit. Nursery is broken at this point anyway. This is
     //needed to prevent infinitely triggering recursive forwarding.
@@ -58,17 +58,19 @@ void reclaimObjects (GC_state s) {
       numReclaimed++;
       GC_header* hp = getHeaderp (p);
       GC_header h = getHeader (p);
-      *hp = h & ~LIFT_MASK;
       objptr op = pointerToObjptr (p, s->sharedHeap->start);
+      fixFwdObjptr (s, &op);
 
       //Ignore reclaiming thread objects
-      if ((h & ~(LIFT_MASK | VIRGIN_MASK)) != (GC_header)0x3) {
+      if ((h & ~(LIFT_MASK | VIRGIN_MASK)) == (GC_header)0x3) {
         if (DEBUG_RECLAIM)
           fprintf (stderr, "RECLAIMING ignores thread "FMTPTR" [%d]\n", (uintptr_t)p, s->procId);
         utarray_push_back (ignoreArray, &p);
       }
       else {
+        *hp = h & ~LIFT_MASK;
         forwardObjptr (s, &op);
+        assert ((getHeader ((pointer)op) & ~(LIFT_MASK | VIRGIN_MASK)) != (GC_header)0x3);
         if (DEBUG_RECLAIM)
           fprintf (stderr, "RECLAIMING: p="FMTPTR" newP="FMTPTR" [%d]\n", (uintptr_t)p, (uintptr_t)op, s->procId);
       }
@@ -84,9 +86,9 @@ void reclaimObjects (GC_state s) {
     //Fill reclaimedObjects
     for (size_t i=0; i < numReclaimed; i++) {
       pointer p = *(pointer*) utarray_eltptr (s->reachable, i);
-      pointer toIgnore = *(pointer*)utarray_front (ignoreArray);
+      pointer* ip = (pointer*)utarray_front (ignoreArray);
 
-      if (p == toIgnore) {
+      if (ip && p == *ip) {
         if (DEBUG_RECLAIM)
           fprintf (stderr, "RECLAIMING ignores fill "FMTPTR" [%d]\n", (uintptr_t)p, s->procId);
         utarray_erase (ignoreArray, 0, 1);
@@ -96,6 +98,7 @@ void reclaimObjects (GC_state s) {
         fillGap (s, front, front + sizeofObject (s, p));
       }
     }
+    assert (utarray_len (ignoreArray) == 0);
     utarray_free (ignoreArray);
 
     if (numReclaimed == totalObjects) {
