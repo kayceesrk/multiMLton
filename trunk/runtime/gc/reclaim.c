@@ -15,7 +15,8 @@ void reclaimObjects (GC_state s) {
   size_t totalSize = 0;
   size_t totalObjects = utarray_len (s->reachable);
 
-  fprintf (stderr, "totalObjects = %zu [%d]\n", totalObjects, s->procId);
+  if (DEBUG_RECLAIM)
+    fprintf (stderr, "totalObjects = %zu [%d]\n", totalObjects, s->procId);
   pointer* iter = NULL;
 
   for (iter = (pointer*)utarray_front (s->reachable);
@@ -25,7 +26,7 @@ void reclaimObjects (GC_state s) {
     totalSize += sizeofObject (s, p);
   }
 
-  if (DEBUG_RECLAIM || TRUE)
+  if (DEBUG_RECLAIM)
     fprintf (stderr, "totalSize = %s [%d]\n", uintmaxToCommaString (totalSize), s->procId);
   if (totalSize) {
     //Move to oldGen
@@ -58,13 +59,6 @@ void reclaimObjects (GC_state s) {
       GC_header* hp = getHeaderp (p);
       GC_header h = getHeader (p);
       *hp = h & ~(LIFT_MASK);
-
-      if ((h & ~(LIFT_MASK | VIRGIN_MASK)) == 0x3) {
-        fprintf (stderr, "THREAD\n");
-        GC_thread thrd = (GC_thread)p;
-        assert (isPointerInHeap (s, s->heap, (pointer)thrd->stack));
-        thrd = thrd;
-      }
       forwardObjptr (s, &op);
 
       if (DEBUG_RECLAIM)
@@ -73,12 +67,10 @@ void reclaimObjects (GC_state s) {
     s->heap->oldGenSize += (s->forwardState.back - s->forwardState.toStart);
 
     //Fix the forwarding pointers
-    s->selectiveDebug = TRUE;
     foreachGlobalObjptrInScope (s, fixFwdObjptr);
     refreshDanglingStackList (s);
     pointer end = s->heap->start + s->heap->oldGenSize;
     foreachObjptrInRange (s, s->heap->start, &end, fixFwdObjptr, FALSE);
-    s->selectiveDebug = FALSE;
 
     //Fill reclaimedObjects
     for (size_t i=0; i < numReclaimed; i++) {
@@ -97,10 +89,26 @@ void reclaimObjects (GC_state s) {
 }
 
 void addToReachableArray (GC_state s, pointer p) {
+  bool toPush = TRUE;
   assert (s->reachable);
   if (isPointerInHeap (s, s->sharedHeap, p)) {
-    fprintf (stderr, "addToReachableArray "FMTPTR"\n", (uintptr_t)p);
-    utarray_push_back (s->reachable, &p);
+    if (DEBUG_RECLAIM)
+      fprintf (stderr, "addToReachableArray "FMTPTR"\n", (uintptr_t)p);
+
+    //If we are adding a thread make sure the stack is not located in another
+    //core's local heap.
+    if ((getHeader(p) & ~(LIFT_MASK | VIRGIN_MASK)) == (GC_header)0x3) {
+      GC_thread thrd = (GC_thread)p;
+      //XXX how does the condition work while walking globals in reclaim ()?
+      if (not isPointerInHeap (s, s->heap, (pointer)thrd->stack)) {
+        if (DEBUG_RECLAIM)
+          fprintf (stderr, "\taddToReachableArray "FMTPTR" ignoring\n", (uintptr_t)p);
+        toPush = FALSE;
+      }
+    }
+
+    if (toPush)
+      utarray_push_back (s->reachable, &p);
   }
 }
 
@@ -141,7 +149,6 @@ GC_objectSharingInfo addToHashTable (GC_state s, GC_objectSharingInfo map, point
 
 void reclaim (GC_state s) {
   s->syncReason = SYNC_MISC;
-  s->selectiveDebug = TRUE;
   ENTER0 (s);
 
 
@@ -156,18 +163,32 @@ void reclaim (GC_state s) {
     utarray_new (s->reachable, &icd);
 
     //Globals -- MARK
+    if (DEBUG_RECLAIM)
+      fprintf (stderr, "reclaim: MARK GLOBALS\n");
     for (unsigned int i = 0; i < s->globalsLength; ++i)
       dfsMarkReachable (s, &s->globals[i]);
     for (int proc = 0; proc < s->numberOfProcs; proc++) {
       GC_state r = &s->procStates[proc];
+      if (DEBUG_RECLAIM)
+        fprintf (stderr, "reclaim: MARK foreachObjptrInWBAs [%d]\n", r->procId);
       foreachObjptrInExportableWBAs (s, r, dfsMarkReachable);
+      if (DEBUG_RECLAIM)
+        fprintf (stderr, "reclaim: MARK danglingStackList [%d]\n", r->procId);
+      foreachObjptrInDanglingStackList (s, r, dfsMarkReachable);
     }
     //Globals -- UNMARK
+    if (DEBUG_RECLAIM)
+      fprintf (stderr, "reclaim: UNMARK GLOBALS\n");
     for (unsigned int i = 0; i < s->globalsLength; ++i)
       dfsUnmarkReachable (s, &s->globals[i]);
     for (int proc = 0; proc < s->numberOfProcs; proc++) {
       GC_state r = &s->procStates[proc];
+      if (DEBUG_RECLAIM)
+        fprintf (stderr, "reclaim: UNMARK foreachObjptrInWBAs [%d]\n", r->procId);
       foreachObjptrInExportableWBAs (s, r, dfsUnmarkReachable);
+      if (DEBUG_RECLAIM)
+        fprintf (stderr, "reclaim: UNMARK danglingStackList [%d]\n", r->procId);
+      foreachObjptrInDanglingStackList (s, r, dfsUnmarkReachable);
     }
     globalReachable = s->reachable;
 
@@ -177,7 +198,11 @@ void reclaim (GC_state s) {
       r->reachable = NULL;
       utarray_new (r->reachable, &icd);
       ENTER_LOCAL0 (r);
+      if (DEBUG_RECLAIM)
+        fprintf (stderr, "reclaim: MARK locals [%d]\n", r->procId);
       foreachGlobalObjptrInScope (r, dfsMarkReachable);
+      if (DEBUG_RECLAIM)
+        fprintf (stderr, "reclaim: UNMARK locals [%d]\n", r->procId);
       foreachGlobalObjptrInScope (r, dfsUnmarkReachable);
       LEAVE_LOCAL0 (r);
     }
@@ -226,7 +251,8 @@ void reclaim (GC_state s) {
             utarray_new (r->reachable, &icd);
           pointer p = (pointer)e->objectLocation;
           utarray_push_back (r->reachable, &p);
-          fprintf (stderr, "PUSH_BACK: p="FMTPTR" coreId=%d\n", (uintptr_t)p, e->coreId);
+          if (DEBUG_RECLAIM)
+            fprintf (stderr, "PUSH_BACK: p="FMTPTR" coreId=%d\n", (uintptr_t)p, e->coreId);
         }
         HASH_DEL (globalMap, e);
         free (e);
@@ -235,5 +261,4 @@ void reclaim (GC_state s) {
   }
 
   LEAVE0 (s);
-  s->selectiveDebug = FALSE;
 }

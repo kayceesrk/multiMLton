@@ -38,7 +38,6 @@ void majorGC (GC_state s, size_t bytesRequested, bool mayResize, bool liftWBAs) 
 
   //Reclaim objects if present
   if (s->reachable) {
-    s->selectiveDebug = TRUE;
     reclaimObjects (s);
   }
 
@@ -56,10 +55,6 @@ void majorGC (GC_state s, size_t bytesRequested, bool mayResize, bool liftWBAs) 
     setCardMapAndCrossMap (s);
   }
   resizeLocalHeapSecondary (s);
-
-  if (s->selectiveDebug)
-    s->selectiveDebug = FALSE;
-
 
   assert (s->heap->oldGenSize + bytesRequested <= s->heap->size);
 }
@@ -166,7 +161,6 @@ void fixForwardingPointers (GC_state s, bool mayResize) {
 }
 
 void performSharedGC (GC_state s, size_t bytesRequested, bool recursive) {
-  fprintf (stderr, "PERFORM SHARED GC -- RECURSIVE %d\n", recursive);
   size_t bytesFilled = 0;
 
   s->forwardState.amInMinorGC = FALSE;
