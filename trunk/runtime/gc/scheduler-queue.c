@@ -237,6 +237,7 @@ void GC_sqClean (GC_state s) {
 }
 
 void GC_sqAcquireLock (GC_state s, int proc) {
+  assert (proc < s->numberOfProcs);
   Lock* lock = &s->schedulerLocks[proc];
 
   if (lock->id == (int)s->procId) {

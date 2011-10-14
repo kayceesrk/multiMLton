@@ -10,7 +10,7 @@
 
 void addToObjectSharingInfoWalkingShared (GC_state s, objptr* opp);
 void reclaimObjects (GC_state s);
-void reclaim (GC_state s);
+void computeExclusivityInformation (GC_state s);
 
 
 static void addToReachableArray (GC_state s, pointer p);

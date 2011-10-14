@@ -12,6 +12,9 @@ UT_icd icd = {sizeof(pointer), NULL, NULL, NULL};
 void reclaimObjects (GC_state s) {
   assert (s->reachable);
 
+  s->syncReason = SYNC_MISC;
+  ENTER_LOCAL0 (s);
+
   size_t totalSize = 0;
   size_t totalObjects = utarray_len (s->reachable);
 
@@ -86,6 +89,8 @@ void reclaimObjects (GC_state s) {
     else
       utarray_erase (s->reachable, 0, numReclaimed);
   }
+
+  ENTER_LOCAL0 (s);
 }
 
 void addToReachableArray (GC_state s, pointer p) {
@@ -98,13 +103,9 @@ void addToReachableArray (GC_state s, pointer p) {
     //If we are adding a thread make sure the stack is not located in another
     //core's local heap.
     if ((getHeader(p) & ~(LIFT_MASK | VIRGIN_MASK)) == (GC_header)0x3) {
-      GC_thread thrd = (GC_thread)p;
-      //XXX how does the condition work while walking globals in reclaim ()?
-      if (not isPointerInHeap (s, s->heap, (pointer)thrd->stack)) {
-        if (DEBUG_RECLAIM)
-          fprintf (stderr, "\taddToReachableArray "FMTPTR" ignoring\n", (uintptr_t)p);
-        toPush = FALSE;
-      }
+      if (DEBUG_RECLAIM)
+        fprintf (stderr, "\taddToReachableArray "FMTPTR" ignoring\n", (uintptr_t)p);
+      toPush = FALSE;
     }
 
     if (toPush)
@@ -147,9 +148,11 @@ GC_objectSharingInfo addToHashTable (GC_state s, GC_objectSharingInfo map, point
   return map;
 }
 
-void reclaim (GC_state s) {
+void computeExclusivityInformation (GC_state s) {
   s->syncReason = SYNC_MISC;
+
   ENTER0 (s);
+
 
 
   if (Proc_processorNumber (s) == 0) {
@@ -197,6 +200,7 @@ void reclaim (GC_state s) {
       GC_state r = &s->procStates[proc];
       r->reachable = NULL;
       utarray_new (r->reachable, &icd);
+      r->syncReason = SYNC_MISC;
       ENTER_LOCAL0 (r);
       if (DEBUG_RECLAIM)
         fprintf (stderr, "reclaim: MARK locals [%d]\n", r->procId);

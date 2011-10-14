@@ -338,7 +338,7 @@ void performSharedGC (GC_state s, size_t bytesRequested) {
   leaveGC (s);
 
   if (s->controls->reclaimObjects) {
-    reclaim (s);
+    computeExclusivityInformation (s);
   }
 
   if (DEBUG)
