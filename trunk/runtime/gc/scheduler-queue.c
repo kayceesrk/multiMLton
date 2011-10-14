@@ -254,7 +254,7 @@ void GC_sqAcquireLock (GC_state s, int proc) {
     if (Proc_threadInSection (s) and
         !Proc_executingInSection (s) and FALSE) {
       s->syncReason = SYNC_HELP;
-      performSharedGC (s, 0, FALSE);
+      performSharedGC (s, 0);
     }
 
     if (Proc_executingInSection (s) and lock->id >= 0)
@@ -286,7 +286,7 @@ void foreachObjptrInSQ (GC_state s, SchedulerQueue* sq, GC_foreachObjptrFun f) {
     uint32_t rp = cq->readPointer;
     uint32_t wp = cq->writePointer;
 
-    if ((DEBUG_DETAILED or s->selectiveDebug))
+    if (DEBUG_DETAILED)
       fprintf (stderr, "foreachObjptrInSQ sq="FMTPTR" q=%d rp=%d wp=%d [%d]\n",
                 (uintptr_t)sq, i, rp, wp, s->procId);
     while (rp != wp) {

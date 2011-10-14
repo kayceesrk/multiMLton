@@ -22,7 +22,7 @@ void displayGenerationalMaps (__attribute__((unused)) GC_state s,
           (uintptr_t)generational->crossMap,
           (uintmax_t)generational->crossMapLength,
           (uintmax_t)generational->crossMapValidSize);
-  if (DEBUG_GENERATIONAL or (DEBUG_DETAILED or s->selectiveDebug)) {
+  if (DEBUG_GENERATIONAL or DEBUG_DETAILED) {
     GC_crossMapIndex i;
 
     fprintf (stderr, "crossMap trues\n");
@@ -161,14 +161,14 @@ GC_crossMapIndex lenofCrossMap (__attribute__ ((unused)) GC_state s, size_t cros
 }
 
 void clearCardMap (GC_state s) {
-  if (DEBUG_GENERATIONAL or (DEBUG_DETAILED or s->selectiveDebug))
+  if (DEBUG_GENERATIONAL or DEBUG_DETAILED)
     fprintf (stderr, "clearCardMap ()\n");
   memset (s->generationalMaps.cardMap, 0,
           s->generationalMaps.cardMapLength * CARD_MAP_ELEM_SIZE);
 }
 
 void clearCrossMap (GC_state s) {
-  if (DEBUG_GENERATIONAL or (DEBUG_DETAILED or s->selectiveDebug))
+  if (DEBUG_GENERATIONAL or DEBUG_DETAILED)
     fprintf (stderr, "clearCrossMap ()\n");
   s->generationalMaps.crossMapValidSize = 0;
   memset (s->generationalMaps.crossMap, CROSS_MAP_EMPTY,

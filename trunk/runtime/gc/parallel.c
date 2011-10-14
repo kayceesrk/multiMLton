@@ -82,7 +82,7 @@ void Parallel_resetBytesLive (void) {
 void maybeWaitForGC (GC_state s) {
   if (Proc_threadInSection (s)) {
     s->syncReason = SYNC_HELP;
-    performSharedGC (s, 0, FALSE);
+    performSharedGC (s, 0);
   }
 }
 

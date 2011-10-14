@@ -19,7 +19,7 @@ static void performGC (GC_state s,
                        bool forceMajor,
                        bool mayResize,
                        size_t forceStackGrowthBytes);
-static void performSharedGC (GC_state s, size_t bytesRequested, bool recursive);
+static void performSharedGC (GC_state s, size_t bytesRequested);
 static size_t fillGap (GC_state s, pointer start, pointer end);
 static void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s,
                                                             bool forceGC,

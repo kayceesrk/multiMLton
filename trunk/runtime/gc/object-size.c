@@ -37,7 +37,7 @@ size_t sizeofObject (GC_state s, pointer p) {
 
   header = getHeader (p);
   while (header == GC_FORWARDED) {
-    if ((DEBUG_DETAILED or s->selectiveDebug))
+    if (DEBUG_DETAILED)
       fprintf (stderr,
                "sizeOfObject saw forwarded object "FMTPTR" [%d]\n",
                (uintptr_t)p, s->procId);
@@ -46,7 +46,7 @@ size_t sizeofObject (GC_state s, pointer p) {
     header = getHeader (p);
   }
   while ((header & 1) == 0) {
-    if ((DEBUG_DETAILED or s->selectiveDebug))
+    if (DEBUG_DETAILED)
       fprintf (stderr, "sizeofObject saw threaded header("FMTHDR") for object "FMTPTR" [%d]\n",
                header, (uintptr_t)p, s->procId);
     header = *(GC_header*)header;
@@ -92,7 +92,7 @@ size_t sizeofObjectNoHeader (GC_state s, pointer p) {
 
   header = getHeader (p);
   while (header == GC_FORWARDED) {
-    if ((DEBUG_DETAILED or s->selectiveDebug))
+    if (DEBUG_DETAILED)
       fprintf (stderr,
                "sizeOfObjectNoHeader saw forwarded object "FMTPTR" [%d]\n",
                (uintptr_t)p, s->procId);
@@ -101,7 +101,7 @@ size_t sizeofObjectNoHeader (GC_state s, pointer p) {
     header = getHeader (p);
   }
   while ((header & 1) == 0) {
-    if ((DEBUG_DETAILED or s->selectiveDebug))
+    if (DEBUG_DETAILED)
       fprintf (stderr, "sizeofObjectNoHeader saw threaded header("FMTHDR") for object "FMTPTR" [%d]\n",
                header, (uintptr_t)p, s->procId);
     header = *(GC_header*)header;
