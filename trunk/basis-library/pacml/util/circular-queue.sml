@@ -69,7 +69,11 @@ struct
         (* If the buffer is empty, raise exception *)
         val _ = if (rpv = ~1) then raise CirQueueEmpty else ()
         (* fetch the element *)
-        val e = Array.sub (arrv, rpv)
+        fun getElement rpv =
+          case Array.sub (arrv, rpv) of
+               NONE => getElement ((rpv + 1) mod sizev)
+             | SOME v => SOME v
+        val e = getElement rpv
         (* Erase the element from the array *)
         val _ = Array.update (arrv, rpv, NONE)
         (* update read pointer *)
@@ -82,7 +86,7 @@ struct
         e
       end
 
-    fun cleanPrefix (q as T {arr, size, rp, wp}, clean) =
+    fun cleanPrefix (q as T {arr, size, rp, wp}, keep) =
     let
       (* read the references *)
       val (arrv, rpv, wpv, sizev) = (!arr, !rp, !wp, !size)
@@ -91,12 +95,18 @@ struct
         if ptr = ~1 then (~1, 0)
         (* If the buffer becomes empty as we clean *)
         else if ptr = wpv then (~1, 0)
-        (* the element needs to be cleaned *)
-        else if clean (valOf (Array.sub (arrv, ptr))) then
-          (Array.update (arrv, ptr, NONE);
-           walk ((ptr+1) mod sizev))
-        (* the element is alive *)
-        else (ptr, wpv)
+        else
+          (case Array.sub (arrv, ptr) of
+                NONE => walk ((ptr+1) mod sizev)
+              | SOME v =>
+                ((* the element needs to be kept *)
+                  if keep v then
+                    (ptr, wpv)
+                  else
+                    (* the element needs to be cleaned *)
+                    (Array.update (arrv, ptr, NONE);
+                    walk ((ptr+1) mod sizev))))
+
 
       (* Walk the prefix and clean *)
       val (rpv, wpv) = walk rpv
@@ -109,7 +119,7 @@ struct
       ()
     end
 
-    fun cleanSuffix (q as T {arr, size, rp, wp}, clean) =
+    fun cleanSuffix (q as T {arr, size, rp, wp}, keep) =
     let
       (* read the references *)
       val (arrv, rpv, wpv, sizev) = (!arr, !rp, !wp, !size)
@@ -117,13 +127,18 @@ struct
         (* If the buffer is empty *)
         if rpv = ~1 then (~1, 0)
         (* If the buffer becomes empty as we clean *)
-        else if (Int.abs (rpv - ptr) = 1) then (~1, 0)
-        (* the element needs to be cleaned *)
-        else if clean (valOf (Array.sub (arrv, ptr))) then
-          (Array.update (arrv, ptr, NONE);
-           walk ((ptr - 1) mod sizev))
-        (* the element is alive *)
-        else (rpv, (ptr + 1) mod sizev)
+        else if ((rpv > ptr) andalso (rpv - ptr = 1)) then (~1, 0)
+        else
+          (case Array.sub (arrv, ptr) of
+                NONE => walk ((ptr - 1) mod sizev)
+              | SOME v =>
+                ((* the element needs to be kept *)
+                 if keep v then
+                   (rpv, (ptr + 1) mod sizev)
+                 else
+                   (* the element needs to be cleaned *)
+                   (Array.update (arrv, ptr, NONE);
+                    walk ((ptr - 1) mod sizev))))
 
       (* Walk the suffix and clean *)
       val (rpv, wpv) = walk ((wpv - 1) mod sizev)
@@ -136,14 +151,17 @@ struct
       ()
     end
 
-   fun printLayout ( T{arr, size, ...}, f) =
+   fun printLayout ( T{arr, size, rp, wp}, f) =
    let
      val _ = print "["
      val _ = List.tabulate (!size, fn i => (case Array.sub (!arr, i) of
                                                NONE => print "N"
                                              | SOME v => print (f v);
                                            if (not (i = !size - 1)) then print ", " else ()))
-     val _ = print "]\n"
+     val _ = print "] "
+     val _ = print ("rp = "^(Int.toString (!rp))^" ")
+     val _ = print ("wp = "^(Int.toString (!wp))^" ")
+     val _ = print ("size = "^(Int.toString (!size))^"\n")
    in
      ()
    end
