@@ -188,6 +188,7 @@ static inline void splitHeader (GC_state s, GC_header header, __attribute__((unu
                                 GC_objectTypeTag *tagRet, bool *hasIdentityRet,
                                 uint16_t *bytesNonObjptrsRet, uint16_t *numObjptrsRet,
                                 bool *hasIdentityTransitiveRet, bool* isUnboundedRet);
+static inline bool objectHasIdentity (GC_state s, GC_header h);
 static inline pointer advanceToObjectData (GC_state s, pointer p);
 static inline pointer getBeginningOfObject (GC_state s, pointer p);
 static inline void isObjectPointerVirgin (GC_state s, pointer p);

@@ -441,6 +441,13 @@ void GC_addToMoveOnWBA (GC_state s, pointer p) {
 }
 
 void GC_addToSpawnOnWBA (GC_state s, pointer p, int proc) {
+
+  s->selectiveDebug = TRUE;
+  fprintf (stderr, "GC_addToSpawnOnWBA: p="FMTPTR" size=%zu on processor %d [%d]\n",
+           (uintptr_t)p, GC_sizeInLocalHeap (s, p), proc, s->procId);
+  GC_objectTypeInfo (s, p);
+  s->selectiveDebug = FALSE;
+
   if (proc == (int)s->procId) {
     GC_sqEnque (s, p, proc, 0);
     return;
