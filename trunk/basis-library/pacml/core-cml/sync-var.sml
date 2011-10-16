@@ -1,7 +1,7 @@
 structure SyncVar : SYNC_VAR_EXTRA =
 struct
   structure Assert = LocalAssert(val assert = false)
-  structure Debug = LocalDebug(val debug = true)
+  structure Debug = LocalDebug(val debug = false)
 
   open Critical
 

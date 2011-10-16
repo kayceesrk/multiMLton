@@ -157,7 +157,7 @@ struct
           e
         end)
 
-    fun cleanPrefix (q as T {arr, size, rp, wp}, keep) =
+    fun cleanPrefix (q as T {arr, size, rp, wp}, clean) =
     let
       (* read the references *)
       val (arrv, rpv, wpv, sizev) = (!arr, !rp, !wp, !size)
@@ -171,7 +171,7 @@ struct
                 NONE => walk ((ptr+1) mod sizev)
               | SOME v =>
                 ((* the element needs to be kept *)
-                  if keep v then
+                  if (not (clean v)) then
                     (ptr, wpv)
                   else
                     (* the element needs to be cleaned *)
@@ -191,7 +191,7 @@ struct
       ()
     end
 
-    fun cleanSuffix (q as T {arr, size, rp, wp}, keep) =
+    fun cleanSuffix (q as T {arr, size, rp, wp}, clean) =
     let
       (* read the references *)
       val (arrv, rpv, wpv, sizev) = (!arr, !rp, !wp, !size)
@@ -205,7 +205,7 @@ struct
                 NONE => walk ((ptr - 1) mod sizev)
               | SOME v =>
                 ((* the element needs to be kept *)
-                 if keep v then
+                 if (not (clean v)) then
                    (rpv, (ptr + 1) mod sizev)
                  else
                    (* the element needs to be cleaned *)
@@ -238,7 +238,7 @@ struct
    in
      ()
    end
-   val enque =
+   (*val enque =
       fn (q as T {arr, size, rp, wp}, e) =>
       let
         val _ = print (concat ["Before Enque: rp=",Int.toString (!rp)," wp=", Int.toString (!wp), "\n"])
@@ -256,6 +256,6 @@ struct
         val _ = print (concat ["After Deque: rp=",Int.toString (!rp)," wp=", Int.toString (!wp), "\n"])
       in
         res
-      end
+      end *)
   end
 end

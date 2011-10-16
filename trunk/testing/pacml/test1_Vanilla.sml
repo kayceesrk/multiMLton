@@ -9,15 +9,13 @@ struct
   fun ping ch n =
     if n=0 then ()
     else
-      (ignore (MLton.size (ch));
-       send (ch, n);
+      (send (ch, n);
        ping ch (n-1))
 
   fun pong ch n =
     if n=0 then ()
     else
-      (ignore (MLton.size (ch));
-       ignore (recv ch);
+      (ignore (recv ch);
        pong ch (n-1))
 
   fun doit n =

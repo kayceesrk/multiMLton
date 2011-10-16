@@ -189,8 +189,8 @@ void isObjectPointerVirgin (GC_state s, pointer p) {
   else
     isVirgin = (countReferences (getHeader(p)) < MANY);
 
-  //if (!isVirgin && !objectHasIdentity(s, getHeader(p)))
-  //  isVirgin = TRUE;
+  if (!isVirgin && !objectHasIdentity(s, getHeader(p)))
+    isVirgin = TRUE;
 
   s->tmpBool = s->tmpBool && isVirgin;
 }
