@@ -140,8 +140,8 @@ struct
         fun getElement rpv =
           case Array.sub (arrv, rpv) of
                NONE => getElement ((rpv + 1) mod sizev)
-             | SOME v => SOME v
-        val e = getElement rpv
+             | SOME v => (SOME v, rpv)
+        val (e, rpv) = getElement rpv
         (* Erase the element from the array *)
         val _ = Array.update (arrv, rpv, NONE)
         (* update read pointer *)

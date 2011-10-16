@@ -5,7 +5,7 @@ struct
 
   open Critical
 
-  structure Q = ImpQueue
+  structure Q = CirQueue
   structure L = Lock
   structure TID = ThreadID
   structure S = Scheduler
@@ -52,7 +52,7 @@ struct
   in
       fun cleanAndChk (prio, q) : int =
         (cleanPrefix (q, cleaner)
-          ; if empty q
+          ; if isEmpty q
               then 0
               else bumpPriority prio)
 
@@ -62,7 +62,10 @@ struct
 
       fun cleanAndEnque (q, item) =
         (cleanSuffix (q, cleaner);
-         enque (q, item))
+         enque (q, SOME item))
+
+      val undeque =
+        fn (q, item) => undeque (q, SOME item)
 
   end
 
@@ -196,7 +199,7 @@ struct
                               else (mytxid := 0; tryLp ()))
                             end
                           else if res = 1 then matchLp () (* CLAIMED *) (* In timeEvt *)
-                          else (Q.undeque (inQ, v);
+                          else (undeque (inQ, v);
                                 L.releaseCmlLock lock PT.getLockId ;
                                 S.atomicSwitchToNext (fn _ => ()))
                         end (* matchLp ends *)
@@ -355,7 +358,7 @@ struct
                               else (mytxid := 0; tryLp ()))
                             end
                           else if res = 1 then matchLp () (* CLAIMED *)
-                          else (Q.undeque (outQ, v);
+                          else (undeque (outQ, v);
                                 L.releaseCmlLock lock PT.getLockId;
                                 S.atomicSwitchToNext (fn _ => ()))
                         end (* matchLp ends *)
