@@ -11,7 +11,7 @@ struct
 
   local
     (* NOTE: startSize must not be less than 2 *)
-    val startSize = 4
+    val startSize = 2
     fun grow (arrv, rpv, wpv, sizev) =
     let
       val oldSize = sizev
@@ -40,7 +40,9 @@ struct
       val live = numElements (rpv, wpv, sizev)
     in
       (* If the live size is 0, resort to initial parameters *)
-      if (live = 0) then
+      if (live = 0 andalso sizev = startSize) then
+        (arrv, rpv, wpv, sizev)
+      else if (live = 0) then
         (Array.tabulate (startSize, fn _ => NONE), ~1, 0, startSize)
       (* shrink if the live size is < 25% of the buffer size *)
       else if (Int.div (sizev, live) >= 4 andalso (not (sizev = startSize))) then
