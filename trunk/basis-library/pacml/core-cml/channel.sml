@@ -57,7 +57,8 @@ struct
               else bumpPriority prio)
 
       fun cleanAndDeque q =
-        dequeLazyClean (q, cleaner)
+        (cleanPrefix (q, cleaner);
+         deque (q))
 
       fun cleanAndEnque (q, item) =
         (cleanSuffix (q, cleaner);

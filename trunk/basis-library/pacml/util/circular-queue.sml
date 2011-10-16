@@ -10,7 +10,9 @@ struct
   exception CirQueueEmpty
 
   local
-    fun grow ({arrv, rpv, wpv, sizev}) =
+    (* NOTE: startSize must not be less than 2 *)
+    val startSize = 4
+    fun grow (arrv, rpv, wpv, sizev) =
     let
       val oldSize = sizev
       val newSize = oldSize * 2
@@ -25,18 +27,55 @@ struct
                       NONE)
       (* val _ = print ("CirQueue.grow to size "^(Int.toString newSize)^"\n") *)
     in
-      {arrv = newArr, rpv = 0, wpv = oldSize, sizev = newSize}
+      (newArr, 0, oldSize, newSize)
     end
+
+   fun numElements (rpv, wpv, sizev) =
+     if (rpv = ~1) then 0
+     else
+      (wpv - rpv + sizev) mod sizev
+
+   fun shrink (arrv, rpv, wpv, sizev) =
+    let
+      val live = numElements (rpv, wpv, sizev)
+    in
+      (* If the live size is 0, resort to initial parameters *)
+      if (live = 0) then
+        (Array.tabulate (startSize, fn _ => NONE), ~1, 0, startSize)
+      (* shrink if the live size is < 25% of the buffer size *)
+      else if (Int.div (sizev, live) >= 4 andalso (not (sizev = startSize))) then
+        let
+          fun getNewSize s =
+            if (s < live orelse s < startSize) then s*2
+            else getNewSize (Int.div (s, 2))
+          val newSize = getNewSize (sizev)
+          val newArray =
+            Array.tabulate (newSize, fn i =>
+              if (i < live) then
+                let
+                  val index = (rpv + i) mod sizev
+                in
+                  Array.sub (arrv, index)
+                end
+              else
+                NONE)
+        in
+          (newArray, 0, live, newSize)
+        end
+      else
+        (arrv, rpv, wpv, sizev)
+    end
+
   in
 
-    fun new (startSize) =
+    fun new () =
     let
       val arr = Array.tabulate (startSize, fn _ => NONE)
     in
       T {arr = ref arr, size = ref startSize, rp = ref ~1, wp = ref 0}
     end
 
-    fun new' ({arr, rp, wp, size}) =
+    fun newExplicit ({arr, rp, wp, size}) =
       T {arr = ref arr, rp = ref rp, wp = ref wp, size = ref size}
 
     fun isEmpty (q as T{rp, ...}) =
@@ -54,13 +93,42 @@ struct
         (* If we are enqueuing to an empty buffer, move the read pointer *)
         val rpv = if (rpv = ~1) then 0 else rpv
         (* If the buffer is full, grow *)
-        val arg = {arrv = arrv, rpv = rpv, wpv = wpv, sizev = sizev}
-        val {arrv, rpv, wpv, sizev} = if (rpv = wpv) then grow arg else arg
+        val arg = (arrv, rpv, wpv, sizev)
+        val (arrv, rpv, wpv, sizev) = if (rpv = wpv) then grow arg else arg
         (* update the references *)
         val _ = (arr := arrv, rp := rpv, wp := wpv, size := sizev)
       in
         ()
       end
+
+    (* Enque in front.
+     * NOTE: We assume that there is space in the queue for the element. *)
+    fun undeque (q as T {arr, size, rp, wp}, e) =
+      let
+        (* read the references *)
+        val (arrv, rpv, wpv, sizev) = (!arr, !rp, !wp, !size)
+        val _ = case e of NONE => raise Fail "Trying to insert none-sence" | _ => ()
+        val (arrv, rpv, wpv, sizev) =
+          if (rpv = ~1) then
+            let
+              val _ = Array.update (arrv, 0, e)
+            in
+              (arrv, 0, 1, sizev)
+            end
+          else
+            let
+              val rpv = (rpv - 1) mod (sizev)
+              (* insert the element *)
+              val _ = Array.update (arrv, rpv, e)
+            in
+              (arrv, rpv, wpv, sizev)
+            end
+        (* update the references *)
+        val _ = (arr := arrv, rp := rpv, wp := wpv, size := sizev)
+      in
+        ()
+      end
+
 
     fun deque (q as T {arr, wp, rp, size}) =
       let
@@ -80,6 +148,8 @@ struct
         val rpv = (rpv + 1) mod sizev
         (* If the buffer is empty, update the read and write pointer *)
         val (rpv, wpv) = if (rpv = wpv) then (~1, 0) else (rpv, wpv)
+        (* shrink *)
+        val (arrv, rpv, wpv, sizev) = shrink (arrv, rpv, wpv, sizev)
         (* update the references *)
         val _ = (arr := arrv, rp := rpv, wp := wpv, size := sizev)
       in
@@ -111,7 +181,8 @@ struct
       (* Walk the prefix and clean *)
       val (rpv, wpv) = walk rpv
 
-      (* TODO SHRINK *)
+      (* shrink *)
+      val (arrv, rpv, wpv, sizev) = shrink (arrv, rpv, wpv, sizev)
 
       (* update the references *)
       val _ = (arr := arrv, rp := rpv, wp := wpv, size := sizev)
@@ -143,7 +214,8 @@ struct
       (* Walk the suffix and clean *)
       val (rpv, wpv) = walk ((wpv - 1) mod sizev)
 
-      (* TODO SHRINK *)
+      (* shrink *)
+      val (arrv, rpv, wpv, sizev) = shrink (arrv, rpv, wpv, sizev)
 
       (* update the references *)
       val _ = (arr := arrv, rp := rpv, wp := wpv, size := sizev)
