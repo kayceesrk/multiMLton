@@ -131,30 +131,31 @@ struct
 
 
     fun deque (q as T {arr, wp, rp, size}) =
-      let
-        (* read the references *)
-        val (arrv, rpv, wpv, sizev) = (!arr, !rp, !wp, !size)
-        (* If the buffer is empty, raise exception *)
-        val _ = if (rpv = ~1) then raise CirQueueEmpty else ()
-        (* fetch the element *)
-        fun getElement rpv =
-          case Array.sub (arrv, rpv) of
-               NONE => getElement ((rpv + 1) mod sizev)
-             | SOME v => (SOME v, rpv)
-        val (e, rpv) = getElement rpv
-        (* Erase the element from the array *)
-        val _ = Array.update (arrv, rpv, NONE)
-        (* update read pointer *)
-        val rpv = (rpv + 1) mod sizev
-        (* If the buffer is empty, update the read and write pointer *)
-        val (rpv, wpv) = if (rpv = wpv) then (~1, 0) else (rpv, wpv)
-        (* shrink *)
-        val (arrv, rpv, wpv, sizev) = shrink (arrv, rpv, wpv, sizev)
-        (* update the references *)
-        val _ = (arr := arrv, rp := rpv, wp := wpv, size := sizev)
-      in
-        e
-      end
+      if (isEmpty (q)) then
+        NONE
+      else
+        (let
+          (* read the references *)
+          val (arrv, rpv, wpv, sizev) = (!arr, !rp, !wp, !size)
+          (* fetch the element *)
+          fun getElement rpv =
+            case Array.sub (arrv, rpv) of
+                NONE => getElement ((rpv + 1) mod sizev)
+              | SOME v => (SOME v, rpv)
+          val (e, rpv) = getElement rpv
+          (* Erase the element from the array *)
+          val _ = Array.update (arrv, rpv, NONE)
+          (* update read pointer *)
+          val rpv = (rpv + 1) mod sizev
+          (* If the buffer is empty, update the read and write pointer *)
+          val (rpv, wpv) = if (rpv = wpv) then (~1, 0) else (rpv, wpv)
+          (* shrink *)
+          val (arrv, rpv, wpv, sizev) = shrink (arrv, rpv, wpv, sizev)
+          (* update the references *)
+          val _ = (arr := arrv, rp := rpv, wp := wpv, size := sizev)
+        in
+          e
+        end)
 
     fun cleanPrefix (q as T {arr, size, rp, wp}, keep) =
     let
@@ -237,7 +238,7 @@ struct
    in
      ()
    end
-    (* val enque =
+   val enque =
       fn (q as T {arr, size, rp, wp}, e) =>
       let
         val _ = print (concat ["Before Enque: rp=",Int.toString (!rp)," wp=", Int.toString (!wp), "\n"])
@@ -247,7 +248,7 @@ struct
         res
       end
 
-    val deque =
+  val deque =
       fn (q as T {arr, size, rp, wp}) =>
       let
         val _ = print (concat ["Before Deque: rp=",Int.toString (!rp)," wp=", Int.toString (!wp), "\n"])
@@ -255,6 +256,6 @@ struct
         val _ = print (concat ["After Deque: rp=",Int.toString (!rp)," wp=", Int.toString (!wp), "\n"])
       in
         res
-      end *)
+      end
   end
 end

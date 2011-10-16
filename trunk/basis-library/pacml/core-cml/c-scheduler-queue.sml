@@ -8,7 +8,7 @@ struct
   structure PrimSQ = PacmlPrim.SchedulerQueue
 
   structure Assert = LocalAssert(val assert = false)
-  structure Debug = LocalDebug(val debug = false)
+  structure Debug = LocalDebug(val debug = true)
 
   datatype runnable_host = datatype RepTypes.runnable_host
   datatype rdy_thread = datatype RepTypes.rdy_thread
