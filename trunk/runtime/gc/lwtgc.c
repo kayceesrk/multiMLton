@@ -254,7 +254,7 @@ pointer GC_move (GC_state s, pointer p,
     skipFixForwardingPointers = TRUE;
 
   if (skipFixForwardingPointers)
-    s->syncReason = SYNC_MISC;
+    s->syncReason = SYNC_LIFT_NO_GC;
   else
     s->syncReason = SYNC_LIFT;
 

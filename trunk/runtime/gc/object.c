@@ -230,15 +230,6 @@ bool GC_objectTypeInfo (GC_state s, pointer p) {
                      isClosureVirgin, s->tmpInt);
   }
 
-  //XXX kC Is this needed?
-  if (isClosureVirgin && FALSE) {
-    s->syncReason = SYNC_MISC;
-    ENTER_LOCAL0(s);
-    GC_stack stk = getStackCurrent (s);
-    foreachObjptrInObject (s, (pointer)stk, fixFwdObjptr, TRUE);
-    LEAVE_LOCAL0(s);
-  }
-
   return isClosureVirgin;
 }
 
