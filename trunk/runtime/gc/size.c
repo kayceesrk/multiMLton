@@ -18,7 +18,7 @@ size_t GC_sizeInLocalHeap (GC_state s, pointer root) {
   ENTER_LOCAL0 (s);
 
   if (DEBUG_SIZE)
-    fprintf (stderr, "GC_sizeInLocalHeap marking\n");
+    fprintf (stderr, "GC_sizeInLocalHeap marking "FMTPTR"\n", (uintptr_t)root);
   res = dfsMarkByMode (s, root, emptyForeachObjectFun, MARK_MODE,
                        FALSE, FALSE, TRUE, FALSE);
   if (DEBUG_SIZE)

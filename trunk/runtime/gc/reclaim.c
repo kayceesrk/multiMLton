@@ -150,10 +150,7 @@ GC_objectSharingInfo addToHashTable (GC_state s, GC_objectSharingInfo map, point
 
 void computeExclusivityInformation (GC_state s) {
   s->syncReason = SYNC_MISC;
-
   ENTER0 (s);
-
-
 
   if (Proc_processorNumber (s) == 0) {
     for (int proc=0; proc < s->numberOfProcs; proc++) {

@@ -360,6 +360,7 @@ static inline void* initCumulativeStatistics (void) {
   cumul->syncForLift = 0;
   cumul->syncForce = 0;
   cumul->syncMisc = 0;
+  cumul->syncForLiftNoGC = 0;
   cumul->numCopyingGCs = 0;
   cumul->numCopyingSharedGCs = 0;
   cumul->numSharedGCs = 0;

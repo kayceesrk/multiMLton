@@ -3,6 +3,8 @@
  *  Ported to MLton threads.
  *)
 
+(* Updated by KC Sivaramakrishnan (chandras@cs.purdue.edu) for multiMLton *)
+
 signature IMP_QUEUE =
    sig
       type 'a t
