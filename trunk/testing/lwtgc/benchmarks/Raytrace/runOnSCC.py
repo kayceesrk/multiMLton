@@ -69,7 +69,7 @@ def main ():
 	parser.add_option("-n", "--numProcs", dest="numProcs", help="number of processors", default =1)
 	(options, args) = parser.parse_args()
 
-	for n in [8, 16, 32]:
+	for n in [6, 8, 16, 32]:
 		run(directory, program, n, options.args, timeout)
 
 main ()

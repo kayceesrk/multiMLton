@@ -55,128 +55,6 @@ void MLton_callFromC (pointer ffiOpArgsResPtr) {                        \
 #define MLtonMain(al, mg, mfs, mmc, pk, ps, gnr, mc, ml)                \
 MLtonCallFromC                                                          \
                                                                         \
-void runProfHandler (void* arg) {                                       \
-        if (DEBUG_ALRM)                                                 \
-            fprintf (stderr, "Running runProfHandler..\n");             \
-        /* Save our state locally */                                    \
-        GC_state s = (GC_state)arg;                                     \
-                                                                        \
-        /* Block all signals */                                         \
-        sigset_t blockSet;                                              \
-        sigfillset (&blockSet);                                         \
-        pthread_sigmask (SIG_SETMASK, &blockSet, NULL);                 \
-                                                                        \
-        if (DEBUG_ALRM)                                                 \
-            fprintf (stderr, "Installing itimer_prof\n");               \
-                                                                        \
-        /* Set PROF timer */                                            \
-        struct itimerval value;                                         \
-        value.it_interval.tv_sec = 0;                                   \
-        value.it_interval.tv_usec = 10000;                              \
-        value.it_value.tv_sec = 0;                                      \
-        value.it_value.tv_usec = 10000;                                 \
-        while (not Proc_isInitialized (s)) {}                           \
-        setitimer(ITIMER_PROF, &value, NULL);                           \
-                                                                        \
-        sigset_t set;                                                   \
-        sigemptyset (&set);                                             \
-        sigaddset (&set, SIGPROF);                                      \
-                                                                        \
-        while (1) {                                                     \
-            int signum;                                                 \
-            if (DEBUG_ALRM)                                             \
-                fprintf (stderr, "Wait for prof timer\n");              \
-            sigwait (&set, &signum);                                    \
-            for (int proc = 0; proc < s->numberOfProcs; proc++) {       \
-               GC_state gcState = &s->procStates[proc];                 \
-               if (gcState->profiling.isProfilingTimeOn)                \
-                 pthread_kill (gcState->pthread, SIGUSR1);              \
-           }                                                            \
-        }                                                               \
-}                                                                       \
-                                                                        \
-void runAlrmHandler (void *arg) {                                       \
-        if (DEBUG_ALRM)                                                 \
-            fprintf (stderr, "Running runAlrmHandler..\n");             \
-                                                                        \
-        /* XXX KC is this needed?? */                                   \
-        /* Save our state locally */                                    \
-        GC_state s = (GC_state)arg;                                     \
-        pthread_setspecific (gcstate_key, s);                           \
-                                                                        \
-        /* Block all signals */                                         \
-        sigset_t blockSet;                                              \
-        sigfillset (&blockSet);                                         \
-        pthread_sigmask (SIG_SETMASK, &blockSet, NULL);                 \
-                                                                        \
-        if (DEBUG_ALRM)                                                 \
-            fprintf (stderr, "Installing timer\n");                     \
-                                                                        \
-        /* Set REAL timer */                                            \
-        struct itimerval value;                                         \
-        int microsec = (int)(s->timeInterval);                          \
-        value.it_interval.tv_sec = microsec / 1000000;                  \
-        value.it_interval.tv_usec = microsec % 1000000;                 \
-        value.it_value.tv_sec = 0;                                      \
-        value.it_value.tv_usec = microsec*5;                            \
-                                                                        \
-        while (not Proc_isInitialized (s)) {}                           \
-        setitimer(ITIMER_REAL, &value, NULL);                           \
-                                                                        \
-        sigset_t set;                                                   \
-        /* XXX To delay sending SigUsr2 by one one time quantum. CML signal */      \
-        /* handler might not be installed if signal is sent immediately */    \
-        bool sendSigUsr2 = FALSE;                                       \
-        sigemptyset (&set);                                             \
-        sigaddset (&set, SIGALRM);                                      \
-                                                                        \
-        GC_state gcState0 = &s->procStates[0];                          \
-        sigaddset(&gcState0->signalsInfo.signalsHandled, SIGALRM);      \
-                                                                        \
-        while (1) {                                                     \
-            int signum;                                                 \
-            if (DEBUG_ALRM)                                             \
-                fprintf (stderr, "Wait for alrm \n");                   \
-            sigwait (&set, &signum);                                    \
-                                                                        \
-            /* set up switches if GC_state is registered for an alrm */ \
-            for (int proc = 0; proc < s->numberOfProcs; proc++) {       \
-                GC_state gcState = &s->procStates[proc];                \
-                if (DEBUG_ALRM)                                         \
-                {                                                       \
-                    fprintf(stderr,"Got an ALRM\n");                    \
-                    fprintf(stderr,"For processor %d\n",proc);          \
-                    fprintf(stderr,"sigismember? SIGALRM %d\n",sigismember(&gcState->signalsInfo.signalsHandled, SIGALRM)); \
-                    fprintf(stderr,"sigismember? SIGUSR2 %d\n",sigismember(&gcState->signalsInfo.signalsHandled, SIGUSR2)); \
-                    fprintf(stderr,"inGC? %d\n", gcState->amInGC);      \
-                    fprintf(stderr,"inHandler? %d\n", gcState->signalsInfo.amInSignalHandler); \
-                    fprintf(stderr,"atomicState = %d\n",gcState->atomicState); \
-                    fprintf(stderr,"sendSigUsr2 = %d\n", sendSigUsr2);  \
-                }                                                       \
-                                                                        \
-                if(sigismember(&gcState->signalsInfo.signalsHandled, SIGALRM)) \
-                {                                                       \
-                    if (!gcState->signalsInfo.amInSignalHandler && !gcState->signalsInfo.signalIsPending) { \
-                        if (gcState->atomicState == 0)                  \
-                            gcState->limit = 0;                         \
-                        gcState->signalsInfo.signalIsPending = TRUE;    \
-                        sigaddset (&gcState->signalsInfo.signalsPending, SIGALRM); \
-                    }                                                   \
-                }                                                       \
-                /* if SIGUSR2 is handled */                             \
-                if (sigismember(&gcState->signalsInfo.signalsHandled, SIGUSR2) &&   \
-                    !gcState->signalsInfo.amInSignalHandler &&          \
-                    !gcState->amInGC) {                                 \
-                    if (sendSigUsr2) {                                  \
-                        pthread_kill (gcState->pthread, SIGUSR2);       \
-                    }                                                   \
-                    sendSigUsr2 = TRUE;                                 \
-                }                                                       \
-            }                                                           \
-        }                                                               \
-}                                                                       \
-                                                                        \
-                                                                        \
 void segvHandler (int sig) {                                            \
   void* tracePtrs[100];                                                 \
   int count = backtrace( tracePtrs, 100 );                              \
@@ -240,12 +118,10 @@ void run (void *arg) {                                                  \
 PUBLIC int MLton_main (int argc, char* argv[]) {                        \
         dup2(STDOUT_FILENO, STDERR_FILENO);                             \
         RCCE_init (&argc, &argv);                                       \
-        fprintf (stderr, "RCCE_init done: %d\n", RCCE_ue());            \
         RCCE_barrier (&RCCE_COMM_WORLD);                                \
         pthread_t *threads;                                             \
         pthread_t alrmHandlerThread;                                    \
         pthread_t profHandlerThread;                                    \
-        printf ("NumUES=%d\n", RCCE_num_ues ());                        \
         if (pthread_key_create (&gcstate_key, NULL)) {                  \
           fprintf (stderr, "pthread_key_create failed\n");              \
           exit (1);                                                     \
@@ -259,14 +135,14 @@ PUBLIC int MLton_main (int argc, char* argv[]) {                        \
           GC_lateInit (&s);                                             \
           /* Bcast s0 for duplication */                                \
           RCCE_bcast ((char*)&s, sizeof (struct GC_state), 0, RCCE_COMM_WORLD); \
-          setInitSharedHeapState (&s, TRUE);                            \
+          setSharedHeapState (&s, TRUE);                                \
         }                                                               \
         if (RCCE_ue () != 0) {                                          \
           struct GC_state s0;                                           \
           /* Recv s0 and duplicate */                                   \
           RCCE_bcast ((char*)&s0, sizeof (struct GC_state), 0, RCCE_COMM_WORLD); \
           Duplicate (&s, &s0);                                          \
-          assistSetInitSharedHeapState (&s);                            \
+          assistSetSharedHeapState (&s, TRUE);                          \
         }                                                               \
         RCCE_barrier (&RCCE_COMM_WORLD);                                \
         run ((void *)&s);                                               \

@@ -421,19 +421,19 @@ static inline void* initLastSharedMajorStatistics (void) {
 
 /* create Aux data structures for current processor */
 static inline void createAuxDataStructures (GC_state s) {
-  s->danglingStackList = (objptr*) GC_shmalloc (sizeof (objptr) * BUFFER_SIZE);
+  s->danglingStackList = (objptr*) malloc (sizeof (objptr) * BUFFER_SIZE);
   s->danglingStackListSize = 0;
   s->danglingStackListMaxSize = BUFFER_SIZE;
 
-  s->moveOnWBA = (objptr*) GC_shmalloc (sizeof (objptr) * BUFFER_SIZE);
+  s->moveOnWBA = (objptr*) malloc (sizeof (objptr) * BUFFER_SIZE);
   s->moveOnWBASize = 0;
   s->moveOnWBAMaxSize = BUFFER_SIZE;
 
-  s->preemptOnWBA = (PreemptThread*) GC_shmalloc (sizeof (PreemptThread) * BUFFER_SIZE);
+  s->preemptOnWBA = (PreemptThread*) malloc (sizeof (PreemptThread) * BUFFER_SIZE);
   s->preemptOnWBASize = 0;
   s->preemptOnWBAMaxSize = BUFFER_SIZE;
 
-  s->spawnOnWBA = (SpawnThread*) GC_shmalloc (sizeof (SpawnThread) * BUFFER_SIZE);
+  s->spawnOnWBA = (SpawnThread*) malloc (sizeof (SpawnThread) * BUFFER_SIZE);
   s->spawnOnWBASize = 0;
   s->spawnOnWBAMaxSize = BUFFER_SIZE;
 }
@@ -671,30 +671,4 @@ void GC_duplicate (GC_state d, GC_state s) {
   s->amInGC = FALSE;
 }
 
-void setSharedHeapState (GC_state s, bool duringInit) {
-  //Collect the GC_states
-  GC_state procStates = (GC_state) malloc ((s->numberOfProcs) * sizeof (struct GC_state));
-  //For proc 0
-  memcpy ((void*)&procStates[0], (void*)s, sizeof (struct GC_state));
-  //For other procs
-  for (int i = 1; i < s->numberOfProcs; i++)
-    RCCE_recv ((char*)&procStates[i], sizeof (struct GC_state), i);
-  setGCStateCurrentSharedHeap (s, procStates, 0, 0, duringInit);
-  //Distribute the new GC_states
-  //For proc 0
-  memcpy ((void*)s, (void*)&procStates[0], sizeof (struct GC_state));
-  //For other procs
-  for (int i = 1; i < s->numberOfProcs; i++)
-    RCCE_send ((char*)&procStates[i], sizeof (struct GC_state), i);
-  free (procStates);
-}
 
-void assistSetSharedHeapState (GC_state s) {
-  struct GC_state localS;
-  memcpy (&localS, s, sizeof (struct GC_state));
-  //Send the local GC_state to processor 0, waiting in the if branch
-  RCCE_send ((char*)&localS, sizeof (struct GC_state), 0);
-  //Recv the new local GC state
-  RCCE_recv ((char*)&localS, sizeof (struct GC_state), 0);
-  memcpy (s, &localS, sizeof (struct GC_state));
-}

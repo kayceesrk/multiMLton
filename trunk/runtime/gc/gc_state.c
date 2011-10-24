@@ -256,15 +256,6 @@ void setGCStateCurrentSharedHeap (GC_state s,
     procStates[proc].sharedHeapEnd = s->sharedHeap->start + s->sharedHeap->size;
   }
 
-  if (not duringInit) {
-    assert (getThreadCurrent(s)->bytesNeeded <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier));
-    assert (hasHeapBytesFree (s, s->sharedHeap, oldGenBytesRequested, getThreadCurrent(s)->bytesNeeded));
-  }
-  else {
-    assert (nurseryBytesRequested <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier));
-    assert (hasHeapBytesFree (s, s->sharedHeap, oldGenBytesRequested, nurseryBytesRequested));
-  }
-  assert (isFrontierAligned (s, s->sharedFrontier));
   RCCE_shflush ();
 }
 
@@ -443,4 +434,46 @@ pointer GC_forwardBase (const GC_state s, const pointer p) {
 void GC_commEvent (void) {
   GC_state s = pthread_getspecific (gcstate_key);
   s->cumulativeStatistics->numComms++;
+}
+
+void setSharedHeapState (GC_state s, bool duringInit) {
+  //tmpSizet will be used by setGCStateCurrentSharedHeap
+  s->tmpSizet = getThreadCurrent(s)->bytesNeeded;
+  //Collect the GC_states
+  GC_state procStates = (GC_state) malloc ((s->numberOfProcs) * sizeof (struct GC_state));
+  //For proc 0
+  memcpy ((void*)&procStates[0], (void*)s, sizeof (struct GC_state));
+  //For other procs
+  for (int i = 1; i < s->numberOfProcs; i++)
+    RCCE_recv ((char*)&procStates[i], sizeof (struct GC_state), i);
+  setGCStateCurrentSharedHeap (s, procStates, 0, 0, duringInit);
+  //Distribute the new GC_states
+  //For proc 0
+  memcpy ((void*)s, (void*)&procStates[0], sizeof (struct GC_state));
+  //For other procs
+  for (int i = 1; i < s->numberOfProcs; i++)
+    RCCE_send ((char*)&procStates[i], sizeof (struct GC_state), i);
+
+  if (not duringInit)
+    assert (getThreadCurrent(s)->bytesNeeded <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier));
+  assert (isFrontierAligned (s, s->sharedFrontier));
+
+  free (procStates);
+}
+
+void assistSetSharedHeapState (GC_state s, bool duringInit) {
+  struct GC_state localS;
+
+  //tmpSizet will be used by setGCStateCurrentSharedHeap
+  s->tmpSizet = getThreadCurrent(s)->bytesNeeded;
+  memcpy (&localS, s, sizeof (struct GC_state));
+  //Send the local GC_state to processor 0, waiting in the if branch
+  RCCE_send ((char*)&localS, sizeof (struct GC_state), 0);
+  //Recv the new local GC state
+  RCCE_recv ((char*)&localS, sizeof (struct GC_state), 0);
+  memcpy (s, &localS, sizeof (struct GC_state));
+
+  if (not duringInit)
+    assert (getThreadCurrent(s)->bytesNeeded <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier));
+  assert (isFrontierAligned (s, s->sharedFrontier));
 }

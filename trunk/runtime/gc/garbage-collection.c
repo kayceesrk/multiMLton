@@ -472,7 +472,6 @@ void performSharedGCCollective (GC_state s,
                                     s->cumulativeStatistics->numMarkCompactSharedGCs),
               uintmaxToCommaString (s->sharedHeap->oldGenSize));
 
-
     finalizePointerToCore (s);
     RCCE_shflush ();
     RCCE_barrier (&RCCE_COMM_WORLD);
@@ -489,9 +488,7 @@ void performSharedGCCollective (GC_state s,
       translateSharedHeap (s, from, to, size);
     }
 
-    //tmpSizet will be used by setGCStateCurrentSharedHeap
-    s->tmpSizet = getThreadCurrent(s)->bytesNeeded;
-    assistSetSharedHeapState (s);
+    assistSetSharedHeapState (s, FALSE);
 
     finalizePointerToCore (s);
     RCCE_barrier (&RCCE_COMM_WORLD);

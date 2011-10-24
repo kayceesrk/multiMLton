@@ -163,7 +163,8 @@ static void setGCStateCurrentSharedHeap (GC_state s,
 static void setGCStateCurrentLocalHeap (GC_state s,
                                         size_t oldGenBytesRequested,
                                         size_t nurseryBytesRequested);
-
+void setSharedHeapState (GC_state s, bool duringInit);
+void assistSetSharedHeapState (GC_state s, bool duringInit);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */
 

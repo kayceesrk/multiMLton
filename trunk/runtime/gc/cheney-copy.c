@@ -54,7 +54,6 @@ void swapHeapsForCheneyCopy (GC_state s) {
 
 //Every core must call this function after shared major cheney copy
 void swapHeapsForSharedCheneyCopy (GC_state s) {
-  assert (0);
   GC_heap tempHeap;
   tempHeap = s->secondarySharedHeap;
   s->secondarySharedHeap = s->sharedHeap;

@@ -25,11 +25,8 @@ void initPointerToCore (GC_state s, size_t size) {
 
 //Must be called by each processor
 void finalizePointerToCore (GC_state s) {
-  if (Proc_processorNumber (s) != 0) {
-    fprintf (stderr, "finalizePointerToCore: Must be called only by processor 0\n");
-    exit (1);
-  }
-  RCCE_shfree ((void*)s->pointerToCoreMap);
+  if (Proc_processorNumber (s) == 0)
+    RCCE_shfree ((void*)s->pointerToCoreMap);
   s->pointerToCoreMap = NULL;
 }
 
