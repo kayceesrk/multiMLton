@@ -321,9 +321,19 @@ int processAtMLton (GC_state s, int argc, char **argv,
   return i;
 }
 
-static inline void* initCumulativeStatistics (void) {
-  struct GC_cumulativeStatistics* cumul =
-      (struct GC_cumulativeStatistics *) malloc (sizeof (struct GC_cumulativeStatistics));
+static inline void* initCumulativeStatistics (GC_state s) {
+  struct GC_cumulativeStatistics* cumul;
+  assert (s->procId == 0);
+  if (RCCE_ue () == 0) {
+    cumul = (struct GC_cumulativeStatistics *) GC_shmalloc (sizeof (struct GC_cumulativeStatistics) *
+                                                            RCCE_num_ues());
+  }
+  else {
+    assert (s->cumulativeStatistics);
+    cumul = (struct GC_cumulativeStatistics*) (((pointer)s->cumulativeStatistics) +
+                                               (RCCE_ue () * sizeof (struct GC_cumulativeStatistics)));
+  }
+
   cumul->bytesAllocated = 0;
   cumul->bytesFilled = 0;
   cumul->bytesCopied = 0;
@@ -409,26 +419,23 @@ static inline void* initLastSharedMajorStatistics (void) {
   return (void*)cumul;
 }
 
+/* create Aux data structures for current processor */
 static inline void createAuxDataStructures (GC_state s) {
-  assert (s->procStates);
-  for (int proc=0; proc < s->numberOfProcs; proc++) {
-    GC_state r = &s->procStates[proc];
-    r->danglingStackList = (objptr*) GC_shmalloc (sizeof (objptr) * BUFFER_SIZE);
-    r->danglingStackListSize = 0;
-    r->danglingStackListMaxSize = BUFFER_SIZE;
+  s->danglingStackList = (objptr*) GC_shmalloc (sizeof (objptr) * BUFFER_SIZE);
+  s->danglingStackListSize = 0;
+  s->danglingStackListMaxSize = BUFFER_SIZE;
 
-    r->moveOnWBA = (objptr*) GC_shmalloc (sizeof (objptr) * BUFFER_SIZE);
-    r->moveOnWBASize = 0;
-    r->moveOnWBAMaxSize = BUFFER_SIZE;
+  s->moveOnWBA = (objptr*) GC_shmalloc (sizeof (objptr) * BUFFER_SIZE);
+  s->moveOnWBASize = 0;
+  s->moveOnWBAMaxSize = BUFFER_SIZE;
 
-    r->preemptOnWBA = (PreemptThread*) GC_shmalloc (sizeof (PreemptThread) * BUFFER_SIZE);
-    r->preemptOnWBASize = 0;
-    r->preemptOnWBAMaxSize = BUFFER_SIZE;
+  s->preemptOnWBA = (PreemptThread*) GC_shmalloc (sizeof (PreemptThread) * BUFFER_SIZE);
+  s->preemptOnWBASize = 0;
+  s->preemptOnWBAMaxSize = BUFFER_SIZE;
 
-    r->spawnOnWBA = (SpawnThread*) GC_shmalloc (sizeof (SpawnThread) * BUFFER_SIZE);
-    r->spawnOnWBASize = 0;
-    r->spawnOnWBAMaxSize = BUFFER_SIZE;
-  }
+  s->spawnOnWBA = (SpawnThread*) GC_shmalloc (sizeof (SpawnThread) * BUFFER_SIZE);
+  s->spawnOnWBASize = 0;
+  s->spawnOnWBAMaxSize = BUFFER_SIZE;
 }
 
 
@@ -482,7 +489,7 @@ int GC_init (GC_state s, int argc, char **argv) {
   assert (sizeofThread (s) == sizeofThread (s));
   assert (sizeofWeak (s) == sizeofWeak (s));
 
-  s->cumulativeStatistics = (struct GC_cumulativeStatistics*)initCumulativeStatistics ();
+  s->cumulativeStatistics = (struct GC_cumulativeStatistics*)initCumulativeStatistics (s);
   s->lastMajorStatistics = (struct GC_lastMajorStatistics*)initLastMajorStatistics ();
   s->lastSharedMajorStatistics = (struct GC_lastSharedMajorStatistics*)initLastSharedMajorStatistics ();
   s->currentThread = BOGUS_OBJPTR;
@@ -496,14 +503,13 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->enableTimer = FALSE;
   s->timeInterval = 200;
   s->copiedSize = -1;
-  s->procStates = NULL;
   s->pointerToCoreMap = NULL;
   s->roots = NULL;
   s->rootsLength = 0;
   s->savedThread = BOGUS_OBJPTR;
   s->savedClosure = BOGUS_OBJPTR;
   s->pacmlThreadId = BOGUS_OBJPTR;
-  s->needsBarrier = (int32_t*) GC_shmalloc (sizeof (GC_barrierInfo));
+  s->needsBarrier = (GC_barrierInfo*) GC_shmalloc (sizeof (GC_barrierInfo));
   *s->needsBarrier = NOT_INITIALIZED;
   s->secondaryLocalHeap = (GC_heap) malloc (sizeof (struct GC_heap));
   initHeap (s, s->secondaryLocalHeap, LOCAL_HEAP);
@@ -528,7 +534,7 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->saveWorldStatus = true;
   s->profiling.isProfilingTimeOn = false;
 
-  s->schedulerQueue = NULL;
+  s->schedulerQueues = NULL;
 
 
 
@@ -588,11 +594,10 @@ void GC_lateInit (GC_state s) {
    * show-sources, in which case we don't want to initialize the
    * atExit.
    */
-
   initProfiling (s);
-
   GC_sqCreateQueues (s);
   createAuxDataStructures (s);
+
   if (s->amOriginal) {
     initWorld (s);
     /* The mutator stack invariant doesn't hold,
@@ -610,13 +615,12 @@ void GC_lateInit (GC_state s) {
 }
 
 void GC_duplicate (GC_state d, GC_state s) {
-  // GC_init
   d->amInGC = s->amInGC;
   d->amOriginal = s->amOriginal;
   d->atomicState = 0;
   d->callFromCHandlerThread = BOGUS_OBJPTR;
   d->controls = s->controls;
-  d->cumulativeStatistics = initCumulativeStatistics ();
+  d->cumulativeStatistics = initCumulativeStatistics (s);
   d->forwardState.liftingObject = BOGUS_OBJPTR;
   d->forwardState.rangeListCurrent = NULL;
   d->forwardState.rangeListLast = NULL;
@@ -657,16 +661,40 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->translateState.from = BOGUS_POINTER;
   d->translateState.to = BOGUS_POINTER;
   d->translateState.size = 0;
-
-  // XXX spoons better duplicate?
-  //initSignalStack (d);
-
   d->sysvals.ram = s->sysvals.ram;
+  d->schedulerQueues = s->schedulerQueues;
 
-  //initProfiling (d);
+  createAuxDataStructures (d);
 
-  // Multi-processor support is incompatible with saved-worlds
   assert (d->amOriginal);
   duplicateWorld (d, s);
   s->amInGC = FALSE;
+}
+
+void setSharedHeapState (GC_state s, bool duringInit) {
+  //Collect the GC_states
+  GC_state procStates = (GC_state) malloc ((s->numberOfProcs) * sizeof (struct GC_state));
+  //For proc 0
+  memcpy ((void*)&procStates[0], (void*)s, sizeof (struct GC_state));
+  //For other procs
+  for (int i = 1; i < s->numberOfProcs; i++)
+    RCCE_recv ((char*)&procStates[i], sizeof (struct GC_state), i);
+  setGCStateCurrentSharedHeap (s, procStates, 0, 0, duringInit);
+  //Distribute the new GC_states
+  //For proc 0
+  memcpy ((void*)s, (void*)&procStates[0], sizeof (struct GC_state));
+  //For other procs
+  for (int i = 1; i < s->numberOfProcs; i++)
+    RCCE_send ((char*)&procStates[i], sizeof (struct GC_state), i);
+  free (procStates);
+}
+
+void assistSetSharedHeapState (GC_state s) {
+  struct GC_state localS;
+  memcpy (&localS, s, sizeof (struct GC_state));
+  //Send the local GC_state to processor 0, waiting in the if branch
+  RCCE_send ((char*)&localS, sizeof (struct GC_state), 0);
+  //Recv the new local GC state
+  RCCE_recv ((char*)&localS, sizeof (struct GC_state), 0);
+  memcpy (s, &localS, sizeof (struct GC_state));
 }

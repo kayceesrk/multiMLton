@@ -15,14 +15,14 @@ void displayHeap (__attribute__ ((unused)) GC_state s,
           "\t\tavailableSize = %zu\n"
           "\t\tstart = "FMTPTR"\n"
           "\t\tfrontier = "FMTPTR"\n"
-          "\t\twithMapsSize = %"PRIuMAX"\n",
+          "\t\twithMapsSize = %zu\n",
           (uintptr_t)heap->nursery,
           (uintmax_t)heap->oldGenSize,
           (uintmax_t)heap->size,
-          (uintmax_t)heap->availableSize,
+          (size_t)heap->availableSize,
           (uintptr_t)heap->start,
           (uintptr_t)heap->frontier,
-          (uintmax_t)heap->withMapsSize);
+          (size_t)heap->withMapsSize);
 }
 
 
@@ -145,7 +145,7 @@ void releaseHeap (GC_state s, GC_heap h) {
              uintmaxToCommaString(h->size),
              uintmaxToCommaString(h->withMapsSize - h->size));
   if (h == s->sharedHeap || h == s->secondarySharedHeap) {
-    RCCE_shfree (h->start);
+    RCCE_shfree ((void*)h->start);
     RCCE_shflush ();
   }
   else

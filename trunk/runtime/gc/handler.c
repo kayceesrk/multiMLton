@@ -15,7 +15,7 @@
  * Don't make it inline, because it is also called in basis/Thread.c,
  * and when compiling with COMPILE_FAST, they may appear out of order.
  */
-void GC_startSignalHandler (__attribute__ ((unused)) GC_state *gs) {
+void GC_startSignalHandler () {
   /* Switch to the signal handler thread. */
   GC_state s = pthread_getspecific (gcstate_key);
   if (DEBUG_SIGNALS) {
@@ -37,7 +37,7 @@ void GC_startSignalHandler (__attribute__ ((unused)) GC_state *gs) {
   s->atomicState = 2;
 }
 
-void GC_finishSignalHandler (__attribute__ ((unused)) GC_state *gs) {
+void GC_finishSignalHandler () {
   GC_state s = pthread_getspecific (gcstate_key);
   if (DEBUG_SIGNALS)
     fprintf (stderr, "GC_finishSignalHandler () [%d]\n",
@@ -55,7 +55,7 @@ void switchToSignalHandlerThreadIfNonAtomicAndSignalPending (GC_state s) {
    }
   if (s->atomicState == 1
       and s->signalsInfo.signalIsPending) {
-    GC_startSignalHandler (&s->procStates);
+    GC_startSignalHandler ();
     switchToThread (s, s->signalHandlerThread);
   }
 }
@@ -67,11 +67,15 @@ void switchToSignalHandlerThreadIfNonAtomicAndSignalPending (GC_state s) {
  * by Posix_Signal_handle (see Posix/Signal/Signal.c).
  */
 void GC_handler (GC_state s, int signum) {
-    int p = Proc_processorNumber (s);
+  assert ("GC_handler: not implemented" && FALSE);
+  fprintf (stderr, "GC_handler: not implemented\n");
+  exit (1);
+#if 0
+  int p = Proc_processorNumber (s);
   if (DEBUG_SIGNALS)
     fprintf (stderr, "GC_handler signum = %d [%d]\n", signum,
              p);
-   //assert (sigismember (&s->signalsInfo.signalsHandled, signum));
+  //assert (sigismember (&s->signalsInfo.signalsHandled, signum));
 
   /* Cannot get the correct GC_state in the signal handler. Signals
    * are delivered to any of the threads which do not mask it. So
@@ -79,29 +83,24 @@ void GC_handler (GC_state s, int signum) {
    * if such a GC_state is found, set signalIsPending flag and set
    * limit to 0 if atomicState is 0
    */
-   for (int proc = 0; proc < s->numberOfProcs; proc++) {
-      GC_state gcState = &s->procStates[proc];
-      if (DEBUG_SIGNALS)
-      {
-        fprintf(stderr,"For processor %d\n",proc);
-        fprintf(stderr,"sigismember? %d\n",sigismember(&gcState->signalsInfo.signalsHandled, signum));
-        fprintf(stderr,"atomicState = %d\n",gcState->atomicState);
-      }
-      if(sigismember(&gcState->signalsInfo.signalsHandled, signum))
-      {
-        gcState->signalsInfo.signalIsPending = TRUE;
-        sigaddset (&gcState->signalsInfo.signalsPending, signum);
-
-        if (gcState->atomicState == 0)
-        {
-            gcState->limit = 0;
-        }
-        break;
-      }
+  for (int proc = 0; proc < s->numberOfProcs; proc++) {
+    GC_state gcState = &s->procStates[proc];
+    if (DEBUG_SIGNALS) {
+      fprintf(stderr,"For processor %d\n",proc);
+      fprintf(stderr,"sigismember? %d\n",sigismember(&gcState->signalsInfo.signalsHandled, signum));
+      fprintf(stderr,"atomicState = %d\n",gcState->atomicState);
     }
+    if(sigismember(&gcState->signalsInfo.signalsHandled, signum)) {
+      gcState->signalsInfo.signalIsPending = TRUE;
+      sigaddset (&gcState->signalsInfo.signalsPending, signum);
+
+      if (gcState->atomicState == 0)
+        gcState->limit = 0;
+      break;
+    }
+  }
 
   if (DEBUG_SIGNALS)
-    fprintf (stderr, "GC_handler done [%d]\n",
-             Proc_processorNumber (s));
-
+    fprintf (stderr, "GC_handler done [%d]\n", Proc_processorNumber (s));
+#endif
 }

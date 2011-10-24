@@ -198,7 +198,7 @@ markInNormal:
         (ignoreSharedHeap and isPointerInHeap (s, s->sharedHeap, next)) or
         (sizeEstimationForLifting &&
          isPointerInHeap (s, s->sharedHeap, todo) &&
-         isPointerInAnotherCore (s, todo, next))) {
+         isPointerInAnotherCore (s, (objptr*)todo, next))) {
       if (DEBUG_DFS_MARK)
         fprintf (stderr, "markInNormal: skipping todo="FMTPTR" next="FMTPTR"\n",
                  (uintptr_t)todo, (uintptr_t)next);

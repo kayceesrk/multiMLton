@@ -82,7 +82,7 @@ static void summaryWrite (GC_state s,
      &cumul->ru_gcMinor,
      cumul->numMinorGCs,
      cumul->bytesCopiedMinor);
-  totalTime = getCurrentTime () - s->procStates[0].startTime;
+  totalTime = getCurrentTime () - s->startTime;
 
   char str[20];
   sprintf (str, " ");
@@ -330,7 +330,7 @@ static inline void initStat (struct GC_cumulativeStatistics* cumul) {
   timevalZero (&cumul->tv_rt);
 }
 
-void GC_summaryWrite (void) {
+void GC_summaryWrite (GC_state procStates) {
   GC_state s = pthread_getspecific (gcstate_key);
   FILE *out;
   out = stderr;
@@ -342,14 +342,14 @@ void GC_summaryWrite (void) {
       for (int proc=0; proc < s->numberOfProcs; proc++) {
         sprintf (fname, "/shared/chandras/gc-summary.%d.out", proc);
         out = fopen_safe (fname, "wb");
-        summaryWrite (s, s->procStates[proc].cumulativeStatistics, out, FALSE);
+        summaryWrite (s, procStates[proc].cumulativeStatistics, out, FALSE);
         fclose_safe (out);
       }
     }
 
     for (int proc=0; proc < s->numberOfProcs; proc++) {
       struct GC_cumulativeStatistics* d =
-        s->procStates[proc].cumulativeStatistics;
+        procStates[proc].cumulativeStatistics;
       cumul.numForceStackGrowth += d->numForceStackGrowth;
       cumul.bytesAllocated += d->bytesAllocated;
       cumul.bytesFilled += d->bytesFilled;
@@ -468,8 +468,19 @@ void GC_done (GC_state s) {
     exit (1);
   }
 
-  GC_summaryWrite ();
   *s->needsBarrier = EXIT;
+  //Collect the GC_states
+  GC_state procStates = (GC_state) malloc ((s->numberOfProcs) * sizeof (struct GC_state));
+  GC_memcpy ((void*)s, (void*)&procStates[0], sizeof (struct GC_state));
+  for (int i = 1; i < s->numberOfProcs; i++) {
+    RCCE_recv ((char*)&procStates[i], sizeof (struct GC_state), i);
+  }
+
+  GC_summaryWrite (procStates);
+  //No need to distribute since the GC_states were not updated
+  free (procStates);
+
+  RCCE_barrier (&RCCE_COMM_WORLD); //Matches with GC_doneAssist
   releaseHeap (s, s->heap);
   releaseHeap (s, s->secondaryLocalHeap);
 
@@ -484,6 +495,13 @@ void GC_doneAssist (GC_state s) {
     fprintf (stderr, "GC_done: Must not be called by core 0\n");
     exit (1);
   }
+
+  //Send the local GC_state to processor 0, waiting in in GC_done
+  RCCE_send ((char*)s, sizeof (struct GC_state), 0);
+  RCCE_barrier (&RCCE_COMM_WORLD); //Matches with GC_done
+
+  //GC_summaryWrite () complete
+
   releaseHeap (s, s->heap);
   releaseHeap (s, s->secondaryLocalHeap);
   RCCE_barrier (&RCCE_COMM_WORLD); //Matches with GC_done

@@ -54,11 +54,11 @@ void setGCStateCurrentThreadAndStack (GC_state s) {
              (uintptr_t)thread, (uintptr_t)stack, s->procId);
   markCard (s, (pointer)stack);
 
-  if (isPointerInHeap (s, s->sharedHeap, thread) &&
-      !isInDanglingStackList (s, stack)) {
+  if (isPointerInHeap (s, s->sharedHeap, (pointer)thread) &&
+      !isInDanglingStackList (s, (objptr)stack)) {
     assert (0);
     fprintf (stderr, "thread="FMTPTR" stack="FMTPTR"\n",
-             thread, stack);
+             (uintptr_t)thread, (uintptr_t)stack);
     exit (1);
   }
   //Fixing forwarding pointers in the stack
@@ -130,6 +130,7 @@ void setGCStateCurrentLocalHeap (GC_state s,
 }
 
 void setGCStateCurrentSharedHeap (GC_state s,
+                                  GC_state procStates,
                                   size_t oldGenBytesRequested,
                                   size_t nurseryBytesRequested,
                                   bool duringInit) {
@@ -210,26 +211,19 @@ void setGCStateCurrentSharedHeap (GC_state s,
 
   if (not duringInit) {
     for (int proc = 0; proc < s->numberOfProcs; proc++) {
-      size_t bytesNeededOther = 0;
-      if (proc == 0) {
-        bytesNeededOther = getThreadCurrent (s)->bytesNeeded;
-      }
-      else {
-        /* Matches with RCCE_send in performSharedGCCOllective */
-        RCCE_recv ((char*)&bytesNeededOther, sizeof (size_t), proc);
-      }
+      size_t bytesNeededOther = procStates[proc].tmpSizet;
       assert (isFrontierAligned (s, frontier));
-      s->procStates[proc].sharedStart = s->procStates[proc].sharedFrontier = frontier;
-      s->procStates[proc].sharedLimitPlusSlop = s->procStates[proc].sharedStart + bytesNeededOther;
-      s->procStates[proc].sharedLimit = s->procStates[proc].sharedLimitPlusSlop - GC_HEAP_LIMIT_SLOP;
-      assert (s->procStates[proc].sharedFrontier <= s->procStates[proc].sharedLimitPlusSlop);
+      procStates[proc].sharedStart = procStates[proc].sharedFrontier = frontier;
+      procStates[proc].sharedLimitPlusSlop = procStates[proc].sharedStart + bytesNeededOther;
+      procStates[proc].sharedLimit = procStates[proc].sharedLimitPlusSlop - GC_HEAP_LIMIT_SLOP;
+      assert (procStates[proc].sharedFrontier <= procStates[proc].sharedLimitPlusSlop);
       /* XXX clearCardMap (?) */
 
       if (DEBUG)
         for (size_t i = 0; i < GC_BONUS_SLOP; i++)
-          *(s->procStates[proc].sharedLimitPlusSlop + i) = 0xBF;
+          *(procStates[proc].sharedLimitPlusSlop + i) = 0xBF;
 
-      frontier = s->procStates[proc].sharedLimitPlusSlop + GC_BONUS_SLOP;
+      frontier = procStates[proc].sharedLimitPlusSlop + GC_BONUS_SLOP;
     }
   }
   else {
@@ -237,18 +231,18 @@ void setGCStateCurrentSharedHeap (GC_state s,
     /* XXX this is a lot of copy-paste */
     for (int proc = 0; proc < s->numberOfProcs; proc++) {
       assert (isFrontierAligned (s, frontier));
-      s->procStates[proc].sharedStart = s->procStates[proc].sharedFrontier = frontier;
-      s->procStates[proc].sharedLimitPlusSlop = s->procStates[proc].sharedStart +
+      procStates[proc].sharedStart = procStates[proc].sharedFrontier = frontier;
+      procStates[proc].sharedLimitPlusSlop = procStates[proc].sharedStart +
         GC_HEAP_LIMIT_SLOP;
-      s->procStates[proc].sharedLimit = s->procStates[proc].sharedLimitPlusSlop - GC_HEAP_LIMIT_SLOP;
-      assert (s->procStates[proc].sharedFrontier <= s->procStates[proc].sharedLimitPlusSlop);
+      procStates[proc].sharedLimit = procStates[proc].sharedLimitPlusSlop - GC_HEAP_LIMIT_SLOP;
+      assert (procStates[proc].sharedFrontier <= procStates[proc].sharedLimitPlusSlop);
       /* XXX clearCardMap (?) */
 
       if (DEBUG)
         for (size_t i = 0; i < GC_BONUS_SLOP; i++)
-          *(s->procStates[proc].sharedLimitPlusSlop + i) = 0xBF;
+          *(procStates[proc].sharedLimitPlusSlop + i) = 0xBF;
 
-      frontier = s->procStates[proc].sharedLimitPlusSlop + GC_BONUS_SLOP;
+      frontier = procStates[proc].sharedLimitPlusSlop + GC_BONUS_SLOP;
     }
   }
   h->frontier = frontier;
@@ -258,8 +252,8 @@ void setGCStateCurrentSharedHeap (GC_state s,
 
   //Set sharedHeap limits in gcState
   for (int proc=0; proc < s->numberOfProcs; proc++) {
-    s->procStates[proc].sharedHeapStart = s->sharedHeap->start;
-    s->procStates[proc].sharedHeapEnd = s->sharedHeap->start + s->sharedHeap->size;
+    procStates[proc].sharedHeapStart = s->sharedHeap->start;
+    procStates[proc].sharedHeapEnd = s->sharedHeap->start + s->sharedHeap->size;
   }
 
   if (not duringInit) {

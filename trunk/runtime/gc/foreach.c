@@ -18,7 +18,7 @@ void callIfIsObjptr (GC_state s, GC_foreachObjptrFun f, objptr *opp) {
  *
  * Apply f to each global object pointer into the heap.
  */
-void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f) {
+void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f, GC_state procStates) {
   for (unsigned int i = 0; i < s->globalsLength; ++i) {
     if (DEBUG_DETAILED)
       fprintf (stderr, "foreachGlobal %u [%d]\n", i, s->procId);
@@ -26,58 +26,53 @@ void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f) {
   }
   if (DEBUG_DETAILED)
     fprintf (stderr, "foreachGlobal threads [%d]\n", s->procId);
-  if (s->procStates) {
-    for (int proc = 0; proc < s->numberOfProcs; proc++) {
-      callIfIsObjptr (s, f, &s->procStates[proc].callFromCHandlerThread);
-      callIfIsObjptr (s, f, &s->procStates[proc].currentThread);
-      callIfIsObjptr (s, f, &s->procStates[proc].savedThread);
-      callIfIsObjptr (s, f, &s->procStates[proc].signalHandlerThread);
-      callIfIsObjptr (s, f, &s->procStates[proc].savedClosure);
-      callIfIsObjptr (s, f, &s->procStates[proc].pacmlThreadId);
+  for (int proc = 0; proc < s->numberOfProcs; proc++) {
+    callIfIsObjptr (s, f, (objptr*)procStates[proc].callFromCHandlerThread);
+    callIfIsObjptr (s, f, (objptr*)procStates[proc].currentThread);
+    callIfIsObjptr (s, f, (objptr*)procStates[proc].savedThread);
+    callIfIsObjptr (s, f, (objptr*)procStates[proc].signalHandlerThread);
+    callIfIsObjptr (s, f, (objptr*)procStates[proc].savedClosure);
+    callIfIsObjptr (s, f, (objptr*)procStates[proc].pacmlThreadId);
 
-      if (s->procStates[proc].roots) {
-        for (uint32_t i = 0; i < s->procStates[proc].rootsLength; i++) {
-          callIfIsObjptr (s, f, &s->procStates[proc].roots[i]);
-        }
+    if (procStates[proc].roots) {
+      for (uint32_t i = 0; i < procStates[proc].rootsLength; i++) {
+        callIfIsObjptr (s, f, (objptr*)procStates[proc].roots[i]);
       }
-
-      for (int i=0; i < s->procStates[proc].danglingStackListSize; i++) {
-        GC_stack stk = (GC_stack) objptrToPointer (s->procStates[proc].danglingStackList[i],
-                                                   s->heap->start);
-        GC_thread thrd = NULL;
-
-        //If we are NOT in the middle of a heap translation, then stk will
-        //point to the correct object only after it has been translated.
-        if (s->translateState.from == BOGUS_POINTER)
-          thrd = (GC_thread) objptrToPointer (stk->thread, s->sharedHeap->start);
-
-        if (DEBUG_DETAILED)
-          fprintf (stderr, "foreachDanlingStack(1) i=%d stack="FMTPTR" [%d]\n",
-                   i, (uintptr_t)s->procStates[proc].danglingStackList[i], s->procId);
-        callIfIsObjptr (s, f, &(s->procStates[proc].danglingStackList[i]));
-
-        //If we are in the middle of a heap translation, then stk will point to
-        //the correct object only now.
-        if (s->translateState.from != BOGUS_POINTER) {
-          stk = (GC_stack) objptrToPointer (s->procStates[proc].danglingStackList[i], s->heap->start);
-          thrd = (GC_thread) objptrToPointer (stk->thread, s->sharedHeap->start);
-        }
-
-
-        if (DEBUG_DETAILED)
-          fprintf (stderr, "foreachDanlingStack(2) thrd="FMTPTR" i=%d [%d]\n",
-                   (uintptr_t)thrd, i, s->procId);
-
-        callIfIsObjptr (s, f, &thrd->stack);
-      }
-
-      foreachObjptrInWBAs (s, &s->procStates[proc], f);
-      foreachObjptrInSQ (s, s->procStates[proc].schedulerQueue, f);
-      callIfIsObjptr (s, f, &s->procStates[proc].forwardState.liftingObject);
     }
-  }
-  else {
-    assert (0 and "foreachGlobalObjptr: s->procStates not initialized");
+
+    for (int i=0; i < procStates[proc].danglingStackListSize; i++) {
+      GC_stack stk = (GC_stack) objptrToPointer (procStates[proc].danglingStackList[i],
+                                                  s->heap->start);
+      GC_thread thrd = NULL;
+
+      //If we are NOT in the middle of a heap translation, then stk will
+      //point to the correct object only after it has been translated.
+      if (s->translateState.from == BOGUS_POINTER)
+        thrd = (GC_thread) objptrToPointer (stk->thread, s->sharedHeap->start);
+
+      if (DEBUG_DETAILED)
+        fprintf (stderr, "foreachDanlingStack(1) i=%d stack="FMTPTR" [%d]\n",
+                  i, (uintptr_t)procStates[proc].danglingStackList[i], s->procId);
+      callIfIsObjptr (s, f, &(procStates[proc].danglingStackList[i]));
+
+      //If we are in the middle of a heap translation, then stk will point to
+      //the correct object only now.
+      if (s->translateState.from != BOGUS_POINTER) {
+        stk = (GC_stack) objptrToPointer (procStates[proc].danglingStackList[i], s->heap->start);
+        thrd = (GC_thread) objptrToPointer (stk->thread, s->sharedHeap->start);
+      }
+
+
+      if (DEBUG_DETAILED)
+        fprintf (stderr, "foreachDanlingStack(2) thrd="FMTPTR" i=%d [%d]\n",
+                  (uintptr_t)thrd, i, s->procId);
+
+      callIfIsObjptr (s, f, &thrd->stack);
+    }
+
+    foreachObjptrInWBAs (s, &procStates[proc], f);
+    foreachObjptrInSQ (s, procStates[proc].schedulerQueues[proc], f);
+    callIfIsObjptr (s, f, (objptr*)procStates[proc].forwardState.liftingObject);
   }
 }
 
@@ -100,7 +95,7 @@ void foreachGlobalObjptrInScope (GC_state s, GC_foreachObjptrFun f) {
   callIfIsObjptr (s, f, &s->savedClosure);
   callIfIsObjptr (s, f, &s->pacmlThreadId);
 
-  if (s->procStates and s->roots) {
+  if (s->roots) {
     for (uint32_t i = 0; i < s->rootsLength; i++)
       callIfIsObjptr (s, f, &s->roots[i]);
   }
@@ -137,7 +132,7 @@ void foreachGlobalObjptrInScope (GC_state s, GC_foreachObjptrFun f) {
     callIfIsObjptr (s, f, &thrd->stack);
   }
   foreachObjptrInWBAs (s, s, f);
-  foreachObjptrInSQ (s, s->schedulerQueue, f);
+  foreachObjptrInSQ (s, s->schedulerQueues[s->procId], f);
   callIfIsObjptr (s, f, &s->forwardState.liftingObject);
 }
 

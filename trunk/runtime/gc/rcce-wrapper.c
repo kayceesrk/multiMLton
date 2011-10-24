@@ -15,12 +15,13 @@ void MLton_RCCE_send (GC_state s, pointer p, int dest) {
 
   int me = Proc_processorNumber (s);
   assert (me != dest && me < s->numberOfProcs);
+  me++; //dummy to eliminate gcc warning
 
   size_t size = GC_size (s, p);
   objptr op = pointerToObjptr (p, s->heap->start);
   void* buffer = malloc_safe (size);
   s->forwardState.toStart = s->forwardState.back = buffer;
-  s->forwardState.toLimit = buffer + size;
+  s->forwardState.toLimit = (pointer)((char*)buffer + size);
 
   ENTER_LOCAL0 (s);
   copyObjptr (s, &op);
@@ -34,11 +35,11 @@ void MLton_RCCE_send (GC_state s, pointer p, int dest) {
     fprintf (stderr, "MLton_RCCE_send: sending control packet to %d\n", dest);
   RCCE_send ((char*)&cp, sizeof (MLton_RCCE_sendRecvControlPacket), dest);
   if (DEBUG_RCCE)
-    fprintf (stderr, "MLton_RCCE_send: sending object closure of size %ld to %ld\n",
+    fprintf (stderr, "MLton_RCCE_send: sending object closure of size %zu to %d\n",
              size, dest);
   RCCE_send ((char*)buffer, size, dest);
   if (DEBUG_RCCE)
-    fprintf (stderr, "MLton_RCCE_send: send object closure to %ld\n", dest);
+    fprintf (stderr, "MLton_RCCE_send: send object closure to %d\n", dest);
 
   free (buffer);
 }
@@ -53,7 +54,7 @@ pointer MLton_RCCE_recv (GC_state s, int src) {
 
   void* buffer = malloc_safe (cp.objectClosureSize);
   if (DEBUG_RCCE)
-    fprintf (stderr, "MLton_RCCE_recv: waiting for object closure of size %ld from %d\n",
+    fprintf (stderr, "MLton_RCCE_recv: waiting for object closure of size %zu from %d\n",
              cp.objectClosureSize, src);
   RCCE_recv ((char*)buffer, cp.objectClosureSize, src);
   if (DEBUG_RCCE)

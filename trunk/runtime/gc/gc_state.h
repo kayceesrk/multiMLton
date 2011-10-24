@@ -32,7 +32,10 @@ struct GC_state {
   struct GC_generationalMaps generationalMaps; /* generational maps for this heap */
 
   /* ML arrays and queues */
-  SchedulerQueue* schedulerQueue;
+  //This is an array of SchedulerQueue pointers (SchedulerQueue*), where each
+  //pointer corresponds to the scheduler queue of a particular processor.
+  //Hence, the size of the array is s->numberOfProcs.
+  SchedulerQueue** schedulerQueues;
 
   objptr* moveOnWBA;
   int32_t moveOnWBASize;
@@ -52,10 +55,12 @@ struct GC_state {
 
   pointer sharedFrontier;
   pointer sharedLimit;
+  size_t exnStack;
+
   bool tmpBool;
   pointer tmpPointer;
+  size_t tmpSizet;
   int32_t tmpInt;
-  size_t exnStack;
 
   /* Alphabetized fields follow. */
   size_t alignment; /* */
@@ -110,7 +115,6 @@ struct GC_state {
   GC_objectType objectTypes; /* Array of object types. */
   uint32_t objectTypesLength; /* Cardinality of objectTypes array. */
   PointerToCoreMap* pointerToCoreMap;
-  GC_state procStates; /* States for each processor */
   struct GC_profiling profiling;
   GC_frameIndex (*returnAddressToFrameIndex) (GC_returnAddress ra);
   uint32_t returnToC;
@@ -152,6 +156,7 @@ static void displayGCState (GC_state s, FILE *stream);
 static inline size_t sizeofGCStateCurrentStackUsed (GC_state s);
 static inline void setGCStateCurrentThreadAndStack (GC_state s);
 static void setGCStateCurrentSharedHeap (GC_state s,
+                                         GC_state procStates,
                                          size_t oldGenBytesRequested,
                                          size_t nurseryBytesRequested,
                                          bool duringInit);

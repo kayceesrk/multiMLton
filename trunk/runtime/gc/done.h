@@ -7,5 +7,6 @@
  */
 
 PRIVATE void GC_done (GC_state s);
-PRIVATE void GC_summaryWrite (void);
+void GC_doneAssist (GC_state s);
+PRIVATE void GC_summaryWrite (GC_state procStates);
 void doneAssist (GC_state s);

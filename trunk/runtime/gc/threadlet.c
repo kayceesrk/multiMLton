@@ -234,7 +234,7 @@ void GC_prefixAndSwitchTo (GC_state s, pointer p) {
             fprintf (stderr, "\tGrowingStack\n");
             fprintf (stderr, "\t\tstackTop = "FMTPTR"\n", (uintptr_t)s->stackTop);
             fprintf (stderr, "\t\tstackLimit = "FMTPTR"\n", (uintptr_t)s->stackLimit);
-            fprintf (stderr, "\t\tparasiteSize = %ld\n", stk->used);
+            fprintf (stderr, "\t\tparasiteSize = %zu\n", stk->used);
         }
 
         /* XXX KC This is a temporary fix. Might break if parasite was
@@ -297,7 +297,7 @@ void GC_prefixAndSwitchTo (GC_state s, pointer p) {
     s->exnStack = curThread->exnStack;
 
     if (DEBUG_SPLICE) {
-        fprintf (stderr, "\tprefixing frame of size %ld\n", stk->used);
+        fprintf (stderr, "\tprefixing frame of size %zu\n", stk->used);
         fprintf (stderr, "\tnewStackTop = "FMTPTR"\n", (uintptr_t) s->stackTop);
         fflush (stderr);
     }

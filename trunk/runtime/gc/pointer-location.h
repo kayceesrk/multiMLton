@@ -45,9 +45,10 @@ typedef struct {
 static void initPointerToCore (GC_state s, size_t size);
 static void finalizePointerToCore (GC_state s);
 static void insertPointerToCore (GC_state s, pointer p, uint32_t core, bool isDanglingStack);
-static uint32_t getCoreIdFromPointer (GC_state s, pointer p);
+static int32_t getCoreIdFromPointer (GC_state s, pointer p);
 static int32_t getCoreIdFromPointer_safe (GC_state s, pointer p);
 static bool isPointerInAnotherCore (GC_state s, objptr* opp, pointer p);
+static int32_t testPointerIsDanglingStack (GC_state s, pointer p);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */
 

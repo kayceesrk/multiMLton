@@ -52,14 +52,13 @@ void swapHeapsForCheneyCopy (GC_state s) {
   setCardMapAbsolute (s);
 }
 
+//Every core must call this function after shared major cheney copy
 void swapHeapsForSharedCheneyCopy (GC_state s) {
+  assert (0);
   GC_heap tempHeap;
-  for (int proc = 0; proc < s->numberOfProcs; proc++) {
-    tempHeap = s->procStates[proc].secondarySharedHeap;
-    s->procStates[proc].secondarySharedHeap =
-        s->procStates[proc].sharedHeap;
-    s->procStates[proc].sharedHeap = tempHeap;
-  }
+  tempHeap = s->secondarySharedHeap;
+  s->secondarySharedHeap = s->sharedHeap;
+  s->sharedHeap = tempHeap;
 }
 
 void majorCheneyCopyGC (GC_state s) {
@@ -224,7 +223,7 @@ void majorCheneyCopySharedGC (GC_state s) {
   /* The last processor must broadcast the forwardState.back value so that
    * everyone gets the most updated values */
   {
-  forwardStateBack = BOGUS_OBJPTR;
+  forwardStateBack = (pointer)BOGUS_OBJPTR;
   if (Proc_processorNumber (s) == (s->numberOfProcs - 1))
     forwardStateBack = s->forwardState.back;
   RCCE_bcast ((char*)&forwardStateBack, sizeof (pointer),
@@ -267,7 +266,7 @@ void majorCheneyCopySharedGC (GC_state s) {
   /* The last processor must broadcast the forwardState.back value so that
    * everyone gets the most updated values */
   {
-  forwardStateBack = BOGUS_OBJPTR;
+  forwardStateBack = (pointer)BOGUS_OBJPTR;
   if (Proc_processorNumber (s) == (s->numberOfProcs - 1))
     forwardStateBack = s->forwardState.back;
   RCCE_bcast ((char*)&forwardStateBack, sizeof (pointer),
@@ -308,6 +307,7 @@ void majorCheneyCopySharedGC (GC_state s) {
   }
   else {
     assistSharedToSpaceWalking (s);
+    swapHeapsForSharedCheneyCopy (s);
   }
 }
 

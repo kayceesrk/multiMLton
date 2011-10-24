@@ -156,7 +156,9 @@ void initWorld (GC_state s) {
   initIntInfs (s);
   initVectors (s);
   s->sharedHeap->oldGenSize = s->sharedFrontier - s->sharedHeap->start;
-  setGCStateCurrentSharedHeap (s, 0, 0, true);
+
+  //XXX this has been moved to c-main.h
+  //setGCStateCurrentSharedHeap (s, 0, 0, true);
 
   //set up local heap
   createHeap (s, s->heap, LOCAL_HEAP, sizeofHeapDesired (s, 65536, 0, LOCAL_HEAP), 0);

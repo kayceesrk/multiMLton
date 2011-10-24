@@ -83,7 +83,7 @@ void growStackCurrent (GC_state s, bool allocInOldGen, size_t reservedNew) {
 
   /* If the thread is in the shared heap and the new stack is not in the
    * dangling stack list, add it. */
-  if (isPointerInHeap (s, s->sharedHeap, getThreadCurrent(s)) &&
+  if (isPointerInHeap (s, s->sharedHeap, (pointer)getThreadCurrent(s)) &&
       !isInDanglingStackList (s, getThreadCurrent(s)->stack))
     addToDanglingStackList (s, getThreadCurrent (s)->stack);
 
@@ -233,7 +233,7 @@ void performSharedGCCollective (GC_state s,
   else { //XXX KC can the following walks be avoided, or atleast made cheaper??
     if (DEBUG)
       fprintf (stderr, "performSharedGC: starting fixing forwarding pointers. Frontier = "FMTPTR" [%d]\n",
-               s->frontier, s->procId);
+               (uintptr_t)s->frontier, s->procId);
 
     //Fix up just the forwarding pointers
     foreachGlobalObjptrInScope (s, fixFwdObjptr);
@@ -249,7 +249,7 @@ void performSharedGCCollective (GC_state s,
 
     if (DEBUG)
       fprintf (stderr, "performSharedGC: finished fixing forwarding pointers. Frontier = "FMTPTR" [%d]\n",
-               s->frontier, s->procId);
+               (uintptr_t)s->frontier, s->procId);
   }
 
 
@@ -266,8 +266,20 @@ void performSharedGCCollective (GC_state s,
     if (DEBUG_DETAILED)
       fprintf (stderr, "Core 0: letting other processors proceed\n");
     RCCE_shflush ();
+    //Other processors are waiting in ENTER0
     RCCE_barrier (&RCCE_COMM_WORLD);
+    //Now bcast the pointerToCoreMap
+    PointerToCoreMap* p = s->pointerToCoreMap;
+    RCCE_bcast ((char*)&p, sizeof (PointerToCoreMap*), 0, RCCE_COMM_WORLD);
   }
+  else {
+    //Other cores fetch the pointerToCoreMap
+    PointerToCoreMap* p = NULL;
+    RCCE_bcast ((char*)&p, sizeof (PointerToCoreMap*), 0, RCCE_COMM_WORLD);
+    s->pointerToCoreMap = p;
+  }
+
+  RCCE_barrier (&RCCE_COMM_WORLD);
 
   /* Add pointer->coreID location for the dangling stacks */
   for (int i=0; i < s->danglingStackListSize; i++) {
@@ -450,7 +462,9 @@ void performSharedGCCollective (GC_state s,
       RCCE_bcast ((char*)&needsTranslateShared, sizeof (bool), 0, RCCE_COMM_WORLD);
     }
     assert (s->sharedHeap->oldGenSize + bytesRequested <= s->sharedHeap->size);
-    setGCStateCurrentSharedHeap (s, 0, 0, FALSE);
+
+    setSharedHeapState (s, FALSE);
+
     s->cumulativeStatistics->bytesFilled += bytesFilled;
     if (DEBUG)
       fprintf (stderr, "[GC: Finished shared heap gc #%s; oldGenSize is %s]\n",
@@ -475,8 +489,11 @@ void performSharedGCCollective (GC_state s,
       translateSharedHeap (s, from, to, size);
     }
 
-    bytesRequested = getThreadCurrent(s)->bytesNeeded;
-    RCCE_send ((char*)&bytesRequested, sizeof (size_t), 0);
+    //tmpSizet will be used by setGCStateCurrentSharedHeap
+    s->tmpSizet = getThreadCurrent(s)->bytesNeeded;
+    assistSetSharedHeapState (s);
+
+    finalizePointerToCore (s);
     RCCE_barrier (&RCCE_COMM_WORLD);
     RCCE_shflush ();
   }
@@ -727,7 +744,8 @@ static bool allocChunkInSharedHeap (GC_state s,
       newStart = oldFrontier;
     }
 
-    if (Parallel_compareAndSwap (&s->sharedHeap->frontier, oldFrontier, newHeapFrontier)) {
+    if (Parallel_compareAndSwap ((pointer)&s->sharedHeap->frontier,
+                                 (Int32)oldFrontier, (Int32)newHeapFrontier)) {
       if (DEBUG)
         fprintf (stderr, "[GC: Shared alloction of chunk @ "FMTPTR".] [%d]\n",
                  (uintptr_t)newProcFrontier, s->procId);
@@ -806,7 +824,8 @@ static void maybeSatisfyAllocationRequestLocally (GC_state s,
       newStart = oldFrontier;
     }
 
-    if (Parallel_compareAndSwap (&s->heap->frontier, oldFrontier, newHeapFrontier)) {
+    if (Parallel_compareAndSwap ((pointer)&s->heap->frontier,
+                                 (Int32)oldFrontier, (Int32)newHeapFrontier)) {
       if (DEBUG)
         fprintf (stderr, "[GC: Local alloction of chunk @ "FMTPTR".]\n",
                  (uintptr_t)newProcFrontier);
@@ -862,7 +881,7 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
   }
 
   if (forceStackGrowthBytes && DEBUG_SPLICE)
-      fprintf (stderr, "stackBytesRequested = %ld\n", stackBytesRequested);
+      fprintf (stderr, "stackBytesRequested = %zu\n", stackBytesRequested);
 
   /* try to satisfy (at least part of the) request locally */
   maybeSatisfyAllocationRequestLocally (s, nurseryBytesRequested + stackBytesRequested);
@@ -870,8 +889,7 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
   if (not stackTopOk
       and (hasHeapBytesFree (s, s->heap, 0, stackBytesRequested))) {
     if (DEBUG or s->controls->messages)
-      fprintf (stderr, "GC: growing stack locally... [%d]\n",
-               s->procStates ? Proc_processorNumber (s) : -1);
+      fprintf (stderr, "GC: growing stack locally... [%d]\n", s->procId);
     growStackCurrent (s, FALSE, forceStackGrowthBytes);
     setGCStateCurrentThreadAndStack (s);
   }
@@ -881,8 +899,7 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
              ensureStack, ensureStack and invariantForMutatorStack (s),
              hasHeapBytesFree (s, s->heap, oldGenBytesRequested, nurseryBytesRequested),
              Proc_threadInSection (s),
-             forceGC,
-             s->procStates ? Proc_processorNumber (s) : -1);
+             forceGC, s->procId);
   }
 
   if ( /* we have signals pending */
@@ -914,12 +931,12 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
     }
     else
       if (DEBUG or s->controls->messages)
-        fprintf (stderr, "GC: Skipping GC (inside of sync). [%d]\n", s->procStates ? Proc_processorNumber (s) : -1);
+        fprintf (stderr, "GC: Skipping GC (inside of sync). [%d]\n", s->procId);
     LEAVE_LOCAL0 (s);
   }
   else {
     if (DEBUG or s->controls->messages)
-      fprintf (stderr, "GC: Skipping GC (invariants already hold / request satisfied locally). [%d]\n", s->procStates ? Proc_processorNumber (s) : -1);
+      fprintf (stderr, "GC: Skipping GC (invariants already hold / request satisfied locally). [%d]\n", s->procId);
 
     /* These are safe even without ENTER/LEAVE */
     assert (isAligned (s->heap->size, s->sysvals.pageSize));

@@ -381,7 +381,7 @@ void forwardObjptr (GC_state s, objptr *opp) {
     }
     size = headerBytes + objectBytes;
     if (s->forwardState.back + size + skip > s->forwardState.toLimit) {
-      fprintf (stderr, "start: "FMTPTR" end: "FMTPTR" size: %ld\n",
+      fprintf (stderr, "start: "FMTPTR" end: "FMTPTR" size: %d\n",
                (uintptr_t)s->forwardState.toStart, (uintptr_t)s->forwardState.back,
                s->forwardState.back - s->forwardState.toStart);
 
@@ -505,7 +505,7 @@ void forwardObjptrForSharedMarkCompact (GC_state s, objptr *opp) {
     p = objptrToPointer (op, s->heap->start);
   }
 
-  if (isPointerInHeap (s, s->sharedHeap, (pointer)opp) and isPointerInAnyLocalHeap (s, p)) {
+  if (isPointerInHeap (s, s->sharedHeap, (pointer)opp)) { //isPointerInAnyLocalHeap (s, p)) {
     assert (0);
     GC_state r = /* getGCStateFromPointer (s, p); */ s;
 
@@ -579,7 +579,7 @@ static inline void forwardObjptrForSharedCheneyCopy (GC_state s, objptr *opp) {
     assist.forwardBack = s->forwardState.back;
     assist.opp = opp;
 
-    uint32_t coreId = getCoreIdFromPointer (s, p);
+    int32_t coreId = getCoreIdFromPointer (s, p);
     if (coreId != Proc_processorNumber (s)) {
       if (DEBUG_DETAILED)
         fprintf (stderr, "forwardObjptrForSharedCheneyCopy: delegating to %d\n",
@@ -780,7 +780,7 @@ void fixFwdObjptr (GC_state s, objptr* opp) {
 
       /* Avoid reading another cores's address */
       if (s->pointerToCoreMap && isPointerInHeap (s, s->sharedHeap, (pointer)opp)) {
-        int coreId = getCoreIdFromPointer_safe (s, *opp);
+        int coreId = getCoreIdFromPointer_safe (s, (pointer)*opp);
         if (coreId != -1 && coreId != Proc_processorNumber (s))
           break;
       }

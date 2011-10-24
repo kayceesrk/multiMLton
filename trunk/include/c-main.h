@@ -251,34 +251,25 @@ PUBLIC int MLton_main (int argc, char* argv[]) {                        \
           exit (1);                                                     \
         }                                                               \
         struct GC_state s;                                              \
-        gcState = (GC_state) RCCE_shmalloc ((RCCE_num_ues ()) * sizeof (struct GC_state)); \
+        s.procId = RCCE_ue ();                                          \
         createGlobals ();                                               \
-        fprintf (stderr, "gcState = %p\n", gcState);                    \
         if (RCCE_ue () == 0) {                                          \
           /* Initialize with a generic state to read in @MLtons, etc */ \
           Initialize (s, al, mg, mfs, mmc, pk, ps, gnr);                \
-          /* Now copy initialization to the first processor state */    \
-          memcpy (&gcState[0], &s, sizeof (struct GC_state));           \
-          gcState[0].procStates = gcState;                              \
-          gcState[0].procId = 0;                                        \
-          GC_lateInit (&gcState[0]);                                    \
-          /* Fill in per-processor data structures */                   \
-          for (int procNo = 1; procNo < gcState[0].numberOfProcs; procNo++) { \
-            gcState[procNo].procStates = gcState;                       \
-            gcState[procNo].procId = procNo;                            \
-          }                                                             \
-          RCCE_shflush ();                                              \
-          RCCE_barrier (&RCCE_COMM_WORLD);                              \
+          GC_lateInit (&s);                                             \
+          /* Bcast s0 for duplication */                                \
+          RCCE_bcast ((char*)&s, sizeof (struct GC_state), 0, RCCE_COMM_WORLD); \
+          setInitSharedHeapState (&s, TRUE);                            \
         }                                                               \
-        else {                                                          \
-          RCCE_barrier (&RCCE_COMM_WORLD);                              \
-          RCCE_shflush ();                                              \
-          Duplicate (&gcState[RCCE_ue ()], &gcState[0]);                \
+        if (RCCE_ue () != 0) {                                          \
+          struct GC_state s0;                                           \
+          /* Recv s0 and duplicate */                                   \
+          RCCE_bcast ((char*)&s0, sizeof (struct GC_state), 0, RCCE_COMM_WORLD); \
+          Duplicate (&s, &s0);                                          \
+          assistSetInitSharedHeapState (&s);                            \
         }                                                               \
-        RCCE_shflush ();                                                \
         RCCE_barrier (&RCCE_COMM_WORLD);                                \
-        RCCE_shflush ();                                                \
-        run ((void *)&gcState[RCCE_ue ()]);                             \
+        run ((void *)&s);                                               \
 }
 
 /*XXX KC : Not sure if gcState is correct*/

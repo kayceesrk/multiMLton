@@ -58,8 +58,9 @@ void loadWorldFromFILE (GC_state s, FILE *f) {
   loadArray (s->preemptOnWBA, sizeof (objptr), &s->preemptOnWBASize, &s->preemptOnWBAMaxSize, f);
   loadArray (s->spawnOnWBA, sizeof (SpawnThread), &s->spawnOnWBASize, &s->spawnOnWBAMaxSize, f);
 
-  loadCircularBuffer (s->schedulerQueue->primary, f);
-  loadCircularBuffer (s->schedulerQueue->secondary, f);
+  //XXX untested
+  loadCircularBuffer (s->schedulerQueues[0]->primary, f);
+  loadCircularBuffer (s->schedulerQueues[0]->secondary, f);
 
   createHeap (s, s->heap, LOCAL_HEAP,
               sizeofHeapDesired (s, s->heap->oldGenSize, 0, LOCAL_HEAP),
@@ -83,7 +84,8 @@ void loadWorldFromFILE (GC_state s, FILE *f) {
   translateHeap (s, start, s->heap->start, s->heap->oldGenSize);
   translateSharedHeap (s, sharedStart, s->sharedHeap->start, s->sharedHeap->oldGenSize);
   setGCStateCurrentLocalHeap (s, 0, 0);
-  setGCStateCurrentSharedHeap (s, 0, 0, FALSE);
+  //XXX Untested
+  setGCStateCurrentSharedHeap (s, s, 0, 0, FALSE);
   setGCStateCurrentThreadAndStack (s);
 }
 
@@ -145,9 +147,9 @@ int saveWorldToFILE (GC_state s, FILE *f) {
                  s->spawnOnWBASize,
                  s->spawnOnWBAMaxSize, f) == -1) return -1;
 
-  if (saveCircularBuffer (s->schedulerQueue->primary, f) == -1)
+  if (saveCircularBuffer (s->schedulerQueues[s->procId]->primary, f) == -1)
     return -1;
-  if (saveCircularBuffer (s->schedulerQueue->secondary, f) == -1)
+  if (saveCircularBuffer (s->schedulerQueues[s->procId]->secondary, f) == -1)
     return -1;
 
   if (fwrite (s->heap->start, 1, s->heap->oldGenSize, f) != s->heap->oldGenSize)

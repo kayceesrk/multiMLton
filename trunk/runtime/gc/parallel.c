@@ -39,7 +39,7 @@ void Parallel_assistInit (GC_state s) {
   pointer bottom = getStackBottom (s, stk);
   RCCE_bcast ((char*)bottom, reserved, 0, RCCE_COMM_WORLD);
   stk->used = reserved;
-  s->callFromCHandlerThread = pointerToObjptr (thrd, s->heap->start);
+  s->callFromCHandlerThread = pointerToObjptr ((pointer)thrd, s->heap->start);
 }
 
 Int32 Parallel_processorNumber (void) {

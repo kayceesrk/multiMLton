@@ -181,7 +181,7 @@ thread:
         front += size;
         if (DEBUG_MARK_COMPACT) {
           fprintf (stderr, "updateForwardPointers: threading saw forwarded object.\n");
-          fprintf (stderr, "\tp="FMTPTR" of size=%ld. New gap=%ld. New front="FMTPTR"\n",
+          fprintf (stderr, "\tp="FMTPTR" of size=%zu. New gap=%zu. New front="FMTPTR"\n",
                    (uintptr_t)p, size, gap, (uintptr_t)front);
         }
         goto updateObject;
@@ -369,7 +369,7 @@ unmark:
         front += size;
         if (DEBUG_MARK_COMPACT) {
           fprintf (stderr, "updateBackwardPointers: threading saw forwarded object.\n");
-          fprintf (stderr, "\tp="FMTPTR" of size=%ld. New gap=%ld. New front="FMTPTR"\n",
+          fprintf (stderr, "\tp="FMTPTR" of size=%zu. New gap=%zu. New front="FMTPTR"\n",
                    (uintptr_t)p, size, gap, (uintptr_t)front);
         }
         goto updateObject;
@@ -561,6 +561,7 @@ void headerCheck (GC_state s, pointer front, pointer back) {
 }
 
 void majorMarkCompactSharedGC (GC_state s) {
+#if 0
   size_t bytesMarkCompacted;
   GC_stack* currentStacks;
   struct rusage ru_start;
@@ -684,4 +685,5 @@ void majorMarkCompactSharedGC (GC_state s) {
 
   if (DEBUG or s->controls->messages)
     fprintf (stderr, "[GC: Finished shared major mark-compact.]\n");
+#endif
 }

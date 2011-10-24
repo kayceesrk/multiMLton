@@ -97,11 +97,16 @@ static inline CircularBuffer* getSubQ (SchedulerQueue* sq, int i) {
   }
 }
 
+/* Creates the scheduler queues for the current processor */
 void GC_sqCreateQueues (GC_state s) {
-  assert (s->procStates);
-  for (int proc=0; proc < s->numberOfProcs; proc++) {
-    s->procStates[proc].schedulerQueue = newSchedulerQueue ();
+  if (Proc_processorNumber (s) != 0) {
+    assert ("GC_sqCreateQueues should only be called by processor 0" && 0);
+    fprintf (stderr, "GC_sqCreateQueues should only be called by processor 0\n");
+    exit (1);
   }
+  s->schedulerQueues = (SchedulerQueue**) GC_shmalloc (sizeof (SchedulerQueue*) * s->numberOfProcs);
+  for (int proc=0; proc < s->numberOfProcs; proc++)
+    s->schedulerQueues[proc] = newSchedulerQueue ();
 }
 
 void sqEnque (GC_state s, pointer p, int proc, int i) {
@@ -110,20 +115,19 @@ void sqEnque (GC_state s, pointer p, int proc, int i) {
               (uintptr_t)p, proc, i, s->procId);
 
   assert (p);
-  GC_state fromProc = &s->procStates[proc];
-  objptr op = pointerToObjptr (p, fromProc->heap->start);
+  objptr op = pointerToObjptr (p, s->heap->start);
   assert (isPointerInHeap (s, s->sharedHeap, p) or
           ((int)s->procId == proc));
 
-  CircularBuffer* cq = getSubQ (fromProc->schedulerQueue, i);
+  CircularBuffer* cq = getSubQ (s->schedulerQueues[proc], i);
   if (CircularBufferIsFull(cq)) {
     if (i == 0)
-      fromProc->schedulerQueue->primary = growCircularBuffer (cq);
+      s->schedulerQueues[proc]->primary = growCircularBuffer (cq);
     else if (i == 1)
-      fromProc->schedulerQueue->secondary = growCircularBuffer (cq);
+      s->schedulerQueues[proc]->secondary = growCircularBuffer (cq);
     else
-      fromProc->schedulerQueue->parasites = growCircularBuffer (cq);
-    cq = getSubQ (fromProc->schedulerQueue, i);
+      s->schedulerQueues[proc]->parasites = growCircularBuffer (cq);
+    cq = getSubQ (s->schedulerQueues[proc], i);
   }
   assert (!CircularBufferIsFull(cq));
   CircularBufferEnque (cq, op);
@@ -138,9 +142,9 @@ void GC_sqEnque (GC_state s, pointer p, int proc, int i) {
 
 
 static inline bool sqIsEmptyPrio (GC_state s, int i) {
-  if (!s->schedulerQueue)
+  if (!s->schedulerQueues[s->procId])
     return TRUE;
-  CircularBuffer* cq = getSubQ (s->schedulerQueue, i);
+  CircularBuffer* cq = getSubQ (s->schedulerQueues[s->procId], i);
   return CircularBufferIsEmpty (cq);
 }
 
@@ -163,7 +167,7 @@ pointer GC_sqDeque (GC_state s, int i) {
 
   GC_sqAcquireLock (s, s->procId);
 
-  CircularBuffer* cq = getSubQ (s->schedulerQueue, i);
+  CircularBuffer* cq = getSubQ (s->schedulerQueues[s->procId], i);
   objptr op = (objptr)NULL;
   pointer res = (pointer)NULL;
   if (!CircularBufferDeque (cq, &op))
@@ -184,15 +188,15 @@ pointer GC_sqDeque (GC_state s, int i) {
 
 bool GC_sqIsEmptyPrio (int i) {
   GC_state s = pthread_getspecific (gcstate_key);
-  CircularBuffer* cq = getSubQ (s->schedulerQueue, i);
+  CircularBuffer* cq = getSubQ (s->schedulerQueues[s->procId], i);
   return CircularBufferIsEmpty (cq);
 }
 
 static inline void moveAllThreadsFromSecToPrim (GC_state s) {
   GC_sqAcquireLock (s, s->procId);
 
-  CircularBuffer* prim = getSubQ (s->schedulerQueue, 0);
-  CircularBuffer* sec = getSubQ (s->schedulerQueue, 1);
+  CircularBuffer* prim = getSubQ (s->schedulerQueues[s->procId], 0);
+  CircularBuffer* sec = getSubQ (s->schedulerQueues[s->procId], 1);
   objptr op = (objptr)NULL;
 
   while (!CircularBufferDeque (sec, &op)) {
@@ -205,8 +209,8 @@ static inline void moveAllThreadsFromSecToPrim (GC_state s) {
 
 bool GC_sqIsEmpty (GC_state s) {
   maybeWaitForGC (s);
-  bool resPrim = CircularBufferIsEmpty (s->schedulerQueue->primary);
-  bool resSec = CircularBufferIsEmpty (s->schedulerQueue->secondary);
+  bool resPrim = CircularBufferIsEmpty (s->schedulerQueues[s->procId]->primary);
+  bool resSec = CircularBufferIsEmpty (s->schedulerQueues[s->procId]->secondary);
   if (resPrim && (s->preemptOnWBASize != 0 || s->spawnOnWBASize != 0)) {
     /* Force a GC if we find that the primary scheduler queue is empty and
      * preemptOnWBA is not */
@@ -219,11 +223,10 @@ bool GC_sqIsEmpty (GC_state s) {
 }
 
 void GC_sqClean (GC_state s) {
-  assert (s->procStates);
   for (int proc=0; proc < s->numberOfProcs; proc++) {
-    CircularBufferClean (s->schedulerQueue->primary);
-    CircularBufferClean (s->schedulerQueue->secondary);
-    CircularBufferClean (s->schedulerQueue->parasites);
+    CircularBufferClean (s->schedulerQueues[s->procId]->primary);
+    CircularBufferClean (s->schedulerQueues[s->procId]->secondary);
+    CircularBufferClean (s->schedulerQueues[s->procId]->parasites);
   }
 }
 
@@ -257,7 +260,7 @@ void foreachObjptrInSQ (GC_state s, SchedulerQueue* sq, GC_foreachObjptrFun f) {
 }
 
 int sizeofSchedulerQueue (GC_state s, int i) {
-  SchedulerQueue* sq = s->schedulerQueue;
+  SchedulerQueue* sq = s->schedulerQueues[s->procId];
   assert (sq);
   int total = 0;
   CircularBuffer* cq = getSubQ (sq, i);

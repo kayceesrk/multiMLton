@@ -15,23 +15,22 @@ void initPointerToCore (GC_state s, size_t size) {
   int sz=size*sizeof(PointerToCore)+sizeof(PointerToCoreMap);
   PointerToCoreMap* map = (PointerToCoreMap*) GC_shmalloc (sz);
   if (map == NULL) {
-    fprintf (stderr, "initPointerToCore: GC_shmalloc with size %ld failed\n", sz);
+    fprintf (stderr, "initPointerToCore: GC_shmalloc with size %zu failed\n", sz);
     exit(1);
   }
   map->maxSize = size;
   map->size = 0;
-  for (int proc=0; proc < s->numberOfProcs; proc++)
-    s->procStates[proc].pointerToCoreMap = map;
+  s->pointerToCoreMap = map;
 }
 
+//Must be called by each processor
 void finalizePointerToCore (GC_state s) {
   if (Proc_processorNumber (s) != 0) {
     fprintf (stderr, "finalizePointerToCore: Must be called only by processor 0\n");
     exit (1);
   }
-  RCCE_shfree (s->pointerToCoreMap);
-  for (int proc=0; proc < s->numberOfProcs; proc++)
-    s->pointerToCoreMap = NULL;
+  RCCE_shfree ((void*)s->pointerToCoreMap);
+  s->pointerToCoreMap = NULL;
 }
 
 /* We will only remember pointers p in local heap, whose opp is in shared heap. */
@@ -54,8 +53,8 @@ void insertPointerToCore (GC_state s, pointer p, uint32_t core, bool isDanglingS
       }
       else {
         assert (map->elem[i].core == core);
-        fprintf (stderr, "insertPointerToCore: pointer "FMTPTR" already associated with core %d\n",
-                 p, map->elem[i].core);
+        fprintf (stderr, "insertPointerToCore: pointer "FMTPTR" already associated with core %u\n",
+                 (uintptr_t)p, map->elem[i].core);
         exit (1);
       }
     }
@@ -75,7 +74,7 @@ void insertPointerToCore (GC_state s, pointer p, uint32_t core, bool isDanglingS
   Parallel_unlock (0);
 }
 
-static uint32_t getCoreIdFromPointer (GC_state s, pointer p) {
+static int32_t getCoreIdFromPointer (GC_state s, pointer p) {
   PointerToCoreMap* map = s->pointerToCoreMap;
   for (size_t i=0; i < map->size; i++) {
     if (map->elem[i].p == p)

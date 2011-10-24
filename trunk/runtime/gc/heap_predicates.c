@@ -112,12 +112,3 @@ static inline GC_numReferences countReferences (GC_header header) {
     return MANY;
   return (header & VIRGIN_MASK) >> VIRGIN_SHIFT;
 }
-
-bool isPointerInAnyLocalHeap (GC_state s, pointer p) {
-  for (int proc = 0; proc < s->numberOfProcs; proc++) {
-    GC_state r = &s->procStates[proc];
-    if (isPointerInHeap (r, r->heap, p))
-      return TRUE;
-  }
-  return FALSE;
-}

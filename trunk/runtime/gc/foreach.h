@@ -16,7 +16,7 @@ static inline void callIfIsObjptr (GC_state s, GC_foreachObjptrFun f, objptr *op
  *
  * Apply f to each global object pointer into the heap.
  */
-static inline void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f);
+static inline void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f, GC_state procStates);
 static inline void foreachGlobalObjptrInScope (GC_state s, GC_foreachObjptrFun f);
 /* foreachObjptrInObject (s, p, skipWeaks, f)
  *

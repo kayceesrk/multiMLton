@@ -353,6 +353,10 @@ static GC_state gs0 = NULL;
 
 
 void GC_handleSigProf (code_pointer pc) {
+  assert ("GC_handleSigProf: Not implemented" && 0);
+  fprintf (stderr, "GC_handleSigProf: Not implemented\n");
+  exit (1);
+#if 0
   GC_frameIndex frameIndex;
   GC_state s;
   GC_sourceSeqIndex sourceSeqsIndex;
@@ -412,6 +416,7 @@ void GC_handleSigProf (code_pointer pc) {
     }
   }
   incForProfiling (s, 1, sourceSeqsIndex);
+#endif
 }
 
 void GC_profileDisable (void) {
@@ -512,6 +517,10 @@ void initProfiling (GC_state s) {
 }
 
 void GC_profileDone (__attribute__ ((unused)) GC_state *gs) {
+  assert ("GC_profileDone: Not implemented" && 0);
+  fprintf (stderr, "GC_profileDone: Not implemented\n");
+  exit (1);
+#if 0
   GC_profileData p;
   GC_profileMasterIndex profileMasterIndex;
   GC_state s0 = pthread_getspecific (gcstate_key);
@@ -548,6 +557,7 @@ void GC_profileDone (__attribute__ ((unused)) GC_state *gs) {
     profileWrite (s, s->profiling.data, fname);
     //XXX KC should I cleanup profiling data here??
   }
+#endif
 }
 
 GC_profileData GC_getProfileCurrent (__attribute__ ((unused)) GC_state *gs) {

@@ -12,6 +12,8 @@
 
 static int processAtMLton (GC_state s, int argc,
                            char **argv, char **worldFile);
+void setSharedHeapState (GC_state s, bool duringInit);
+void assistSetSharedHeapState (GC_state s);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */
 

@@ -68,7 +68,7 @@ static inline void liftObjptrAndFillOrig (GC_state s, objptr *opp) {
     size_t objSize = sizeofObject (s, new_p);
     old_p -= sizeofObjectHeader (s, getHeader (new_p));
     if (DEBUG_DETAILED)
-      fprintf (stderr, "\t filling Gap between "FMTPTR" and "FMTPTR" of size %ld [%d]\n",
+      fprintf (stderr, "\t filling Gap between "FMTPTR" and "FMTPTR" of size %zu [%d]\n",
                (uintptr_t)old_p, (uintptr_t)(old_p + objSize), objSize, s->procId);
     fillGap (s, old_p, old_p + objSize);
   }
@@ -366,7 +366,7 @@ void moveEachObjptrInObject (GC_state s, pointer p) {
 void liftAllObjptrsInMoveOnWBA (GC_state s) {
 
   s->cumulativeStatistics->numPreemptGC += s->preemptOnWBASize;
-  if (s->schedulerQueue) {
+  if (s->schedulerQueues) {
     s->cumulativeStatistics->numReadyPrimGC += sizeofSchedulerQueue (s, 0);
     s->cumulativeStatistics->numReadySecGC += sizeofSchedulerQueue (s, 1);
   }

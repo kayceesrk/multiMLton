@@ -12,5 +12,5 @@ void* GC_shmalloc (size_t size) {
     fprintf (stderr, "Should not call GC_shmalloc from cores other than core 0\n");
     exit (1);
   }
-  return (void*) RCCE_shmalloc (size);
+  return RCCE_shmalloc (size);
 }
