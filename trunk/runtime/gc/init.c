@@ -490,7 +490,7 @@ int GC_init (GC_state s, int argc, char **argv) {
   assert (sizeofWeak (s) == sizeofWeak (s));
 
   s->sendIntent = (int*) GC_shmalloc (sizeof (int) * RCCE_num_ues ());
-  s->recvIntent = (int*) GC_shmalloc (sizeof (int) * RCCE_num_use ());
+  s->recvIntent = (int*) GC_shmalloc (sizeof (int) * RCCE_num_ues ());
 
   for (int i=0; i < RCCE_num_ues(); i++)
     s->sendIntent[i] = s->recvIntent[i] = -1;
