@@ -271,6 +271,11 @@ void addToDanglingStackList (GC_state s, objptr op) {
   s->danglingStackList[s->danglingStackListSize - 1] = op;
 }
 
+void foreachObjptrInDanglingStackList (GC_state s, GC_state fromState, GC_foreachObjptrFun f) {
+  for (int i=0; i < fromState->danglingStackListSize; i++)
+    callIfIsObjptr (s, f, &(fromState->danglingStackList [i]));
+}
+
 bool updateStackIfDangling (GC_state s, objptr old, objptr new) {
   for (int i=0; i < s->danglingStackListSize; i++) {
     if (s->danglingStackList[i] == old) {
@@ -281,6 +286,26 @@ bool updateStackIfDangling (GC_state s, objptr old, objptr new) {
     }
   }
   return FALSE;
+}
+
+void refreshDanglingStackList (GC_state s) {
+  int count = 0;
+  objptr* newDanglingStackList = (objptr*) malloc (sizeof (objptr) * s->danglingStackListMaxSize);
+  for (int i=0; i < s->danglingStackListSize; i++) {
+    GC_stack stk = (GC_stack) objptrToPointer (s->danglingStackList[i], s->heap->start);
+    fixFwdObjptr (s, &stk->thread);
+    if (not isPointerInHeap (s, s->heap, (pointer)stk->thread)) {
+      newDanglingStackList[count++] = s->danglingStackList[i];
+    }
+    else {
+      if (DEBUG_STACKS)
+        fprintf (stderr, "refreshDanglingStackList: Removing.. stack "FMTPTR" has thread "FMTPTR" in local heap [%d]\n",
+                 (uintptr_t)stk, (uintptr_t)stk->thread, s->procId);
+    }
+  }
+  free (s->danglingStackList);
+  s->danglingStackList = newDanglingStackList;
+  s->danglingStackListSize = count;
 }
 
 bool isInDanglingStackList (GC_state s, objptr p) {

@@ -39,6 +39,9 @@ void incSync (GC_state s) {
     case SYNC_MISC:
       s->cumulativeStatistics->syncMisc++;
       break;
+    case SYNC_LIFT_NO_GC:
+      s->cumulativeStatistics->syncForLiftNoGC++;
+      break;
     case SYNC_HELP:
       break;
   }

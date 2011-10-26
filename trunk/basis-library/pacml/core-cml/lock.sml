@@ -38,7 +38,7 @@ struct
     RepTypes.LOCK {state = ref 0,
                    lockId = ref ~1,
                    count = ref 0,
-                   que = CirQueue.new (512)}
+                   que = CirQueue.new ()}
 
   val FREE = 0
   val LOCKED = 1

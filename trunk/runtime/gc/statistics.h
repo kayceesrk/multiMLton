@@ -25,6 +25,7 @@ enum {
   SYNC_SIGNALS,
   /* When objects need to be lifted but GC is not invoked to fix forwarding
    * pointers */
+  SYNC_LIFT_NO_GC,
   SYNC_MISC,
   /* When some thread has requested a shared heap collection and we are joining
    * the barrier */
@@ -98,6 +99,7 @@ struct GC_cumulativeStatistics {
   uintmax_t syncForLift;
   uintmax_t syncForce;
   uintmax_t syncMisc;
+  uintmax_t syncForLiftNoGC;
 
   uintmax_t numPreemptWB; /* # calls to addToPreemptOnWBA -- actual # threads preempted on write barrier */
   uintmax_t numMoveWB; /* # calls to addToMoveOnWBA -- ideal # threads that should have been preempted on write barrier */

@@ -50,6 +50,14 @@ GC_header buildHeaderFromTypeIndex (uint32_t t) {
   return 1 | (t << 1);
 }
 
+bool objectHasIdentity (GC_state s, GC_header header) {
+  assert (header != GC_FORWARDED);
+  header &= ~(LIFT_MASK | VIRGIN_MASK);
+  unsigned objectTypeIndex =  (header & TYPE_INDEX_MASK) >> TYPE_INDEX_SHIFT;
+  GC_objectType objectType = &(s->objectTypes[objectTypeIndex]);
+  return objectType->hasIdentity;
+}
+
 void splitHeader(GC_state s, GC_header header, __attribute__((unused)) GC_header* headerpunused,
                  GC_objectTypeTag *tagRet, bool *hasIdentityRet,
                  uint16_t *bytesNonObjptrsRet, uint16_t *numObjptrsRet,
@@ -62,10 +70,7 @@ void splitHeader(GC_state s, GC_header header, __attribute__((unused)) GC_header
   GC_header* headerp = NULL;
 
   assert (header != GC_FORWARDED);
-  assert (headerp == NULL ||
-          isPointerInHeap (s, s->heap, headerp) ||
-          isPointerInHeap (s, s->sharedHeap, headerp));
-  header &= ~(LIFT_MASK);
+  header &= ~(LIFT_MASK | VIRGIN_MASK);
 
   if (DEBUG_DETAILED)
       fprintf (stderr, "splitHeader p="FMTPTR" ("FMTHDR") [%d]\n", (uintptr_t)headerp, header, s->procId);
@@ -138,6 +143,28 @@ pointer advanceToObjectData (__attribute__ ((unused)) GC_state s, pointer p) {
   return res;
 }
 
+pointer getBeginningOfObject (GC_state s, pointer p) {
+  GC_header header;
+  pointer res;
+  GC_objectTypeTag tag;
+
+  assert (isFrontierAligned (s, p));
+  objptr op = pointerToObjptr (p, s->heap->start);
+  fixFwdObjptr (s, &op);
+  header = getHeader ((pointer)op);
+
+  splitHeader (s, header, getHeaderp (p), &tag, NULL, NULL, NULL, NULL, NULL);
+  if (tag == ARRAY_TAG)
+    res = p - GC_ARRAY_HEADER_SIZE;
+  else
+    res = p - GC_NORMAL_HEADER_SIZE;
+  assert (isAligned ((uintptr_t)res, s->alignment));
+  if (DEBUG_DETAILED)
+    fprintf (stderr, FMTPTR" = getBeginningOfObject ("FMTPTR")\n",
+             (uintptr_t)res, (uintptr_t)p);
+  return res;
+}
+
 
 /* isObjectPointerVirgin (s, p)
  *
@@ -151,6 +178,9 @@ pointer advanceToObjectData (__attribute__ ((unused)) GC_state s, pointer p) {
  *
  */
 void isObjectPointerVirgin (GC_state s, pointer p) {
+  if (!s->tmpBool)
+    return;
+
   assert (s->tmpPointer != BOGUS_POINTER);
   bool isVirgin = FALSE;
 
@@ -158,6 +188,9 @@ void isObjectPointerVirgin (GC_state s, pointer p) {
     isVirgin = (countReferences (getHeader(p)) == ZERO);
   else
     isVirgin = (countReferences (getHeader(p)) < MANY);
+
+  if (!isVirgin && !objectHasIdentity(s, getHeader(p)))
+    isVirgin = TRUE;
 
   s->tmpBool = s->tmpBool && isVirgin;
 }
@@ -196,13 +229,12 @@ bool GC_objectTypeInfo (GC_state s, pointer p) {
                      hasIdentityTransitive, isUnbounded, objectTypeIndex,
                      isClosureVirgin, s->tmpInt);
   }
-  if (isClosureVirgin) {
-    s->syncReason = SYNC_MISC;
-    ENTER_LOCAL0(s);
-    GC_stack stk = getStackCurrent (s);
-    foreachObjptrInObject (s, (pointer)stk, fixFwdObjptr, TRUE);
-    LEAVE_LOCAL0(s);
-  }
 
   return isClosureVirgin;
+}
+
+void checkHeader (__attribute__((unused)) GC_state s, pointer p, char* file, int line) {
+  if ((getHeader (p) & ~(VIRGIN_MASK | LIFT_MASK)) == (GC_header)0x11) {
+    fprintf (stderr, "%s:%d P = "FMTPTR"\n", file, line, (uintptr_t)p);
+  }
 }

@@ -47,6 +47,16 @@ typedef struct GC_heap {
   pointer frontier; /* next (globally) unallocated space */
 } *GC_heap;
 
+
+typedef struct GC_objectSharingInfo {
+  //Location of the object in the shared heap
+  void* objectLocation;
+  //If the object is exclusively pointed from a single local heap, then this is
+  //the core id of the local heap. Otherwise, this is -1.
+  int32_t coreId;
+  UT_hash_handle hh;
+} *GC_objectSharingInfo;
+
 #define GC_HEAP_LIMIT_SLOP 512
 
 #endif /* (defined (MLTON_GC_INTERNAL_TYPES)) */

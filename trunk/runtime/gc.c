@@ -57,6 +57,7 @@ extern C_Pthread_Key_t gcstate_key;
 #include "gc/pointer-location.c"
 #include "gc/profiling.c"
 #include "gc/rcce-wrapper.c"
+#include "gc/reclaim.c"
 #include "gc/rusage.c"
 #include "gc/scheduler-queue.c"
 #include "gc/share.c"

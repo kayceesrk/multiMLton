@@ -84,33 +84,13 @@ pointer GC_copyThread (GC_state s, pointer p) {
     fprintf (stderr, "GC_copyThread ("FMTPTR") [%d]\n", (uintptr_t)p,
              Proc_processorNumber (s));
 
-  /* Used to be an ENTER here, but we don't really need to synchronize unless
-     we don't have enough room to allocate a new thread and stack. */
-
-  /* XXX copied from enter() */
-  /* used needs to be set because the mutator has changed s->stackTop. */
   getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
   getThreadCurrent(s)->exnStack = s->exnStack;
 
   fromThread = (GC_thread)(p + offsetofThread (s));
   fromStack = (GC_stack)(objptrToPointer(fromThread->stack, s->heap->start));
-  /* The following assert is no longer true, since alignment
-   * restrictions can force the reserved to be slightly larger than
-   * the used.
-   */
-  /* assert (fromStack->reserved == fromStack->used); */
   assert (fromStack->reserved >= fromStack->used);
   toThread = copyThread (s, s, fromThread, fromStack->reserved);
-  /* The following assert is no longer true, since alignment
-   * restrictions can force the reserved to be slightly larger than
-   * the used.
-   */
-  //toStack = (GC_stack)(objptrToPointer(toThread->stack, s->heap->start));
-  /* assert (fromStack->reserved == fromStack->used); */
-  /* Can't trust fromStack to be set properly (i.e. after GC). */
-  //assert (fromStack->reserved >= fromStack->used);
-
-  /* Formerly: LEAVE2 (s, "toThread", "fromThread"); */
 
   if (DEBUG_THREADS)
     fprintf (stderr, FMTPTR" = GC_copyThread ("FMTPTR") [%d]\n",

@@ -11,7 +11,7 @@
 /* ---------------------------------------------------------------- */
 
 
-//TODO KC merge local and shared translateions, use information in
+//TODO KC merge local and shared translations, use information in
 //translateState to decide if a pointer needs to be tranalated
 
 void translateObjptrLocal (GC_state s, objptr *opp) {

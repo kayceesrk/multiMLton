@@ -229,6 +229,11 @@ int processAtMLton (GC_state s, int argc, char **argv,
           if (i == argc)
             die ("@MLton may-page-heap missing argument.");
           s->controls->mayPageHeap = stringToBool (argv[i++]);
+        } else if (0 == strcmp (arg, "reclaim-objects")) {
+          i++;
+          if (i == argc)
+            die ("@MLton may-page-heap missing argument.");
+          s->controls->reclaimObjects = stringToBool (argv[i++]);
         } else if (0 == strcmp (arg, "no-load-world")) {
           i++;
           s->controls->mayLoadWorld = FALSE;
@@ -360,6 +365,7 @@ static inline void* initCumulativeStatistics (GC_state s) {
   cumul->syncForLift = 0;
   cumul->syncForce = 0;
   cumul->syncMisc = 0;
+  cumul->syncForLiftNoGC = 0;
   cumul->numCopyingGCs = 0;
   cumul->numCopyingSharedGCs = 0;
   cumul->numSharedGCs = 0;
@@ -479,6 +485,8 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->controls->ratios.stackMaxReserved = 8.0;
   s->controls->ratios.stackShrink = 0.5;
   s->controls->summary = SUMMARY_NONE;
+  s->controls->reclaimObjects = FALSE;
+
   s->forwardState.liftingObject = BOGUS_OBJPTR;
   s->forwardState.rangeListCurrent = NULL;
   s->forwardState.rangeListLast = NULL;
@@ -499,7 +507,6 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->lastMajorStatistics = (struct GC_lastMajorStatistics*)initLastMajorStatistics ();
   s->lastSharedMajorStatistics = (struct GC_lastSharedMajorStatistics*)initLastSharedMajorStatistics ();
   s->currentThread = BOGUS_OBJPTR;
-  s->selectiveDebug = FALSE;
   s->danglingStackList = NULL;
   s->hashConsDuringGC = FALSE;
   s->heap = (GC_heap) malloc (sizeof (struct GC_heap));
@@ -539,6 +546,7 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->weaks = NULL;
   s->saveWorldStatus = true;
   s->profiling.isProfilingTimeOn = false;
+  s->reachable = NULL;
 
   s->schedulerQueues = NULL;
 
@@ -639,7 +647,6 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->numIOThreads = s->numIOThreads;
   d->enableTimer = s->enableTimer;
   d->needsBarrier = s->needsBarrier;
-  d->selectiveDebug = FALSE;
   d->timeInterval = s->timeInterval;
   d->sharedHeapStart = s->sharedHeapStart;
   d->sharedHeapEnd = s->sharedHeapEnd;
@@ -663,6 +670,8 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->weaks = s->weaks;
   d->copiedSize = s->copiedSize;
   d->saveWorldStatus = s->saveWorldStatus;
+  d->reachable = NULL;
+
   d->forwardState.liftingObject = BOGUS_OBJPTR;
   d->translateState.from = BOGUS_POINTER;
   d->translateState.to = BOGUS_POINTER;
