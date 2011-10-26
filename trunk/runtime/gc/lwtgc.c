@@ -9,10 +9,7 @@
 /* Move an object from local heap to the shared heap */
 static inline void liftObjptr (GC_state s, objptr *opp) {
 
-  pointer p = objptrToPointer (*opp, s->heap->start);
-  if (getHeader (p) == GC_FORWARDED) {
-    *opp = *(objptr*)p;
-  }
+  fixFwdObjptr (s, opp);
   /* If pointer has already been forwarded, skip setting lift bit */
   if (isObjptrInHeap (s, s->sharedHeap, *opp)) {
     if (DEBUG_LWTGC) {
@@ -159,10 +156,6 @@ void liftAllObjectsDuringInit (GC_state s) {
     callIfIsObjptr (s, liftObjptr, &s->globals [i]);
   }
 
-
-  if (DEBUG_LWTGC)
-    fprintf (stderr, "liftAllObjectsDuringInit: foreachObjptrInRange\n");
-  foreachObjptrInRange (s, toStart, &s->forwardState.back, liftObjptr, TRUE);
   clearRangeList (s);
 
   //Check
@@ -257,7 +250,7 @@ pointer GC_move (GC_state s, pointer p,
     skipFixForwardingPointers = TRUE;
 
   if (skipFixForwardingPointers)
-    s->syncReason = SYNC_MISC;
+    s->syncReason = SYNC_LIFT_NO_GC;
   else
     s->syncReason = SYNC_LIFT;
 
@@ -444,6 +437,15 @@ void GC_addToMoveOnWBA (GC_state s, pointer p) {
 }
 
 void GC_addToSpawnOnWBA (GC_state s, pointer p, int proc) {
+
+  /*
+  s->selectiveDebug = TRUE;
+  fprintf (stderr, "GC_addToSpawnOnWBA: p="FMTPTR" size=%zu on processor %d [%d]\n",
+           (uintptr_t)p, GC_sizeInLocalHeap (s, p), proc, s->procId);
+  GC_objectTypeInfo (s, p);
+  s->selectiveDebug = FALSE;
+  */
+
   if (proc == (int)s->procId) {
     GC_sqEnque (s, p, proc, 0);
     return;
@@ -490,6 +492,13 @@ static inline void foreachObjptrInWBAs (GC_state s, GC_state fromState, GC_forea
     callIfIsObjptr (s, f, &(fromState->moveOnWBA [i]));
   for (int i=0; i < fromState->preemptOnWBASize; i++)
     callIfIsObjptr (s, f, &(fromState->preemptOnWBA[i].op));
+  for (int i=0; i < fromState->spawnOnWBASize; i++)
+    callIfIsObjptr (s, f, &((fromState->spawnOnWBA [i]).op));
+}
+
+static inline void foreachObjptrInExportableWBAs (GC_state s, GC_state fromState, GC_foreachObjptrFun f) {
+  for (int i=0; i < fromState->moveOnWBASize; i++)
+    callIfIsObjptr (s, f, &(fromState->moveOnWBA [i]));
   for (int i=0; i < fromState->spawnOnWBASize; i++)
     callIfIsObjptr (s, f, &((fromState->spawnOnWBA [i]).op));
 }

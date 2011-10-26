@@ -1,8 +1,0 @@
-local
-   $(SML_LIB)/basis/basis.mlb
-   $(SML_LIB)/basis/mlton.mlb
-   /home/chandras/multiMLton/trunk/lib/mlton/basic/http.mlb
-   /home/chandras/multiMLton/trunk/lib/mlton/basic/sources.mlb
-in
-    httpBench.sml
-end

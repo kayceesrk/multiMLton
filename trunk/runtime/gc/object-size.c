@@ -79,6 +79,7 @@ size_t sizeofObject (GC_state s, pointer p) {
     objectBytes = 0;
     assert (0 and "unknown tag in sizeofObject");
   }
+  assert (isAligned (headerBytes + objectBytes, s->alignment));
   return headerBytes + objectBytes;
 }
 

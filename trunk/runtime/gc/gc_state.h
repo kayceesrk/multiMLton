@@ -156,6 +156,7 @@ struct GC_state {
   struct GC_translateState translateState;
   struct GC_vectorInit *vectorInits;
   uint32_t vectorInitsLength;
+  UT_array* reachable;
   GC_weak weaks; /* Linked list of (live) weak pointers */
   char *worldFile;
 

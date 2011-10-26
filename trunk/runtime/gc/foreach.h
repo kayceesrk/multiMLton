@@ -55,4 +55,6 @@ typedef void (*GC_foreachStackFrameFun) (GC_state s, GC_frameIndex i);
  */
 static inline void foreachStackFrame (GC_state s, GC_foreachStackFrameFun f);
 
+void foreachObjptrInDanglingStackList (GC_state s, GC_state fromState, GC_foreachObjptrFun f);
+
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

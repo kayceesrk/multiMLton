@@ -35,6 +35,12 @@ void majorGC (GC_state s, size_t bytesRequested, bool mayResize, bool liftWBAs) 
     majorCheneyCopyGC (s);
   else
     majorMarkCompactGC (s);
+
+  //Reclaim objects if present
+  if (s->reachable) {
+    reclaimObjects (s);
+  }
+
   s->hashConsDuringGC = FALSE;
   s->lastMajorStatistics->bytesLive = s->heap->oldGenSize;
   if (s->lastMajorStatistics->bytesLive > s->cumulativeStatistics->maxBytesLive)
@@ -49,6 +55,7 @@ void majorGC (GC_state s, size_t bytesRequested, bool mayResize, bool liftWBAs) 
     setCardMapAndCrossMap (s);
   }
   resizeLocalHeapSecondary (s);
+
   assert (s->heap->oldGenSize + bytesRequested <= s->heap->size);
 }
 
@@ -112,47 +119,6 @@ void leaveGC (GC_state s) {
   s->amInGC = FALSE;
 }
 
-
-#if 0
-
-void fixForwardingPointers (GC_state s, __attribute__((unused)) bool mayResize) {
-  uintmax_t gcTime;
-  struct timeval tv_start;
-
-  if (DEBUG)
-      fprintf (stderr, "Starting fixForwardingPointers[%d]\n", s->procId);
-
-  enterGC (s);
-
-  if (needGCTime (s))
-    startWallTiming (&tv_start);
-
-  //Perform the lifting that might be required
-  liftAllObjptrsInMoveOnWBA (s);
-  //Fix the forwarding pointers by walking the live objects
-  foreachGlobalObjptrInScope (s, dfsMarkWithoutHashConsWithLinkWeaks);
-  foreachGlobalObjptrInScope (s, dfsUnmark);
-
-  if (needGCTime (s)) {
-    gcTime = stopWallTiming (&tv_start, &s->cumulativeStatistics->ru_gc);
-    s->cumulativeStatistics->maxPauseTime =
-      max (s->cumulativeStatistics->maxPauseTime, gcTime);
-  } else
-    gcTime = 0;  /* Assign gcTime to quell gcc warning. */
-  setGCStateCurrentThreadAndStack (s);
-  if (DEBUG)
-    displayGCState (s, stderr);
-  assert (invariantForGC (s));
-
-  leaveGC (s);
-
-  if (DEBUG)
-      fprintf (stderr, "Finished fixForwardingPointers[%d]\n", s->procId);
-}
-
-#endif
-
-
 void fixForwardingPointers (GC_state s, bool mayResize) {
   uintmax_t gcTime;
   struct timeval tv_start;
@@ -209,6 +175,10 @@ void performSharedGCCollective (GC_state s,
   size_t bytesFilled = 0;
 
   s->forwardState.amInMinorGC = FALSE;
+  if (s->reachable)
+    utarray_free (s->reachable);
+  s->reachable = NULL;
+
   objptr op = s->forwardState.liftingObject;
 
   if (DEBUG)
@@ -220,6 +190,7 @@ void performSharedGCCollective (GC_state s,
     if (DEBUG)
       fprintf (stderr, "performSharedGC: starting local GC [%d]\n", s->procId);
 
+    s->syncReason = SYNC_MISC;
     ENTER_LOCAL0 (s);
     minorCheneyCopyGC (s);
     majorGC (s, GC_HEAP_LIMIT_SLOP, TRUE, FALSE);
@@ -494,8 +465,14 @@ void performSharedGCCollective (GC_state s,
     RCCE_barrier (&RCCE_COMM_WORLD);
     RCCE_shflush ();
   }
+
   LEAVE0 (s);
   leaveGC (s);
+
+  if (s->controls->reclaimObjects) {
+    computeExclusivityInformation (s);
+  }
+
   if (DEBUG)
     fprintf(stderr, "After performSharedGC: numDanglingStacks=%d [%d]\n",
             s->danglingStackListSize, s->procId);
@@ -666,12 +643,9 @@ size_t fillGap (__attribute__ ((unused)) GC_state s, pointer start, pointer end)
       exit (1);
     }
 
-    /* XXX debug only */
-    /*
     while (start < end) {
       *(start++) = 0xDF;
     }
-    */
 
     return diff;
   }

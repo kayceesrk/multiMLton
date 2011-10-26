@@ -13,6 +13,7 @@
 #include "c-common.h"
 #include "RCCE.h"
 #include <unistd.h>
+#include <execinfo.h>
 
 static GC_frameIndex returnAddressToFrameIndex (GC_returnAddress ra) {
         return (GC_frameIndex)ra;
@@ -66,6 +67,7 @@ void segvHandler (int sig) {                                            \
   free( funcNames );                                                    \
   exit (0);                                                             \
 }                                                                       \
+                                                                        \
                                                                         \
 void run (void *arg) {                                                  \
         struct cont cont;                                               \

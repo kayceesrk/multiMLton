@@ -181,7 +181,7 @@ static void summaryWrite (GC_state s,
   fprintf (out, "sync force: %s\n",
            uintmaxToCommaString (cumul->syncForce));
   fprintf (out, "num lift transitive closure but no gc: %s\n",
-           uintmaxToCommaString (cumul->syncMisc));
+           uintmaxToCommaString (cumul->syncForLiftNoGC));
 
 
   fprintf (out, "\nWRITE BARRIER\n");
@@ -289,6 +289,7 @@ static inline void initStat (struct GC_cumulativeStatistics* cumul) {
   cumul->syncForLift = 0;
   cumul->syncForce = 0;
   cumul->syncMisc = 0;
+  cumul->syncForLiftNoGC = 0;
   cumul->numCopyingGCs = 0;
   cumul->numCopyingSharedGCs = 0;
   cumul->numHashConsGCs = 0;
@@ -398,6 +399,7 @@ void GC_summaryWrite (GC_state procStates) {
       cumul.syncForLift += d->syncForLift;
       cumul.syncForce += d->syncForce;
       cumul.syncMisc += d->syncMisc;
+      cumul.syncForLiftNoGC += d->syncForLiftNoGC;
       cumul.numCopyingGCs += d->numCopyingGCs;
       cumul.numCopyingSharedGCs += d->numCopyingSharedGCs;
       cumul.numSharedGCs += d->numSharedGCs;

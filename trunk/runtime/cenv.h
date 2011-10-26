@@ -140,6 +140,10 @@ COMPILE_TIME_ASSERT(sizeof_double__is_eight, sizeof(double) == 8);
 #include "RCCE.h"
 #include "export.h"
 
+//HashTable implementation in C
+#include "uthash.h"
+#include "utarray.h"
+
 COMPILE_TIME_ASSERT(sizeof_uintptr_t__is__sizeof_voidStar,
                     sizeof(uintptr_t) == sizeof(void*));
 COMPILE_TIME_ASSERT(sizeof_uintptr_t__is__sizeof_size_t,
