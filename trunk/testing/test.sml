@@ -1,3 +1,0 @@
-structure Main=
-struct
-end
