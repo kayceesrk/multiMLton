@@ -32,6 +32,46 @@ struct
 
   val h = MLtonSignal.Handler.handler (fn t => t)
 
+  fun closureReceiver () =
+  let
+    val myProcId = PacmlFFI.processorNumber ()
+
+    fun phase1 () =
+    let
+      val sender = PacmlFFI.readIntentArray (PacmlFFI.SEND_INTENT, myProcId)
+    in
+      if sender <> ~1 then
+        phase2 (sender)
+      else
+        (Thread.yield (); phase1 ())
+    end
+
+    and phase2 (sender) =
+    let
+      val res = PacmlFFI.writeIntentArray (PacmlFFI.RECV_INTENT,
+                                           sender, ~1, myProcId)
+    in
+      if res <> ~1 then
+        phase3 (sender)
+      else
+        (Thread.yield (); phase2 sender)
+    end
+
+    and phase3 (sender) =
+    let
+      val rdyThrd = MLtonRcce.recv (sender)
+      val _ = S.readyForSpawn (rdyThrd)
+      val res = PacmlFFI.writeIntentArray (PacmlFFI.SEND_INTENT, myProcId, sender, ~1)
+      val _ = if res <> sender then raise Fail "closureReceiver.phase3.write1" else ()
+      val res = PacmlFFI.writeIntentArray (PacmlFFI.RECV_INTENT, sender, myProcId, ~1)
+      val _ = if res <> myProcId then raise Fail "closureReceiver.phase3.write2" else ()
+    in
+      phase1 ()
+    end
+  in
+    phase1 ()
+  end
+
   fun thread_main () =
   let
     val _ = MLtonProfile.init ()
@@ -50,6 +90,7 @@ struct
 
     fun loop procNum =
     let
+      val _ = Thread.spawn closureReceiver
       val _ = PacmlFFI.maybeWaitForGC ()
     in
       case doAtomic (fn () => SQ.dequeHost (RepTypes.PRI)) of
@@ -133,6 +174,7 @@ struct
     ()
   end
 
+
   fun run (initialProc : unit -> unit) =
   let
     (* DO NOT REMOVE *)
@@ -146,6 +188,7 @@ struct
           let
             val () = Config.isRunning := true
             val () = debug' (fn () => "lateInit")
+            val _ = Thread.spawn closureReceiver
             (* Spawn the Non-blocking worker threads *)
             val _ = List.tabulate (numIOThreads * 5, fn _ => NonBlocking.mkNBThread ())
             val _ = List.tabulate (numIOThreads, fn i => PacmlFFI.wakeUp (PacmlFFI.numComputeProcessors + i, 1))

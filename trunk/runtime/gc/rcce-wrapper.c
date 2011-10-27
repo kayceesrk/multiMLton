@@ -50,7 +50,14 @@ pointer MLton_RCCE_recv (GC_state s, int src) {
   MLton_RCCE_sendRecvControlPacket cp;
   if (DEBUG_RCCE)
     fprintf (stderr, "MLton_RCCE_recv: waiting for control packet from %d\n", src);
-  RCCE_recv ((char*)&cp, sizeof (MLton_RCCE_sendRecvControlPacket), src);
+
+  int done = 0;
+  do {
+    RCCE_recv_test ((char*)&cp, sizeof (MLton_RCCE_sendRecvControlPacket), src, &done);
+    if (!done) {
+      maybeWaitForGC (s);
+    }
+  } while (!done);
 
   void* buffer = malloc_safe (cp.objectClosureSize);
   if (DEBUG_RCCE)

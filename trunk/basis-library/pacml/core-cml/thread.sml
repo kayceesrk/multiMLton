@@ -170,6 +170,39 @@ struct
                 end)
       end
 
+
+  fun closureSender (rhost, receiver) =
+  let
+    val myProcId = PacmlFFI.processorNumber ()
+
+    fun phase1 () =
+    let
+      val res = PacmlFFI.writeIntentArray (PacmlFFI.SEND_INTENT, receiver, ~1, myProcId)
+    in
+      if res <> ~1 then
+        phase2 ()
+      else
+        (yield (); phase1 ())
+    end
+
+    and phase2 () =
+    let
+      val recvId = PacmlFFI.readIntentArray (PacmlFFI.RECV_INTENT, myProcId)
+    in
+      (* Since multiple closureSender functions can run in parallel, only
+      * receive if my intended receiver has writtten to the RECV_INTENT array
+      * *)
+      if (recvId = receiver) then
+        phase3 ()
+      else
+        (yield (); phase2 ())
+    end
+
+    and phase3 () = MLtonRcce.send (rhost, receiver)
+  in
+    phase1 ()
+  end
+
   datatype proc_spec = ANY_PROC | ON_PROC of int
 
   fun spawnHostHelperEager (f, ps) =
@@ -188,22 +221,43 @@ struct
                      generalExit (SOME tid, false))
     val thrd = H_THRD (tid, PT.new thrdFun)
     val rhost = PT.getRunnableHost (PT.prep (thrd))
+    val proc = TID.getProcId (tid)
 
-    (* If the newly spawned thread is going to another processor, then move it
-    * to the shared heap. We first try to move the thread to the shared heap
-    * without needing a GC. If we are not able to do it, we add rhost to
-    * moveOnWBA queue and preempt, with the hope that there will be other
-    * threads to run on this core. If there are none, we will perform a GC,
-    * after which we will place rhost on the target scheduler. *)
-    val () = if (Primitive.Controls.wbUsesTypeInfo andalso Primitive.Lwtgc.objectTypeInfo rhost) then
-              (ignore (Primitive.Lwtgc.move (rhost, false, true)))
-             else
-              (debug' (fn () => "spawnHostHelper.lift(1): tid="^(TID.tidToString tid));
-              Primitive.Lwtgc.addToMoveOnWBA (rhost);
-              S.preemptOnWriteBarrier ();
-              debug' (fn () => "spawnHostHelper.lift(2): tid="^(TID.tidToString tid)))
+    val shouldReady =
+      if proc <> PacmlFFI.processorNumber () then
+        (* If the newly spawned thread is going to another processor,
+        * then move it to the shared heap. We first try to move the
+        * thread directly to the target heap, without needing a GC. If
+        * we are not able to do it, we add rhost to moveOnWBA queue and
+        * preempt, with the hope that there will be other threads to
+        * run on this core. If there are none, we will perform a GC,
+        * after which we will place rhost on the target scheduler. *)
+        (if (Primitive.Controls.wbUsesTypeInfo andalso
+              Primitive.Lwtgc.isClosureVirgin rhost) then
+          let
+            (* spawn a new thread on the current processor that will send the
+            * original closure directly to the target heap *)
+            val _ = spawnHostHelperEager
+                      (fn () => closureSender (rhost, proc),
+                       ON_PROC (PacmlFFI.processorNumber ()))
+          in
+            false
+          end
+        else
+          let
+            val _ = debug' (fn () => "spawnHostHelper.lift(1): tid="^(TID.tidToString tid))
+            val _ = Primitive.Lwtgc.addToMoveOnWBA (rhost)
+            val _ = S.preemptOnWriteBarrier ()
+            val _ = debug' (fn () => "spawnHostHelper.lift(2): tid="^(TID.tidToString tid))
+          in
+            true
+          end)
+      else
+        true
 
-    val () = S.readyForSpawn (rhost)
+    val () = if shouldReady then
+              S.readyForSpawn (rhost)
+             else ()
 
     (* If this thread was spawned on an IO processor, then decrement the
     * numLiveThreads as the IO worker threads never die *)
@@ -244,7 +298,17 @@ struct
 
     val proc = TID.getProcId (tid)
     val _ = Config.incrementNumLiveThreads ()
-    val _ = PacmlPrim.addToSpawnOnWBA (H_RTHRD rhost, proc)
+
+    val _ = if proc = PacmlFFI.processorNumber () then
+              S.ready (H_RTHRD rhost)
+            else if (Primitive.Controls.wbUsesTypeInfo andalso
+                     Primitive.Lwtgc.isClosureVirgin rhost) then
+              (* spawn a new thread on the current processor that will send the
+               * original closure directly to the target heap *)
+              ignore (spawnHostHelperEager (fn () => closureSender (rhost, proc),
+                                            ON_PROC (PacmlFFI.processorNumber ())))
+            else
+              PacmlPrim.addToSpawnOnWBA (H_RTHRD rhost, proc)
 
     (* If this thread was spawned on an IO processor, then decrement the
     * numLiveThreads as the IO worker threads never die *)

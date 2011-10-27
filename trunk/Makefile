@@ -77,8 +77,11 @@ basis-no-check:
 	mkdir -p "$(LIB)/sml"
 	rm -rf "$(LIB)/sml/basis"
 	$(CP) "$(SRC)/basis-library/." "$(LIB)/sml/basis"
-	find "$(LIB)/sml/basis" -type d -name .svn | xargs rm -rf
-	find "$(LIB)/sml/basis" -type f -name .ignore | xargs rm -rf
+
+.PHONY: basis-check
+basis-check:
+	"$(MLTON)" -disable-ann deadCode -stop tc '$(SRC)/basis-library/libs/all.mlb' >/dev/null
+
 
 .PHONY: basis
 basis:

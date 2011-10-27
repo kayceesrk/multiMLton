@@ -263,7 +263,7 @@ void copyObjptr (GC_state s, objptr *opp) {
   if (s->forwardState.back + size > s->forwardState.toLimit) {
     fprintf (stderr, "copyObjptr: Ran out of space in toSpace\n");
     fflush (stderr);
-    exit (1/0);
+    exit (1);
   }
   /* Copy the object. */
   GC_memcpy (p - headerBytes, s->forwardState.back, size);

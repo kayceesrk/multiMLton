@@ -50,6 +50,7 @@ extern C_Pthread_Key_t gcstate_key;
 #include "gc/new-object.c"
 #include "gc/object-size.c"
 #include "gc/object.c"
+#include "gc/object-cleanliness.c"
 #include "gc/objptr.c"
 #include "gc/pack.c"
 #include "gc/parallel.c"

@@ -148,7 +148,7 @@ GC_objectSharingInfo addToHashTable (GC_state s, GC_objectSharingInfo map, point
   return map;
 }
 
-void computeExclusivityInformation (GC_state s) {
+void computeExclusivityInformation (__attribute__((unused)) GC_state s) {
   assert ("computeExclusivityInformation: not implemented" && 0);
   fprintf (stderr, "computeExclusivityInformation: not implemented\n");
   exit (1);

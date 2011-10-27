@@ -58,6 +58,8 @@ PRIVATE bool GC_sqIsEmpty (GC_state s);
 PRIVATE bool GC_sqIsEmptyPrio (int i);
 PRIVATE void GC_sqClean (GC_state s);
 int sizeofSchedulerQueue (GC_state s, int i);
+PRIVATE int GC_manipulateIntentArray (GC_state s, int array, int operation,
+                                      int coreId, int oldValue, int newValue);
 
 #endif /* (defined (MLTON_GC_INTERNAL_BASIS)) */
 

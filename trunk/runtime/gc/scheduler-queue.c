@@ -269,3 +269,28 @@ int sizeofSchedulerQueue (GC_state s, int i) {
   total += ((wp - rp + cq->size) % cq->size);
   return total;
 }
+
+/* The following function are to assist with direct closure copying between local heaps.
+ * array - sendIntent=0 recvIntent=1
+ * operation - read=0 write=1
+ * coreId
+ * oldValue - irrelevant for read
+ * newValue - irrelevant for read
+ */
+
+int GC_manipulateIntentArray (GC_state s, int array, int operation,
+                              int coreId, int oldValue, int newValue) {
+  int* intentArray;
+  if (array == 0)
+    intentArray = s->sendIntent;
+  else
+    intentArray = s->recvIntent;
+
+  RCCE_shflush ();
+
+  //Operation is a read
+  if (operation == 0)
+    return intentArray[coreId];
+  //Operation is a write
+  return Parallel_vCompareAndSwap ((pointer)&intentArray[coreId], oldValue, newValue);
+}

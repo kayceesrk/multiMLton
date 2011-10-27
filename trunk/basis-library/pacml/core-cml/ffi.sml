@@ -19,4 +19,19 @@ struct
   val wakeUp = _import "Parallel_wakeUpThread": Int32.int * Int32.int -> unit;
   val summaryWrite = _import "GC_summaryWrite": unit -> unit;
 
+  datatype array_kind = SEND_INTENT | RECV_INTENT
+  local
+    val manipulateIntentArray = _import "GC_manipulateIntentArray": Primitive.MLton.GCState.t * Int32.t * Int32.t * Int32.t * Int32.t * Int32.t -> Int32.t;
+
+    fun arrayKindToInt SEND_INTENT = 0
+      | arrayKindToInt RECV_INTENT = 1
+
+    val gcState = Primitive.MLton.GCState.gcState
+  in
+    fun readIntentArray (ak, coreId) =
+      manipulateIntentArray (gcState, arrayKindToInt ak, 0, coreId, 0, 0)
+
+    fun writeIntentArray (ak, coreId, oldValue, newValue) =
+      manipulateIntentArray (gcState, arrayKindToInt ak, 1, coreId, oldValue, newValue)
+  end
 end

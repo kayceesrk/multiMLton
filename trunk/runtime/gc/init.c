@@ -532,6 +532,7 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->sharedHeapEnd = 0;
   s->secondarySharedHeap = (GC_heap) GC_shmalloc (sizeof (struct GC_heap));
   initHeap (s, s->secondarySharedHeap, SHARED_HEAP);
+  s->selectiveDebug = FALSE;
   s->signalHandlerThread = BOGUS_OBJPTR;
   s->signalsInfo.amInSignalHandler = FALSE;
   s->signalsInfo.gcSignalHandled = FALSE;
@@ -656,6 +657,7 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->savedThread = BOGUS_OBJPTR;
   d->savedClosure = BOGUS_OBJPTR;
   d->pacmlThreadId = BOGUS_OBJPTR;
+  d->selectiveDebug = FALSE;
   d->signalHandlerThread = BOGUS_OBJPTR;
   d->signalsInfo.amInSignalHandler = FALSE;
   d->signalsInfo.gcSignalHandled = FALSE;

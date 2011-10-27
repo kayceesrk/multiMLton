@@ -76,7 +76,7 @@ struct
   val addToSpawnOnWBA = _prim "Lwtgc_addToSpawnOnWBA": 'a * Int32.int -> unit;
   val isObjptrInLocalHeap = _prim "Lwtgc_isObjptrInLocalHeap": 'a -> bool;
   val isObjptrInSharedHeap = _prim "Lwtgc_isObjptrInSharedHeap": 'a -> bool;
-  val objectTypeInfo = _prim "Lwtgc_objectTypeInfo": 'a -> bool;
+  val isClosureVirgin = _prim "Lwtgc_isClosureVirgin": 'a -> bool;
   val isObjptr = _prim "Lwtgc_isObjptr": 'a -> bool;
   val needPreemption = _prim "Lwtgc_needPreemption": 'a ref * 'a -> bool;
   val move = _prim "MLton_move": 'a * bool * bool -> 'a;
@@ -101,7 +101,7 @@ structure Ref =
                     (Lwtgc.isObjptrInLocalHeap v) andalso
                     (Lwtgc.isObjptrInSharedHeap r)
                  then
-                    (if Controls.wbUsesTypeInfo andalso Lwtgc.objectTypeInfo v then
+                    (if Controls.wbUsesTypeInfo andalso Lwtgc.isClosureVirgin v then
                       let val _ = Lwtgc.move (v, false, true) in v end
                      else
                       (Lwtgc.addToMoveOnWBA v;
