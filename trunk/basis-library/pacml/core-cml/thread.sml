@@ -198,7 +198,7 @@ struct
         (yield (); phase2 ())
     end
 
-    and phase3 () = MLtonRcce.send (rhost, receiver)
+    and phase3 () = MLtonRcce.send (ref rhost, receiver)
   in
     phase1 ()
   end

@@ -32,7 +32,7 @@
 #define LoadArray(a, f) if (fread (a, sizeof(*a), cardof(a), f) != cardof(a)) return -1;
 #define SaveArray(a, f) if (fwrite(a, sizeof(*a), cardof(a), f) != cardof(a)) return -1;
 
-PRIVATE Pointer gcStateAddress;
+PRIVATE Pointer gcStateAddress = NULL;
 #define Initialize(s, al, mg, mfs, mmc, pk, ps, gnr)              \
         gcStateAddress = (pointer)&s;                             \
         s.alignment = al;                                         \
@@ -77,7 +77,7 @@ PRIVATE Pointer gcStateAddress;
 static void MLton_callFromC ();
 
 void Duplicate (GC_state d, GC_state s) {
-  // Initialize
+  gcStateAddress = (pointer)d;
   d->alignment = s->alignment;
   d->atMLtons = s->atMLtons;
   d->atMLtonsLength = s->atMLtonsLength;

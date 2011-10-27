@@ -7,7 +7,7 @@
  */
 
 void MLton_RCCE_send (GC_state s, pointer p, int dest) {
-  assert (isPointer (p));
+  assert (isPointer (p) && isPointerInHeap (s, s->heap, p));
 
   if (DEBUG_RCCE)
     fprintf (stderr, "MLton_RCCE_send p="FMTPTR" dest=%d\n",

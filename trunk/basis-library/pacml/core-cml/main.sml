@@ -59,7 +59,7 @@ struct
 
     and phase3 (sender) =
     let
-      val rdyThrd = MLtonRcce.recv (sender)
+      val rdyThrd = !(MLtonRcce.recv sender)
       val _ = S.readyForSpawn (rdyThrd)
       val res = PacmlFFI.writeIntentArray (PacmlFFI.SEND_INTENT, myProcId, sender, ~1)
       val _ = if res <> sender then raise Fail "closureReceiver.phase3.write1" else ()
@@ -90,7 +90,10 @@ struct
 
     fun loop procNum =
     let
-      val _ = Thread.spawn closureReceiver
+      val _ = Thread.spawnOnProc (closureReceiver, PacmlFFI.processorNumber ())
+      (* Closure receiver will run forever. Hence, we will decrement num
+      * live threads so that it does not hinder program termination. *)
+      val _ = Config.decrementNumLiveThreads ()
       val _ = PacmlFFI.maybeWaitForGC ()
     in
       case doAtomic (fn () => SQ.dequeHost (RepTypes.PRI)) of
@@ -188,7 +191,10 @@ struct
           let
             val () = Config.isRunning := true
             val () = debug' (fn () => "lateInit")
-            val _ = Thread.spawn closureReceiver
+            val _ = Thread.spawnOnProc (closureReceiver, PacmlFFI.processorNumber ())
+            (* Closure receiver will run forever. Hence, we will decrement num
+            * live threads so that it does not hinder program termination. *)
+            val _ = Config.decrementNumLiveThreads ()
             (* Spawn the Non-blocking worker threads *)
             val _ = List.tabulate (numIOThreads * 5, fn _ => NonBlocking.mkNBThread ())
             val _ = List.tabulate (numIOThreads, fn i => PacmlFFI.wakeUp (PacmlFFI.numComputeProcessors + i, 1))

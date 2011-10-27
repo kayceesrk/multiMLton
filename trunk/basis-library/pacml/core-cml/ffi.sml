@@ -26,12 +26,12 @@ struct
     fun arrayKindToInt SEND_INTENT = 0
       | arrayKindToInt RECV_INTENT = 1
 
-    val gcState = Primitive.MLton.GCState.gcState
+    val gcState = Primitive.MLton.GCState.getCurrentGCState
   in
     fun readIntentArray (ak, coreId) =
-      manipulateIntentArray (gcState, arrayKindToInt ak, 0, coreId, 0, 0)
+      manipulateIntentArray (gcState (), arrayKindToInt ak, 0, coreId, 0, 0)
 
     fun writeIntentArray (ak, coreId, oldValue, newValue) =
-      manipulateIntentArray (gcState, arrayKindToInt ak, 1, coreId, oldValue, newValue)
+      manipulateIntentArray (gcState (), arrayKindToInt ak, 1, coreId, oldValue, newValue)
   end
 end
