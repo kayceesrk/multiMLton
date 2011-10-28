@@ -473,18 +473,18 @@ structure CFunction =
             bytesNeeded = NONE,
             convention = Cdecl,
             ensuresBytesFree = false,
-            mayGC = false,
+            mayGC = true,
             maySwitchThreads = false,
             modifiesFrontier = false,
             prototype = (Vector.new3 (CType.gcState,
                                       CType.cpointer,
                                       CType.cint ()),
                          NONE),
-            readsStackTop = false,
+            readsStackTop = true,
             return = Type.unit,
             symbolScope = Private,
             target = Direct "MLton_RCCE_send",
-            writesStackTop = false}
+            writesStackTop = true}
 
       fun rcceRecv t =
          T {args = Vector.new2 (Type.gcState (), Type.cint ()),

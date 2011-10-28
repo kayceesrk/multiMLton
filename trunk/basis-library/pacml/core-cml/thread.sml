@@ -171,16 +171,18 @@ struct
       end
 
 
-  fun closureSender (rhost, receiver) =
+  fun closureSender (rhost : RepTypes.runnable_host, receiver) =
   let
     val myProcId = PacmlFFI.processorNumber ()
+    val _ = debug' (fn () => "closureSender: In phase1")
 
     fun phase1 () =
     let
       val res = PacmlFFI.writeIntentArray (PacmlFFI.SEND_INTENT, receiver, ~1, myProcId)
     in
-      if res <> ~1 then
-        phase2 ()
+      if res = ~1 then
+        (debug' (fn () => "closureSender: Moving to phase2");
+        phase2 ())
       else
         (yield (); phase1 ())
     end
@@ -193,12 +195,14 @@ struct
       * receive if my intended receiver has writtten to the RECV_INTENT array
       * *)
       if (recvId = receiver) then
-        phase3 ()
+        (debug' (fn () => "closureSender: Moving to phase3");
+        phase3 ())
       else
         (yield (); phase2 ())
     end
 
-    and phase3 () = MLtonRcce.send (ref rhost, receiver)
+    and phase3 () = (MLtonRcce.send (ref rhost, receiver);
+                    debug' (fn () => "closureSender: done"))
   in
     phase1 ()
   end
@@ -233,7 +237,8 @@ struct
         * run on this core. If there are none, we will perform a GC,
         * after which we will place rhost on the target scheduler. *)
         (if (Primitive.Controls.wbUsesTypeInfo andalso
-              Primitive.Lwtgc.isClosureVirgin rhost) then
+             Primitive.Controls.directCloXfer andalso
+             Primitive.Lwtgc.isClosureVirgin rhost) then
           let
             (* spawn a new thread on the current processor that will send the
             * original closure directly to the target heap *)
@@ -297,18 +302,21 @@ struct
                                    end
 
     val proc = TID.getProcId (tid)
-    val _ = Config.incrementNumLiveThreads ()
+
 
     val _ = if proc = PacmlFFI.processorNumber () then
-              S.ready (H_RTHRD rhost)
+              (Config.incrementNumLiveThreads ();
+               S.ready (H_RTHRD rhost))
             else if (Primitive.Controls.wbUsesTypeInfo andalso
+                     Primitive.Controls.directCloXfer andalso
                      Primitive.Lwtgc.isClosureVirgin rhost) then
               (* spawn a new thread on the current processor that will send the
                * original closure directly to the target heap *)
               ignore (spawnHostHelperEager (fn () => closureSender (rhost, proc),
                                             ON_PROC (PacmlFFI.processorNumber ())))
             else
-              PacmlPrim.addToSpawnOnWBA (H_RTHRD rhost, proc)
+              (Config.incrementNumLiveThreads ();
+              PacmlPrim.addToSpawnOnWBA (H_RTHRD rhost, proc))
 
     (* If this thread was spawned on an IO processor, then decrement the
     * numLiveThreads as the IO worker threads never die *)
@@ -322,11 +330,10 @@ struct
     tid
   end
 
-  fun spawnHost f = if (Primitive.Controls.lazySpawn) then
+  fun spawn f = if (Primitive.Controls.lazySpawn) then
                       spawnHostHelperLazy (f, ANY_PROC)
                     else
                       spawnHostHelperEager (f, ANY_PROC)
-  fun spawn f = spawnHost f
   fun spawnOnProc (f, n) = if (Primitive.Controls.lazySpawn) then
                              spawnHostHelperLazy (f, ON_PROC n)
                            else
@@ -353,7 +360,7 @@ struct
     in
       if numPenaltySpawnsSpawned > 0 then
         (PT.setNumPenaltySpawns (numPenaltySpawnsSpawned - 1);
-        ignore (spawnHost (f)))
+        ignore (spawn (f)))
       else
         (let
           val ts = Time.now ()

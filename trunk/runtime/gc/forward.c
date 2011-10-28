@@ -246,7 +246,8 @@ void copyObjptr (GC_state s, objptr *opp) {
   HASH_FIND_PTR (copyObjectMap, &p, e);
   if (e) { //We have already copied the object to toSpace
     *opp = e->newP;
-    fprintf (stderr, "copyObjptr: Already copied newP="FMTPTR"\n", (uintptr_t)*opp);
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "copyObjptr: Already copied newP="FMTPTR"\n", (uintptr_t)*opp);
     return;
   }
 
@@ -294,8 +295,9 @@ void copyObjptr (GC_state s, objptr *opp) {
   e = (CopyObjectMap*) malloc (sizeof (CopyObjectMap));
   e->oldP = *opp;
   e->newP = (pointer) s->forwardState.back + headerBytes;
-  fprintf (stderr, "copyObjptr: Adding oldP="FMTPTR" newP="FMTPTR"\n",
-           (uintptr_t)e->oldP, (uintptr_t)e->newP);
+  if (DEBUG_DETAILED)
+    fprintf (stderr, "copyObjptr: Adding oldP="FMTPTR" newP="FMTPTR"\n",
+             (uintptr_t)e->oldP, (uintptr_t)e->newP);
   HASH_ADD_PTR (copyObjectMap, oldP, e);
 
   if (isPointerInToSpace (s, (pointer)opp)) {

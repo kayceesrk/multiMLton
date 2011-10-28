@@ -8,6 +8,15 @@
 
 extern CopyObjectMap* copyObjectMap;
 
+pointer BUFFER_START;
+pointer BUFFER_END;
+
+static assertObjptrNotInBuffer (GC_state s, objptr* opp) {
+  pointer p = objptrToPointer (*opp, s->heap->start);
+  assert (!(p >= BUFFER_START && p < BUFFER_END));
+  p = p;
+}
+
 void MLton_RCCE_send (GC_state s, pointer p, int dest) {
   assert (isPointer (p) && isPointerInHeap (s, s->heap, p));
 
@@ -27,11 +36,18 @@ void MLton_RCCE_send (GC_state s, pointer p, int dest) {
   s->forwardState.toLimit = (pointer)((char*)buffer + size);
 
   assert (copyObjectMap == NULL);
-  fprintf (stderr, "Before copyObjptr\n");
   ENTER_LOCAL0 (s);
   copyObjptr (s, &op);
   foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, copyObjptr, TRUE);
   LEAVE_LOCAL0 (s);
+
+  #if ASSERT
+  BUFFER_START = buffer;
+  BUFFER_END = (char*)buffer + size;
+  getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
+  getThreadCurrent(s)->exnStack = s->exnStack;
+  foreachObjptrInObject (s, (pointer)getStackCurrent(s), assertObjptrNotInBuffer, TRUE);
+  #endif
 
   CopyObjectMap *e, *tmp;
   HASH_ITER (hh, copyObjectMap, e, tmp) {

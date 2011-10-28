@@ -439,9 +439,8 @@ ret:
   assert (FALSE);
 }
 
-void emptyForeachObjectFun (__attribute__((unused)) GC_state s, pointer p) {
-  if (s->selectiveDebug)
-    fprintf (stderr, "emptyForeachObjptrFun: "FMTPTR"\n", (uintptr_t)p);
+void emptyForeachObjectFun (__attribute__((unused)) GC_state s,
+                            __attribute__((unused)) pointer p) {
 }
 
 void dfsMarkWithHashConsWithLinkWeaks (GC_state s, objptr *opp) {

@@ -41,7 +41,8 @@ struct
       val sender = PacmlFFI.readIntentArray (PacmlFFI.SEND_INTENT, myProcId)
     in
       if sender <> ~1 then
-        phase2 (sender)
+        (debug' (fn () => "closureReceiver: moving to phase2");
+        phase2 (sender))
       else
         (Thread.yield (); phase1 ())
     end
@@ -51,26 +52,37 @@ struct
       val res = PacmlFFI.writeIntentArray (PacmlFFI.RECV_INTENT,
                                            sender, ~1, myProcId)
     in
-      if res <> ~1 then
-        phase3 (sender)
+      if res = ~1 then
+        (debug' (fn () => "closureReceiver: moving to phase3");
+        phase3 (sender))
       else
         (Thread.yield (); phase2 sender)
     end
 
     and phase3 (sender) =
     let
-      val rdyThrd = !(MLtonRcce.recv sender)
-      val _ = S.readyForSpawn (rdyThrd)
+      val rhost : RepTypes.runnable_host = !(MLtonRcce.recv sender)
+      val _ = S.readyForSpawn (rhost)
       val res = PacmlFFI.writeIntentArray (PacmlFFI.SEND_INTENT, myProcId, sender, ~1)
-      val _ = if res <> sender then raise Fail "closureReceiver.phase3.write1" else ()
+      val _ = if res <> sender then (print "FAIL\n"; raise Fail "closureReceiver.phase3.write1") else ()
       val res = PacmlFFI.writeIntentArray (PacmlFFI.RECV_INTENT, sender, myProcId, ~1)
-      val _ = if res <> myProcId then raise Fail "closureReceiver.phase3.write2" else ()
+      val _ = if res <> myProcId then (print "FAIL\n"; raise Fail "closureReceiver.phase3.write2") else ()
     in
-      phase1 ()
+      (debug' (fn () => "closureReceiver: back to phase1");
+      phase1 ())
     end
   in
     phase1 ()
   end
+
+  fun spawnClosureReceiver () =
+    if Primitive.Controls.directCloXfer then
+      (ignore (Thread.spawnOnProc (closureReceiver, PacmlFFI.processorNumber ()));
+      (* Closure receiver will run forever. Hence, we will decrement num
+      * live threads so that it does not hinder program termination. *)
+      ignore (Config.decrementNumLiveThreads ()))
+    else ()
+
 
   fun thread_main () =
   let
@@ -90,10 +102,7 @@ struct
 
     fun loop procNum =
     let
-      val _ = Thread.spawnOnProc (closureReceiver, PacmlFFI.processorNumber ())
-      (* Closure receiver will run forever. Hence, we will decrement num
-      * live threads so that it does not hinder program termination. *)
-      val _ = Config.decrementNumLiveThreads ()
+      val _ = spawnClosureReceiver ()
       val _ = PacmlFFI.maybeWaitForGC ()
     in
       case doAtomic (fn () => SQ.dequeHost (RepTypes.PRI)) of
@@ -191,10 +200,7 @@ struct
           let
             val () = Config.isRunning := true
             val () = debug' (fn () => "lateInit")
-            val _ = Thread.spawnOnProc (closureReceiver, PacmlFFI.processorNumber ())
-            (* Closure receiver will run forever. Hence, we will decrement num
-            * live threads so that it does not hinder program termination. *)
-            val _ = Config.decrementNumLiveThreads ()
+            val () = spawnClosureReceiver ()
             (* Spawn the Non-blocking worker threads *)
             val _ = List.tabulate (numIOThreads * 5, fn _ => NonBlocking.mkNBThread ())
             val _ = List.tabulate (numIOThreads, fn i => PacmlFFI.wakeUp (PacmlFFI.numComputeProcessors + i, 1))
@@ -212,7 +218,7 @@ struct
           val () = debug' (fn () => "Main(-1)")
           val () = SH.pauseHook := pauseHook
           val () = debug' (fn () => "Main(0)")
-          val () = ignore (Thread.spawnHost (fn ()=> (lateInit (); initialProc ())))
+          val () = ignore (Thread.spawn (fn ()=> (lateInit (); initialProc ())))
         in
             ()
         end)

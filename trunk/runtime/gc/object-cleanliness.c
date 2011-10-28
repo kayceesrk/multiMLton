@@ -74,7 +74,7 @@ bool GC_isClosureVirgin (GC_state s, pointer p) {
 
   //numPointerFromStack is broken since it only looks for pointers from stack
   //to the root of the closure
-  if (DEBUG_OBJECT_TYPE_INFO || s->selectiveDebug) {
+  if (DEBUG_OBJECT_TYPE_INFO) {
     fprintf (stderr, "hasIdentityTransitive = %d isUnbounded = %d objectTypeIndex = %d \
                       isClosureVirgin = %d numPointerFromStack = %d\n",
                      hasIdentityTransitive, isUnbounded, objectTypeIndex,

@@ -34,8 +34,10 @@ structure Controls =
       val detectOverflow = _command_line_const "MLton.detectOverflow": bool = true;
       val safe = _command_line_const "MLton.safe": bool = true;
       val bufSize = _command_line_const "TextIO.bufSize": Int32.int = 4096;
+
       val wbUsesTypeInfo = _command_line_const "MLton.wbTypeInfo": bool = true;
       val lazySpawn = _command_line_const "MLton.lazySpawn": bool = true;
+      val directCloXfer = _command_line_const "MLton.directCloXfer": bool = true;
    end
 
 structure Exn =
