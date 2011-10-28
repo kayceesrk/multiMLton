@@ -6,6 +6,8 @@
  * See the file MLton-LICENSE for details.
  */
 
+extern CopyObjectMap* copyObjectMap;
+
 void MLton_RCCE_send (GC_state s, pointer p, int dest) {
   assert (isPointer (p) && isPointerInHeap (s, s->heap, p));
 
@@ -17,17 +19,28 @@ void MLton_RCCE_send (GC_state s, pointer p, int dest) {
   assert (me != dest && me < s->numberOfProcs);
   me++; //dummy to eliminate gcc warning
 
+  s->selectiveDebug = TRUE;
   size_t size = GC_size (s, p);
   objptr op = pointerToObjptr (p, s->heap->start);
   void* buffer = malloc_safe (size);
   s->forwardState.toStart = s->forwardState.back = buffer;
   s->forwardState.toLimit = (pointer)((char*)buffer + size);
 
+  assert (copyObjectMap == NULL);
+  fprintf (stderr, "Before copyObjptr\n");
   ENTER_LOCAL0 (s);
   copyObjptr (s, &op);
   foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, copyObjptr, TRUE);
   LEAVE_LOCAL0 (s);
 
+  CopyObjectMap *e, *tmp;
+  HASH_ITER (hh, copyObjectMap, e, tmp) {
+    HASH_DEL (copyObjectMap, e);
+    free (e);
+  }
+  copyObjectMap = NULL;
+
+  s->selectiveDebug = FALSE;
   MLton_RCCE_sendRecvControlPacket cp;
   cp.objectClosureSize = size;
   cp.toSpaceStart = (pointer) buffer;

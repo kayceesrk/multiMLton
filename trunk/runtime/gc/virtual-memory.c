@@ -19,7 +19,7 @@ void *GC_mmapAnon_safe (void *p, size_t length) {
 }
 
 static inline void GC_memcpy (pointer src, pointer dst, size_t size) {
-  if (DEBUG_DETAILED)
+  if (DEBUG_MEM)
     fprintf (stderr, "GC_memcpy ("FMTPTR", "FMTPTR", %"PRIuMAX")\n",
              (uintptr_t)src, (uintptr_t)dst, (uintmax_t)size);
   assert (isAligned ((size_t)src, sizeof(unsigned int)));

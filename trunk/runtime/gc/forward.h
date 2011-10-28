@@ -8,6 +8,12 @@
 
 #if (defined (MLTON_GC_INTERNAL_TYPES))
 
+typedef struct __CopyObjectMap {
+  pointer oldP;
+  pointer newP;
+  UT_hash_handle hh;
+} CopyObjectMap;
+
 typedef struct __SkipRange SkipRange;
 
 struct __SkipRange {

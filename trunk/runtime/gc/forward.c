@@ -218,6 +218,8 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
   RCCE_shflush ();
 }
 
+CopyObjectMap* copyObjectMap = NULL;
+
 /* copyObjptr (s, opp)
  * Copies the object pointed to by *opp to the toSpace.
  */
@@ -236,8 +238,19 @@ void copyObjptr (GC_state s, objptr *opp) {
              (uintptr_t)opp, op, (uintptr_t)p);
   header = getHeader (p);
 
-  size_t size;
+  /* If the object is in the shared heap, skip */
+  if (isObjectLifted (header))
+    return;
 
+  CopyObjectMap* e = NULL;
+  HASH_FIND_PTR (copyObjectMap, &p, e);
+  if (e) { //We have already copied the object to toSpace
+    *opp = e->newP;
+    fprintf (stderr, "copyObjptr: Already copied newP="FMTPTR"\n", (uintptr_t)*opp);
+    return;
+  }
+
+  size_t size;
   size_t headerBytes, objectBytes;
   uint16_t bytesNonObjptrs, numObjptrs;
 
@@ -278,6 +291,13 @@ void copyObjptr (GC_state s, objptr *opp) {
     w->objptr = BOGUS_OBJPTR;
   }
 
+  e = (CopyObjectMap*) malloc (sizeof (CopyObjectMap));
+  e->oldP = *opp;
+  e->newP = (pointer) s->forwardState.back + headerBytes;
+  fprintf (stderr, "copyObjptr: Adding oldP="FMTPTR" newP="FMTPTR"\n",
+           (uintptr_t)e->oldP, (uintptr_t)e->newP);
+  HASH_ADD_PTR (copyObjectMap, oldP, e);
+
   if (isPointerInToSpace (s, (pointer)opp)) {
     *opp = pointerToObjptr (s->forwardState.back + headerBytes,
                             s->forwardState.toStart);
@@ -287,9 +307,6 @@ void copyObjptr (GC_state s, objptr *opp) {
               (uintptr_t)*opp, s->procId);
   }
 
-  //Remove lift bit
-  GC_header* headerp = ((GC_header*)(p - GC_HEADER_SIZE));
-  *headerp = header & (~(LIFT_MASK));
 
   s->forwardState.back += size;
   assert (isAligned ((size_t)s->forwardState.back + GC_NORMAL_HEADER_SIZE,
