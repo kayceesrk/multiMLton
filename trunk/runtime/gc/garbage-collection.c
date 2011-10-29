@@ -56,6 +56,7 @@ void majorGC (GC_state s, size_t bytesRequested, bool mayResize, bool liftWBAs) 
   }
   resizeLocalHeapSecondary (s);
 
+  RCCE_DCMflush ();
   assert (s->heap->oldGenSize + bytesRequested <= s->heap->size);
 }
 
@@ -236,7 +237,7 @@ void performSharedGCCollective (GC_state s,
     initPointerToCore (s, BUFFER_SIZE);
     if (DEBUG_DETAILED)
       fprintf (stderr, "Core 0: letting other processors proceed\n");
-    RCCE_shflush ();
+    RCCE_DCMflush ();
     //Other processors are waiting in ENTER0
     RCCE_barrier (&RCCE_COMM_WORLD);
     //Now bcast the pointerToCoreMap
@@ -307,12 +308,12 @@ void performSharedGCCollective (GC_state s,
 
   if (oldGenSize != 0) {
     s->sharedHeap->oldGenSize = oldGenSize;
-    RCCE_shflush ();
+    RCCE_DCMflush ();
     RCCE_barrier (&RCCE_COMM_WORLD);
   }
   else {
     RCCE_barrier (&RCCE_COMM_WORLD);
-    RCCE_shflush ();
+    RCCE_DCMflush ();
   }
   assert (s->sharedHeap->oldGenSize != 0);
 
@@ -378,10 +379,10 @@ void performSharedGCCollective (GC_state s,
       desiredSize > s->secondarySharedHeap->size)
     resizeSharedHeapSecondary (s, desiredSize);
 
-  RCCE_shflush ();
+  RCCE_DCMflush ();
   //This barrier is needed so that all cores see the effect of secondary shared heap resizing
   RCCE_barrier (&RCCE_COMM_WORLD);
-  RCCE_shflush ();
+  RCCE_DCMflush ();
 
 
   /* Choose the kind of GC */
@@ -444,7 +445,7 @@ void performSharedGCCollective (GC_state s,
               uintmaxToCommaString (s->sharedHeap->oldGenSize));
 
     finalizePointerToCore (s);
-    RCCE_shflush ();
+    RCCE_DCMflush ();
     RCCE_barrier (&RCCE_COMM_WORLD);
   }
   else {
@@ -463,7 +464,7 @@ void performSharedGCCollective (GC_state s,
 
     finalizePointerToCore (s);
     RCCE_barrier (&RCCE_COMM_WORLD);
-    RCCE_shflush ();
+    RCCE_DCMflush ();
   }
 
   LEAVE0 (s);
@@ -720,7 +721,7 @@ static bool allocChunkInSharedHeap (GC_state s,
       if (DEBUG)
         fprintf (stderr, "[GC: Shared alloction of chunk @ "FMTPTR".] [%d]\n",
                  (uintptr_t)newProcFrontier, s->procId);
-      RCCE_shflush ();
+      RCCE_DCMflush ();
 
       s->sharedStart = newStart;
       s->sharedFrontier = newProcFrontier;
@@ -827,6 +828,7 @@ void ensureHasHeapBytesFreeAndOrInvariantForMutator (GC_state s, bool forceGC,
                                                      size_t nurseryBytesRequested,
                                                      bool fromGCCollect,
                                                      size_t forceStackGrowthBytes) {
+  RCCE_DCMflush ();
   bool stackTopOk;
   size_t stackBytesRequested;
 

@@ -286,7 +286,7 @@ int GC_manipulateIntentArray (GC_state s, int array, int operation,
   else
     intentArray = s->recvIntent;
 
-  RCCE_shflush ();
+  RCCE_DCMflush ();
 
   //Operation is a read
   if (operation == 0)

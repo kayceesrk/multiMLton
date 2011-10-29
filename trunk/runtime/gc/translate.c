@@ -190,10 +190,10 @@ void translateSharedHeap (GC_state s, pointer from, pointer to, size_t size) {
   }
 
   /* Translate globals and heap. */
-  RCCE_shflush ();
+  RCCE_DCMflush ();
   foreachGlobalObjptrInScope (s, translateObjptrShared);
   limit = to + size;
-  RCCE_shflush ();
+  RCCE_DCMflush ();
 
   if (Proc_processorNumber (s) != s->numberOfProcs - 1) {
     if (DEBUG_DETAILED)
@@ -231,9 +231,9 @@ void translateSharedHeap (GC_state s, pointer from, pointer to, size_t size) {
                Proc_processorNumber (s) + 1, Proc_processorNumber (s));
   }
 
-  RCCE_shflush ();
+  RCCE_DCMflush ();
   RCCE_barrier (&RCCE_COMM_WORLD);
-  RCCE_shflush ();
+  RCCE_DCMflush ();
 
   s->translateState.from = BOGUS_POINTER;
   s->translateState.to = BOGUS_POINTER;

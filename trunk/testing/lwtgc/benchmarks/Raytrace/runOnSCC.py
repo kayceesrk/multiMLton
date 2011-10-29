@@ -66,10 +66,13 @@ def main ():
 	#Parse options
 	parser = OptionParser()
 	parser.add_option("-a", "--arguments", dest="args", help="pacml program arguments", default ="")
-	parser.add_option("-n", "--numProcs", dest="numProcs", help="number of processors", default =1)
+	parser.add_option("-n", "--numProcs", dest="numProcs", help="number of processors")
 	(options, args) = parser.parse_args()
 
-	for n in [6, 8, 16, 32]:
-		run(directory, program, n, options.args, timeout)
+	if (options.numProcs):
+		run(directory, program, options.numProcs, options.args, timeout)
+	else:
+		for n in [6, 8, 16, 32]:
+			run(directory, program, n, options.args, timeout)
 
 main ()

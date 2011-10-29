@@ -116,7 +116,7 @@ static void assistSharedToSpaceWalking (GC_state s) {
 
   while (1) {
     RCCE_recv ((char*)&assist, sizeof(SMAssistInfo), 0);
-    RCCE_shflush ();
+    RCCE_DCMflush ();
     if ((objptr)assist.opp == BOGUS_OBJPTR)
       return;
     s->forwardState.toStart = assist.forwardToStart;
@@ -124,7 +124,7 @@ static void assistSharedToSpaceWalking (GC_state s) {
     s->forwardState.back = assist.forwardBack;
 
     forwardObjptrForSharedCheneyCopy (s, assist.opp);
-    RCCE_shflush ();
+    RCCE_DCMflush ();
     back = s->forwardState.back;
     RCCE_send ((char*)&back, sizeof(pointer), 0);
   }
@@ -205,7 +205,7 @@ void majorCheneyCopySharedGC (GC_state s) {
     fprintf (stderr, "majorCheneyCopySharedGC: walking local heaps (2) [%d]\n",
              Proc_processorNumber (s));
   callIfIsObjptr (s, forwardObjptrForSharedCheneyCopy, &s->forwardState.liftingObject);
-  RCCE_shflush ();
+  RCCE_DCMflush ();
   }
 
   if (Proc_processorNumber (s) != s->numberOfProcs - 1) {
@@ -246,9 +246,9 @@ void majorCheneyCopySharedGC (GC_state s) {
 
   {
   //Forward Globals -- must come after walking local heaps for correct forwarding state
-  RCCE_shflush ();
+  RCCE_DCMflush ();
   foreachGlobalObjptrInScope (s, forwardObjptrForSharedCheneyCopy);
-  RCCE_shflush ();
+  RCCE_DCMflush ();
   }
 
   if (Proc_processorNumber (s) != s->numberOfProcs - 1) {

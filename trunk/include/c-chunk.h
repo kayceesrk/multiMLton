@@ -100,24 +100,24 @@
 #define FlushFrontier()                         \
         do {                                    \
                 FrontierMem = Frontier;         \
-                RCCE_shflush ();                \
+                RCCE_DCMflush ();                \
         } while (0)
 
 #define FlushStackTop()                         \
         do {                                    \
                 StackTopMem = StackTop;         \
-                RCCE_shflush ();                \
+                RCCE_DCMflush ();                \
         } while (0)
 
 #define CacheFrontier()                         \
         do {                                    \
-                RCCE_shflush ();                \
+                RCCE_DCMflush ();                \
                 Frontier = FrontierMem;         \
         } while (0)
 
 #define CacheStackTop()                         \
         do {                                    \
-                RCCE_shflush ();                \
+                RCCE_DCMflush ();                \
                 StackTop = StackTopMem;         \
         } while (0)
 

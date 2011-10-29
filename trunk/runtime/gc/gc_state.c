@@ -256,7 +256,7 @@ void setGCStateCurrentSharedHeap (GC_state s,
     procStates[proc].sharedHeapEnd = s->sharedHeap->start + s->sharedHeap->size;
   }
 
-  RCCE_shflush ();
+  RCCE_DCMflush ();
 }
 
 bool GC_getIsPCML (void) {
@@ -422,7 +422,7 @@ pointer GC_forwardBase (const GC_state s, const pointer p) {
     return p;
 
   if (*(GC_header*)(p - GC_HEADER_SIZE) == GC_FORWARDED) {
-    RCCE_shflush ();
+    RCCE_DCMflush ();
     if (DEBUG_READ_BARRIER)
       fprintf (stderr, "GC_forwardBase: forwarding "FMTPTR" to "FMTPTR" [%d]\n",
                (uintptr_t)p, (uintptr_t)*(pointer*)p, s->procId);

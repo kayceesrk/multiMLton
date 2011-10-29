@@ -215,7 +215,7 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
     forwardObjptrToSharedHeap (s, opp);
   }
   assert (isObjptrInToSpace (s, *opp) || isObjptrInHeap (s, s->sharedHeap, *opp));
-  RCCE_shflush ();
+  RCCE_DCMflush ();
 }
 
 CopyObjectMap* copyObjectMap = NULL;
@@ -607,7 +607,7 @@ static inline void forwardObjptrForSharedCheneyCopy (GC_state s, objptr *opp) {
       assert (Proc_processorNumber (s) == 0);
       pointer back = BOGUS_POINTER;
       RCCE_send ((char*)&assist, sizeof (SMAssistInfo), coreId);
-      RCCE_shflush ();
+      RCCE_DCMflush ();
       RCCE_recv ((char*)&back, sizeof (pointer), coreId);
       assert (back != BOGUS_POINTER);
       s->forwardState.back = back;

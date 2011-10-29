@@ -146,7 +146,7 @@ void releaseHeap (GC_state s, GC_heap h) {
              uintmaxToCommaString(h->withMapsSize - h->size));
   if (h == s->sharedHeap || h == s->secondarySharedHeap) {
     RCCE_shfree ((void*)h->start);
-    RCCE_shflush ();
+    RCCE_DCMflush ();
   }
   else
     GC_release (h->start, h->withMapsSize);
@@ -481,7 +481,7 @@ copy:
             and to >= newHeapp->start);
     if (remaining < COPY_CHUNK_SIZE) {
       GC_memcpy (curHeapp->start, newHeapp->start, remaining);
-      RCCE_shflush ();
+      RCCE_DCMflush ();
       releaseHeap (s, curHeapp);
     } else {
       remaining -= COPY_CHUNK_SIZE;

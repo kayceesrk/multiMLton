@@ -12,23 +12,23 @@ int32_t Proc_addrToCoreId (pointer p) {
 
 void Proc_waitForInitialization (__attribute__((unused)) GC_state s) {
   RCCE_barrier (&RCCE_COMM_WORLD);
-  RCCE_shflush ();
+  RCCE_DCMflush ();
 }
 
 void Proc_signalInitialization (GC_state s) {
   *s->needsBarrier = DEFAULT;
-  RCCE_shflush ();
+  RCCE_DCMflush ();
   RCCE_barrier (&RCCE_COMM_WORLD);
 }
 
 bool Proc_isInitialized (GC_state s) {
-  RCCE_shflush ();
+  RCCE_DCMflush ();
   return (*s->needsBarrier != NOT_INITIALIZED);
 }
 
 void Proc_beginCriticalSection (GC_state s) {
   *s->needsBarrier = NEEDS_BARRIER;
-  RCCE_shflush ();
+  RCCE_DCMflush ();
 
   if (Proc_isInitialized (s)) {
     assert (s->atomicState > 0);
@@ -47,7 +47,7 @@ void Proc_beginCriticalSection (GC_state s) {
       *s->needsBarrier = IN_CRITICAL_SECTION;
       if (DEBUG_DETAILED)
         fprintf (stderr, "Core 0: entering critical section\n");
-      RCCE_shflush ();
+      RCCE_DCMflush ();
     }
   }
 }
@@ -60,16 +60,16 @@ void Proc_endCriticalSection (GC_state s) {
       *s->needsBarrier = DEFAULT;
 
     /* All processors sync one more time before exiting */
-    RCCE_shflush ();
+    RCCE_DCMflush ();
     RCCE_barrier (&RCCE_COMM_WORLD);
-    RCCE_shflush ();
+    RCCE_DCMflush ();
   }
 }
 
 /* returns true if some thread has initiated a barrier and/or inside a critical
  * section */
 bool Proc_threadInSection (GC_state s) {
-  RCCE_shflush ();
+  RCCE_DCMflush ();
   return (*s->needsBarrier == NEEDS_BARRIER);
 }
 
@@ -77,11 +77,11 @@ bool Proc_threadInSection (GC_state s) {
  * difference from Proc_threadInSection is that here true is returned only if
  * all threads are already in critical section */
 bool Proc_executingInSection (GC_state s) {
-  RCCE_shflush ();
+  RCCE_DCMflush ();
   return (*s->needsBarrier == IN_CRITICAL_SECTION);
 }
 
 bool Proc_mustExit (GC_state s) {
-  RCCE_shflush ();
+  RCCE_DCMflush ();
   return (*s->needsBarrier == EXIT);
 }
