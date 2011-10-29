@@ -278,7 +278,7 @@ void SHMalloc(t_vcharp *SHM) {
 #ifdef SHMDBG
   fprintf(stderr, "Opened CACHEABLE\n");
 #endif
-  if (MappedAddr == (void*)0x97f00000)
+  if (MappedAddr != (void*)0x97f00000)
   {
           perror("mmap");
           exit(-1);
