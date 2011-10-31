@@ -629,6 +629,9 @@ void GC_lateInit (GC_state s) {
 
 void GC_earlyInit (GC_state s) {
   s->needsBarrier = (GC_barrierInfo*) GC_mpbmalloc (sizeof (GC_barrierInfo));
+  if (s->procId != 0) {
+    s->needsBarrier = (GC_barrierInfo*)(((char*)s->needsBarrier - (char*) RCCE_getMPBbase(s->procId)) + (char*) RCCE_getMPBbase(0));
+  }
   writeNeedsBarrier (s, NOT_INITIALIZED);
 }
 
