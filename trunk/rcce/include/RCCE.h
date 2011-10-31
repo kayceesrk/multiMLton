@@ -37,13 +37,13 @@
 
 #ifdef SHMADD
 //64MB
-//#define RCCE_SHM_SIZE_MAX                      0x4000000
+#define RCCE_SHM_SIZE_MAX                      0x4000000
 // 128MB
 //#define RCCE_SHM_SIZE_MAX                      0x8000000
 // 256MB
 //#define RCCE_SHM_SIZE_MAX                      0x10000000
 // 512MB
-#define RCCE_SHM_SIZE_MAX                      0x20000000
+//#define RCCE_SHM_SIZE_MAX                      0x20000000
 // 960MB
 //#define RCCE_SHM_SIZE_MAX                      0x3C000000
 #else
@@ -146,9 +146,9 @@ int    RCCE_finalize(void);
 double RCCE_wtime(void);
 int    RCCE_ue(void);
 int    RCCE_num_ues(void);
-#ifdef GORY
 t_vcharp RCCE_malloc(size_t);
 t_vcharp RCCE_malloc_request(size_t, size_t *);
+#ifdef GORY
 void   RCCE_free(t_vcharp);
 int    RCCE_put(t_vcharp, t_vcharp, int, int);
 int    RCCE_get(t_vcharp, t_vcharp, int, int);
