@@ -522,8 +522,6 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->savedThread = BOGUS_OBJPTR;
   s->savedClosure = BOGUS_OBJPTR;
   s->pacmlThreadId = BOGUS_OBJPTR;
-  s->needsBarrier = (GC_barrierInfo*) GC_shmalloc (sizeof (GC_barrierInfo));
-  *s->needsBarrier = NOT_INITIALIZED;
   s->secondaryLocalHeap = (GC_heap) malloc (sizeof (struct GC_heap));
   initHeap (s, s->secondaryLocalHeap, LOCAL_HEAP);
   s->sharedHeap = (GC_heap) GC_shmalloc (sizeof (struct GC_heap));
@@ -629,6 +627,11 @@ void GC_lateInit (GC_state s) {
   s->amInGC = FALSE;
 }
 
+void GC_earlyInit (GC_state s) {
+  s->needsBarrier = (GC_barrierInfo*) GC_mpbmalloc (sizeof (GC_barrierInfo));
+  writeNeedsBarrier (s, NOT_INITIALIZED);
+}
+
 void GC_duplicate (GC_state d, GC_state s) {
   d->amInGC = s->amInGC;
   d->amOriginal = s->amOriginal;
@@ -647,7 +650,6 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->numberOfProcs = s->numberOfProcs;
   d->numIOThreads = s->numIOThreads;
   d->enableTimer = s->enableTimer;
-  d->needsBarrier = s->needsBarrier;
   d->timeInterval = s->timeInterval;
   d->sharedHeapStart = s->sharedHeapStart;
   d->sharedHeapEnd = s->sharedHeapEnd;

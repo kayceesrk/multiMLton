@@ -470,7 +470,7 @@ void GC_done (GC_state s) {
     exit (1);
   }
 
-  *s->needsBarrier = EXIT;
+  writeNeedsBarrier (s, EXIT);
   //Collect the GC_states
   GC_state procStates = (GC_state) malloc ((s->numberOfProcs) * sizeof (struct GC_state));
   GC_memcpy ((void*)s, (void*)&procStates[0], sizeof (struct GC_state));

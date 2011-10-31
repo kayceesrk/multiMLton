@@ -10,24 +10,24 @@ int32_t Proc_addrToCoreId (pointer p) {
   return (((int)p & 0x000000FC) >> 2)% RCCE_num_ues ();
 }
 
-void Proc_waitForInitialization (__attribute__((unused)) GC_state s) {
+void Proc_waitForInitialization (GC_state s) {
   RCCE_barrier (&RCCE_COMM_WORLD);
   RCCE_DCMflush ();
+  assert (readNeedsBarrier (s) != NOT_INITIALIZED);
 }
 
 void Proc_signalInitialization (GC_state s) {
-  *s->needsBarrier = DEFAULT;
+  writeNeedsBarrier (s, DEFAULT);
   RCCE_DCMflush ();
   RCCE_barrier (&RCCE_COMM_WORLD);
 }
 
 bool Proc_isInitialized (GC_state s) {
-  RCCE_DCMflush ();
-  return (*s->needsBarrier != NOT_INITIALIZED);
+  return (readNeedsBarrier (s) != NOT_INITIALIZED);
 }
 
 void Proc_beginCriticalSection (GC_state s) {
-  *s->needsBarrier = NEEDS_BARRIER;
+  writeNeedsBarrier (s, NEEDS_BARRIER);
   RCCE_DCMflush ();
 
   if (Proc_isInitialized (s)) {
@@ -44,7 +44,7 @@ void Proc_beginCriticalSection (GC_state s) {
                  Proc_processorNumber (s));
     }
     else {
-      *s->needsBarrier = IN_CRITICAL_SECTION;
+      writeNeedsBarrier (s, IN_CRITICAL_SECTION);
       if (DEBUG_DETAILED)
         fprintf (stderr, "Core 0: entering critical section\n");
       RCCE_DCMflush ();
@@ -57,7 +57,7 @@ void Proc_endCriticalSection (GC_state s) {
     assert (s->atomicState > 0);
 
     if (Proc_processorNumber (s) == 0)
-      *s->needsBarrier = DEFAULT;
+      writeNeedsBarrier (s, DEFAULT);
 
     /* All processors sync one more time before exiting */
     RCCE_DCMflush ();
@@ -70,18 +70,16 @@ void Proc_endCriticalSection (GC_state s) {
  * section */
 bool Proc_threadInSection (GC_state s) {
   RCCE_DCMflush ();
-  return (*s->needsBarrier == NEEDS_BARRIER);
+  return (readNeedsBarrier (s) == NEEDS_BARRIER);
 }
 
 /* Returns true if all threads are in a critical section and executing it. Main
  * difference from Proc_threadInSection is that here true is returned only if
  * all threads are already in critical section */
 bool Proc_executingInSection (GC_state s) {
-  RCCE_DCMflush ();
-  return (*s->needsBarrier == IN_CRITICAL_SECTION);
+  return (readNeedsBarrier (s) == IN_CRITICAL_SECTION);
 }
 
 bool Proc_mustExit (GC_state s) {
-  RCCE_DCMflush ();
-  return (*s->needsBarrier == EXIT);
+  return (readNeedsBarrier (s) == EXIT);
 }

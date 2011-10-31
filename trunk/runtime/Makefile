@@ -143,7 +143,7 @@ FLAGS += -funroll-all-loops
 endif
 
 CPPFLAGS :=
-CFLAGS := -I. -Iplatform $(FLAGS) -I$(SH)/rcce/include -DSHMADD -DSHMADD_CACHEABLE
+CFLAGS := -I. -Iplatform $(FLAGS) -I$(SH)/rcce/include
 OPTCFLAGS := $(CFLAGS) $(CPPFLAGS) $(OPTFLAGS)
 DEBUGCFLAGS := $(CFLAGS) $(CPPFLAGS) -DASSERT=1 $(DEBUGFLAGS)
 PICCFLAGS := $(CFLAGS) $(CPPFLAGS) $(OPTFLAGS) $(PICFLAGS)

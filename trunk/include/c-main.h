@@ -118,8 +118,11 @@ void run (void *arg) {                                                  \
         }                                                               \
 }                                                                       \
 PUBLIC int MLton_main (int argc, char* argv[]) {                        \
+        struct GC_state s;                                              \
         dup2(STDOUT_FILENO, STDERR_FILENO);                             \
         RCCE_init (&argc, &argv);                                       \
+        s.procId = RCCE_ue ();                                          \
+        GC_earlyInit (&s);                                              \
         RCCE_barrier (&RCCE_COMM_WORLD);                                \
         pthread_t *threads;                                             \
         pthread_t alrmHandlerThread;                                    \
@@ -128,8 +131,6 @@ PUBLIC int MLton_main (int argc, char* argv[]) {                        \
           fprintf (stderr, "pthread_key_create failed\n");              \
           exit (1);                                                     \
         }                                                               \
-        struct GC_state s;                                              \
-        s.procId = RCCE_ue ();                                          \
         createGlobals ();                                               \
         if (RCCE_ue () == 0) {                                          \
           /* Initialize with a generic state to read in @MLtons, etc */ \

@@ -23,8 +23,6 @@ void* GC_shmalloc (size_t size) {
 void* GC_mpbmalloc (size_t size) {
   size_t resultSize;
   void* res = RCCE_malloc_request (size, &resultSize);
-  fprintf (stderr, "GC_mpbmalloc: res "FMTPTR" resultSize %zu\n",
-           (uintptr_t)res, resultSize);
   if (res == NULL) {
     fprintf (stderr, "GC_mpbmalloc: failed\n");
     exit (1);

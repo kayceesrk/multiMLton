@@ -477,3 +477,13 @@ void assistSetSharedHeapState (GC_state s, bool duringInit) {
     assert (getThreadCurrent(s)->bytesNeeded <= (size_t)(s->sharedLimitPlusSlop - s->sharedFrontier));
   assert (isFrontierAligned (s, s->sharedFrontier));
 }
+
+GC_barrierInfo readNeedsBarrier (GC_state s) {
+  RC_cache_invalidate ();
+  return *(GC_barrierInfo*)(((char*)s->needsBarrier - (char*) RCCE_getMPBbase(s->procId)) + (char*) RCCE_getMPBbase(0));
+}
+
+void writeNeedsBarrier (GC_state s, GC_barrierInfo b) {
+  RC_cache_invalidate ();
+  *(GC_barrierInfo*) (((char*)s->needsBarrier - (char*)RCCE_getMPBbase(s->procId)) + (char*)RCCE_getMPBbase(0)) = b;
+}

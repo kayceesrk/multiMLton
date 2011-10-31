@@ -181,6 +181,9 @@ static void setGCStateCurrentLocalHeap (GC_state s,
 void setSharedHeapState (GC_state s, bool duringInit);
 void assistSetSharedHeapState (GC_state s, bool duringInit);
 
+GC_barrierInfo readNeedsBarrier (GC_state s);
+void writeNeedsBarrier (GC_state s, GC_barrierInfo b);
+
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */
 
 #if (defined (MLTON_GC_INTERNAL_BASIS))

@@ -26,7 +26,7 @@ ifeq ($(OMP_EMULATOR),0)
 #  PLATFORMFLAGS=$(BMFLAG) -DSCC -DSHMADD -DSHMADD_CACHEABLE -static -mcpu=pentium -gcc-version=340 -I../include
 
   CCOMPILE=gcc
-  PLATFORMFLAGS=$(BMFLAG) -DSHMADD -DSHMADD_CACHEABLE -DSCC -static -march=pentium -mtune=pentium -I../include
+  PLATFORMFLAGS=$(BMFLAG) -DSHMADD -DSCC -static -march=pentium -mtune=pentium -I../include
 
 #  CCOMPILE=g++
 #  PLATFORMFLAGS=$(BMFLAG) -DSCC -static -march=pentium -mtune=pentium -I../include
@@ -64,6 +64,6 @@ else
 endif
 
 ARCHIVE=$(RCCEROOT)/bin/$(SUBDIR)/libRCCE_$(flagname)_$(apiname)_$(powername).a
-CFLAGS=-O0 -g2 -ggdb $(PLATFORMFLAGS) $(PWROPT) $(FLAGOPT) $(APIOPT) -I$(RCCEINCLUDE)
-#CFLAGS=-O3 $(PLATFORMFLAGS) $(PWROPT) $(FLAGOPT) $(APIOPT) -I$(RCCEINCLUDE)
+#CFLAGS=-O0 -g2 -ggdb $(PLATFORMFLAGS) $(PWROPT) $(FLAGOPT) $(APIOPT) -I$(RCCEINCLUDE)
+CFLAGS=-O3 $(PLATFORMFLAGS) $(PWROPT) $(FLAGOPT) $(APIOPT) -I$(RCCEINCLUDE)
 #CFLAGS=-O3 $(PLATFORMFLAGS) $(PWROPT) $(FLAGOPT) $(APIOPT) -I$(RCCEINCLUDE) -I$(RCK_LIB_SRC)

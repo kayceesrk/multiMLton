@@ -145,6 +145,8 @@ int    RCCE_init(int *, char***);
 int    RCCE_finalize(void);
 double RCCE_wtime(void);
 int    RCCE_ue(void);
+t_vcharp RCCE_getMPBbase (int);
+void RC_cache_invalidate (void);
 int    RCCE_num_ues(void);
 t_vcharp RCCE_malloc(size_t);
 t_vcharp RCCE_malloc_request(size_t, size_t *);

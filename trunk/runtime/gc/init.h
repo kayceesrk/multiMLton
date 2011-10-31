@@ -18,3 +18,4 @@ static int processAtMLton (GC_state s, int argc,
 PRIVATE int GC_init (GC_state s, int argc, char **argv);
 PRIVATE void GC_lateInit (GC_state s);
 PRIVATE void GC_duplicate (GC_state d, GC_state s);
+PRIVATE void GC_earlyInit (GC_state s);
