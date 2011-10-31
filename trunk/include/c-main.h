@@ -137,6 +137,7 @@ PUBLIC int MLton_main (int argc, char* argv[]) {                        \
           GC_lateInit (&s);                                             \
           /* Bcast s0 for duplication */                                \
           RCCE_bcast ((char*)&s, sizeof (struct GC_state), 0, RCCE_COMM_WORLD); \
+          RCCE_barrier (&RCCE_COMM_WORLD);                              \
           setSharedHeapState (&s, TRUE);                                \
         }                                                               \
         if (RCCE_ue () != 0) {                                          \
@@ -144,6 +145,7 @@ PUBLIC int MLton_main (int argc, char* argv[]) {                        \
           /* Recv s0 and duplicate */                                   \
           RCCE_bcast ((char*)&s0, sizeof (struct GC_state), 0, RCCE_COMM_WORLD); \
           Duplicate (&s, &s0);                                          \
+          RCCE_barrier (&RCCE_COMM_WORLD);                              \
           assistSetSharedHeapState (&s, TRUE);                          \
         }                                                               \
         RCCE_barrier (&RCCE_COMM_WORLD);                                \

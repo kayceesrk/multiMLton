@@ -12,5 +12,23 @@ void* GC_shmalloc (size_t size) {
     fprintf (stderr, "Should not call GC_shmalloc from cores other than core 0\n");
     exit (1);
   }
-  return RCCE_shmalloc (size);
+  void* res = RCCE_shmalloc (size);
+  if (res == NULL) {
+    fprintf (stderr, "GC_shmalloc: failed\n");
+    exit (1);
+  }
+  return res;
+}
+
+void* GC_mpbmalloc (size_t size) {
+  size_t resultSize;
+  void* res = RCCE_malloc_request (size, &resultSize);
+  fprintf (stderr, "GC_mpbmalloc: res "FMTPTR" resultSize %zu\n",
+           (uintptr_t)res, resultSize);
+  if (res == NULL) {
+    fprintf (stderr, "GC_mpbmalloc: failed\n");
+    exit (1);
+  }
+
+  return res;
 }
