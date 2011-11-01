@@ -497,12 +497,6 @@ int GC_init (GC_state s, int argc, char **argv) {
   assert (sizeofThread (s) == sizeofThread (s));
   assert (sizeofWeak (s) == sizeofWeak (s));
 
-  s->sendIntent = (int*) GC_shmalloc (sizeof (int) * RCCE_num_ues ());
-  s->recvIntent = (int*) GC_shmalloc (sizeof (int) * RCCE_num_ues ());
-
-  for (int i=0; i < RCCE_num_ues(); i++)
-    s->sendIntent[i] = s->recvIntent[i] = -1;
-
   s->cumulativeStatistics = (struct GC_cumulativeStatistics*)initCumulativeStatistics (s);
   s->lastMajorStatistics = (struct GC_lastMajorStatistics*)initLastMajorStatistics ();
   s->lastSharedMajorStatistics = (struct GC_lastSharedMajorStatistics*)initLastSharedMajorStatistics ();
@@ -629,10 +623,17 @@ void GC_lateInit (GC_state s) {
 
 void GC_earlyInit (GC_state s) {
   s->needsBarrier = (GC_barrierInfo*) GC_mpbmalloc (sizeof (GC_barrierInfo));
+  //s->sendIntent = (int*) GC_mpbmalloc (sizeof (int*) * RCCE_num_ues());
+  //s->recvIntent = (int*) GC_mpbmalloc (sizeof (int*) * RCCE_num_ues());
   if (s->procId != 0) {
     s->needsBarrier = (GC_barrierInfo*)(((char*)s->needsBarrier - (char*) RCCE_getMPBbase(s->procId)) + (char*) RCCE_getMPBbase(0));
+    //s->sendIntent = (GC_barrierInfo*)(((char*)s->sendIntent - (char*) RCCE_getMPBbase(s->procId)) + (char*) RCCE_getMPBbase(0));
+    //s->recvIntent = (GC_barrierInfo*)(((char*)s->recvIntent - (char*) RCCE_getMPBbase(s->procId)) + (char*) RCCE_getMPBbase(0));
   }
+  //for (int i=0; i < RCCE_num_ues(); i++)
+  //  s->sendIntent[i] = s->recvIntent[i] = -1;
   writeNeedsBarrier (s, NOT_INITIALIZED);
+  RCCE_barrier (&RCCE_COMM_WORLD);
 }
 
 void GC_duplicate (GC_state d, GC_state s) {
@@ -685,9 +686,6 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->translateState.size = 0;
   d->sysvals.ram = s->sysvals.ram;
   d->schedulerQueues = s->schedulerQueues;
-
-  d->sendIntent = s->sendIntent;
-  d->recvIntent = s->recvIntent;
 
   createAuxDataStructures (d);
 

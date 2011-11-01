@@ -84,7 +84,6 @@ void Parallel_maybeWaitForGC (void) {
 void Parallel_lock (Int32 p) {
   /* This flush will ensure that global data read within the locked region is
    * upto date */
-  RCCE_DCMflush ();
   RCCE_acquire_lock (p);
   RCCE_DCMflush ();
 }
@@ -94,7 +93,6 @@ void Parallel_unlock (Int32 p) {
    * flushed */
   RCCE_DCMflush ();
   RCCE_release_lock (p);
-  RCCE_DCMflush ();
 }
 
 Int32 Parallel_fetchAndAdd (pointer p, Int32 v) {
@@ -147,6 +145,24 @@ Int32 Parallel_vCompareAndSwap (pointer p, Int32 old, Int32 new) {
 
   return result;
 }
+
+Int32 Unsafe_vCompareAndSwap (pointer p, Int32 old, Int32 new) {
+  int* ip = (int*)p;
+  int i = *ip;
+  if (i != old)
+    return i;
+
+  int result;
+  i = *ip;
+  if (i != old)
+    result = i;
+  else {
+    *ip = new;
+    result = old;
+  }
+  return result;
+}
+
 
 void Parallel_enablePreemption (void)
 {

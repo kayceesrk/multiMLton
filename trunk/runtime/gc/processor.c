@@ -62,14 +62,12 @@ void Proc_endCriticalSection (GC_state s) {
     /* All processors sync one more time before exiting */
     RCCE_DCMflush ();
     RCCE_barrier (&RCCE_COMM_WORLD);
-    RCCE_DCMflush ();
   }
 }
 
 /* returns true if some thread has initiated a barrier and/or inside a critical
  * section */
 bool Proc_threadInSection (GC_state s) {
-  RCCE_DCMflush ();
   return (readNeedsBarrier (s) == NEEDS_BARRIER);
 }
 

@@ -16,6 +16,9 @@ Int32 Parallel_fetchAndAdd (pointer p, Int32 v);
 bool Parallel_compareAndSwap (pointer p, Int32 old, Int32 new);
 Int32 Parallel_vCompareAndSwap (pointer p, Int32 old, Int32 new);
 
+//Need to perform locking externally
+Int32 Unsafe_vCompareAndSwap (pointer p, Int32 old, Int32 new);
+
 void Parallel_maybeWaitForGC (void);
 void maybeWaitForGC (GC_state s);
 

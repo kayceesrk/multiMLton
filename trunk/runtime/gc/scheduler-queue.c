@@ -286,11 +286,15 @@ int GC_manipulateIntentArray (GC_state s, int array, int operation,
   else
     intentArray = s->recvIntent;
 
-  RCCE_DCMflush ();
+  RC_cache_invalidate ();
 
   //Operation is a read
   if (operation == 0)
     return intentArray[coreId];
   //Operation is a write
-  return Parallel_vCompareAndSwap ((pointer)&intentArray[coreId], oldValue, newValue);
+  pointer address = (pointer)&intentArray[coreId];
+  RCCE_acquire_lock (Proc_addrToCoreId (address));
+  int result = Unsafe_vCompareAndSwap (address, oldValue, newValue);
+  RCCE_release_lock (Proc_addrToCoreId (address));
+  return result;
 }
