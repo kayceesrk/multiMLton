@@ -10,5 +10,6 @@
 
 PRIVATE void* GC_shmalloc (size_t size);
 PRIVATE void* GC_mpbmalloc (size_t size);
+char* translateMPBAddress (char* address, int fromCore, int toCore);
 
 #endif /* (defined (MLTON_GC_INTERNAL_BASIS)) */

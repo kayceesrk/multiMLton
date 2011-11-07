@@ -30,3 +30,9 @@ void* GC_mpbmalloc (size_t size) {
 
   return res;
 }
+
+char* translateMPBAddress (char* address, int fromCore, int toCore) {
+  if (fromCore == toCore)
+    return address;
+  return (address - (char*) RCCE_getMPBbase (fromCore)) + (char*) RCCE_getMPBbase (toCore);
+}

@@ -62,17 +62,6 @@ struct GC_state {
   size_t tmpSizet;
   int32_t tmpInt;
 
-  /* Intents for sharing closures over RCCE
-   * --------------------------------------
-   * xxxxIntent is an array of size numberOfProcs, allocated on the shared
-   * memory, shared between all cores. When a core X wishes to spawn a thread
-   * on a different core Y and the closure is "clean" (See objectTypeTag), the
-   * sender publishes its intent by atomically setting sendIntent[Y] = X. This
-   * will <eventually> be seen by the receiver which will atomically set
-   * recdIntent[X] = Y and then perform RCCE_recv (from ML). This recvIntent
-   * will <eventually> be seen by the sender who performs the RCCE_send (also
-   * from ML).
-   */
   volatile int* sendIntent;
   volatile int* recvIntent;
 
