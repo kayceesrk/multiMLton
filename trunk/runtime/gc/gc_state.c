@@ -486,4 +486,5 @@ GC_barrierInfo readNeedsBarrier (GC_state s) {
 void writeNeedsBarrier (GC_state s, GC_barrierInfo b) {
   RC_cache_invalidate ();
   *s->needsBarrier = b;
+  RCCE_foolWCB ();
 }

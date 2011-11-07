@@ -73,8 +73,8 @@ struct GC_state {
    * will <eventually> be seen by the sender who performs the RCCE_send (also
    * from ML).
    */
-  int* sendIntent;
-  int* recvIntent;
+  volatile int* sendIntent;
+  volatile int* recvIntent;
 
   /* Alphabetized fields follow. */
   size_t alignment; /* */

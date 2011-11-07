@@ -551,6 +551,14 @@ unsigned int coreID,result,  alignedAddr, pageOffset, ConfigAddr, coreID_mask=0x
 t_vcharp RCCE_getMPBbase (int coreId) {
   return RCCE_comm_buffer[coreId];
 }
+
+//-------------------------------------------------------------------------------------
+// FUNCTION: getMPBbase
+//-------------------------------------------------------------------------------------
+
+void RCCE_foolWCB () {
+  *(int*)RCCE_fool_write_combine_buffer = 1;
+}
 #endif
 
 

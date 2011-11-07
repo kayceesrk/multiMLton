@@ -623,16 +623,19 @@ void GC_lateInit (GC_state s) {
 
 void GC_earlyInit (GC_state s) {
   s->needsBarrier = (GC_barrierInfo*) GC_mpbmalloc (sizeof (GC_barrierInfo));
-  //s->sendIntent = (int*) GC_mpbmalloc (sizeof (int*) * RCCE_num_ues());
-  //s->recvIntent = (int*) GC_mpbmalloc (sizeof (int*) * RCCE_num_ues());
+  s->sendIntent = (int*) GC_mpbmalloc (sizeof (int*) * RCCE_num_ues());
+  s->recvIntent = (int*) GC_mpbmalloc (sizeof (int*) * RCCE_num_ues());
   if (s->procId != 0) {
     s->needsBarrier = (GC_barrierInfo*)(((char*)s->needsBarrier - (char*) RCCE_getMPBbase(s->procId)) + (char*) RCCE_getMPBbase(0));
-    //s->sendIntent = (GC_barrierInfo*)(((char*)s->sendIntent - (char*) RCCE_getMPBbase(s->procId)) + (char*) RCCE_getMPBbase(0));
-    //s->recvIntent = (GC_barrierInfo*)(((char*)s->recvIntent - (char*) RCCE_getMPBbase(s->procId)) + (char*) RCCE_getMPBbase(0));
+    s->sendIntent = (int*)(((char*)s->sendIntent - (char*) RCCE_getMPBbase(s->procId)) + (char*) RCCE_getMPBbase(0));
+    s->recvIntent = (int*)(((char*)s->recvIntent - (char*) RCCE_getMPBbase(s->procId)) + (char*) RCCE_getMPBbase(0));
   }
-  //for (int i=0; i < RCCE_num_ues(); i++)
-  //  s->sendIntent[i] = s->recvIntent[i] = -1;
-  writeNeedsBarrier (s, NOT_INITIALIZED);
+  if (RCCE_ue () == 0) {
+    for (int i=0; i < RCCE_num_ues(); i++)
+      s->sendIntent[i] = s->recvIntent[i] = -1;
+    RCCE_foolWCB ();
+    writeNeedsBarrier (s, NOT_INITIALIZED);
+  }
   RCCE_barrier (&RCCE_COMM_WORLD);
 }
 

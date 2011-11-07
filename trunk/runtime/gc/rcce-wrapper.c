@@ -6,8 +6,6 @@
  * See the file MLton-LICENSE for details.
  */
 
-extern CopyObjectMap* copyObjectMap;
-
 pointer BUFFER_START;
 pointer BUFFER_END;
 

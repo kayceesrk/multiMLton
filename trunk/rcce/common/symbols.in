@@ -21,6 +21,7 @@ ifeq ($(OMP_EMULATOR),0)
 
   CCOMPILE=gcc
   PLATFORMFLAGS=$(BMFLAG) -DSHMADD -DSCC -static -march=pentium -mtune=pentium -I../include
+#  PLATFORMFLAGS=$(BMFLAG) -DSHMADD -DSHMADD_CACHEABLE -DSCC -static -march=pentium -mtune=pentium -I../include
 
 #  CCOMPILE=g++
 #  PLATFORMFLAGS=$(BMFLAG) -DSCC -static -march=pentium -mtune=pentium -I../include

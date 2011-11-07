@@ -147,6 +147,7 @@ double RCCE_wtime(void);
 int    RCCE_ue(void);
 t_vcharp RCCE_getMPBbase (int);
 void RC_cache_invalidate (void);
+void RCCE_foolWCB (void);
 int    RCCE_num_ues(void);
 t_vcharp RCCE_malloc(size_t);
 t_vcharp RCCE_malloc_request(size_t, size_t *);
@@ -178,7 +179,7 @@ void     RCCE_shfree(t_vcharp);
 void     RCCE_shflush(void);
 
 #ifdef SHMADD_CACHEABLE
-int    RCCE_DCMflush();
+int    RCCE_DCMflush(void);
 #endif
 
 int    RCCE_acquire_lock(int);

@@ -280,7 +280,8 @@ int sizeofSchedulerQueue (GC_state s, int i) {
 
 int GC_manipulateIntentArray (GC_state s, int array, int operation,
                               int coreId, int oldValue, int newValue) {
-  int* intentArray;
+  volatile int* intentArray;
+  int result;
   if (array == 0)
     intentArray = s->sendIntent;
   else
@@ -291,10 +292,18 @@ int GC_manipulateIntentArray (GC_state s, int array, int operation,
   //Operation is a read
   if (operation == 0)
     return intentArray[coreId];
+
   //Operation is a write
-  pointer address = (pointer)&intentArray[coreId];
-  RCCE_acquire_lock (Proc_addrToCoreId (address));
-  int result = Unsafe_vCompareAndSwap (address, oldValue, newValue);
-  RCCE_release_lock (Proc_addrToCoreId (address));
+  RCCE_acquire_lock (0);
+  RC_cache_invalidate ();
+
+  result = intentArray[coreId];
+  if (result == oldValue) {
+    intentArray[coreId] = newValue;
+    RCCE_foolWCB ();
+    fprintf (stderr, "GC_manIntArr: intentArray%d[%d] old %d new %d\n", array, coreId, result, newValue);
+  }
+
+  RCCE_release_lock (0);
   return result;
 }
