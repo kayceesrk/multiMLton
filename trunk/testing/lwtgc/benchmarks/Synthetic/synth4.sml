@@ -17,7 +17,8 @@ struct
 
     (* tightloop (1000) ~= 1 ms *)
   in
-    tightLoop (workSize)
+    tightLoop (workSize);
+    print "done\n"
   end
 
   fun doit (numThreads, workSize) =

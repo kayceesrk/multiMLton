@@ -86,24 +86,22 @@ pointer MLton_RCCE_recv (GC_state s, int src) {
     }
   } while (!done);
 
-  void* buffer = malloc_safe (cp.objectClosureSize);
-  if (DEBUG_RCCE || TRUE)
-    fprintf (stderr, "MLton_RCCE_recv: waiting for object closure of size %zu from %d\n",
-             cp.objectClosureSize, src);
-  RCCE_recv ((char*)buffer, cp.objectClosureSize, src);
-  if (DEBUG_RCCE)
-    fprintf (stderr, "MLton_RCCE_recv: received object closure from %d\n", src);
-
   ENTER_LOCAL0 (s);
   ensureHasHeapBytesFreeAndOrInvariantForMutator (s, FALSE, TRUE, FALSE, 0,
                                                   cp.objectClosureSize, FALSE, 0);
-  GC_memcpy (buffer, s->frontier, cp.objectClosureSize);
   assert (s->frontier + cp.objectClosureSize < s->limitPlusSlop);
+
+  if (DEBUG_RCCE || TRUE)
+    fprintf (stderr, "MLton_RCCE_recv: waiting for object closure of size %zu from %d\n",
+             cp.objectClosureSize, src);
+  RCCE_recv ((char*)s->frontier, cp.objectClosureSize, src);
+  if (DEBUG_RCCE)
+    fprintf (stderr, "MLton_RCCE_recv: received object closure from %d\n", src);
+
   pointer to = s->frontier;
   s->frontier += cp.objectClosureSize;
   translateRange (s, cp.toSpaceStart, to, cp.objectClosureSize);
   LEAVE_LOCAL0 (s);
-  free (buffer);
   pointer result = advanceToObjectData (s, to);
   if (DEBUG_RCCE)
     fprintf (stderr, "MLton_RCCE_recv: returning object "FMTPTR"\n", (uintptr_t)result);
