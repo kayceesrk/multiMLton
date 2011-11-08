@@ -1561,9 +1561,6 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
 
                                 val (stmts2, cond2) = addressInLocalHeap (rhsAddr)
 
-                                val newRhsAddrOp =
-                                  Operand.Var {var = newRhsAddr, ty = returnTy}
-
                                 val doesNotScoreBlock =
                                   newBlock
                                   {args = Vector.new1 (newRhsAddr, returnTy),

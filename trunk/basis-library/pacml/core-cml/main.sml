@@ -44,7 +44,7 @@ struct
         (debug' (fn () => "closureReceiver: moving to phase2");
         phase2 (sender))
       else
-        (Thread.yield (); phase1 ())
+        (Thread.yieldExplicit {forceToSecondary = false} (); phase1 ())
     end
 
     and phase2 (sender) =
@@ -56,7 +56,7 @@ struct
         (debug' (fn () => "closureReceiver: moving to phase3");
         phase3 (sender))
       else
-        (Thread.yield (); phase2 sender)
+        (Thread.yieldExplicit {forceToSecondary = false} (); phase2 sender)
     end
 
     and phase3 (sender) =

@@ -40,13 +40,15 @@ struct
 
   local
       val tidCounter = ref 0
+      val spawnCounter = ref 0
   in
       fun new () =
       let
         val _ = Assert.assertAtomic' ("ThreadID.newTid(1)", NONE)
         val n = PacmlFFI.fetchAndAdd(tidCounter, 1)
+        val p = PacmlFFI.fetchAndAdd(spawnCounter, 1)
       in
-        new' (n, n mod PacmlFFI.numComputeProcessors)
+        new' (n, p mod PacmlFFI.numComputeProcessors)
       end
 
       fun newOnProc (p) =
@@ -60,8 +62,9 @@ struct
       fun newWithTid (n) =
       let
         val _ = Assert.assertAtomic' ("ThreadID.newTid(3)", NONE)
+        val p = PacmlFFI.fetchAndAdd(spawnCounter, 1)
       in
-        new' (n, n mod PacmlFFI.numComputeProcessors)
+        new' (n, p mod PacmlFFI.numComputeProcessors)
       end
 
 

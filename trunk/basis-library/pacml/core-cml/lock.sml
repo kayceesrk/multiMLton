@@ -60,16 +60,11 @@ struct
                               rt'
                   val _ = CirQueue.enque (q, rt')
                   val _ = state := LOCKED
-                  (* val _ = debug' (fn () => "yieldForLock(2) "^(TID.tidToString t)) *)
                 in
                   ()
                 end)
     val () = setAtomicState (atomicState)
-    (* val _ = debug' (fn () => "yieldForLock(3)") *)
     val lockId' = TID.getLockId ()
-    (* val _ = Assert.assert' ("yieldForLock: lockIds dont match ("
-                            ^(Int.toString lockId)^", "^(Int.toString lockId')^")"
-                            , fn () => (lockId = lockId')) *)
   in
       ()
   end

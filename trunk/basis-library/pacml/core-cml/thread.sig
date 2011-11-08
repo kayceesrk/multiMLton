@@ -12,6 +12,7 @@ end
 signature THREAD_EXTRA =
 sig
   include THREAD
+  val yieldExplicit: {forceToSecondary : bool} -> unit -> unit
   val timeoutCleanup : (unit -> unit) ref
   val createHost : (unit->unit) -> RepTypes.runnable_host
   val reifyHostFromParasite : (int * RepTypes.parasite) -> RepTypes.runnable_host

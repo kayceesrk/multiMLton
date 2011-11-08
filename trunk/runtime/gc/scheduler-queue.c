@@ -291,12 +291,19 @@ int GC_manipulateIntentArray (GC_state s, int array, int operation,
   intent = (volatile int*) translateMPBAddress ((char*)intent, s->procId, coreId);
 
   RC_cache_invalidate ();
+  result = *intent;
 
-  //Operation is a read
+  //---- READ ----
+
   if (operation == 0)
-    return *intent;
+    return result;
 
-  //Operation is a write
+  //---- WRITE ----
+
+  //short circuit
+  if (result != oldValue)
+    return result;
+
   RCCE_acquire_lock (0);
   RC_cache_invalidate ();
 

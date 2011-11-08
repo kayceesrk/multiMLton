@@ -87,7 +87,7 @@ pointer MLton_RCCE_recv (GC_state s, int src) {
   } while (!done);
 
   void* buffer = malloc_safe (cp.objectClosureSize);
-  if (DEBUG_RCCE)
+  if (DEBUG_RCCE || TRUE)
     fprintf (stderr, "MLton_RCCE_recv: waiting for object closure of size %zu from %d\n",
              cp.objectClosureSize, src);
   RCCE_recv ((char*)buffer, cp.objectClosureSize, src);

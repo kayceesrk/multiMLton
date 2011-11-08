@@ -148,12 +148,23 @@ struct
   end
 
 
-  fun yield () =
+  fun yieldExplicit {forceToSecondary} () =
       let
-        val () = Assert.assertNonAtomic' "Thread.yield"
+        val () = Assert.assertNonAtomic' "Thread.yieldExplicit"
         val () = atomicBegin ()
         (* Clean up for timeouts *)
         val () = !timeoutCleanup ()
+
+        fun touchRunnableHost (rhost as RHOST (tid, mt)) =
+          (if forceToSecondary then
+            let
+              (* Force this thread into the secondary scheduler queue *)
+              val _ = TID.unmark (tid)
+            in
+              RHOST (tid, mt)
+            end
+          else
+            rhost)
       in
         case PT.getThreadType () of
              RepTypes.PARASITE => reifyCurrent ()
@@ -161,17 +172,15 @@ struct
               S.atomicSwitchToNext
               (fn t =>
                 let
-                  val RHOST (tid,mt) = PT.getRunnableHost (PT.prep (t))
-                  (* Force this thread into the secondary scheduler queue *)
-                  val _ = TID.unmark (tid)
-                  val rhost = RHOST (tid, mt)
+                  val rhost = PT.getRunnableHost (PT.prep (t))
                 in
-                  S.preempt (rhost)
+                  S.preempt (touchRunnableHost rhost)
                 end)
       end
 
+  val yield  = yieldExplicit {forceToSecondary = true}
 
-  fun closureSender (rhost : RepTypes.runnable_host, receiver) =
+  fun closureSender (rhost : runnable_host, receiver) =
   let
     val myProcId = PacmlFFI.processorNumber ()
     val _ = debug' (fn () => "closureSender: In phase1")
@@ -184,7 +193,7 @@ struct
         (debug' (fn () => "closureSender: Moving to phase2");
         phase2 ())
       else
-        (yield (); phase1 ())
+        (yieldExplicit {forceToSecondary = false} (); phase1 ())
     end
 
     and phase2 () =
@@ -198,7 +207,7 @@ struct
         (debug' (fn () => "closureSender: Moving to phase3");
         phase3 ())
       else
-        (yield (); phase2 ())
+        (yieldExplicit {forceToSecondary = false} (); phase2 ())
     end
 
     and phase3 () = (MLtonRcce.send (ref rhost, receiver);
