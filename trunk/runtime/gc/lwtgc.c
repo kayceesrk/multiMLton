@@ -156,6 +156,9 @@ void liftAllObjectsDuringInit (GC_state s) {
     callIfIsObjptr (s, liftObjptr, &s->globals [i]);
   }
 
+  if (DEBUG_LWTGC)
+    fprintf (stderr, "liftAllObjectsDuringInit: foreachObjptrInRange\n");
+  foreachObjptrInRange (s, toStart, &s->forwardState.back, liftObjptr, TRUE);
   clearRangeList (s);
 
   //Check
