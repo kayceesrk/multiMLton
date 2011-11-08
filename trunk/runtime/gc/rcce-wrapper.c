@@ -98,7 +98,7 @@ pointer MLton_RCCE_recv (GC_state s, int src) {
   ensureHasHeapBytesFreeAndOrInvariantForMutator (s, FALSE, TRUE, FALSE, 0,
                                                   cp.objectClosureSize, FALSE, 0);
   GC_memcpy (buffer, s->frontier, cp.objectClosureSize);
-  assert (s->frontier + cp.objectClosureSize < s->limit);
+  assert (s->frontier + cp.objectClosureSize < s->limitPlusSlop);
   pointer to = s->frontier;
   s->frontier += cp.objectClosureSize;
   translateRange (s, cp.toSpaceStart, to, cp.objectClosureSize);

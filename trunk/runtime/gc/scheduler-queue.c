@@ -211,12 +211,10 @@ bool GC_sqIsEmpty (GC_state s) {
   maybeWaitForGC (s);
   bool resPrim = CircularBufferIsEmpty (s->schedulerQueues[s->procId]->primary);
   bool resSec = CircularBufferIsEmpty (s->schedulerQueues[s->procId]->secondary);
-  if (resPrim && (s->preemptOnWBASize != 0 || s->spawnOnWBASize != 0)) {
+  if (resPrim && resSec && (s->preemptOnWBASize != 0 || s->spawnOnWBASize != 0)) {
     /* Force a GC if we find that the primary scheduler queue is empty and
      * preemptOnWBA is not */
     forceLocalGC (s);
-    if (!resSec && FALSE)
-      moveAllThreadsFromSecToPrim (s);
     resPrim = FALSE;
   }
   return (resPrim && resSec);
