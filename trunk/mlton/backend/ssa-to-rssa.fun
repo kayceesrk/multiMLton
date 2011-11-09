@@ -375,7 +375,7 @@ structure CFunction =
             target = Direct "GC_isInSharedOrForwarded",
             writesStackTop = false}
 
-      fun objectTypeInfo t =
+      fun isObjectClean t =
          T {args = Vector.new2 (Type.gcState (), t),
             bytesNeeded = NONE,
             convention = Cdecl,
@@ -388,7 +388,7 @@ structure CFunction =
             readsStackTop = true,
             return = Type.bool,
             symbolScope = Private,
-            target = Direct "GC_objectTypeInfo",
+            target = Direct "GC_isObjectClean",
             writesStackTop = false}
 
 
@@ -2058,7 +2058,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                            if not (Type.isObjptr t) then
                                              move (Operand.bool false)
                                            else isObjptrInSharedHeap (varOp (arg 0)))
-                               | Lwtgc_objectTypeInfo =>
+                               | Lwtgc_isObjectClean =>
                                     (case toRtype (varType (arg 0)) of
                                         NONE => move (Operand.bool false)
                                       | SOME t =>
@@ -2066,7 +2066,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                              move (Operand.bool false)
                                            else
                                               simpleCCallWithGCState
-                                              (CFunction.objectTypeInfo (Operand.ty (a 0))))
+                                              (CFunction.isObjectClean (Operand.ty (a 0))))
                                | Lwtgc_isObjptr =>
                                     (case toRtype (varType (arg 0)) of
                                         NONE => move (Operand.bool false)

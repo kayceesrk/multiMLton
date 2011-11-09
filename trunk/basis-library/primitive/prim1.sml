@@ -34,7 +34,9 @@ structure Controls =
       val detectOverflow = _command_line_const "MLton.detectOverflow": bool = true;
       val safe = _command_line_const "MLton.safe": bool = true;
       val bufSize = _command_line_const "TextIO.bufSize": Int32.int = 4096;
-      val wbUsesTypeInfo = _command_line_const "MLton.wbTypeInfo": bool = true;
+
+      val readBarrier = _command_line_const "MLton.readBarrier": bool = true;
+      val wbUsesCleanliness = _command_line_const "MLton.wbTypeInfo": bool = true;
       val lazySpawn = _command_line_const "MLton.lazySpawn": bool = true;
    end
 
@@ -76,7 +78,7 @@ struct
   val addToSpawnOnWBA = _prim "Lwtgc_addToSpawnOnWBA": 'a * Int32.int -> unit;
   val isObjptrInLocalHeap = _prim "Lwtgc_isObjptrInLocalHeap": 'a -> bool;
   val isObjptrInSharedHeap = _prim "Lwtgc_isObjptrInSharedHeap": 'a -> bool;
-  val objectTypeInfo = _prim "Lwtgc_objectTypeInfo": 'a -> bool;
+  val isObjectClean = _prim "Lwtgc_isObjectClean": 'a -> bool;
   val isObjptr = _prim "Lwtgc_isObjptr": 'a -> bool;
   val needPreemption = _prim "Lwtgc_needPreemption": 'a ref * 'a -> bool;
   val move = _prim "MLton_move": 'a * bool * bool -> 'a;
@@ -95,22 +97,25 @@ structure Ref =
       val eq = _prim "MLton_eq": 'a * 'a -> bool;
 
       fun writeBarrier (r, v) =
-      let
-        val preemptFn = deref preemptFn
-        val v' = if (Lwtgc.isObjptr v) andalso
-                    (Lwtgc.isObjptrInLocalHeap v) andalso
-                    (Lwtgc.isObjptrInSharedHeap r)
-                 then
-                    (if Controls.wbUsesTypeInfo andalso Lwtgc.objectTypeInfo v then
-                      let val _ = Lwtgc.move (v, false, true) in v end
-                     else
-                      (Lwtgc.addToMoveOnWBA v;
-                       preemptFn ();
-                       v))
-                 else v
-      in
-        v'
-      end
+        (if (Controls.readBarrier) then
+          v
+        else
+          let
+            val preemptFn = deref preemptFn
+            val v' = if (Lwtgc.isObjptr v) andalso
+                        (Lwtgc.isObjptrInLocalHeap v) andalso
+                        (Lwtgc.isObjptrInSharedHeap r)
+                    then
+                        (if Controls.wbUsesCleanliness andalso Lwtgc.isObjectClean v then
+                          let val _ = Lwtgc.move (v, false, true) in v end
+                        else
+                          (Lwtgc.addToMoveOnWBA v;
+                          preemptFn ();
+                          v))
+                    else v
+          in
+            v'
+          end)
 
       fun assign (r, v) =
       let

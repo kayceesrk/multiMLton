@@ -512,7 +512,11 @@ structure StackOffset =
    struct
       open StackOffset
 
-      fun toString (T {offset, ty}): string =
+      fun toString (T {offset, ty}, isDest): string =
+        if ((Type.isObjptr ty) andalso (not isDest) andalso
+            !Control.stackRB andalso !Control.readBarrier) then
+          concat ["S_RB", C.args [Type.toC ty, C.bytes offset]]
+        else
           concat ["S", C.args [Type.toC ty, C.bytes offset]]
    end
 
@@ -689,15 +693,16 @@ fun output {program as Machine.Program.T {chunks,
          fun toString (z: Operand.t, isDest: bool): string =
             case z of
                ArrayOffset {base, index, offset, scale, ty} =>
-                  (* if (not isDest andalso
+                  if (not isDest andalso
                       Type.isObjptr ty andalso
-                      (not (!Control.serialExec))) then
+                      (not (!Control.serialExec)) andalso
+                       !Control.readBarrier) then
                   (concat ["X_RB", C.args [Type.toC ty,
                                        toString (base, false),
                                        toString (index, false),
                                        Scale.toString scale,
                                        C.bytes offset]])
-                  else *)
+                  else
                   (concat ["X", C.args [Type.toC ty,
                                        toString (base, false),
                                        toString (index, false),
@@ -718,13 +723,14 @@ fun output {program as Machine.Program.T {chunks,
              | Line => "__LINE__"
              | Null => "NULL"
              | Offset {base, offset, ty} =>
-                 (* if (not isDest andalso
+                 if (not isDest andalso
                      Type.isObjptr ty andalso
-                     (not (!Control.serialExec))) then
+                     (not (!Control.serialExec)) andalso
+                      !Control.readBarrier) then
                   (concat ["O_RB", C.args [Type.toC ty,
                                        toString (base, false),
                                        C.bytes offset]])
-                 else *)
+                 else
                   (concat ["O", C.args [Type.toC ty,
                                        toString (base, false),
                                        C.bytes offset]])
@@ -732,7 +738,7 @@ fun output {program as Machine.Program.T {chunks,
              | Register r =>
                   concat [Type.name (Register.ty r), "_",
                           Int.toString (Register.index r)]
-             | StackOffset s => StackOffset.toString (s)
+             | StackOffset s => StackOffset.toString (s, isDest)
              | StackTop => "StackTop"
              | Word w => WordX.toC w
       in
@@ -863,9 +869,9 @@ fun output {program as Machine.Program.T {chunks,
             fun push (return: Label.t, size: Bytes.t) =
                (print "\t"
                 ; print (move {dst = (StackOffset.toString
-                                      (StackOffset.T
+                                      ((StackOffset.T
                                        {offset = Bytes.- (size, Runtime.labelSize ()),
-                                        ty = Type.label return})),
+                                        ty = Type.label return}), true)),
                                dstIsMem = true,
                                src = operandToString (Operand.Label return, false),
                                srcIsMem = false,

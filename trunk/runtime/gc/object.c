@@ -201,7 +201,7 @@ void doesPointToTmpPointer (GC_state s, objptr* opp) {
     s->tmpInt++;
 }
 
-bool GC_objectTypeInfo (GC_state s, pointer p) {
+bool GC_isObjectClean (GC_state s, pointer p) {
   bool hasIdentityTransitive, isUnbounded, isClosureVirgin;
   GC_header header = getHeader (p);
   GC_objectTypeTag tag;

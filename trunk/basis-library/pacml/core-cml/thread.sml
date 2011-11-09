@@ -195,13 +195,39 @@ struct
     * moveOnWBA queue and preempt, with the hope that there will be other
     * threads to run on this core. If there are none, we will perform a GC,
     * after which we will place rhost on the target scheduler. *)
-    val () = if (Primitive.Controls.wbUsesTypeInfo andalso Primitive.Lwtgc.objectTypeInfo rhost) then
+    val () = if (Primitive.Controls.wbUsesCleanliness andalso Primitive.Lwtgc.isObjectClean rhost) then
               (ignore (Primitive.Lwtgc.move (rhost, false, true)))
              else
               (debug' (fn () => "spawnHostHelper.lift(1): tid="^(TID.tidToString tid));
               Primitive.Lwtgc.addToMoveOnWBA (rhost);
               S.preemptOnWriteBarrier ();
               debug' (fn () => "spawnHostHelper.lift(2): tid="^(TID.tidToString tid)))
+
+    val () = S.readyForSpawn (rhost)
+
+    (* If this thread was spawned on an IO processor, then decrement the
+    * numLiveThreads as the IO worker threads never die *)
+    val _ = case ps of
+                 ANY_PROC => ()
+               | ON_PROC n => if (n > (PacmlFFI.numComputeProcessors - 1)) then
+                                ignore (Config.decrementNumLiveThreads ())
+                              else ()
+    val () = atomicEnd ()
+  in
+    tid
+  end
+
+  fun spawnHostHelper (f, ps) =
+  let
+    val _ = debug' (fn () => "spawnHostHelper")
+    val () = atomicBegin ()
+    val tid = case ps of
+                   ANY_PROC => TID.new ()
+                 | ON_PROC n => TID.newOnProc (n)
+    fun thrdFun () = ((f ()) handle ex => doHandler (tid, ex);
+                     generalExit (SOME tid, false))
+    val thrd = H_THRD (tid, PT.new thrdFun)
+    val rhost = PT.getRunnableHost (PT.prep (thrd))
 
     val () = S.readyForSpawn (rhost)
 
@@ -258,12 +284,18 @@ struct
     tid
   end
 
-  fun spawnHost f = if (Primitive.Controls.lazySpawn) then
+  fun spawnHost f = if (Primitive.Controls.readBarrier) then
+                      spawnHostHelper (f, ANY_PROC)
+                    else if (Primitive.Controls.lazySpawn) then
                       spawnHostHelperLazy (f, ANY_PROC)
                     else
                       spawnHostHelperEager (f, ANY_PROC)
+
   fun spawn f = spawnHost f
-  fun spawnOnProc (f, n) = if (Primitive.Controls.lazySpawn) then
+
+  fun spawnOnProc (f, n) = if (Primitive.Controls.readBarrier) then
+                             spawnHostHelper (f, ON_PROC n)
+                           else if (Primitive.Controls.lazySpawn) then
                              spawnHostHelperLazy (f, ON_PROC n)
                            else
                              spawnHostHelperEager (f, ON_PROC n)

@@ -140,7 +140,9 @@ fun setCommandLineConstant (c as {name, value}) =
          end
       val () =
          case List.peek ([("Exn.keepHistory", make (Bool.fromString, Control.exnHistory)),
-                          ("MLton.wbTypeInfo", make (Bool.fromString, Control.wbUsesTypeInfo))],
+                          ("MLton.wbTypeInfo", make (Bool.fromString, Control.wbUsesCleanliness)),
+                          ("MLton.readBarrier", make (Bool.fromString, Control.readBarrier)),
+                          ("MLton.stackRB", make (Bool.fromString, Control.stackRB))],
                          fn (s, _) => s = name) of
             NONE => ()
           | SOME (_,set) => set ()

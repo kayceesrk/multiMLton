@@ -320,6 +320,8 @@ signature CONTROL_FLAGS =
 
       val profileVal: bool ref
 
+      val stackRB : bool ref
+
       val serialExec : bool ref
 
       (* Show the basis library. *)
@@ -381,7 +383,9 @@ signature CONTROL_FLAGS =
       (* version number *)
       val version: string
 
-      val wbUsesTypeInfo: bool ref
+      val wbUsesCleanliness: bool ref
+
+      val readBarrier: bool ref
 
       val warnAnn: bool ref
 

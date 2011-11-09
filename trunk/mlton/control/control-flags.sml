@@ -1103,14 +1103,23 @@ val warnAnn = control {name = "warn unrecognized annotation",
                        default = true,
                        toString = Bool.toString}
 
-val wbUsesTypeInfo = control {name = "whether WB uses object type info to prevent preemptions",
+val wbUsesCleanliness = control {name = "WB uses cleanliness",
                               default = true,
                               toString = Bool.toString}
+
+val readBarrier = control {name = "readBarrierGC",
+                           default = true,
+                           toString = Bool.toString}
 
 val zoneCutDepth: int ref =
    control {name = "zone cut depth",
             default = 100,
             toString = Int.toString}
+
+val stackRB : bool ref =
+  control {name = "stack read barrier",
+           default = false,
+           toString = Bool.toString}
 
 val defaults = setDefaults
 
