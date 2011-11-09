@@ -1107,7 +1107,7 @@ val wbUsesCleanliness = control {name = "WB uses cleanliness",
                               default = true,
                               toString = Bool.toString}
 
-val readBarrier = control {name = "readBarrierGC",
+val readBarrier = control {name = "read barrierGC",
                            default = true,
                            toString = Bool.toString}
 

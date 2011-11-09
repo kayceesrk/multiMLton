@@ -35,9 +35,9 @@ structure Controls =
       val safe = _command_line_const "MLton.safe": bool = true;
       val bufSize = _command_line_const "TextIO.bufSize": Int32.int = 4096;
 
-      val readBarrier = _command_line_const "MLton.readBarrier": bool = true;
-      val wbUsesCleanliness = _command_line_const "MLton.wbTypeInfo": bool = true;
-      val lazySpawn = _command_line_const "MLton.lazySpawn": bool = true;
+      val readBarrier = _command_line_const "MLton.GC.readBarrier": bool = true;
+      val wbUsesCleanliness = _command_line_const "MLton.GC.WB.useCleanliness": bool = true;
+      val lazySpawn = _command_line_const "MLton.GC.WB.lazySpawn": bool = true;
    end
 
 structure Exn =
