@@ -9,7 +9,7 @@
 objptr getThreadCurrentObjptr (GC_state s) {
   objptr op = s->currentThread;
   pointer p = objptrToPointer (op, s->heap->start);
-  pointer newP = GC_forwardBaseWorking (s, p);
+  pointer newP = GC_forwardBase (s, p);
   if (p != newP) {
     s->currentThread = pointerToObjptr (newP, s->heap->start);
     if (DEBUG_THREADS)

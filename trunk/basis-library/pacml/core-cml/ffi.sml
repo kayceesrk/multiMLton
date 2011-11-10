@@ -1,6 +1,8 @@
 structure PacmlFFI =
 struct
 
+  val setSelectiveDebug = Primitive.MLton.GC.setSelectiveDebug
+
   val commEvent = _import "GC_commEvent": unit -> unit;
   val compareAndSwap = _import "Parallel_compareAndSwap": Int32.int ref * Int32.int * Int32.int -> bool;
   val disablePreemption = _import "Parallel_disablePreemption": unit -> unit;

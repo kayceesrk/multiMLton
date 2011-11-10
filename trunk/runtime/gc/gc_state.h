@@ -132,6 +132,7 @@ struct GC_state {
   GC_weak weaks; /* Linked list of (live) weak pointers */
   char *worldFile;
 
+  FILE* fp;
 };
 
 #endif /* (defined (MLTON_GC_INTERNAL_TYPES)) */
@@ -157,6 +158,7 @@ static GC_state getGCStateFromPointer (GC_state s, pointer p);
 
 #if (defined (MLTON_GC_INTERNAL_BASIS))
 
+PRIVATE void GC_setSelectiveDebug (GC_state *gs, bool b);
 PRIVATE bool GC_getAmOriginal (GC_state *gs);
 PRIVATE void GC_setAmOriginal (GC_state *gs, bool b);
 PRIVATE bool GC_getIsPCML (void);
@@ -180,7 +182,6 @@ PRIVATE void GC_setSignalHandlerThread (GC_state *gs, pointer p);
 
 PRIVATE void GC_print (int);
 PRIVATE inline pointer GC_forwardBase (const GC_state s, const pointer p);
-PRIVATE inline pointer GC_forwardBaseWorking (const GC_state s, const pointer p);
 
 #endif /* (defined (MLTON_GC_INTERNAL_BASIS)) */
 

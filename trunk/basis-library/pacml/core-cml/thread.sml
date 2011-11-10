@@ -188,20 +188,29 @@ struct
                      generalExit (SOME tid, false))
     val thrd = H_THRD (tid, PT.new thrdFun)
     val rhost = PT.getRunnableHost (PT.prep (thrd))
+    val proc = TID.getProcId (tid)
 
-    (* If the newly spawned thread is going to another processor, then move it
-    * to the shared heap. We first try to move the thread to the shared heap
-    * without needing a GC. If we are not able to do it, we add rhost to
-    * moveOnWBA queue and preempt, with the hope that there will be other
-    * threads to run on this core. If there are none, we will perform a GC,
-    * after which we will place rhost on the target scheduler. *)
-    val () = if (Primitive.Controls.wbUsesCleanliness andalso Primitive.Lwtgc.isObjectClean rhost) then
-              (ignore (Primitive.Lwtgc.move (rhost, false, true)))
-             else
-              (debug' (fn () => "spawnHostHelper.lift(1): tid="^(TID.tidToString tid));
-              Primitive.Lwtgc.addToMoveOnWBA (rhost);
-              S.preemptOnWriteBarrier ();
-              debug' (fn () => "spawnHostHelper.lift(2): tid="^(TID.tidToString tid)))
+
+    val () =
+      if proc <> PacmlFFI.processorNumber () then
+        ((* If the newly spawned thread is going to another processor, then move it
+          * to the shared heap. We first try to move the thread to the shared heap
+          * without needing a GC. If we are not able to do it, we add rhost to
+          * moveOnWBA queue and preempt, with the hope that there will be other
+          * threads to run on this core. If there are none, we will perform a GC,
+          * after which we will place rhost on the target scheduler. *)
+        if (Primitive.Controls.wbUsesCleanliness andalso
+            (* (PacmlFFI.setSelectiveDebug (true); true) andalso *)
+            Primitive.Lwtgc.isObjectClean rhost
+            (* andalso (PacmlFFI.setSelectiveDebug (false); true) *)) then
+          (ignore (Primitive.Lwtgc.move (rhost, false, true)))
+        else
+          (debug' (fn () => "spawnHostHelper.lift(1): tid="^(TID.tidToString tid));
+          Primitive.Lwtgc.addToMoveOnWBA (rhost);
+          S.preemptOnWriteBarrier ();
+          debug' (fn () => "spawnHostHelper.lift(2): tid="^(TID.tidToString tid))))
+      else
+        ()
 
     val () = S.readyForSpawn (rhost)
 
@@ -269,8 +278,12 @@ struct
                                    end
 
     val proc = TID.getProcId (tid)
-    val _ = Config.incrementNumLiveThreads ()
-    val _ = PacmlPrim.addToSpawnOnWBA (H_RTHRD rhost, proc)
+    val () =
+      if proc <> PacmlFFI.processorNumber () then
+        (Config.incrementNumLiveThreads ();
+         PacmlPrim.addToSpawnOnWBA (H_RTHRD rhost, proc))
+      else
+        S.readyForSpawn (rhost)
 
     (* If this thread was spawned on an IO processor, then decrement the
     * numLiveThreads as the IO worker threads never die *)

@@ -141,6 +141,14 @@ structure GC =
          _import "GC_setControlsRusageMeasureGC" private: GCState.t * bool -> unit;
       val setSummary = _import "GC_setControlsSummary" private: GCState.t * bool -> unit;
       val unpack = _import "GC_unpack" private: GCState.t -> unit;
+
+      local
+        val setSelectiveDebug' = _import "GC_setSelectiveDebug" private: GCState.t * bool -> unit;
+      in
+        fun setSelectiveDebug p = setSelectiveDebug' (GCState.gcState, p)
+      end
+
+
    end
 
 structure Parallel =

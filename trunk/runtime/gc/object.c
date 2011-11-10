@@ -165,8 +165,28 @@ pointer getBeginningOfObject (GC_state s, pointer p) {
   return res;
 }
 
+const char* numReferencesToString (GC_numReferences n);
+const char* numReferencesToString (GC_numReferences n) {
+  switch (n) {
+    case 0:
+      return "ZERO";
+    case 1:
+      return "ONE";
+    case 2:
+      return "MANY";
+    default:
+      return "MANY";
+  }
+}
 
-/* isObjectPointerVirgin (s, p)
+
+void isObjectPointerVirginUnmark (__attribute__((unused)) GC_state s,
+                            __attribute__((unused)) pointer current,
+                            __attribute__((unused)) pointer prev) {
+}
+
+
+/* isObjectPointerVirginMark (s, p)
  *
  * This function needs s->tmpPointer to be explicitly set to the root of the
  * object's closure. Because, the notion of viginity differ for the object
@@ -177,12 +197,13 @@ pointer getBeginningOfObject (GC_state s, pointer p) {
  * The result is transmitted through s->tmpBool.
  *
  */
-void isObjectPointerVirgin (GC_state s, pointer p) {
+void isObjectPointerVirginMark (GC_state s, pointer p, pointer parent) {
   if (!s->tmpBool)
     return;
 
   assert (s->tmpPointer != BOGUS_POINTER);
   bool isVirgin = FALSE;
+
 
   if (s->tmpPointer == p)
     isVirgin = (countReferences (getHeader(p)) == ZERO);
@@ -191,6 +212,25 @@ void isObjectPointerVirgin (GC_state s, pointer p) {
 
   if (!isVirgin && !objectHasIdentity(s, getHeader(p)))
     isVirgin = TRUE;
+  parent = parent;
+
+#if 0
+  if (s->selectiveDebug) {
+    GC_header h = getHeader (p);
+    if (isVirgin)
+      fprintf (s->fp, "X%p [label=\""FMTPTR" | %s | %s\"];\n",
+               p, (uintptr_t)p, numReferencesToString (countReferences (h)),
+               boolToString (objectHasIdentity (s, h)));
+    else
+      fprintf (s->fp, "X%p [label=\""FMTPTR" | %s | %s\", \
+                       style = filled, fillcolor = red];\n",
+               p, (uintptr_t)p, numReferencesToString (countReferences (h)),
+               boolToString (objectHasIdentity (s, h)));
+    if (parent != NULL)
+      fprintf (s->fp, "X%p -> X%p;\n", (uintptr_t)parent, (uintptr_t)p);
+  }
+#endif
+
 
   s->tmpBool = s->tmpBool && isVirgin;
 }
@@ -200,6 +240,7 @@ void doesPointToTmpPointer (GC_state s, objptr* opp) {
   if (p == s->tmpPointer)
     s->tmpInt++;
 }
+
 
 bool GC_isObjectClean (GC_state s, pointer p) {
   bool hasIdentityTransitive, isUnbounded, isClosureVirgin;
@@ -215,10 +256,23 @@ bool GC_isObjectClean (GC_state s, pointer p) {
   else {
     s->tmpBool = TRUE;
     s->tmpPointer = p;
-    dfsMarkByMode (s, p, isObjectPointerVirgin, MARK_MODE,
+    if (s->selectiveDebug) {
+      char str[50];
+      sprintf (str, "Closure_"FMTPTR".dot", (uintptr_t)p);
+      s->fp = fopen (str, "w");
+      if (s->fp == NULL) exit (1);
+      fprintf (s->fp, "digraph {\n");
+      fprintf (s->fp, "node [shape=record];\n");
+    }
+    dfsMarkByMode (s, p, isObjectPointerVirginMark, MARK_MODE,
                   FALSE, FALSE, TRUE, FALSE);
+    if (s->selectiveDebug) {
+      fprintf (s->fp, "}\n");
+      fclose (s->fp);
+      s->fp = NULL;
+    }
     isClosureVirgin = s->tmpBool;
-    dfsMarkByMode (s, p, isObjectPointerVirgin, UNMARK_MODE,
+    dfsMarkByMode (s, p, isObjectPointerVirginUnmark, UNMARK_MODE,
                   FALSE, FALSE, TRUE, FALSE);
     s->tmpPointer = BOGUS_POINTER;
   }
@@ -229,6 +283,8 @@ bool GC_isObjectClean (GC_state s, pointer p) {
                      hasIdentityTransitive, isUnbounded, objectTypeIndex,
                      isClosureVirgin, s->tmpInt);
   }
+
+  s->selectiveDebug = FALSE;
 
   return isClosureVirgin;
 }

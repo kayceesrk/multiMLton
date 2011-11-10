@@ -26,13 +26,15 @@ static inline bool areSmall (objptr arg1, objptr arg2) {
  */
 static inline GC_intInf toBignum (GC_state s, objptr arg) {
   GC_intInf bp;
+  GC_header h;
 
   assert (not isSmall(arg));
   bp = (GC_intInf)(objptrToPointer(arg, s->heap->start)
                    - offsetof(struct GC_intInf, obj.body.isneg));
+  h = bp->header & ~(LIFT_MASK | VIRGIN_MASK);
   if (DEBUG_INT_INF)
-    fprintf (stderr, "bp->header = "FMTHDR"\n", bp->header);
-  assert (bp->header == GC_INTINF_HEADER);
+    fprintf (stderr, "bp->header = "FMTHDR"\n", h);
+  assert (h == GC_INTINF_HEADER);
   return bp;
 }
 

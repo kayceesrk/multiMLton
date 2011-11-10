@@ -134,7 +134,7 @@ mark:
   assert (header == getHeader (cur));
   assert (headerp == getHeaderp (cur));
   /* Apply f before marking */
-  f (s, cur);
+  f (s, cur, prev);
   header ^= MARK_MASK;
   /* Store the mark.  In the case of an object that contains a pointer to
    * itself, it is essential that we store the marked header before marking
@@ -179,6 +179,8 @@ markNextInNormal:
     nextHeaderp = getHeaderp (next);
     nextHeader = *nextHeaderp;
     if (mark == (nextHeader & MARK_MASK)) {
+      if (s->selectiveDebug && f == isObjectPointerVirginMark)
+        f (s, next, cur);
       if (shouldHashCons)
         shareObjptr (s, (objptr*)todo);
       goto markNextInNormal;
@@ -264,6 +266,8 @@ markNextInArray:
     nextHeaderp = getHeaderp (next);
     nextHeader = *nextHeaderp;
     if (mark == (nextHeader & MARK_MASK)) {
+      if (s->selectiveDebug and f == isObjectPointerVirginMark)
+        f (s, next, cur);
       if (shouldHashCons)
         shareObjptr (s, (objptr*)todo);
       goto markNextInArray;
@@ -293,7 +297,7 @@ markInStack:
                (uintmax_t)(top - getStackBottom (s, (GC_stack)cur)));
     if (top == getStackBottom (s, (GC_stack)(cur)))
       goto ret;
-    if (f == isObjectPointerVirgin) {
+    if (f == isObjectPointerVirginMark || f  == isObjectPointerVirginUnmark) {
       s->tmpBool = FALSE;
       goto ret;
     }
@@ -324,6 +328,8 @@ markInFrame:
     nextHeaderp = getHeaderp (next);
     nextHeader = *nextHeaderp;
     if (mark == (nextHeader & MARK_MASK)) {
+      if (s->selectiveDebug and f == isObjectPointerVirginMark)
+        f (s, next, cur);
       objptrIndex++;
       if (shouldHashCons)
         shareObjptr (s, (objptr*)todo);
@@ -398,7 +404,8 @@ ret:
 }
 
 void emptyForeachObjectFun (__attribute__((unused)) GC_state s,
-                            __attribute__((unused)) pointer p) {
+                            __attribute__((unused)) pointer current,
+                            __attribute__((unused)) pointer prev) {
 }
 
 void dfsMarkWithHashConsWithLinkWeaks (GC_state s, objptr *opp) {

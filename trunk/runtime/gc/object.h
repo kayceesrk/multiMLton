@@ -191,7 +191,8 @@ static inline void splitHeader (GC_state s, GC_header header, __attribute__((unu
 static inline bool objectHasIdentity (GC_state s, GC_header h);
 static inline pointer advanceToObjectData (GC_state s, pointer p);
 static inline pointer getBeginningOfObject (GC_state s, pointer p);
-static inline void isObjectPointerVirgin (GC_state s, pointer p);
+static inline void isObjectPointerVirginMark (GC_state s, pointer current, pointer parent);
+static inline void isObjectPointerVirginUnmark (GC_state s, pointer current, pointer parent);
 static inline void doesPointToTmpPointer (GC_state s, objptr* opp);
 
 PRIVATE bool GC_isObjectClean (GC_state s, pointer p);
