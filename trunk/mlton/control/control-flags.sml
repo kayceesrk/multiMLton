@@ -1118,7 +1118,7 @@ val zoneCutDepth: int ref =
 
 val stackRB : bool ref =
   control {name = "stack read barrier",
-           default = false,
+           default = true,
            toString = Bool.toString}
 
 val defaults = setDefaults

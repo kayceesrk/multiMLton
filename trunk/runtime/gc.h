@@ -30,6 +30,7 @@ typedef GC_state GCState_t;
 #include "gc/pointer.h"
 #include "gc/objptr.h"
 #include "gc/object.h"
+#include "gc/object-cleanliness.h"
 #include "gc/array.h"
 #include "gc/frame.h"
 #include "gc/stack.h"

@@ -27,12 +27,6 @@ typedef enum {
     SHARED_HEAP
 } GC_heapKind;
 
-typedef enum {
-  ZERO=0,
-  ONE=1,
-  MANY
-} GC_numReferences;
-
 typedef struct GC_heap {
   GC_heapKind kind;
   pointer nursery; /* start of nursery */

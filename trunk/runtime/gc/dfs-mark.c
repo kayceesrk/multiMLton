@@ -179,8 +179,10 @@ markNextInNormal:
     nextHeaderp = getHeaderp (next);
     nextHeader = *nextHeaderp;
     if (mark == (nextHeader & MARK_MASK)) {
+#if 0
       if (s->selectiveDebug && f == isObjectPointerVirginMark)
         f (s, next, cur);
+#endif
       if (shouldHashCons)
         shareObjptr (s, (objptr*)todo);
       goto markNextInNormal;
@@ -266,8 +268,10 @@ markNextInArray:
     nextHeaderp = getHeaderp (next);
     nextHeader = *nextHeaderp;
     if (mark == (nextHeader & MARK_MASK)) {
+#if 0
       if (s->selectiveDebug and f == isObjectPointerVirginMark)
         f (s, next, cur);
+#endif
       if (shouldHashCons)
         shareObjptr (s, (objptr*)todo);
       goto markNextInArray;
@@ -328,8 +332,10 @@ markInFrame:
     nextHeaderp = getHeaderp (next);
     nextHeader = *nextHeaderp;
     if (mark == (nextHeader & MARK_MASK)) {
+#if 0
       if (s->selectiveDebug and f == isObjectPointerVirginMark)
         f (s, next, cur);
+#endif
       objptrIndex++;
       if (shouldHashCons)
         shareObjptr (s, (objptr*)todo);
