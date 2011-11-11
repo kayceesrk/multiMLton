@@ -50,7 +50,7 @@ GC_header buildHeaderFromTypeIndex (uint32_t t) {
   return 1 | (t << 1);
 }
 
-bool objectHasIdentity (GC_state s, GC_header header) {
+inline bool objectHasIdentity (GC_state s, GC_header header) {
   assert (header != GC_FORWARDED);
   header &= ~(LIFT_MASK | VIRGIN_MASK);
   unsigned objectTypeIndex =  (header & TYPE_INDEX_MASK) >> TYPE_INDEX_SHIFT;

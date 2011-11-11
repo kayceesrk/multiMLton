@@ -200,9 +200,7 @@ struct
           * threads to run on this core. If there are none, we will perform a GC,
           * after which we will place rhost on the target scheduler. *)
         if (Primitive.Controls.wbUsesCleanliness andalso
-            (* (PacmlFFI.setSelectiveDebug (true); true) andalso *)
-            Primitive.Lwtgc.isObjectClean rhost
-            (* andalso (PacmlFFI.setSelectiveDebug (false); true) *)) then
+            Primitive.Lwtgc.isThreadClosureClean rhost) then
           (ignore (Primitive.Lwtgc.move (rhost, false, true)))
         else
           (debug' (fn () => "spawnHostHelper.lift(1): tid="^(TID.tidToString tid));

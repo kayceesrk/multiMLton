@@ -8,6 +8,11 @@
 
 #if (defined (MLTON_GC_INTERNAL_TYPES))
 
+struct GC_pointerSet {
+  void* p;
+  UT_hash_handle hh;
+};
+
 typedef enum {
   ZERO=0,
   ONE=1,
@@ -20,7 +25,8 @@ typedef enum {
 
 static inline void isObjectPointerVirginMark (GC_state s, pointer current, pointer parent);
 static inline void isObjectPointerVirginUnmark (GC_state s, pointer current, pointer parent);
-static inline void doesPointToTmpPointer (GC_state s, objptr* opp);
-PRIVATE bool GC_isObjectClean (GC_state s, pointer p);
+static inline void doesPointToMarkedObject (GC_state s, objptr* opp);
+PRIVATE bool GC_isObjectClosureClean (GC_state s, pointer p);
+PRIVATE bool GC_isThreadClosureClean (GC_state s, pointer p);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

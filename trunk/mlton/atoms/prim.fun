@@ -90,7 +90,8 @@ datatype 'a t =
  | Lwtgc_isObjptr
  | Lwtgc_isObjptrInLocalHeap
  | Lwtgc_isObjptrInSharedHeap
- | Lwtgc_isObjectClean
+ | Lwtgc_isObjectClosureClean
+ | Lwtgc_isThreadClosureClean
  | MLton_bogus (* ssa to rssa *)
  (* of type unit -> 'a.
   * Makes a bogus value of any type.
@@ -302,7 +303,8 @@ fun toString (n: 'a t): string =
        | Lwtgc_isObjptr => "Lwtgc_isObjptr"
        | Lwtgc_isObjptrInLocalHeap => "Lwtgc_isObjptrInLocalHeap"
        | Lwtgc_isObjptrInSharedHeap => "Lwtgc_isObjptrInSharedHeap"
-       | Lwtgc_isObjectClean => "Lwtgc_isObjectClean"
+       | Lwtgc_isObjectClosureClean => "Lwtgc_isObjectClosureClean"
+       | Lwtgc_isThreadClosureClean => "Lwtgc_isThreadClosureClean"
        | MLton_bogus => "MLton_bogus"
        | MLton_bug => "MLton_bug"
        | MLton_deserialize => "MLton_deserialize"
@@ -471,7 +473,8 @@ val equals: 'a t * 'a t -> bool =
     | (Lwtgc_isObjptr, Lwtgc_isObjptr) => true
     | (Lwtgc_isObjptrInLocalHeap, Lwtgc_isObjptrInLocalHeap) => true
     | (Lwtgc_isObjptrInSharedHeap, Lwtgc_isObjptrInSharedHeap) => true
-    | (Lwtgc_isObjectClean, Lwtgc_isObjectClean) => true
+    | (Lwtgc_isObjectClosureClean, Lwtgc_isObjectClosureClean) => true
+    | (Lwtgc_isThreadClosureClean, Lwtgc_isThreadClosureClean) => true
     | (MLton_bogus, MLton_bogus) => true
     | (MLton_bug, MLton_bug) => true
     | (MLton_deserialize, MLton_deserialize) => true
@@ -663,7 +666,8 @@ val map: 'a t * ('a -> 'b) -> 'b t =
     | Lwtgc_isObjptr => Lwtgc_isObjptr
     | Lwtgc_isObjptrInLocalHeap => Lwtgc_isObjptrInLocalHeap
     | Lwtgc_isObjptrInSharedHeap => Lwtgc_isObjptrInSharedHeap
-    | Lwtgc_isObjectClean => Lwtgc_isObjectClean
+    | Lwtgc_isObjectClosureClean => Lwtgc_isObjectClosureClean
+    | Lwtgc_isThreadClosureClean => Lwtgc_isThreadClosureClean
     | MLton_bogus => MLton_bogus
     | MLton_bug => MLton_bug
     | MLton_deserialize => MLton_deserialize
@@ -940,7 +944,8 @@ val kind: 'a t -> Kind.t =
        | Lwtgc_isObjptr => Functional
        | Lwtgc_isObjptrInLocalHeap => DependsOnState
        | Lwtgc_isObjptrInSharedHeap => DependsOnState
-       | Lwtgc_isObjectClean => DependsOnState
+       | Lwtgc_isObjectClosureClean => DependsOnState
+       | Lwtgc_isThreadClosureClean => DependsOnState
        | MLton_bogus => Functional
        | MLton_bug => SideEffect
        | MLton_deserialize => Moveable
@@ -1168,7 +1173,8 @@ in
        Lwtgc_isObjptr,
        Lwtgc_isObjptrInLocalHeap,
        Lwtgc_isObjptrInSharedHeap,
-       Lwtgc_isObjectClean,
+       Lwtgc_isObjectClosureClean,
+       Lwtgc_isThreadClosureClean,
        MLton_bogus,
        MLton_bug,
        MLton_deserialize,
@@ -1456,7 +1462,8 @@ fun 'a checkApp (prim: 'a t,
        | Lwtgc_isObjptr => oneTarg (fn t => (oneArg t, bool))
        | Lwtgc_isObjptrInLocalHeap => oneTarg (fn t => (oneArg t, bool))
        | Lwtgc_isObjptrInSharedHeap => oneTarg (fn t => (oneArg t, bool))
-       | Lwtgc_isObjectClean => oneTarg (fn t => (oneArg t, bool))
+       | Lwtgc_isObjectClosureClean => oneTarg (fn t => (oneArg t, bool))
+       | Lwtgc_isThreadClosureClean => oneTarg (fn t => (oneArg t, bool))
        | MLton_bogus => oneTarg (fn t => (noArgs, t))
        | MLton_bug => noTargs (fn () => (oneArg string, unit))
        | MLton_deserialize => oneTarg (fn t => (oneArg word8Vector, t))
@@ -1619,7 +1626,8 @@ fun ('a, 'b) extractTargs (prim: 'b t,
        | Lwtgc_isObjptr => one (arg 0)
        | Lwtgc_isObjptrInLocalHeap => one (arg 0)
        | Lwtgc_isObjptrInSharedHeap => one (arg 0)
-       | Lwtgc_isObjectClean => one (arg 0)
+       | Lwtgc_isObjectClosureClean => one (arg 0)
+       | Lwtgc_isThreadClosureClean => one (arg 0)
        | MLton_bogus => one result
        | MLton_deserialize => one result
        | MLton_eq => one (arg 0)

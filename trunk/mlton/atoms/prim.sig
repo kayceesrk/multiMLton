@@ -80,7 +80,8 @@ signature PRIM =
              | Lwtgc_isObjptr (* backend *)
              | Lwtgc_isObjptrInLocalHeap (* backend *)
              | Lwtgc_isObjptrInSharedHeap (* backend *)
-             | Lwtgc_isObjectClean (* backend *)
+             | Lwtgc_isObjectClosureClean (* backend *)
+             | Lwtgc_isThreadClosureClean (* backend *)
              | MLton_bogus (* ssa to rssa *)
              (* of type unit -> 'a.
               * Makes a bogus value of any type.

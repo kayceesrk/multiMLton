@@ -35,7 +35,8 @@ void isObjectPointerVirginUnmark (__attribute__((unused)) GC_state s,
  * pointers for the object to be a virgin, whereas for the internal nodes, it
  * is OK to have one reference (that is reachable from the object root).
  *
- * The result is transmitted through s->tmpBool.
+ * The result is transmitted through s->tmpBool, which is the predicate
+ * isClosureVirgin.
  *
  */
 void isObjectPointerVirginMark (GC_state s, pointer p, pointer parent) {
@@ -45,7 +46,6 @@ void isObjectPointerVirginMark (GC_state s, pointer p, pointer parent) {
   assert (s->tmpPointer != BOGUS_POINTER);
   bool isVirgin = FALSE;
 
-
   if (s->tmpPointer == p)
     isVirgin = (countReferences (getHeader(p)) == ZERO);
   else
@@ -53,7 +53,8 @@ void isObjectPointerVirginMark (GC_state s, pointer p, pointer parent) {
 
   if (!isVirgin && !objectHasIdentity(s, getHeader(p)))
     isVirgin = TRUE;
-  parent = parent;
+
+  parent = parent; //To silence GCC warnings
 
 #if 0
   if (s->selectiveDebug) {
@@ -72,18 +73,88 @@ void isObjectPointerVirginMark (GC_state s, pointer p, pointer parent) {
   }
 #endif
 
-
   s->tmpBool = s->tmpBool && isVirgin;
 }
 
-void doesPointToTmpPointer (GC_state s, objptr* opp) {
+/* doesPointerToMarkedObject
+ * -------------------------
+ * s->tmpPointer is the root of the thread closure
+ * s->tmpBool is isClosureVirgin predicate
+ * s->tmpInt counts the number of troublesome pointers from stack
+ */
+void doesPointToMarkedObject (GC_state s, objptr* opp) {
   pointer p = objptrToPointer (*opp, s->heap->start);
-  if (p == s->tmpPointer)
+  if (isPointerMarked (p) && p != s->tmpPointer &&
+      objectHasIdentity (s, getHeader(p))) {
     s->tmpInt++;
+  }
 }
 
 
-bool GC_isObjectClean (GC_state s, pointer p) {
+bool GC_isThreadClosureClean (GC_state s, pointer p) {
+  bool hasIdentityTransitive, isUnbounded, isClosureVirgin;
+  unsigned int numPointersFromStack;
+  GC_header header = getHeader (p);
+  GC_objectTypeTag tag;
+  unsigned int objectTypeIndex = (header & TYPE_INDEX_MASK) >> TYPE_INDEX_SHIFT;
+  splitHeader (s, header, getHeaderp (p), &tag, NULL,
+               NULL, NULL, &hasIdentityTransitive, &isUnbounded);
+
+  if (tag == STACK_TAG) {
+    isClosureVirgin = FALSE;
+  }
+  else {
+    s->tmpBool = TRUE;
+    s->tmpPointer = p;
+    s->tmpInt = 0;
+#if 0
+    if (s->selectiveDebug) {
+      char str[50];
+      sprintf (str, "Closure_"FMTPTR".dot", (uintptr_t)p);
+      s->fp = fopen (str, "w");
+      if (s->fp == NULL) exit (1);
+      fprintf (s->fp, "digraph {\n");
+      fprintf (s->fp, "node [shape=record];\n");
+    }
+#endif
+
+    dfsMarkByMode (s, p, isObjectPointerVirginMark, MARK_MODE,
+                  FALSE, FALSE, TRUE, FALSE);
+
+    //Walk the current stack and test if the current stack points to any marked object
+    foreachObjptrInObject (s, (pointer)getStackCurrent (s), doesPointToMarkedObject, FALSE);
+
+    isClosureVirgin = s->tmpBool;
+    numPointersFromStack = s->tmpInt;
+
+#if 0
+    if (s->selectiveDebug) {
+      fprintf (s->fp, "}\n");
+      fclose (s->fp);
+      s->fp = NULL;
+    }
+#endif
+    dfsMarkByMode (s, p, isObjectPointerVirginUnmark, UNMARK_MODE,
+                  FALSE, FALSE, TRUE, FALSE);
+
+    //Reset tmp* variables
+    s->tmpPointer = BOGUS_POINTER;
+    s->tmpBool = TRUE;
+    s->tmpInt = 0;
+  }
+
+  if (DEBUG_CLEANLINESS) {
+    fprintf (stderr, "GC_isThreadClosureClean: hasIdentityTransitive = %d \
+                      isUnbounded = %d objectTypeIndex = %d \
+                      isClosureVirgin = %d numPointerFromStack = %d\n",
+             hasIdentityTransitive, isUnbounded, objectTypeIndex,
+             isClosureVirgin, numPointersFromStack);
+  }
+
+  return isClosureVirgin;
+}
+
+bool GC_isObjectClosureClean (GC_state s, pointer p) {
   bool hasIdentityTransitive, isUnbounded, isClosureVirgin;
   GC_header header = getHeader (p);
   GC_objectTypeTag tag;
@@ -97,35 +168,20 @@ bool GC_isObjectClean (GC_state s, pointer p) {
   else {
     s->tmpBool = TRUE;
     s->tmpPointer = p;
-    if (s->selectiveDebug) {
-      char str[50];
-      sprintf (str, "Closure_"FMTPTR".dot", (uintptr_t)p);
-      s->fp = fopen (str, "w");
-      if (s->fp == NULL) exit (1);
-      fprintf (s->fp, "digraph {\n");
-      fprintf (s->fp, "node [shape=record];\n");
-    }
+
     dfsMarkByMode (s, p, isObjectPointerVirginMark, MARK_MODE,
                   FALSE, FALSE, TRUE, FALSE);
-    if (s->selectiveDebug) {
-      fprintf (s->fp, "}\n");
-      fclose (s->fp);
-      s->fp = NULL;
-    }
     isClosureVirgin = s->tmpBool;
     dfsMarkByMode (s, p, isObjectPointerVirginUnmark, UNMARK_MODE,
                   FALSE, FALSE, TRUE, FALSE);
     s->tmpPointer = BOGUS_POINTER;
   }
 
-  if ((DEBUG_OBJECT_TYPE_INFO or s->selectiveDebug)) {
-    fprintf (stderr, "hasIdentityTransitive = %d isUnbounded = %d objectTypeIndex = %d \
-                      isClosureVirgin = %d numPointerFromStack = %d\n",
-                     hasIdentityTransitive, isUnbounded, objectTypeIndex,
-                     isClosureVirgin, s->tmpInt);
+  if (DEBUG_CLEANLINESS) {
+    fprintf (stderr, "GC_isObjectClosureClean: hasIdentityTransitive = %d \
+                      isUnbounded = %d objectTypeIndex = %d isClosureVirgin = %d\n",
+             hasIdentityTransitive, isUnbounded, objectTypeIndex, isClosureVirgin);
   }
-
-  s->selectiveDebug = FALSE;
 
   return isClosureVirgin;
 }

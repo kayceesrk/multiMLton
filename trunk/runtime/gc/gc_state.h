@@ -132,6 +132,11 @@ struct GC_state {
   GC_weak weaks; /* Linked list of (live) weak pointers */
   char *worldFile;
 
+  /* DEV variables
+   * ------------
+   * The following variables are only used for development purposes. The are to
+   * be removed/not used for production/benchmarking runs.
+   */
   FILE* fp;
 };
 
