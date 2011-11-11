@@ -166,8 +166,11 @@ pointer getBeginningOfObject (GC_state s, pointer p) {
 }
 
 
-void checkHeader (__attribute__((unused)) GC_state s, pointer p, char* file, int line) {
-  if ((getHeader (p) & ~(VIRGIN_MASK | LIFT_MASK)) == (GC_header)0x11) {
-    fprintf (stderr, "%s:%d P = "FMTPTR"\n", file, line, (uintptr_t)p);
+void checkHeader (GC_state s, pointer p, char* file, int line) {
+  if (!isPointer (p) || p == (pointer)s->generationalMaps.cardMapAbsolute)
+    return;
+
+  if (1 != (getHeader (p) & GC_VALID_HEADER_MASK)) {
+    fprintf (stderr, "CheckHeader: %s:%d P = "FMTPTR"\n", file, line, (uintptr_t)p);
   }
 }

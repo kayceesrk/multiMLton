@@ -35,7 +35,7 @@ LIBS = -L$(MMPATH)/trunk/build/lib/self -lmlton -lgdtoa \
 			 -lm -lgmp -m64 -lplpa_included -pthread -lrt
 
 %.o: %.c
-	gcc -save-temps $(FLAGS) -o $@ $<
+	gcc -ggdb3 $(FLAGS) -o $@ $<
 
 
 .SECONDEXPANSION:

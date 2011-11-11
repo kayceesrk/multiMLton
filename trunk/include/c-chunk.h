@@ -79,8 +79,10 @@ PRIVATE extern Pointer GC_forwardBase (struct GC_state* s, Pointer b);
 #else
     #define O_RB(ty, b, o) (FWD (*(ty*)((b) + (o))))
     #define O(ty, b, o) (*((ty*)((b) + (o))))
+    //#define O(ty, b, o) (*(checkHeader (GCState, b, __FILE__, __LINE__), ((ty*)((b) + (o)))))
     #define X_RB(ty, b, i, s, o) (FWD (*((ty*)((b) + ((i) * (s)) + (o)))))
     #define X(ty, b, i, s, o) (*((ty*)((b) + ((i) * (s)) + (o))))
+    //#define X(ty, b, i, s, o) (*(checkHeader (GCState, (b) + ((i) * (s)), __FILE__, __LINE__), ((ty*)((b) + ((i) * (s)) + (o)))))
     #define S_RB(ty, i)  (FWD (*(ty*)(StackTop + (i))))
     #define S(ty, i) (*((ty*)(StackTop + (i))))
 #endif

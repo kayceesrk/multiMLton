@@ -93,7 +93,7 @@ void doesPointToMarkedObject (GC_state s, objptr* opp) {
 
 bool GC_isThreadClosureClean (GC_state s, pointer p) {
   bool hasIdentityTransitive, isUnbounded, isClosureVirgin;
-  unsigned int numPointersFromStack;
+  unsigned int numPointersFromStack = -1;
   GC_header header = getHeader (p);
   GC_objectTypeTag tag;
   unsigned int objectTypeIndex = (header & TYPE_INDEX_MASK) >> TYPE_INDEX_SHIFT;
@@ -143,10 +143,10 @@ bool GC_isThreadClosureClean (GC_state s, pointer p) {
     s->tmpInt = 0;
   }
 
-  if (DEBUG_CLEANLINESS) {
-    fprintf (stderr, "GC_isThreadClosureClean: hasIdentityTransitive = %d \
-                      isUnbounded = %d objectTypeIndex = %d \
-                      isClosureVirgin = %d numPointerFromStack = %d\n",
+  if (DEBUG_CLEANLINESS || TRUE) {
+    fprintf (stderr, "GC_isThreadClosureClean: hasIdentityTransitive = %d "
+                     "isUnbounded = %d objectTypeIndex = %d "
+                     "isClosureVirgin = %d numPointerFromStack = %d\n",
              hasIdentityTransitive, isUnbounded, objectTypeIndex,
              isClosureVirgin, numPointersFromStack);
   }
