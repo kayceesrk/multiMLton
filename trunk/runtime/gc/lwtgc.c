@@ -445,7 +445,7 @@ void GC_addToSpawnOnWBA (GC_state s, pointer p, int proc) {
            (uintptr_t)p, GC_sizeInLocalHeap (s, p), proc, s->procId);
   bool isClosureClean = GC_isThreadClosureClean (s, p);
 
-  if (FALSE && isClosureClean) {
+  if (isClosureClean) {
     s->selectiveDebug = TRUE;
     fprintf (stderr, "sharedFrontier(1) "FMTPTR"\n", (uintptr_t)s->sharedFrontier);
     pointer newP = GC_move (s, p, false, true);

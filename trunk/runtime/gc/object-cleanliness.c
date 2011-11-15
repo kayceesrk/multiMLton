@@ -51,8 +51,9 @@ void isObjectPointerVirginMark (GC_state s, pointer p, pointer parent) {
   else
     isVirgin = (countReferences (getHeader(p)) < MANY);
 
-  if (!isVirgin && !objectHasIdentity(s, getHeader(p)))
+  if (!isVirgin && !objectHasIdentity(s, getHeader(p))) {
     isVirgin = TRUE;
+  }
 
   parent = parent; //To silence GCC warnings
 
@@ -122,6 +123,8 @@ bool GC_isThreadClosureClean (GC_state s, pointer p) {
                   FALSE, FALSE, TRUE, FALSE);
 
     //Walk the current stack and test if the current stack points to any marked object
+    getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
+    getThreadCurrent(s)->exnStack = s->exnStack;
     foreachObjptrInObject (s, (pointer)getStackCurrent (s), doesPointToMarkedObject, FALSE);
 
     isClosureVirgin = s->tmpBool;
