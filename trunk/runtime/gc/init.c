@@ -513,6 +513,8 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->saveWorldStatus = true;
   s->profiling.isProfilingTimeOn = false;
   s->reachable = NULL;
+  s->copyImmutable = FALSE;
+  s->copyObjectMap = NULL;
 
   s->schedulerQueue = NULL;
   s->schedulerLocks = NULL;
@@ -540,6 +542,7 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->translateState.from = BOGUS_POINTER;
   s->translateState.to = BOGUS_POINTER;
   s->translateState.size = 0;
+
 
   initIntInf (s);
   initSignalStack (s);

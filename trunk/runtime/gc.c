@@ -71,3 +71,4 @@ extern C_Pthread_Key_t gcstate_key;
 #include "gc/translate.c"
 #include "gc/weak.c"
 #include "gc/world.c"
+#include "gc/write-barrier-array.c"

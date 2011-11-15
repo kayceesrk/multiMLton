@@ -20,6 +20,102 @@ bool isObjptrInToSpace (GC_state s, objptr op) {
   return isPointerInToSpace (s, p);
 }
 
+/* copyObjptr (s, opp)
+ * Copies the object pointed to by *opp to the toSpace.
+ */
+void copyObjptr (GC_state s, objptr *opp) {
+  objptr op;
+  pointer p;
+  GC_header header;
+  GC_objectTypeTag tag;
+
+  fixFwdObjptr (s, opp);
+  op = *opp;
+  p = objptrToPointer (op, s->heap->start);
+  if (DEBUG_DETAILED)
+    fprintf (stderr,
+             "copyObjptr  opp = "FMTPTR"  op = "FMTOBJPTR"  p = "FMTPTR"\n",
+             (uintptr_t)opp, op, (uintptr_t)p);
+  header = getHeader (p);
+
+  /* If the object is in the shared heap, skip */
+  if (isObjectLifted (header))
+    return;
+
+  CopyObjectMap* e = NULL;
+  HASH_FIND_PTR (s->copyObjectMap, &p, e);
+  if (e) { //We have already copied the object to toSpace
+    *opp = (objptr)e->newP;
+    if (DEBUG_DETAILED)
+      fprintf (stderr, "copyObjptr: Already copied newP="FMTPTR"\n", (uintptr_t)*opp);
+    return;
+  }
+
+  size_t size;
+  size_t headerBytes, objectBytes;
+  uint16_t bytesNonObjptrs, numObjptrs;
+
+  splitHeader(s, header, getHeaderp (p), &tag, NULL, &bytesNonObjptrs, &numObjptrs, NULL, NULL);
+
+  /* Compute the space taken by the header and object body. */
+  if ((NORMAL_TAG == tag) or (WEAK_TAG == tag)) { /* Fixed size object. */
+    headerBytes = GC_NORMAL_HEADER_SIZE;
+    objectBytes = bytesNonObjptrs + (numObjptrs * OBJPTR_SIZE);
+  } else if (ARRAY_TAG == tag) {
+    headerBytes = GC_ARRAY_HEADER_SIZE;
+    objectBytes = sizeofArrayNoHeader (s, getArrayLength (p),
+                                        bytesNonObjptrs, numObjptrs);
+  } else { /* Stack. */
+    GC_stack stack;
+    assert (STACK_TAG == tag);
+    headerBytes = GC_STACK_HEADER_SIZE;
+    stack = (GC_stack)p;
+    objectBytes = sizeof (struct GC_stack) + stack->used;
+  }
+  size = headerBytes + objectBytes;
+  assert (s->forwardState.back + size <= s->forwardState.toLimit);
+  if (s->forwardState.back + size > s->forwardState.toLimit) {
+    fprintf (stderr, "copyObjptr: Ran out of space in toSpace\n");
+    fflush (stderr);
+    exit (1);
+  }
+  /* Copy the object. */
+  GC_memcpy (p - headerBytes, s->forwardState.back, size);
+
+  /* If the object is a weak pointer, clear the weak pointer, since we do not
+   * know the property of the toSpace. XXX this might not be the correct thing
+   * to do. */
+  if ((WEAK_TAG == tag) and (numObjptrs == 1)) {
+    GC_weak w;
+    w = (GC_weak)(s->forwardState.back + GC_NORMAL_HEADER_SIZE + offsetofWeak (s));
+    *(getHeaderp((pointer)w - offsetofWeak (s))) = GC_WEAK_GONE_HEADER;
+    w->objptr = BOGUS_OBJPTR;
+  }
+
+  e = (CopyObjectMap*) malloc (sizeof (CopyObjectMap));
+  e->oldP = (pointer)*opp;
+  e->newP = (pointer) s->forwardState.back + headerBytes;
+  if (DEBUG_DETAILED)
+    fprintf (stderr, "copyObjptr: Adding oldP="FMTPTR" newP="FMTPTR"\n",
+             (uintptr_t)e->oldP, (uintptr_t)e->newP);
+  HASH_ADD_PTR (s->copyObjectMap, oldP, e);
+
+  if (isPointerInToSpace (s, (pointer)opp)) {
+    *opp = pointerToObjptr (s->forwardState.back + headerBytes,
+                            s->forwardState.toStart);
+    if (DEBUG_DETAILED)
+      fprintf (stderr,
+              "copyObjptr --> *opp = "FMTPTR" [%d]\n",
+              (uintptr_t)*opp, s->procId);
+  }
+
+
+  s->forwardState.back += size;
+  assert (isAligned ((size_t)s->forwardState.back + GC_NORMAL_HEADER_SIZE,
+                      s->alignment));
+}
+
+
 /* forwardObjptrToSharedHeap (s, opp)
  * Forwards the object pointed to by *opp to the shared heap and updates *opp
  * to point to the new object.
@@ -27,8 +123,9 @@ bool isObjptrInToSpace (GC_state s, objptr op) {
 
 void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
   objptr op;
-  pointer p;
+  pointer p, newP = BOGUS_POINTER;
   GC_header header;
+  bool hasIdentity = FALSE;
 
   op = *opp;
   p = objptrToPointer (op, s->heap->start);
@@ -48,13 +145,28 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
 
   if (header != GC_FORWARDED) { /* forward the object */
     size_t size, skip;
-
     size_t headerBytes, objectBytes;
     GC_objectTypeTag tag;
     uint16_t bytesNonObjptrs, numObjptrs;
 
-    splitHeader(s, header, getHeaderp (p), &tag, NULL,
+    splitHeader(s, header, getHeaderp (p), &tag, &hasIdentity,
                 &bytesNonObjptrs, &numObjptrs, NULL, NULL);
+
+    /* If we are copying immutable objects, we might have already copied the
+     * object. Since we do not modify the original object in that case, we
+     * would have added it to the s->copyObjectMap. Check this map to see if
+     * the obejct has been copied already. */
+    if (s->copyImmutable and (not hasIdentity)) {
+      CopyObjectMap* e = NULL;
+      HASH_FIND_PTR (s->copyObjectMap, &p, e);
+      if (e) { //We have already copied the object to toSpace
+        *opp = (objptr)e->newP;
+        if (DEBUG_DETAILED)
+          fprintf (stderr, "forwardObjptrToSharedHeap: copyImmutable mode: "
+                           "Already copied. newP="FMTPTR"\n", (uintptr_t)*opp);
+        return;
+      }
+    }
 
     /* Compute the space taken by the header and object body. */
     if ((NORMAL_TAG == tag) or (WEAK_TAG == tag)) { /* Fixed size object. */
@@ -183,23 +295,46 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
           fprintf (stderr, "not linking\n");
       }
     }
-    /* Store the forwarding pointer in the old object. */
-    *((GC_header*)(p - GC_HEADER_SIZE)) = GC_FORWARDED;
-    *((objptr*)p) = pointerToObjptr (s->forwardState.back + headerBytes,
-                                     s->forwardState.toStart);
-    if (DEBUG_DETAILED) {
-      fprintf (stderr, "Setting headerp ="FMTPTR" to "FMTHDR"\n",
-               (uintptr_t)(p - GC_HEADER_SIZE), *((GC_header*)(p - GC_HEADER_SIZE)));
-      fprintf (stderr, "Setting p="FMTPTR" to "FMTOBJPTR"\n",
-               (uintptr_t)p, *(objptr*)p);
+
+    if (s->copyImmutable and (not hasIdentity)) {
+      /* Leave the original object as it is if we are copying immutable objects
+       * and the original object is immutable. Add it to the copyObjectMap.
+       */
+      CopyObjectMap* e = (CopyObjectMap*) malloc (sizeof (CopyObjectMap));
+      e->oldP = (pointer)*opp;
+      e->newP = (pointer) s->forwardState.back + headerBytes;
+      newP = e->newP;
+      if (DEBUG_DETAILED)
+        fprintf (stderr, "forwardObjptrToSharedHeap: copyImmutable mode. Adding oldP="FMTPTR" newP="FMTPTR"\n",
+                (uintptr_t)e->oldP, (uintptr_t)e->newP);
+      HASH_ADD_PTR (s->copyObjectMap, oldP, e);
     }
+    else {
+      /* Otherwise, store the forwarding pointer in the old object */
+      *((GC_header*)(p - GC_HEADER_SIZE)) = GC_FORWARDED;
+      *((objptr*)p) = pointerToObjptr (s->forwardState.back + headerBytes,
+                                      s->forwardState.toStart);
+      if (DEBUG_DETAILED) {
+        fprintf (stderr, "Setting headerp ="FMTPTR" to "FMTHDR"\n",
+                (uintptr_t)(p - GC_HEADER_SIZE), *((GC_header*)(p - GC_HEADER_SIZE)));
+        fprintf (stderr, "Setting p="FMTPTR" to "FMTOBJPTR"\n",
+                (uintptr_t)p, *(objptr*)p);
+      }
+    }
+
     /* Update the back of the queue. */
     s->sharedFrontier += size + skip;
-    assert (isAligned ((size_t)s->forwardState.back + GC_NORMAL_HEADER_SIZE,
-                       s->alignment));
+    assert (isAligned ((size_t)s->forwardState.back + GC_NORMAL_HEADER_SIZE, s->alignment));
     s->forwardState.back = s->sharedFrontier;
   }
-  *opp = *((objptr*)p);
+
+  if (s->copyImmutable and (not hasIdentity)) {
+    assert (newP != BOGUS_POINTER);
+    *opp = (objptr)newP;
+  }
+  else
+    *opp = *((objptr*)p);
+
   if (DEBUG_DETAILED)
     fprintf (stderr,
              "forwardObjptr --> *opp = "FMTPTR"\n",

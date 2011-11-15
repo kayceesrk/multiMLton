@@ -129,6 +129,8 @@ struct GC_state {
   struct GC_vectorInit *vectorInits;
   uint32_t vectorInitsLength;
   UT_array* reachable;
+  CopyObjectMap* copyObjectMap;
+  bool copyImmutable;
   GC_weak weaks; /* Linked list of (live) weak pointers */
   char *worldFile;
 
