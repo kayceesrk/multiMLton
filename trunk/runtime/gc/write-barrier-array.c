@@ -91,16 +91,12 @@ void GC_addToMoveOnWBA (GC_state s, pointer p) {
 }
 
 void GC_addToSpawnOnWBA (GC_state s, pointer p, int proc) {
+  bool isClosureClean = FALSE;
+  //isClosureClean = GC_isThreadClosureClean (s, p);
 
-  fprintf (stderr, "GC_addToSpawnOnWBA: p="FMTPTR" size=%zu on processor %d [%d]\n",
-           (uintptr_t)p, GC_sizeInLocalHeap (s, p), proc, s->procId);
-  bool isClosureClean = GC_isThreadClosureClean (s, p);
-
-  if (isClosureClean) {
+  if (FALSE && isClosureClean) {
     s->selectiveDebug = TRUE;
-    fprintf (stderr, "sharedFrontier(1) "FMTPTR"\n", (uintptr_t)s->sharedFrontier);
     pointer newP = GC_move (s, p, false, true);
-    fprintf (stderr, "sharedFrontier(2) "FMTPTR"\n", (uintptr_t)s->sharedFrontier);
     s->selectiveDebug = FALSE;
     GC_sqEnque (s, newP, proc, 0);
     return;

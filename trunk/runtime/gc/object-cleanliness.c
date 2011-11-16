@@ -45,15 +45,15 @@ void isObjectPointerVirginMark (GC_state s, pointer p, pointer parent) {
 
   assert (s->tmpPointer != BOGUS_POINTER);
   bool isVirgin = FALSE;
+  GC_header h = getHeader (p);
 
   if (s->tmpPointer == p)
-    isVirgin = (countReferences (getHeader(p)) == ZERO);
+    isVirgin = (countReferences (h) == ZERO);
   else
-    isVirgin = (countReferences (getHeader(p)) < MANY);
+    isVirgin = (countReferences (h) < MANY);
 
-  if (!isVirgin && !objectHasIdentity(s, getHeader(p))) {
+  if (!isVirgin && !objectHasIdentity(s, h))
     isVirgin = TRUE;
-  }
 
   parent = parent; //To silence GCC warnings
 
@@ -146,7 +146,7 @@ bool GC_isThreadClosureClean (GC_state s, pointer p) {
     s->tmpInt = 0;
   }
 
-  if (DEBUG_CLEANLINESS || TRUE) {
+  if (DEBUG_CLEANLINESS) {
     fprintf (stderr, "GC_isThreadClosureClean: hasIdentityTransitive = %d "
                      "isUnbounded = %d objectTypeIndex = %d "
                      "isClosureVirgin = %d numPointerFromStack = %d\n",

@@ -256,8 +256,8 @@ structure Main =
                       g)
      | nthgen_cml g i sl numSlaves =
                     (print  (Int.toString(i)^"\n");
-                     (* printGen g;
-                     show print g; *)
+                     printGen g;
+                     show print g;
                      nthgen_cml (master g sl numSlaves) (i-1) sl numSlaves)
 
    fun nthgen g 0 = ((*print "0 : ";printGen g; print "\n\n";*) g)
