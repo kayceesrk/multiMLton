@@ -142,6 +142,12 @@ void sqEnque (GC_state s, pointer p, int proc, int i) {
   Parallel_wakeUpThread (proc, 1);
 }
 
+void GC_addToDirectCloXferArray (GC_state s, ClosureToSpawn c, int proc) {
+  GC_sqAcquireLock (s, proc);
+  utarray_push_back (s->procStates[proc].directCloXferArray, &c);
+  GC_sqReleaseLock (s, proc);
+}
+
 void GC_sqEnque (GC_state s, pointer p, int proc, int i) {
   GC_sqAcquireLock (s, proc);
   sqEnque (s, p, proc, i);
@@ -189,6 +195,45 @@ pointer GC_sqDeque (GC_state s, int i) {
   return res;
 }
 
+void flushFromDirectCloXferArray (GC_state s) {
+  if (utarray_len (s->directCloXferArray) > 0) {
+    UT_array* localArray;
+
+    //Copy to local array
+    GC_sqAcquireLock (s, s->procId);
+    utarray_new (localArray, &directCloXfer_icd);
+    ClosureToSpawn* c;
+    for (c=(ClosureToSpawn*)utarray_front (s->directCloXferArray);
+         c!=NULL;
+         c=(ClosureToSpawn*)utarray_next (s->directCloXferArray, c)) {
+      utarray_push_back (localArray, c);
+    }
+    utarray_clear (s->directCloXferArray);
+    GC_sqReleaseLock (s, s->procId);
+
+    //Copy all to local heap and enque
+    for (c=(ClosureToSpawn*)utarray_front (localArray);
+         c!=NULL;
+         c=(ClosureToSpawn*)utarray_next (localArray, c)) {
+      s->syncReason = SYNC_MISC;
+      ENTER_LOCAL0 (s);
+      ensureHasHeapBytesFreeAndOrInvariantForMutator (s, FALSE, TRUE, FALSE, 0,
+                                                      c->size, FALSE, 0);
+      assert (s->frontier + c->size < s->limit);
+      pointer to = s->frontier;
+      s->frontier += c->size;
+      translateRange (s, c->p, to, c->size);
+      LEAVE_LOCAL0 (s);
+      void* buffer = c->p;
+      free (buffer);
+
+      pointer closure = advanceToObjectData (s, to);
+      GC_sqEnque (s, closure, s->procId, 0);
+    }
+    utarray_clear (localArray);
+  }
+}
+
 bool GC_sqIsEmptyPrio (int i) {
   GC_state s = pthread_getspecific (gcstate_key);
   CircularBuffer* cq = getSubQ (s->schedulerQueue, i);
@@ -211,6 +256,7 @@ static inline void moveAllThreadsFromSecToPrim (GC_state s) {
 }
 
 bool GC_sqIsEmpty (GC_state s) {
+  flushFromDirectCloXferArray (s);
   Parallel_maybeWaitForGC ();
   bool primEmpty = CircularBufferIsEmpty (s->schedulerQueue->primary);
   bool secEmpty = CircularBufferIsEmpty (s->schedulerQueue->secondary);

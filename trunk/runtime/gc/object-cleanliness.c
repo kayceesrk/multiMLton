@@ -91,8 +91,12 @@ void doesPointToMarkedObject (GC_state s, objptr* opp) {
   }
 }
 
-
 bool GC_isThreadClosureClean (GC_state s, pointer p) {
+  size_t size;
+  return __GC_isThreadClosureClean (s, p, &size);
+}
+
+bool __GC_isThreadClosureClean (GC_state s, pointer p, size_t* size) {
   bool hasIdentityTransitive, isUnbounded, isClosureVirgin;
   unsigned int numPointersFromStack = -1;
   GC_header header = getHeader (p);
@@ -119,8 +123,8 @@ bool GC_isThreadClosureClean (GC_state s, pointer p) {
     }
 #endif
 
-    dfsMarkByMode (s, p, isObjectPointerVirginMark, MARK_MODE,
-                  FALSE, FALSE, TRUE, FALSE);
+    *size = dfsMarkByMode (s, p, isObjectPointerVirginMark, MARK_MODE,
+                           FALSE, FALSE, TRUE, FALSE);
 
     //Walk the current stack and test if the current stack points to any marked object
     getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);

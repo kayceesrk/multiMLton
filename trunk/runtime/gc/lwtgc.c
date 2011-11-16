@@ -378,3 +378,36 @@ bool GC_isInSharedOrForwarded (GC_state s, pointer p) {
     return TRUE;
   return FALSE;
 }
+
+static inline void assertNotInLocalHeap (GC_state s, objptr* opp) {
+  assert (not isPointerInHeap (s, s->heap, (pointer)*opp));
+  s=s;
+  opp = opp;
+}
+
+pointer GC_copyToBuffer (GC_state s, pointer p, size_t size) {
+  objptr op = pointerToObjptr (p, s->heap->start);
+  void* buffer = malloc_safe (size);
+  s->forwardState.toStart = s->forwardState.back = buffer;
+  s->forwardState.toLimit = (pointer)((char*)buffer + size);
+  assert (s->copyObjectMap == NULL);
+  s->copyObjectMap = NULL;
+
+  s->syncReason = SYNC_MISC;
+  ENTER_LOCAL0 (s);
+  copyObjptr (s, &op);
+  foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, copyObjptr, TRUE);
+  LEAVE_LOCAL0 (s);
+
+  CopyObjectMap *e, *tmp;
+  HASH_ITER (hh, s->copyObjectMap, e, tmp) {
+    HASH_DEL (s->copyObjectMap, e);
+    free (e);
+  }
+  s->copyObjectMap = NULL;
+
+  pointer back = ((pointer)buffer) + size;
+  foreachObjptrInRange (s, (pointer)buffer, &back, assertNotInLocalHeap, TRUE);
+
+  return (pointer)buffer;
+}

@@ -28,5 +28,6 @@ static inline void isObjectPointerVirginUnmark (GC_state s, pointer current, poi
 static inline void doesPointToMarkedObject (GC_state s, objptr* opp);
 PRIVATE bool GC_isObjectClosureClean (GC_state s, pointer p);
 PRIVATE bool GC_isThreadClosureClean (GC_state s, pointer p);
+bool __GC_isThreadClosureClean (GC_state s, pointer p, size_t* size);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

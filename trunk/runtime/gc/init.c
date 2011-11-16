@@ -515,6 +515,7 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->reachable = NULL;
   s->copyImmutable = FALSE;
   s->copyObjectMap = NULL;
+  utarray_new (s->directCloXferArray, &directCloXfer_icd);
 
   s->schedulerQueue = NULL;
   s->schedulerLocks = NULL;
@@ -657,9 +658,7 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->copiedSize = s->copiedSize;
   d->saveWorldStatus = s->saveWorldStatus;
   d->reachable = NULL;
-
   d->forwardState.liftingObject = BOGUS_OBJPTR;
-
   d->schedulerLocks = NULL;
   d->schedulerQueue = NULL;
   d->moveOnWBA = (objptr*) malloc (sizeof (objptr) * BUFFER_SIZE);
@@ -677,15 +676,9 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->translateState.from = BOGUS_POINTER;
   d->translateState.to = BOGUS_POINTER;
   d->translateState.size = 0;
-
-  // XXX spoons better duplicate?
-  //initSignalStack (d);
-
+  utarray_new (d->directCloXferArray, &directCloXfer_icd);
   d->sysvals.ram = s->sysvals.ram;
 
-  //initProfiling (d);
-
-  // Multi-processor support is incompatible with saved-worlds
   assert (d->amOriginal);
   duplicateWorld (d, s);
   s->amInGC = FALSE;

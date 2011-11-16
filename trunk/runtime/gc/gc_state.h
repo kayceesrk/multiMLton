@@ -133,6 +133,7 @@ struct GC_state {
   bool copyImmutable;
   GC_weak weaks; /* Linked list of (live) weak pointers */
   char *worldFile;
+  UT_array* directCloXferArray; /* Array to store closures directly transferred to this core */
 
   /* DEV variables
    * ------------

@@ -92,13 +92,16 @@ void GC_addToMoveOnWBA (GC_state s, pointer p) {
 
 void GC_addToSpawnOnWBA (GC_state s, pointer p, int proc) {
   bool isClosureClean = FALSE;
-  //isClosureClean = GC_isThreadClosureClean (s, p);
+  size_t size;
+  isClosureClean = __GC_isThreadClosureClean (s, p, &size);
 
-  if (FALSE && isClosureClean) {
+  if (isClosureClean) {
     s->selectiveDebug = TRUE;
-    pointer newP = GC_move (s, p, false, true);
+    ClosureToSpawn c;
+    c.p = GC_copyToBuffer (s, p, size);
+    c.size = size;
+    GC_addToDirectCloXferArray (s, c, proc);
     s->selectiveDebug = FALSE;
-    GC_sqEnque (s, newP, proc, 0);
     return;
   }
   ++(s->spawnOnWBASize);

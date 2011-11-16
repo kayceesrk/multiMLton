@@ -120,6 +120,44 @@ void translateObjptrShared (GC_state s, objptr* opp) {
   }
 }
 
+void translateObjptrInRange (GC_state s, objptr *opp) {
+  pointer p = objptrToPointer (*opp, s->translateState.from);
+
+  if (p >= s->translateState.from and
+      p < (s->translateState.from + s->translateState.size)) {
+    if (DEBUG_DETAILED)
+        fprintf (stderr, "translateObjptrInRange: Remapping pointer "FMTPTR" to "FMTPTR"\n",
+                (uintptr_t)p, (uintptr_t)((p - s->translateState.from) + s->translateState.to));
+    p = (p - s->translateState.from) + s->translateState.to;
+    *opp = pointerToObjptr (p, s->translateState.to);
+  }
+}
+
+void translateRange (GC_state s, pointer from, pointer to, size_t size) {
+  pointer limit;
+
+  if (from == to)
+    return;
+
+  if (DEBUG or s->controls->messages)
+    fprintf (stderr,
+             "[GC: Translating range at "FMTPTR" of size %s bytes from "FMTPTR".] [%d]\n",
+             (uintptr_t)to,
+             uintmaxToCommaString(size),
+             (uintptr_t)from, s->procId);
+  s->translateState.from = from;
+  s->translateState.to = to;
+  s->translateState.size = size;
+  limit = to + size;
+  foreachObjptrInRange (s, alignFrontier (s, to), &limit, translateObjptrInRange, FALSE);
+  s->translateState.from = BOGUS_POINTER;
+  s->translateState.to = BOGUS_POINTER;
+  s->translateState.size = 0;
+  if (DEBUG)
+    fprintf (stderr, "[GC: Translating range done.] [%d]\n", s->procId);
+}
+
+
 
 void translateSharedHeap (GC_state s, pointer from, pointer to, size_t size) {
   pointer limit;
