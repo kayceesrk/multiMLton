@@ -21,13 +21,18 @@ const char* numReferencesToString (GC_numReferences n) {
 }
 
 
-void isObjectPointerVirginUnmark (__attribute__((unused)) GC_state s,
-                            __attribute__((unused)) pointer current,
-                            __attribute__((unused)) pointer prev) {
+void isWriteCleanUnmark (__attribute__((unused)) GC_state s,
+                         __attribute__((unused)) pointer current,
+                         __attribute__((unused)) pointer prev) {
+}
+
+void isSpawnCleanUnmark (__attribute__((unused)) GC_state s,
+                              __attribute__((unused)) pointer current,
+                              __attribute__((unused)) pointer prev) {
 }
 
 
-/* isObjectPointerVirginMark (s, p)
+/* isWriteCleanMark (s, p)
  *
  * This function needs s->tmpPointer to be explicitly set to the root of the
  * object's closure. Because, the notion of viginity differ for the object
@@ -39,7 +44,8 @@ void isObjectPointerVirginUnmark (__attribute__((unused)) GC_state s,
  * isClosureVirgin.
  *
  */
-void isObjectPointerVirginMark (GC_state s, pointer p, pointer parent) {
+void isWriteCleanMark (GC_state s, pointer p, pointer parent) {
+  parent = parent; //To silence GCC warnings
   if (!s->tmpBool)
     return;
 
@@ -53,33 +59,33 @@ void isObjectPointerVirginMark (GC_state s, pointer p, pointer parent) {
     isVirgin = (countReferences (h) < MANY);
   }
 
-  //if (!isVirgin && !objectHasIdentity(s, h))
-    //isVirgin = TRUE;
-
-  if ((h & ~(VIRGIN_MASK|LIFT_MASK)) == 0x1 /* STACK_TAG */)
-    isVirgin = FALSE;
-
-  parent = parent; //To silence GCC warnings
-
-#if 0
-  if (s->selectiveDebug) {
-    GC_header h = getHeader (p);
-    if (isVirgin)
-      fprintf (s->fp, "X%p [label=\""FMTPTR" | %s | %s\"];\n",
-               p, (uintptr_t)p, numReferencesToString (countReferences (h)),
-               boolToString (objectHasIdentity (s, h)));
-    else
-      fprintf (s->fp, "X%p [label=\""FMTPTR" | %s | %s\", \
-                       style = filled, fillcolor = red];\n",
-               p, (uintptr_t)p, numReferencesToString (countReferences (h)),
-               boolToString (objectHasIdentity (s, h)));
-    if (parent != NULL)
-      fprintf (s->fp, "X%p -> X%p;\n", (uintptr_t)parent, (uintptr_t)p);
-  }
-#endif
+  if (!isVirgin && !objectHasIdentity(s, h))
+    isVirgin = TRUE;
 
   s->tmpBool = s->tmpBool && isVirgin;
 }
+
+void isSpawnCleanMark (GC_state s, pointer p, pointer parent) {
+  parent = parent; //To silence GCC warnings
+  if (!s->tmpBool)
+    return;
+
+  assert (s->tmpPointer != BOGUS_POINTER);
+  bool isVirgin = FALSE;
+  GC_header h = getHeader (p);
+
+  if (s->tmpPointer == p)
+    isVirgin = (countReferences (h) == ZERO);
+  else {
+    isVirgin = (countReferences (h) < MANY);
+  }
+
+  if (!isVirgin && !objectHasIdentityTransitive(s, h))
+    isVirgin = TRUE;
+
+  s->tmpBool = s->tmpBool && isVirgin;
+}
+
 
 /* doesPointerToMarkedObject
  * -------------------------
@@ -115,18 +121,8 @@ bool __GC_isThreadClosureClean (GC_state s, pointer p, size_t* size) {
   else {
     s->tmpBool = TRUE;
     s->tmpPointer = p;
-#if 0
-    if (s->selectiveDebug) {
-      char str[50];
-      sprintf (str, "Closure_"FMTPTR".dot", (uintptr_t)p);
-      s->fp = fopen (str, "w");
-      if (s->fp == NULL) exit (1);
-      fprintf (s->fp, "digraph {\n");
-      fprintf (s->fp, "node [shape=record];\n");
-    }
-#endif
 
-    *size = dfsMarkByMode (s, p, isObjectPointerVirginMark, MARK_MODE,
+    *size = dfsMarkByMode (s, p, isSpawnCleanMark, MARK_MODE,
                            FALSE, FALSE, TRUE, FALSE);
 
     //Walk the current stack and test if the current stack points to any marked object
@@ -134,18 +130,10 @@ bool __GC_isThreadClosureClean (GC_state s, pointer p, size_t* size) {
     getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
     getThreadCurrent(s)->exnStack = s->exnStack;
     foreachObjptrInObject (s, (pointer)getStackCurrent (s), doesPointToMarkedObject, FALSE);
-
     isClosureVirgin = s->tmpBool;
     numPointersFromStack = s->tmpInt;
 
-#if 0
-    if (s->selectiveDebug) {
-      fprintf (s->fp, "}\n");
-      fclose (s->fp);
-      s->fp = NULL;
-    }
-#endif
-    dfsMarkByMode (s, p, isObjectPointerVirginUnmark, UNMARK_MODE,
+    dfsMarkByMode (s, p, isSpawnCleanUnmark, UNMARK_MODE,
                   FALSE, FALSE, TRUE, FALSE);
 
     //Reset tmp* variables
@@ -180,10 +168,10 @@ bool GC_isObjectClosureClean (GC_state s, pointer p) {
     s->tmpBool = TRUE;
     s->tmpPointer = p;
 
-    dfsMarkByMode (s, p, isObjectPointerVirginMark, MARK_MODE,
+    dfsMarkByMode (s, p, isWriteCleanMark, MARK_MODE,
                   FALSE, FALSE, TRUE, FALSE);
     isClosureVirgin = s->tmpBool;
-    dfsMarkByMode (s, p, isObjectPointerVirginUnmark, UNMARK_MODE,
+    dfsMarkByMode (s, p, isWriteCleanUnmark, UNMARK_MODE,
                   FALSE, FALSE, TRUE, FALSE);
     s->tmpPointer = BOGUS_POINTER;
   }

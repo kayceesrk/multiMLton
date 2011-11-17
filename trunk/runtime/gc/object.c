@@ -58,6 +58,15 @@ inline bool objectHasIdentity (GC_state s, GC_header header) {
   return objectType->hasIdentity;
 }
 
+inline bool objectHasIdentityTransitive (GC_state s, GC_header header) {
+  assert (header != GC_FORWARDED);
+  header &= ~(LIFT_MASK | VIRGIN_MASK);
+  unsigned objectTypeIndex =  (header & TYPE_INDEX_MASK) >> TYPE_INDEX_SHIFT;
+  GC_objectType objectType = &(s->objectTypes[objectTypeIndex]);
+  return objectType->hasIdentityTransitive;
+}
+
+
 void splitHeader(GC_state s, GC_header header, __attribute__((unused)) GC_header* headerpunused,
                  GC_objectTypeTag *tagRet, bool *hasIdentityRet,
                  uint16_t *bytesNonObjptrsRet, uint16_t *numObjptrsRet,

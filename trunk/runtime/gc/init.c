@@ -678,6 +678,7 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->translateState.size = 0;
   utarray_new (d->directCloXferArray, &directCloXfer_icd);
   d->sysvals.ram = s->sysvals.ram;
+  d->copyObjectMap = NULL;
 
   assert (d->amOriginal);
   duplicateWorld (d, s);

@@ -236,6 +236,8 @@ void moveTransitiveClosure (GC_state s, objptr* opp,
 pointer GC_move (GC_state s, pointer p,
                  bool forceStackForwarding,
                  bool skipFixForwardingPointers) {
+
+  size_t gcID = s->lastSharedMajorStatistics->bytesLive;
   assert (s);
   assert (s->heap);
   if (!(s->heap->start <= p and p < s->heap->start + s->heap->size)) {
@@ -281,6 +283,10 @@ pointer GC_move (GC_state s, pointer p,
     CopyObjectMap *e, *tmp;
     HASH_ITER (hh, s->copyObjectMap, e, tmp) {
       HASH_DEL (s->copyObjectMap, e);
+
+      //Only fix forwarding pointers if we haven't done a shared GC
+      if (gcID == s->lastSharedMajorStatistics->bytesLive)
+        foreachObjptrInObject (s, e->oldP, fixFwdObjptr, TRUE);
       free (e);
     }
     s->copyObjectMap = NULL;

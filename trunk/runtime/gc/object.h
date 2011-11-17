@@ -189,6 +189,7 @@ static inline void splitHeader (GC_state s, GC_header header, __attribute__((unu
                                 uint16_t *bytesNonObjptrsRet, uint16_t *numObjptrsRet,
                                 bool *hasIdentityTransitiveRet, bool* isUnboundedRet);
 static inline bool objectHasIdentity (GC_state s, GC_header h);
+static inline bool objectHasIdentityTransitive (GC_state s, GC_header header);
 static inline pointer advanceToObjectData (GC_state s, pointer p);
 static inline pointer getBeginningOfObject (GC_state s, pointer p);
 PRIVATE void checkHeader (GC_state s, pointer p, char* file, int line);
