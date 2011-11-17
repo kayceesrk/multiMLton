@@ -276,6 +276,8 @@ struct
                                    end
 
     val proc = TID.getProcId (tid)
+    val _ = debug' (fn () => "spawnHostHelperLazy: TID="^(TID.tidToString tid)^
+                             " procId="^(Int.toString proc))
     val () =
       if proc <> PacmlFFI.processorNumber () then
         (Config.incrementNumLiveThreads ();

@@ -49,11 +49,15 @@ void isObjectPointerVirginMark (GC_state s, pointer p, pointer parent) {
 
   if (s->tmpPointer == p)
     isVirgin = (countReferences (h) == ZERO);
-  else
+  else {
     isVirgin = (countReferences (h) < MANY);
+  }
 
-  if (!isVirgin && !objectHasIdentity(s, h))
-    isVirgin = TRUE;
+  //if (!isVirgin && !objectHasIdentity(s, h))
+    //isVirgin = TRUE;
+
+  if ((h & ~(VIRGIN_MASK|LIFT_MASK)) == 0x1 /* STACK_TAG */)
+    isVirgin = FALSE;
 
   parent = parent; //To silence GCC warnings
 
@@ -111,7 +115,6 @@ bool __GC_isThreadClosureClean (GC_state s, pointer p, size_t* size) {
   else {
     s->tmpBool = TRUE;
     s->tmpPointer = p;
-    s->tmpInt = 0;
 #if 0
     if (s->selectiveDebug) {
       char str[50];
@@ -127,6 +130,7 @@ bool __GC_isThreadClosureClean (GC_state s, pointer p, size_t* size) {
                            FALSE, FALSE, TRUE, FALSE);
 
     //Walk the current stack and test if the current stack points to any marked object
+    s->tmpInt = 0;
     getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
     getThreadCurrent(s)->exnStack = s->exnStack;
     foreachObjptrInObject (s, (pointer)getStackCurrent (s), doesPointToMarkedObject, FALSE);
@@ -150,11 +154,11 @@ bool __GC_isThreadClosureClean (GC_state s, pointer p, size_t* size) {
     s->tmpInt = 0;
   }
 
-  if (DEBUG_CLEANLINESS) {
+  if (DEBUG_CLEANLINESS || TRUE) {
     fprintf (stderr, "GC_isThreadClosureClean: hasIdentityTransitive = %d "
-                     "isUnbounded = %d objectTypeIndex = %d "
+                     "isUnbounded = %d objectTypeIndex = %d size = %zu "
                      "isClosureVirgin = %d numPointerFromStack = %d\n",
-             hasIdentityTransitive, isUnbounded, objectTypeIndex,
+             hasIdentityTransitive, isUnbounded, objectTypeIndex, *size,
              isClosureVirgin, numPointersFromStack);
   }
 

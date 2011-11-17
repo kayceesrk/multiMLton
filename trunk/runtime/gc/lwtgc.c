@@ -385,6 +385,21 @@ static inline void assertNotInLocalHeap (GC_state s, objptr* opp) {
   opp = opp;
 }
 
+static inline void assertThreadCleanliness (GC_state s, objptr* opp) {
+  CopyObjectMap *parentFound, *currentFound;
+  pointer p = *(pointer*)opp;
+  void* current = (void*)p;
+  void* parent = (pointer)s->tmpPointer;
+  HASH_FIND_PTR (s->copyObjectMap, &current, currentFound);
+  HASH_FIND_PTR (s->copyObjectMap, &parent, parentFound);
+  if (objectHasIdentity (s, getHeader (p))) {
+    if (parentFound && (!currentFound))
+      assert ("Closure points to local heap" && 0);
+    else if (currentFound && (not parentFound))
+      assert ("Local heap points to mutable closure object" && 0);
+  }
+}
+
 pointer GC_copyToBuffer (GC_state s, pointer p, size_t size) {
   objptr op = pointerToObjptr (p, s->heap->start);
   void* buffer = malloc_safe (size);
@@ -405,9 +420,6 @@ pointer GC_copyToBuffer (GC_state s, pointer p, size_t size) {
     free (e);
   }
   s->copyObjectMap = NULL;
-
-  pointer back = ((pointer)buffer) + size;
-  foreachObjptrInRange (s, (pointer)buffer, &back, assertNotInLocalHeap, TRUE);
 
   return (pointer)buffer;
 }

@@ -66,6 +66,9 @@ void copyObjptr (GC_state s, objptr *opp) {
     objectBytes = sizeofArrayNoHeader (s, getArrayLength (p),
                                         bytesNonObjptrs, numObjptrs);
   } else { /* Stack. */
+    assert ("Cannot copyStack" && 0);
+    fprintf (stderr, "Cannot copy stack\n");
+    exit (1);
     GC_stack stack;
     assert (STACK_TAG == tag);
     headerBytes = GC_STACK_HEADER_SIZE;
@@ -108,7 +111,6 @@ void copyObjptr (GC_state s, objptr *opp) {
               "copyObjptr --> *opp = "FMTPTR" [%d]\n",
               (uintptr_t)*opp, s->procId);
   }
-
 
   s->forwardState.back += size;
   assert (isAligned ((size_t)s->forwardState.back + GC_NORMAL_HEADER_SIZE,

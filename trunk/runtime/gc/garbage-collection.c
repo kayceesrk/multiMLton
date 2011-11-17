@@ -511,9 +511,11 @@ size_t fillGap (__attribute__ ((unused)) GC_state s, pointer start, pointer end)
       exit (1);
     }
 
+#if ASSERT
     while (start < end) {
       *(start++) = 0xDF;
     }
+#endif
 
     return diff;
   }

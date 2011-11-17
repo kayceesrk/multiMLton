@@ -146,6 +146,7 @@ void GC_addToDirectCloXferArray (GC_state s, ClosureToSpawn c, int proc) {
   GC_sqAcquireLock (s, proc);
   utarray_push_back (s->procStates[proc].directCloXferArray, &c);
   GC_sqReleaseLock (s, proc);
+  Parallel_wakeUpThread (proc, 1);
 }
 
 void GC_sqEnque (GC_state s, pointer p, int proc, int i) {
@@ -217,14 +218,15 @@ void flushFromDirectCloXferArray (GC_state s) {
          c=(ClosureToSpawn*)utarray_next (localArray, c)) {
       s->syncReason = SYNC_MISC;
       ENTER_LOCAL0 (s);
+      void* buffer = c->p;
       ensureHasHeapBytesFreeAndOrInvariantForMutator (s, FALSE, TRUE, FALSE, 0,
                                                       c->size, FALSE, 0);
+      GC_memcpy (buffer, s->frontier, c->size);
       assert (s->frontier + c->size < s->limit);
       pointer to = s->frontier;
       s->frontier += c->size;
       translateRange (s, c->p, to, c->size);
       LEAVE_LOCAL0 (s);
-      void* buffer = c->p;
       free (buffer);
 
       pointer closure = advanceToObjectData (s, to);
@@ -236,6 +238,7 @@ void flushFromDirectCloXferArray (GC_state s) {
 
 bool GC_sqIsEmptyPrio (int i) {
   GC_state s = pthread_getspecific (gcstate_key);
+  flushFromDirectCloXferArray (s);
   CircularBuffer* cq = getSubQ (s->schedulerQueue, i);
   return CircularBufferIsEmpty (cq);
 }

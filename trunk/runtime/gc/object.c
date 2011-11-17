@@ -170,7 +170,7 @@ void checkHeader (GC_state s, pointer p, char* file, int line) {
   if (!isPointer (p) || p == (pointer)s->generationalMaps.cardMapAbsolute)
     return;
 
-  if (1 != (getHeader (p) & GC_VALID_HEADER_MASK)) {
+  if (FALSE) {
     fprintf (stderr, "CheckHeader: %s:%d P = "FMTPTR"\n", file, line, (uintptr_t)p);
   }
 }
