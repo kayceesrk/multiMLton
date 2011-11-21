@@ -20,5 +20,6 @@ struct
   val wait = _import "Parallel_wait": unit -> unit;
   val wakeUp = _import "Parallel_wakeUpThread": Int32.int * Int32.int -> unit;
   val summaryWrite = _import "GC_summaryWrite": unit -> unit;
+  val writeBarrierInitialized = _import "GC_writeBarrierInitialized": unit -> unit;
 
 end

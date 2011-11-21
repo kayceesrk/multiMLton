@@ -429,3 +429,9 @@ pointer GC_copyToBuffer (GC_state s, pointer p, size_t size) {
 
   return (pointer)buffer;
 }
+
+void GC_writeBarrierInitialized (void) {
+  GC_state s = pthread_getspecific(gcstate_key);
+  for (int proc=0; proc < s->numberOfProcs; proc++)
+    s->procStates[proc].writeBarrierInitialized = TRUE;
+}

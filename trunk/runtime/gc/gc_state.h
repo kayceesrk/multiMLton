@@ -20,6 +20,7 @@ struct GC_state {
   pointer localHeapStart;
   pointer sharedHeapStart;
   pointer sharedHeapEnd;
+  uint32_t writeBarrierInitialized;
   struct GC_generationalMaps generationalMaps; /* generational maps for this heap */
 
   /* ML arrays and queues */

@@ -95,7 +95,7 @@ void GC_addToSpawnOnWBA (GC_state s, pointer p, int proc) {
   size_t size;
   //isClosureClean = __GC_isThreadClosureClean (s, p, &size);
 
-  if (FALSE) {
+  if (isClosureClean) {
     s->selectiveDebug = TRUE;
     ClosureToSpawn c;
     c.p = GC_copyToBuffer (s, p, size);

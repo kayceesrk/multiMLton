@@ -511,10 +511,11 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->sysvals.physMem = GC_physMem ();
   s->weaks = NULL;
   s->saveWorldStatus = true;
-  s->profiling.isProfilingTimeOn = false;
+  s->profiling.isProfilingTimeOn = FALSE;
   s->reachable = NULL;
   s->copyImmutable = FALSE;
   s->copyObjectMap = NULL;
+  s->writeBarrierInitialized = FALSE;
   utarray_new (s->directCloXferArray, &directCloXfer_icd);
 
   s->schedulerQueue = NULL;
@@ -679,6 +680,7 @@ void GC_duplicate (GC_state d, GC_state s) {
   utarray_new (d->directCloXferArray, &directCloXfer_icd);
   d->sysvals.ram = s->sysvals.ram;
   d->copyObjectMap = NULL;
+  d->writeBarrierInitialized = FALSE;
 
   assert (d->amOriginal);
   duplicateWorld (d, s);
