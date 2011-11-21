@@ -23,10 +23,10 @@ typedef enum {
 
 #if (defined (MLTON_GC_INTERNAL_FUNCS))
 
-static inline void isWriteCleanMark (GC_state s, pointer current, pointer parent);
-static inline void isWriteCleanUnmark (GC_state s, pointer current, pointer parent);
-static inline void isSpawnCleanMark (GC_state s, pointer current, pointer parent);
-static inline void isSpawnCleanUnmark (GC_state s, pointer current, pointer parent);
+static inline bool isWriteCleanMark (GC_state s, pointer current, pointer parent);
+static inline bool isWriteCleanUnmark (GC_state s, pointer current, pointer parent);
+static inline bool isSpawnCleanMark (GC_state s, pointer current, pointer parent);
+static inline bool isSpawnCleanUnmark (GC_state s, pointer current, pointer parent);
 static inline void doesPointToMarkedObject (GC_state s, objptr* opp);
 PRIVATE bool GC_isObjectClosureClean (GC_state s, pointer p);
 PRIVATE bool GC_isThreadClosureClean (GC_state s, pointer p);

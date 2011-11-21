@@ -134,7 +134,7 @@ mark:
   assert (header == getHeader (cur));
   assert (headerp == getHeaderp (cur));
   /* Apply f before marking */
-  f (s, cur, prev);
+  bool toContinue = f (s, cur, prev);
   header ^= MARK_MASK;
   /* Store the mark.  In the case of an object that contains a pointer to
    * itself, it is essential that we store the marked header before marking
@@ -148,6 +148,8 @@ mark:
         (not isPointerInHeap (s, s->sharedHeap, cur))) {
       size += GC_NORMAL_HEADER_SIZE + bytesNonObjptrs + (numObjptrs * OBJPTR_SIZE);
     }
+    if (not toContinue)
+      goto ret;
     if (0 == numObjptrs) {
       /* There is nothing to mark. */
 normalDone:
@@ -219,6 +221,8 @@ markNextInNormal:
       size += GC_ARRAY_HEADER_SIZE +
         sizeofArrayNoHeader (s, getArrayLength (cur), bytesNonObjptrs, numObjptrs);
     }
+    if (not toContinue)
+      goto ret;
     if (0 == numObjptrs or 0 == getArrayLength (cur)) {
       /* There is nothing to mark. */
 arrayDone:
@@ -291,6 +295,8 @@ markInStack:
     if (DEBUG_DFS_MARK)
       fprintf (stderr, "markInStack  top = %"PRIuMAX"\n",
                (uintmax_t)(top - getStackBottom (s, (GC_stack)cur)));
+    if (not toContinue)
+      goto ret;
     if (top == getStackBottom (s, (GC_stack)(cur)))
       goto ret;
     if (f == isWriteCleanMark || f == isWriteCleanUnmark || f == isSpawnCleanMark || f == isSpawnCleanUnmark) {
@@ -397,9 +403,10 @@ ret:
   assert (FALSE);
 }
 
-void emptyForeachObjectFun (__attribute__((unused)) GC_state s,
+bool emptyForeachObjectFun (__attribute__((unused)) GC_state s,
                             __attribute__((unused)) pointer current,
                             __attribute__((unused)) pointer prev) {
+  return TRUE;
 }
 
 void dfsMarkWithHashConsWithLinkWeaks (GC_state s, objptr *opp) {

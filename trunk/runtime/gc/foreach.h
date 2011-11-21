@@ -9,7 +9,7 @@
 #if (defined (MLTON_GC_INTERNAL_FUNCS))
 
 typedef void (*GC_foreachObjptrFun) (GC_state s, objptr *opp);
-typedef void (*GC_foreachObjectFun) (GC_state s, pointer current, pointer parent);
+typedef bool (*GC_foreachObjectFun) (GC_state s, pointer current, pointer parent);
 
 static inline void callIfIsObjptr (GC_state s, GC_foreachObjptrFun f, objptr *opp);
 /* foreachGlobalObjptr (s, f)

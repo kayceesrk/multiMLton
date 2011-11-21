@@ -15,7 +15,7 @@ void reclaimObjects (GC_state s);
 void computeExclusivityInformation (GC_state s);
 
 
-static void addToReachableArray (GC_state s, pointer current, pointer parent);
+static bool addToReachableArray (GC_state s, pointer current, pointer parent);
 static void dfsMarkReachable (GC_state s, objptr* opp);
 static void dfsUnmarkReachable (GC_state s, objptr* opp);
 static GC_objectSharingInfo addToHashTable (GC_state s, GC_objectSharingInfo map, pointer p, int coreId);

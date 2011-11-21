@@ -21,14 +21,16 @@ const char* numReferencesToString (GC_numReferences n) {
 }
 
 
-void isWriteCleanUnmark (__attribute__((unused)) GC_state s,
+bool isWriteCleanUnmark (__attribute__((unused)) GC_state s,
                          __attribute__((unused)) pointer current,
                          __attribute__((unused)) pointer prev) {
+  return TRUE;
 }
 
-void isSpawnCleanUnmark (__attribute__((unused)) GC_state s,
+bool isSpawnCleanUnmark (__attribute__((unused)) GC_state s,
                               __attribute__((unused)) pointer current,
                               __attribute__((unused)) pointer prev) {
+  return TRUE;
 }
 
 
@@ -44,10 +46,8 @@ void isSpawnCleanUnmark (__attribute__((unused)) GC_state s,
  * isClosureVirgin.
  *
  */
-void isWriteCleanMark (GC_state s, pointer p, pointer parent) {
+bool isWriteCleanMark (GC_state s, pointer p, pointer parent) {
   parent = parent; //To silence GCC warnings
-  if (!s->tmpBool)
-    return;
 
   assert (s->tmpPointer != BOGUS_POINTER);
   bool isVirgin = FALSE;
@@ -63,12 +63,12 @@ void isWriteCleanMark (GC_state s, pointer p, pointer parent) {
     isVirgin = TRUE;
 
   s->tmpBool = s->tmpBool && isVirgin;
+
+  return s->tmpBool;
 }
 
-void isSpawnCleanMark (GC_state s, pointer p, pointer parent) {
+bool isSpawnCleanMark (GC_state s, pointer p, pointer parent) {
   parent = parent; //To silence GCC warnings
-  if (!s->tmpBool)
-    return;
 
   assert (s->tmpPointer != BOGUS_POINTER);
   bool isVirgin = FALSE;
@@ -84,6 +84,8 @@ void isSpawnCleanMark (GC_state s, pointer p, pointer parent) {
     isVirgin = TRUE;
 
   s->tmpBool = s->tmpBool && isVirgin;
+
+  return s->tmpBool;
 }
 
 
@@ -150,7 +152,7 @@ bool __GC_isThreadClosureClean (GC_state s, pointer p, size_t* size) {
              isClosureVirgin, numPointersFromStack);
   }
 
-  return isClosureVirgin;
+  return (isClosureVirgin && (numPointersFromStack == 0));
 }
 
 bool GC_isObjectClosureClean (GC_state s, pointer p) {
