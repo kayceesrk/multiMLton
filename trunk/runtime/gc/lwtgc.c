@@ -233,6 +233,13 @@ void moveTransitiveClosure (GC_state s, objptr* opp,
 
 }
 
+pointer GC_moveFromWB (GC_state s, pointer p,
+                       bool forceStackForwarding,
+                       bool skipFixForwardingPointers) {
+  return GC_move (s, p, forceStackForwarding, skipFixForwardingPointers);
+}
+
+
 pointer GC_move (GC_state s, pointer p,
                  bool forceStackForwarding,
                  bool skipFixForwardingPointers) {

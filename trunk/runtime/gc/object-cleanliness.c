@@ -178,10 +178,11 @@ bool GC_isObjectClosureClean (GC_state s, pointer p) {
     s->tmpPointer = BOGUS_POINTER;
   }
 
-  if (DEBUG_CLEANLINESS) {
-    fprintf (stderr, "GC_isObjectClosureClean: hasIdentityTransitive = %d \
+  if (DEBUG_CLEANLINESS || TRUE) {
+    fprintf (stderr, "GC_isObjectClosureClean: "FMTPTR" hasIdentityTransitive = %d \
                       isUnbounded = %d objectTypeIndex = %d isClosureVirgin = %d\n",
-             hasIdentityTransitive, isUnbounded, objectTypeIndex, isClosureVirgin);
+             (uintptr_t)p, hasIdentityTransitive, isUnbounded,
+             objectTypeIndex, isClosureVirgin);
   }
 
   return isClosureVirgin;

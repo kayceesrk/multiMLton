@@ -108,7 +108,7 @@ structure Ref =
                         (Lwtgc.isObjptrInSharedHeap r)
                     then
                         (if Controls.wbUsesCleanliness andalso Lwtgc.isObjectClosureClean v then
-                          let val _ = Lwtgc.move (v, false, true) in v end
+                          Lwtgc.move (v, false, true)
                         else
                           (Lwtgc.addToMoveOnWBA v;
                           preemptFn ();

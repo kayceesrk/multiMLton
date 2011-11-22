@@ -137,7 +137,7 @@ struct
   let
     val TID.TID {preemptParasite, ...} = TID.getCurThreadId ()
   in
-    PacmlPrim.unsafeAssign (preemptParasite, false)
+    preemptParasite := false
   end
 
   fun enableParasitePreemption () =
