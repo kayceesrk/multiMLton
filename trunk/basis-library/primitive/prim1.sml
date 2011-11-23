@@ -83,6 +83,7 @@ struct
   val isObjptr = _prim "Lwtgc_isObjptr": 'a -> bool;
   val needPreemption = _prim "Lwtgc_needPreemption": 'a ref * 'a -> bool;
   val move = _prim "MLton_move": 'a * bool * bool -> 'a;
+  val move2 = _prim "MLton_move2": 'a * bool * bool -> 'a;
 end
 
 structure Ref =

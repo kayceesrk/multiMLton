@@ -467,6 +467,15 @@ fun primApply {prim: Type.t Prim.t, args: t vector, resultTy: Type.t}: t =
            in
              r
            end
+       | MLton_move2 =>
+           let
+             val r = result ()
+             val a = (#1 (threeArgs ()))
+             val () = coerce {from = a, to = r}
+           in
+             r
+           end
+
        | Array_toVector =>
             let val r = result ()
             in (case (dest (oneArg ()), dest r) of

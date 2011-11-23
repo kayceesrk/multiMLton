@@ -1721,7 +1721,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                 val returnFromHandler =
                                   newBlock
                                   {args = Vector.new1 (cReturnVar, returnTy),
-                                   kind = Kind.CReturn {func = CFunction.moveFromWB returnTy},
+                                   kind = Kind.CReturn {func = CFunction.move returnTy},
                                    statements = Vector.new0 (),
                                    transfer =
                                    Goto {args = Vector.new1 (cReturnOp),
@@ -1738,7 +1738,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                                          rhsAddr,
                                                          Operand.bool false,
                                                          Operand.bool false),
-                                    func = CFunction.moveFromWB returnTy,
+                                    func = CFunction.move returnTy,
                                     return = SOME returnFromHandler}}
 
                                 val maybeMoveBlock =
@@ -2158,6 +2158,17 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                            else
                                               simpleCCallWithGCState
                                               (CFunction.share (Operand.ty (a 0))))
+                               | MLton_move2 =>
+                                    (case toRtype (varType (arg 0)) of
+                                        NONE => none ()
+                                      | SOME t =>
+                                           if not (Type.isObjptr t) then
+                                             move (a 0)
+                                           else
+                                             ccall {args = Vector.concat
+                                                            [Vector.new1 GCState,
+                                                             vos args],
+                                                    func = CFunction.moveFromWB (Operand.ty (a 0))})
                                | MLton_move =>
                                     (case toRtype (varType (arg 0)) of
                                         NONE => none ()

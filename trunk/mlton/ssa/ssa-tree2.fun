@@ -354,6 +354,7 @@ structure Type =
             case Prim.name prim of
                Lwtgc_needPreemption => true (* HACK *)
              | MLton_move => true (* HACK *)
+             | MLton_move2 => true (* HACK *)
              | Array_array =>
                   oneArg (fn n =>
                           equals (n, seqIndex) andalso isVector result)

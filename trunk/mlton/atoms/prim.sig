@@ -110,6 +110,7 @@ signature PRIM =
              | MLton_serialize (* unused *)
              | MLton_share
              | MLton_move
+             | MLton_move2
              | MLton_size (* ssa to rssa *)
              | MLton_touch (* backend *)
              | Real_Math_acos of RealSize.t (* codegen *)

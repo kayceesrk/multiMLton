@@ -706,6 +706,7 @@ fun flatten (program as Program.T {datatypes, functions, globals, main}) =
              | MLton_size => dontFlatten ()
              | MLton_share => dontFlatten ()
              | MLton_move => dontFlatten ()
+             | MLton_move2 => dontFlatten ()
              | SQ_enque => dontFlatten ()
              | SQ_deque => dontFlatten ()
              | Thread_setSavedClosure => dontFlatten ()
