@@ -501,7 +501,7 @@ fun flatten (program as Program.T {datatypes, functions, globals, main}) =
              | Object ob => Object.select (ob, offset)
              | _ => Error.bug "RefFlatten.select"
          end
-      fun update {base, offset, value} =
+      fun update {base, offset, value, needsMove} =
          (coerce {from = value,
                   to = select {base = base, offset = offset}}
           (* Don't flatten the component of the update,
@@ -1091,7 +1091,7 @@ fun flatten (program as Program.T {datatypes, functions, globals, main}) =
          case s of
             Bind b => transformBind b
           | Profile _ => Vector.new1 s
-          | Update {base, offset, value} =>
+          | Update {base, offset, value, needsMove} =>
                Vector.new1
                (case base of
                    Base.Object object =>
@@ -1110,7 +1110,8 @@ fun flatten (program as Program.T {datatypes, functions, globals, main}) =
                              in
                                 Update {base = base,
                                         offset = objectOffset (obj, offset),
-                                        value = value}
+                                        value = value,
+                                        needsMove = needsMove}
                              end)
                  | Base.VectorSub _ => s)
       val transformStatement =

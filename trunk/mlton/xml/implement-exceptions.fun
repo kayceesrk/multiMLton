@@ -7,7 +7,7 @@
  *)
 
 functor ImplementExceptions (S: IMPLEMENT_EXCEPTIONS_STRUCTS):
-   IMPLEMENT_EXCEPTIONS = 
+   IMPLEMENT_EXCEPTIONS =
 struct
 
 open S
@@ -22,6 +22,8 @@ fun doit (Program.T {datatypes, body, ...}): Program.t =
        *)
       val topLevelHandlerType = Type.arrow (Type.exn, Type.unit)
       val topLevelHandlerVar = Var.newNoname ()
+      val falseVar = Var.newNoname ()
+
       val extraType =
          Exn.withEscape
          (fn escape =>
@@ -187,15 +189,15 @@ fun doit (Program.T {datatypes, body, ...}): Program.t =
                                       make: VarExp.t option -> Dexp.t} option,
            set = setExconInfo, destroy} =
          Property.destGetSetOnce (Con.plist, Property.initConst NONE)
-      val setExconInfo = 
-         Trace.trace2 
-         ("ImplementExceptions.setExconInfo", 
-          Con.layout, Layout.ignore, Unit.layout) 
+      val setExconInfo =
+         Trace.trace2
+         ("ImplementExceptions.setExconInfo",
+          Con.layout, Layout.ignore, Unit.layout)
          setExconInfo
       val exconInfo =
-         Trace.trace 
-         ("ImplementExceptions.exconInfo", 
-          Con.layout, Layout.ignore) 
+         Trace.trace
+         ("ImplementExceptions.exconInfo",
+          Con.layout, Layout.ignore)
          exconInfo
       fun isExcon c =
          case exconInfo c of
@@ -399,8 +401,9 @@ fun doit (Program.T {datatypes, body, ...}): Program.t =
                         primExp
                         (PrimApp {prim = Prim.assign,
                                   targs = Vector.new1 ty,
-                                  args = Vector.new2 (VarExp.mono var,
-                                                      Vector.sub (args, 0))})
+                                  args = Vector.new3 (VarExp.mono var,
+                                                      Vector.sub (args, 0),
+                                                      VarExp.mono falseVar)})
                   in
                      case Prim.name prim of
                         Exn_extra =>
@@ -519,6 +522,13 @@ fun doit (Program.T {datatypes, body, ...}): Program.t =
           ty = Type.unit,
           catch = (Var.newNoname (), Type.exn),
           handler = Dexp.bug "toplevel handler not installed"}
+
+      val body =
+        Dexp.let1
+        {var = falseVar,
+         exp = Dexp.falsee (),
+         body = body}
+
       val body = Dexp.toExp body
       val program =
          Program.T {datatypes = datatypes,

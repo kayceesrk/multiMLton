@@ -1335,6 +1335,12 @@ fun 'a checkApp (prim: 'a t,
          andalso equals (arg0', arg 0)
          andalso equals (arg1', arg 1)
          andalso equals (arg2', arg 2)
+      fun fourArgs (arg0', arg1', arg2', arg3') () =
+         4 = Vector.length args
+         andalso equals (arg0', arg 0)
+         andalso equals (arg1', arg 1)
+         andalso equals (arg2', arg 2)
+         andalso equals (arg3', arg 3)
       fun nArgs args' () =
          Vector.equals (args', args, equals)
       fun done (args, result') =
@@ -1402,7 +1408,7 @@ fun 'a checkApp (prim: 'a t,
        | Array_sub => oneTarg (fn t => (twoArgs (array t, seqIndex), t))
        | Array_toVector => oneTarg (fn t => (oneArg (array t), vector t))
        | Array_update =>
-            oneTarg (fn t => (threeArgs (array t, seqIndex, t), unit))
+            oneTarg (fn t => (fourArgs (array t, seqIndex, t, bool), unit))
        | CPointer_add =>
             noTargs (fn () => (twoArgs (cpointer, csize), cpointer))
        | CPointer_diff =>
@@ -1517,7 +1523,7 @@ fun 'a checkApp (prim: 'a t,
             noTargs (fn () => (oneArg (real s), word s'))
        | Real_round s => realUnary s
        | Real_sub s => realBinary s
-       | Ref_assign => oneTarg (fn t => (twoArgs (reff t, t), unit))
+       | Ref_assign => oneTarg (fn t => (threeArgs (reff t, t, bool), unit))
        | Ref_deref => oneTarg (fn t => (oneArg (reff t), t))
        | Ref_ref => oneTarg (fn t => (oneArg t, reff t))
        | Thread_atomicBegin => noTargs (fn () => (noArgs, unit))
@@ -2296,6 +2302,7 @@ fun ('a, 'b) layoutApp (p: 'a t,
       open Layout
       fun one name = seq [str name, str " ", arg 0]
       fun two name = seq [arg 0, str " ", str name, str " ", arg 1]
+      fun refLayout name = seq [arg 0, str " ", str name, str " ", arg 2, str "{", arg 3, str "}"]
    in
       case p of
          Array_length => one "length"
@@ -2318,7 +2325,7 @@ fun ('a, 'b) layoutApp (p: 'a t,
        | Real_neg _ => one "-"
        | Real_qequal _ => two "?="
        | Real_sub _ => two "-"
-       | Ref_assign => two ":="
+       | Ref_assign => refLayout ":="
        | Ref_deref => one "!"
        | Ref_ref => one "ref"
        | Vector_length => one "length"

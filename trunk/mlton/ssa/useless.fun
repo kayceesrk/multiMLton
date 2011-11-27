@@ -503,9 +503,18 @@ fun useless (program: Program.t): Program.t =
                fun update () =
                   let
                      val a = dearray (arg 0)
-                  in arg 1 dependsOn a
-                     ; coerce {from = arg 2, to = a}
+                  in arg 1 dependsOn a;
+                     arg 3 dependsOn a;
+                     coerce {from = arg 2, to = a}
                   end
+               fun assign () =
+                 let
+                   val a = deref (arg 0)
+                 in
+                   arg 2 dependsOn a;
+                   coerce {from = arg 1, to = a}
+                 end
+
                datatype z = datatype Prim.Name.t
                val _ =
                   case Prim.name prim of
@@ -526,8 +535,7 @@ fun useless (program: Program.t): Program.t =
                          deepMakeUseful result)
                    | MLton_equal => Vector.foreach (args, deepMakeUseful)
                    | MLton_hash => Vector.foreach (args, deepMakeUseful)
-                   | Ref_assign => coerce {from = arg 1, to = deref (arg 0)}
-                   (* | Lwtgc_needPreemption => coerce {from = arg 1, to = deref (arg 0)} *)
+                   | Ref_assign => assign ()
                    | Ref_deref => return (deref (arg 0))
                    | Ref_ref => coerce {from = arg 0, to = deref result}
                    | Vector_length => return (vectorLength (arg 0))

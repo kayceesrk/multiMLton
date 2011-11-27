@@ -406,6 +406,10 @@ fun primApply {prim: Type.t Prim.t, args: t vector, resultTy: Type.t}: t =
          if n = 3
             then (arg 0, arg 1, arg 2)
          else Error.bug "AbstractValue.primApply.threeArgs"
+      fun fourArgs () =
+         if n = 4
+            then (arg 0, arg 1, arg 2, arg 3)
+         else Error.bug "AbstractValue.primApply.fourArgs"
       datatype z = datatype Prim.Name.t
    in
       case Prim.name prim of
@@ -415,7 +419,7 @@ fun primApply {prim: Type.t Prim.t, args: t vector, resultTy: Type.t}: t =
               | Type _ => result ()
               | _ => typeError ())
        | Array_update =>
-            let val (a, _, x) = threeArgs ()
+            let val (a, _, x, _) = fourArgs ()
             in (case dest a of
                    Array x' => coerce {from = x, to = x'} (* unify (x, x') *)
                  | Type _ => ()
@@ -437,7 +441,7 @@ fun primApply {prim: Type.t Prim.t, args: t vector, resultTy: Type.t}: t =
                ; result ()
             end
        | Ref_assign =>
-            let val (r, x) = twoArgs ()
+            let val (r, x, _) = threeArgs ()
             in (case dest r of
                    Ref x' => coerce {from = x, to = x'} (* unify (x, x') *)
                  | Type _ => ()

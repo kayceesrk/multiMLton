@@ -138,11 +138,8 @@ in
             val r : (unit -> 'a) ref =
                ref (fn () => die "Thread.atomicSwitch didn't set r.\n")
 
-            fun assign x =
-              Primitive.Ref.unsafeAssign (r, Primitive.Lwtgc.move2 (x, false, false))
-
             val t: 'a thread ref =
-               ref (Paused (assign, Prim.current gcState))
+               ref (Paused (fn x => r := x, Prim.current gcState))
             fun fail e = (t := Dead
                           (* ; unmark proc *)
                           ; atomicEnd ()

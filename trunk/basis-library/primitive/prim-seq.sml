@@ -21,15 +21,31 @@ structure Array =
       (* There is no maximum length on arrays, so maxLen' = SeqIndex.maxInt'. *)
       (* val maxLen': SeqIndex.int = SeqIndex.maxInt' *)
       val subUnsafe = _prim "Array_sub": 'a array * SeqIndex.int -> 'a;
-      val arrayUpdate = _prim "Array_update": 'a array * SeqIndex.int * 'a -> unit;
+      val arrayUpdate = _prim "Array_update": 'a array * SeqIndex.int * 'a * bool -> unit;
 
-      fun updateUnsafe (a, i, v) =
-      let
-        val v' = Ref.writeBarrier (a, v)
-      in
-        arrayUpdate (a, i, v')
-      end
+      fun writeBarrierArray (a, i, v) =
+        (if (Controls.readBarrier) then
+          arrayUpdate (a, i, v, false)
+        else
+          let
+            val preemptFn = Ref.deref Ref.preemptFn
+            val needsMove =
+              if (Lwtgc.isObjptr v) andalso
+                 (Lwtgc.isObjptrInLocalHeap v) andalso
+                 (Lwtgc.isObjptrInSharedHeap a) then
+                (if Controls.wbUsesCleanliness andalso
+                    Lwtgc.isObjectClosureClean v then
+                      true
+                else
+                  (Lwtgc.addToMoveOnWBA v;
+                   preemptFn ();
+                   false))
+              else false
+          in
+            arrayUpdate (a, i, v, needsMove)
+          end)
 
+      fun updateUnsafe (a, i, v) = writeBarrierArray (a, i, v)
    end
 
 structure Vector =

@@ -555,7 +555,7 @@ fun remove (Program.T {datatypes, globals, functions, main}) =
                            ; visitExp exp)
                   else maybeVisitVarExp (var, exp))
           | Profile _ => ()
-          | Update {base, offset, value} =>
+          | Update {base, offset, value, needsMove} =>
                let
                   datatype z = datatype Base.t
                   datatype z = datatype ObjectCon.t
@@ -576,17 +576,20 @@ fun remove (Program.T {datatypes, globals, functions, main}) =
                                          (vi, fn () =>
                                           (ConInfo.decon ci
                                            ; visitVar base
-                                           ; visitVar value))
+                                           ; visitVar value
+                                           ; visitVar needsMove))
                                       end
                                  | Tuple =>
                                       (visitVar base
-                                       ; visitVar value)
+                                       ; visitVar value
+                                       ; visitVar needsMove)
                                  | Vector => Error.bug "RemoveUnused2.visitStatement: Update:non-Con|Tuple")
                           | _ => Error.bug "RemoveUnused2.visitStatement: Update:non-Object")
                    | VectorSub {index, vector} =>
                         (visitVar index
                          ; visitVar vector
-                         ; visitVar value)
+                         ; visitVar value
+                         ; visitVar needsMove)
                end
       fun visitTransfer (t: Transfer.t, fi: FuncInfo.t) =
          case t of
@@ -1187,7 +1190,7 @@ fun remove (Program.T {datatypes, globals, functions, main}) =
                    | NONE => doit NONE
                end
           | Profile _ => SOME s
-          | Update {base, offset, value} =>
+          | Update {base, offset, value, needsMove} =>
                let
                   datatype z = datatype Base.t
                in
@@ -1223,7 +1226,8 @@ fun remove (Program.T {datatypes, globals, functions, main}) =
                                                     (Update
                                                      {base = Base.Object base,
                                                       offset = offset,
-                                                      value = value})
+                                                      value = value,
+                                                      needsMove = needsMove})
                                                  end
                                            else NONE
                                         end

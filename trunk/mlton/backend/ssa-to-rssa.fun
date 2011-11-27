@@ -1531,7 +1531,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                   in
                      case s of
                         S.Statement.Profile e => add (Statement.Profile e)
-                      | S.Statement.Update {base, offset, value} =>
+                      | S.Statement.Update {base, offset, value, needsMove} =>
                           let
                             fun updateCardRB (lhsAddr: Operand.t, rhsAddr, newRhsAddr: Var.t,
                                             continue: Label.t, returnTy, baseTy):
@@ -1715,19 +1715,19 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                          dst = doesNotScoreBlock}}
 
 
-                                val cReturnVar = Var.newNoname ()
-                                val cReturnOp = Operand.Var {var = cReturnVar, ty = returnTy}
+                                val cReturnVar2 = Var.newNoname ()
+                                val cReturnOp2 = Operand.Var {var = cReturnVar2, ty = returnTy}
 
-                                val returnFromHandler =
+                                val returnFromHandler2 =
                                   newBlock
-                                  {args = Vector.new1 (cReturnVar, returnTy),
-                                   kind = Kind.CReturn {func = CFunction.move returnTy},
+                                  {args = Vector.new1 (cReturnVar2, returnTy),
+                                   kind = Kind.CReturn {func = CFunction.moveFromWB returnTy},
                                    statements = Vector.new0 (),
                                    transfer =
-                                   Goto {args = Vector.new1 (cReturnOp),
+                                   Goto {args = Vector.new1 (cReturnOp2),
                                          dst = doesNotScoreBlock}}
 
-                                val moveBlock =
+                                val moveBlock2 =
                                   newBlock
                                   {args = Vector.new0 (),
                                    kind = Kind.Jump,
@@ -1738,8 +1738,34 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                                          rhsAddr,
                                                          Operand.bool false,
                                                          Operand.bool false),
+                                    func = CFunction.moveFromWB returnTy,
+                                    return = SOME returnFromHandler2}}
+
+                                val cReturnVar1 = Var.newNoname ()
+                                val cReturnOp1 = Operand.Var {var = cReturnVar1, ty = returnTy}
+
+                                val returnFromHandler1 =
+                                  newBlock
+                                  {args = Vector.new1 (cReturnVar1, returnTy),
+                                   kind = Kind.CReturn {func = CFunction.moveFromWB returnTy},
+                                   statements = Vector.new0 (),
+                                   transfer =
+                                   Goto {args = Vector.new1 (cReturnOp1),
+                                         dst = doesNotScoreBlock}}
+
+                                val moveBlock1 =
+                                  newBlock
+                                  {args = Vector.new0 (),
+                                   kind = Kind.Jump,
+                                   statements = Vector.new0 (),
+                                   transfer =
+                                    Transfer.CCall
+                                    {args = Vector.new4 (GCState,
+                                                         rhsAddr,
+                                                         Operand.bool false,
+                                                         Operand.bool true),
                                     func = CFunction.move returnTy,
-                                    return = SOME returnFromHandler}}
+                                    return = SOME returnFromHandler1}}
 
                                 val maybeMoveBlock =
                                   newBlock
@@ -1749,7 +1775,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                    transfer =
                                     Transfer.ifBool
                                     (Operand.Var {var = cond2, ty = Type.bool},
-                                     {truee = moveBlock,
+                                     {truee = moveBlock2,
                                       falsee = origContinue})}
 
                                 val cardMarkBlock =
@@ -1776,7 +1802,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                   newBlock
                                   {args = Vector.new0 (),
                                    kind = Kind.Jump,
-                                   statements = Vector.new0 (),
+                                   statements = Vector.fromList (stmts3),
                                    transfer =
                                     Transfer.ifBool
                                     (Operand.Var {var = cond3, ty = Type.bool},
@@ -1784,9 +1810,8 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                       falsee = if (!Control.markCards) then cardMarkBlock else origContinue})}
 
                               in
-                                (stmts3, Transfer.Goto {args = Vector.new0 (), dst = checkLHSAddr})
+                                ([], Transfer.ifBool (Operand.Var {var=needsMove, ty = Type.bool}, {truee=moveBlock1, falsee=checkLHSAddr}))
                               end
-
                           in
                            (case toRtype (varType value) of
                                NONE => none ()

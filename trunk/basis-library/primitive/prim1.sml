@@ -95,39 +95,33 @@ structure Ref =
       val ffiPrint = _import "GC_print": Int32.int -> unit;
       val preemptFn = ref (fn () => ())
       val deref = _prim "Ref_deref": 'a ref -> 'a;
-      val refAssign = _prim "Ref_assign": 'a ref * 'a -> unit;
+      val refAssign = _prim "Ref_assign": 'a ref * 'a * bool -> unit;
       val eq = _prim "MLton_eq": 'a * 'a -> bool;
 
-      fun writeBarrier (r, v) =
+      fun writeBarrierRef (r, v) =
         (if (Controls.readBarrier) then
-          v
+          refAssign (r, v, false)
         else
           let
             val preemptFn = deref preemptFn
-            val v' = if (Lwtgc.isObjptr v) andalso
-                        (Lwtgc.isObjptrInLocalHeap v) andalso
-                        (Lwtgc.isObjptrInSharedHeap r)
-                    then
-                        (if Controls.wbUsesCleanliness andalso Lwtgc.isObjectClosureClean v then
-                          Lwtgc.move (v, false, true)
-                        else
-                          (Lwtgc.addToMoveOnWBA v;
-                          preemptFn ();
-                          v))
-                    else v
+            val needsMove =
+              if (Lwtgc.isObjptr v) andalso
+                 (Lwtgc.isObjptrInLocalHeap v) andalso
+                 (Lwtgc.isObjptrInSharedHeap r) then
+                (if Controls.wbUsesCleanliness andalso
+                    Lwtgc.isObjectClosureClean v then
+                      true
+                else
+                  (Lwtgc.addToMoveOnWBA v;
+                   preemptFn ();
+                   false))
+              else false
           in
-            v'
+            refAssign (r, v, needsMove)
           end)
 
-      fun assign (r, v) =
-      let
-        val v' = writeBarrier (r,v)
-      in
-        refAssign (r, v')
-      end
-
-     val unsafeAssign = refAssign
-
+      fun assign (r, v) = writeBarrierRef (r, v)
+      fun unsafeAssign (r,v) = refAssign (r, v, false)
    end
 
 
