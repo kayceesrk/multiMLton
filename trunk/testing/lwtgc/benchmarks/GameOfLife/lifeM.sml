@@ -249,14 +249,14 @@ structure Main =
    fun show pr = (app (fn s => (pr s; pr "\n"))) o plot o alive
 
    fun nthgen_cml g 0 sl numSlaves =
-                     (print "0 : ";
-                      (* printGen g; *)
+                     ((* print "0 : ";
+                      printGen g; *)
                       show print g;
                       print "\n\n";
                       g)
      | nthgen_cml g i sl numSlaves =
-                    (print  (Int.toString(i)^"\n");
-                     printGen g;
+                    ((* print  (Int.toString(i)^"\n");
+                     printGen g; *)
                      show print g;
                      nthgen_cml (master g sl numSlaves) (i-1) sl numSlaves)
 

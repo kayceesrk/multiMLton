@@ -144,7 +144,7 @@ bool __GC_isThreadClosureClean (GC_state s, pointer p, size_t* size) {
     s->tmpInt = 0;
   }
 
-  if (DEBUG_CLEANLINESS || TRUE) {
+  if (DEBUG_CLEANLINESS) {
     fprintf (stderr, "GC_isThreadClosureClean: hasIdentityTransitive = %d "
                      "isUnbounded = %d objectTypeIndex = %d size = %zu "
                      "isClosureVirgin = %d numPointerFromStack = %d\n",
@@ -178,7 +178,7 @@ bool GC_isObjectClosureClean (GC_state s, pointer p) {
     s->tmpPointer = BOGUS_POINTER;
   }
 
-  if (DEBUG_CLEANLINESS || TRUE) {
+  if (DEBUG_CLEANLINESS) {
     fprintf (stderr, "GC_isObjectClosureClean: "FMTPTR" hasIdentityTransitive = %d \
                       isUnbounded = %d objectTypeIndex = %d isClosureVirgin = %d\n",
              (uintptr_t)p, hasIdentityTransitive, isUnbounded,

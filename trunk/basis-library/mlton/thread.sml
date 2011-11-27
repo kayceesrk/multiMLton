@@ -249,7 +249,7 @@ in
                    let
                       val _ =
                          case !r of
-                            Paused (f, _) => f (fn () => ())
+                            Paused (f, _) => f (globalNoopThunk)
                           | _ => raise die "Thread.setSignalHandler saw strange thread"
                    in
                       t

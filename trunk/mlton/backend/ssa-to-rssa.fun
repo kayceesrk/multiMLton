@@ -1787,17 +1787,6 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                   Goto {args = Vector.new0 (),
                                         dst = origContinue}}
 
-                                val wbInit = Operand.Runtime GCField.WriteBarrierInitialized
-
-                                val checkWBInit =
-                                  newBlock
-                                  {args = Vector.new0 (),
-                                   kind = Kind.Jump,
-                                   statements = Vector.new0 (),
-                                   transfer =
-                                    Transfer.ifBool
-                                    (wbInit, {truee = origContinue, falsee = maybeMoveBlock})}
-
                                 val checkLHSAddr =
                                   newBlock
                                   {args = Vector.new0 (),
@@ -1806,7 +1795,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                    transfer =
                                     Transfer.ifBool
                                     (Operand.Var {var = cond3, ty = Type.bool},
-                                      {truee = checkWBInit,
+                                      {truee = maybeMoveBlock,
                                       falsee = if (!Control.markCards) then cardMarkBlock else origContinue})}
 
                               in
