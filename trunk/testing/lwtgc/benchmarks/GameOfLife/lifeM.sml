@@ -255,8 +255,9 @@ structure Main =
                       print "\n\n";
                       g)
      | nthgen_cml g i sl numSlaves =
-                    ((* print  (Int.toString(i)^"\n");
-                     printGen g; *)
+                    (print  (Int.toString(i)^"\n");
+                     printGen g;
+                     print "------------------------------------------------\n";
                      show print g;
                      nthgen_cml (master g sl numSlaves) (i-1) sl numSlaves)
 
@@ -278,8 +279,7 @@ structure Main =
     val alGenB = alive genB
     val genC = mkgen (alGenB at (2,2) @
                       alive(gun) at (4, 4) @
-                      glider at (8, 2) @
-                      alGenB at (10, 1))
+                      glider at (8, 2))
 
     fun foo numSlaves gens () =
       let
