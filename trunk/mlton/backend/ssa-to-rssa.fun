@@ -343,6 +343,23 @@ structure CFunction =
             target = Direct "GC_addToPreemptOnWBA",
             writesStackTop = false}
 
+      fun score t =
+         T {args = Vector.new3 (Type.gcState (), t, t),
+            bytesNeeded = NONE,
+            convention = Cdecl,
+            ensuresBytesFree = false,
+            mayGC = false,
+            maySwitchThreads = false,
+            modifiesFrontier = false,
+            prototype = (Vector.new3 (CType.gcState, CType.cpointer, CType.cpointer),
+                         NONE),
+            readsStackTop = false,
+            return = Type.unit,
+            symbolScope = Private,
+            target = Direct "GC_score",
+            writesStackTop = false}
+
+
       fun moveFromWB t =
          T {args = Vector.new4 (Type.gcState (), t, Type.bool, Type.bool),
             bytesNeeded = NONE,
@@ -1763,8 +1780,8 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                     {args = Vector.new4 (GCState,
                                                          rhsAddr,
                                                          Operand.bool false,
-                                                         Operand.bool true),
-                                    func = CFunction.move returnTy,
+                                                         Operand.bool false),
+                                    func = CFunction.moveFromWB returnTy,
                                     return = SOME returnFromHandler1}}
 
                                 val maybeMoveBlock =

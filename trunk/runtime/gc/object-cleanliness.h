@@ -16,13 +16,19 @@ struct GC_pointerSet {
 typedef enum {
   ZERO=0,
   ONE=1,
-  MANY
+  LOCAL_MANY=2,
+  GLOBAL_MANY
 } GC_numReferences;
+
+#define ONE_REF (ONE << VIRGIN_SHIFT)
+#define LOCAL_MANY_REF (LOCAL_MANY << VIRGIN_SHIFT)
+#define GLOBAL_MANY_REF (GLOBAL_MANY << VIRGIN_SHIFT)
 
 #endif /* (defined (MLTON_GC_INTERNAL_TYPES)) */
 
 #if (defined (MLTON_GC_INTERNAL_FUNCS))
 
+static inline GC_numReferences countReferences (GC_header header);
 static inline bool isWriteCleanMark (GC_state s, pointer current, pointer parent);
 static inline bool isWriteCleanUnmark (GC_state s, pointer current, pointer parent);
 static inline bool isSpawnCleanMark (GC_state s, pointer current, pointer parent);
@@ -30,6 +36,7 @@ static inline bool isSpawnCleanUnmark (GC_state s, pointer current, pointer pare
 static inline void doesPointToMarkedObject (GC_state s, objptr* opp);
 PRIVATE bool GC_isObjectClosureClean (GC_state s, pointer p);
 PRIVATE bool GC_isThreadClosureClean (GC_state s, pointer p);
+PRIVATE void GC_score (GC_state s, pointer lhs, pointer rhs);
 bool __GC_isThreadClosureClean (GC_state s, pointer p, size_t* size);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

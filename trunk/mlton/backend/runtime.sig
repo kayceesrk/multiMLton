@@ -40,7 +40,7 @@ signature RUNTIME =
              | StackBottom
              | StackLimit (* Must have StackTop <= StackLimit *)
              | StackTop (* Points at the next available byte on the stack. *)
-             | WriteBarrierInitialized
+             | SessionStart
 
             val layout: t -> Layout.t
             val offset: t -> Bytes.t (* Field offset in struct GC_state. *)
@@ -64,7 +64,7 @@ signature RUNTIME =
                              stackBottom: Bytes.t,
                              stackLimit: Bytes.t,
                              stackTop: Bytes.t,
-                             writeBarrierInitialized: Bytes.t} -> unit
+                             sessionStart: Bytes.t} -> unit
             val setSizes: {atomicState: Bytes.t,
                            cardMapAbsolute: Bytes.t,
                            currentThread: Bytes.t,
@@ -85,7 +85,7 @@ signature RUNTIME =
                            stackBottom: Bytes.t,
                            stackLimit: Bytes.t,
                            stackTop: Bytes.t,
-                           writeBarrierInitialized: Bytes.t} -> unit
+                           sessionStart: Bytes.t} -> unit
             val size: t -> Bytes.t (* Field size in struct GC_state. *)
             val toString: t -> string
          end

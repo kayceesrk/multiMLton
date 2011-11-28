@@ -14,9 +14,12 @@ const char* numReferencesToString (GC_numReferences n) {
     case 1:
       return "ONE";
     case 2:
-      return "MANY";
+      return "LOCAL_MANY";
+    case 3:
+      return "GLOBAL_MANY";
     default:
-      return "MANY";
+      fprintf (stderr, "numReferencesToString: Unknown case\n");
+      exit (1);
   }
 }
 
@@ -56,7 +59,7 @@ bool isWriteCleanMark (GC_state s, pointer p, pointer parent) {
   if (s->tmpPointer == p)
     isVirgin = (countReferences (h) == ZERO);
   else {
-    isVirgin = (countReferences (h) < MANY);
+    isVirgin = (countReferences (h) <= ONE);
   }
 
   if (!isVirgin && !objectHasIdentity(s, h))
@@ -77,7 +80,7 @@ bool isSpawnCleanMark (GC_state s, pointer p, pointer parent) {
   if (s->tmpPointer == p)
     isVirgin = (countReferences (h) == ZERO);
   else {
-    isVirgin = (countReferences (h) < MANY);
+    isVirgin = (countReferences (h) <= ONE);
   }
 
   if (!isVirgin && !objectHasIdentityTransitive(s, h))
@@ -188,3 +191,40 @@ bool GC_isObjectClosureClean (GC_state s, pointer p) {
   return isClosureVirgin;
 }
 
+static inline GC_numReferences countReferences (GC_header header) {
+  if (header == GC_FORWARDED)
+    return GLOBAL_MANY;
+  return (header & VIRGIN_MASK) >> VIRGIN_SHIFT;
+}
+
+
+void GC_score (GC_state s, pointer lhs, pointer rhs) {
+  GC_header h = getHeader (rhs);
+  GC_header* hp = getHeaderp (rhs);
+  GC_numReferences nr = countReferences (h);
+
+  assert (isPointerInHeap (s, s->heap, lhs) ||
+          isPointerInHeap (s, s->sharedHeap, lhs));
+  assert (isPointerInHeap (s, s->heap, rhs) ||
+          isPointerInHeap (s, s->sharedHeap, rhs));
+
+  if (nr == ZERO) {
+    *hp = (h & ~VIRGIN_MASK) | ONE_REF;
+    fprintf (stderr, "GC_score: LHS="FMTPTR" RHS="FMTPTR" %s [%d]\n",
+           (uintptr_t)lhs, (uintptr_t)rhs, numReferencesToString (countReferences (*hp)),
+           s->procId);
+    return;
+  }
+
+  bool isLHSInSession = (lhs >= s->sessionStart) && (lhs < s->frontier);
+  bool isRHSInSession = (rhs >= s->sessionStart) && (rhs < s->frontier);
+
+  if ((nr == ONE || nr == LOCAL_MANY) && isLHSInSession && isRHSInSession)
+    *hp = (h & ~VIRGIN_MASK) | LOCAL_MANY_REF;
+  else
+    *hp = (h & ~VIRGIN_MASK) | GLOBAL_MANY_REF;
+
+  fprintf (stderr, "GC_score: LHS="FMTPTR" RHS="FMTPTR" %s [%d]\n",
+           (uintptr_t)lhs, (uintptr_t)rhs, numReferencesToString (countReferences (*hp)),
+           s->procId);
+}

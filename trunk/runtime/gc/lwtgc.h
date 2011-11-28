@@ -15,7 +15,6 @@ PRIVATE pointer GC_moveFromWB (GC_state s, pointer object,
                                bool forceStackForwarding,
                                bool skipFixForwardingPointers);
 PRIVATE bool GC_isInSharedOrForwarded (GC_state s, pointer p);
-PRIVATE void GC_writeBarrierInitialized (void);
 
 static inline void liftObjptr (GC_state s, objptr *opp);
 void forceLocalGC (GC_state s);

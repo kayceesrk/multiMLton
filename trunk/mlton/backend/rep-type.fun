@@ -563,7 +563,7 @@ fun ofGCField (f: GCField.t): t =
        | StackBottom => cpointer ()
        | StackLimit => cpointer ()
        | StackTop => cpointer ()
-       | WriteBarrierInitialized => word32
+       | SessionStart => cpointer ()
    end
 
 fun castIsOk {from, to, tyconTy = _} =

@@ -85,8 +85,6 @@ static void resizeHeap (GC_state s, GC_heap h, size_t minSize);
 static void resizeLocalHeapSecondary (GC_state s);
 static void resizeSharedHeapSecondary (GC_state s, size_t primarySize);
 
-
 static inline bool isObjectLifted (GC_header header);
-static inline GC_numReferences countReferences (GC_header header);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

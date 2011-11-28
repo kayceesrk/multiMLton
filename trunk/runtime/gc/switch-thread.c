@@ -20,6 +20,7 @@ void switchToThread (GC_state s, objptr op) {
              op, (uintmax_t)stack->used, (uintmax_t)stack->reserved);
   }
   s->currentThread = op;
+  s->sessionStart = s->frontier;
   setGCStateCurrentThreadAndStack (s);
 }
 

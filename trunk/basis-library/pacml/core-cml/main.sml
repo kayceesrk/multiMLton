@@ -125,11 +125,6 @@ struct
   fun runtimeInit () =
   let
     val () = PacmlPrim.initRefUpdate (S.preemptOnWriteBarrier)
-    (* val () = if (Primitive.Controls.readBarrier) then
-               ()
-             else
-               PacmlFFI.writeBarrierInitialized () *)
-    (* init MUST come after waitForWorkLoop has been exported *)
     val () = Primitive.MLton.parallelInit ()
     (* Install handler for processor 0*)
     val _ = MLtonSignal.setHandler (Posix.Signal.usr2, h)

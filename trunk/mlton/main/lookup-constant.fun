@@ -70,7 +70,7 @@ val gcFields =
     "stackBottom",
     "stackLimit",
     "stackTop",
-    "writeBarrierInitialized"
+    "sessionStart"
     ]
 
 val gcFieldsOffsets =

@@ -33,7 +33,7 @@ structure GCField =
        | StackBottom
        | StackLimit
        | StackTop
-       | WriteBarrierInitialized
+       | SessionStart
 
       val atomicStateOffset: Bytes.t ref = ref Bytes.zero
       val cardMapAbsoluteOffset: Bytes.t ref = ref Bytes.zero
@@ -55,13 +55,13 @@ structure GCField =
       val stackBottomOffset: Bytes.t ref = ref Bytes.zero
       val stackLimitOffset: Bytes.t ref = ref Bytes.zero
       val stackTopOffset: Bytes.t ref = ref Bytes.zero
-      val writeBarrierInitializedOffset: Bytes.t ref = ref Bytes.zero
+      val sessionStartOffset: Bytes.t ref = ref Bytes.zero
 
       fun setOffsets {atomicState, cardMapAbsolute, currentThread, curSourceSeqsIndex,
                       exnStack, ffiOpArgsResPtr, frontier, globalObjptrNonRoot, limit,
                       limitPlusSlop, localHeapStart, maxFrameSize, procId, returnToC,
                       sharedHeapStart, sharedHeapEnd, signalIsPending, stackBottom,
-                      stackLimit, stackTop, writeBarrierInitialized} =
+                      stackLimit, stackTop, sessionStart} =
          (atomicStateOffset := atomicState
           ; cardMapAbsoluteOffset := cardMapAbsolute
           ; currentThreadOffset := currentThread
@@ -82,7 +82,7 @@ structure GCField =
           ; stackBottomOffset := stackBottom
           ; stackLimitOffset := stackLimit
           ; stackTopOffset := stackTop
-          ; writeBarrierInitializedOffset := writeBarrierInitialized)
+          ; sessionStartOffset := sessionStart)
 
       val offset =
          fn AtomicState => !atomicStateOffset
@@ -105,7 +105,7 @@ structure GCField =
           | StackBottom => !stackBottomOffset
           | StackLimit => !stackLimitOffset
           | StackTop => !stackTopOffset
-          | WriteBarrierInitialized => !writeBarrierInitializedOffset
+          | SessionStart => !sessionStartOffset
 
       val atomicStateSize: Bytes.t ref = ref Bytes.zero
       val cardMapAbsoluteSize: Bytes.t ref = ref Bytes.zero
@@ -127,13 +127,13 @@ structure GCField =
       val stackBottomSize: Bytes.t ref = ref Bytes.zero
       val stackLimitSize: Bytes.t ref = ref Bytes.zero
       val stackTopSize: Bytes.t ref = ref Bytes.zero
-      val writeBarrierInitializedSize: Bytes.t ref = ref Bytes.zero
+      val sessionStartSize: Bytes.t ref = ref Bytes.zero
 
       fun setSizes {atomicState, cardMapAbsolute, currentThread, curSourceSeqsIndex,
                     exnStack, ffiOpArgsResPtr, frontier, globalObjptrNonRoot, limit,
                     limitPlusSlop, localHeapStart, maxFrameSize,  procId, returnToC,
                     sharedHeapStart, sharedHeapEnd, signalIsPending, stackBottom,
-                    stackLimit, stackTop, writeBarrierInitialized} =
+                    stackLimit, stackTop, sessionStart} =
          (atomicStateSize := atomicState
           ; cardMapAbsoluteSize := cardMapAbsolute
           ; currentThreadSize := currentThread
@@ -154,7 +154,7 @@ structure GCField =
           ; stackBottomSize := stackBottom
           ; stackLimitSize := stackLimit
           ; stackTopSize := stackTop
-          ; writeBarrierInitializedSize := writeBarrierInitialized)
+          ; sessionStartSize := sessionStart)
 
       val size =
          fn AtomicState => !atomicStateSize
@@ -177,7 +177,7 @@ structure GCField =
           | StackBottom => !stackBottomSize
           | StackLimit => !stackLimitSize
           | StackTop => !stackTopSize
-          | WriteBarrierInitialized => !writeBarrierInitializedSize
+          | SessionStart => !sessionStartSize
 
       val toString =
          fn AtomicState => "AtomicState"
@@ -200,7 +200,7 @@ structure GCField =
           | StackBottom => "StackBottom"
           | StackLimit => "StackLimit"
           | StackTop => "StackTop"
-          | WriteBarrierInitialized => "WriteBarrierInitialized"
+          | SessionStart => "SessionStart"
 
       val layout = Layout.str o toString
    end

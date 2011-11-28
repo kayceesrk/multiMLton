@@ -548,7 +548,7 @@ fun elaborate {input: MLBString.t}: Xml.Program.t =
              stackBottom = get "stackBottom_Offset",
              stackLimit = get "stackLimit_Offset",
              stackTop = get "stackTop_Offset",
-             writeBarrierInitialized = get "writeBarrierInitialized_Offset"
+             sessionStart = get "sessionStart_Offset"
              };
             Runtime.GCField.setSizes
             {
@@ -572,7 +572,7 @@ fun elaborate {input: MLBString.t}: Xml.Program.t =
              stackBottom = get "stackBottom_Size",
              stackLimit = get "stackLimit_Size",
              stackTop = get "stackTop_Size",
-             writeBarrierInitialized = get "writeBarrierInitialized_Size"
+             sessionStart = get "sessionStart_Size"
              }
          end
       (* Setup endianness *)
