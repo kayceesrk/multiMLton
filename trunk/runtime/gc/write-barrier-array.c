@@ -93,9 +93,12 @@ void GC_addToMoveOnWBA (GC_state s, pointer p) {
 void GC_addToSpawnOnWBA (GC_state s, pointer p, int proc) {
   bool isClosureClean = FALSE;
   size_t size = 0;
-  //isClosureClean = __GC_isThreadClosureClean (s, p, &size);
+  isClosureClean = __GC_isThreadClosureClean (s, p, &size);
+  fprintf (stderr, "isClosureClean %s Session size=%zu\n",
+           boolToString (isClosureClean),
+           (size_t) (s->frontier - s->sessionStart));
 
-  if (isClosureClean) {
+  if (FALSE && isClosureClean) {
     s->selectiveDebug = TRUE;
     ClosureToSpawn c;
     c.p = GC_copyToBuffer (s, p, size);

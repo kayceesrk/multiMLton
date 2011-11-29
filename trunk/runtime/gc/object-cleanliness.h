@@ -34,9 +34,10 @@ static inline bool isWriteCleanUnmark (GC_state s, pointer current, pointer pare
 static inline bool isSpawnCleanMark (GC_state s, pointer current, pointer parent);
 static inline bool isSpawnCleanUnmark (GC_state s, pointer current, pointer parent);
 static inline void doesPointToMarkedObject (GC_state s, objptr* opp);
+static inline void doesCurrentStackPointToMarkedObject (GC_state s, objptr* opp);
 PRIVATE bool GC_isObjectClosureClean (GC_state s, pointer p);
 PRIVATE bool GC_isThreadClosureClean (GC_state s, pointer p);
-PRIVATE void GC_score (GC_state s, pointer lhs, pointer rhs);
 bool __GC_isThreadClosureClean (GC_state s, pointer p, size_t* size);
+bool foreachObjptrInUnmarkedObject (GC_state s, pointer p);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

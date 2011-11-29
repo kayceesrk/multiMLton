@@ -52,32 +52,42 @@ fun isOk (T {cases, default, size = _, test}, {checkUse, labelIsOk}): bool =
    let
       val () = checkUse test
       val ty = Use.ty test
+
+      fun checkCond f s =
+      let
+        val r = f ()
+        val _ = if (not r) then print s else ()
+      in
+        r
+      end
+
       val res =
-        Vector.forall (cases, labelIsOk o #2)
-        andalso (case default of
+        checkCond (fn () => Vector.forall (cases, labelIsOk o #2)) "C1\n"
+        andalso
+        checkCond (fn () => case default of
                     NONE => true
-                  | SOME l => labelIsOk l)
-        andalso Vector.isSorted (cases, fn ((w, _), (w', _)) =>
-                                WordX.le (w, w', {signed = false}))
-        andalso not (isRedundant
+                  | SOME l => labelIsOk l) "C2\n"
+        andalso
+        checkCond (fn () => Vector.isSorted (cases, fn ((w, _), (w', _)) =>
+                                WordX.le (w, w', {signed = false}))) "C3\n"
+        andalso
+        checkCond (fn () => not (isRedundant
                     {cases = cases,
-                      equals = fn ((w, _), (w', _)) => WordX.equals (w, w')})
+                      equals = fn ((w, _), (w', _)) => WordX.equals (w, w')})) "C4\n"
         andalso
         if 0 = Vector.length cases
-          then isSome default
+          then checkCond (fn () => isSome default) "C5\n"
         else
           let
               val casesTy =
                 Type.sum (Vector.map (cases, fn (w, _) => Type.ofWordX w))
           in
-              Bits.equals (Type.width ty, Type.width casesTy)
-              andalso not (Type.isObjptr ty)
-              andalso (isSome default orelse Type.isSubtype (ty, casesTy))
+              checkCond (fn () => Bits.equals (Type.width ty, Type.width casesTy)) "C6\n"
+              andalso
+              checkCond (fn () => not (Type.isObjptr ty)) "C7\n"
+              andalso
+              checkCond (fn () => isSome default orelse Type.isSubtype (ty, casesTy)) "C8\n"
           end
-     val _ = if not res then
-              print "DDDDDD\n"
-             else
-               ()
    in
      res
    end

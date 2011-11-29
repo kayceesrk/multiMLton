@@ -9,7 +9,8 @@
 #if (defined (MLTON_GC_INTERNAL_FUNCS))
 
 typedef void (*GC_foreachObjptrFun) (GC_state s, objptr *opp);
-typedef bool (*GC_foreachObjectFun) (GC_state s, pointer current, pointer parent);
+typedef bool (*GC_foreachObjectFun) (GC_state s, pointer p);
+typedef bool (*GC_foreachObjectDfsFun) (GC_state s, pointer current, pointer parent);
 
 static inline void callIfIsObjptr (GC_state s, GC_foreachObjptrFun f, objptr *opp);
 /* foreachGlobalObjptr (s, f)
@@ -45,6 +46,11 @@ static pointer foreachObjptrInRangeWithFill (GC_state s, pointer front,
  */
 static inline pointer foreachObjptrInRange (GC_state s, pointer front, pointer *back,
                                             GC_foreachObjptrFun f, bool skipWeaks);
+
+
+/* Walks the range and calls foreachObjptrFun on each object in the range */
+static inline void foreachObjectInRange (GC_state s, pointer front, pointer back,
+                                         GC_foreachObjectFun f, bool skipWeaks);
 
 
 typedef void (*GC_foreachStackFrameFun) (GC_state s, GC_frameIndex i);

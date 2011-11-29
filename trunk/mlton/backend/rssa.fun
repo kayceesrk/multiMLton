@@ -878,9 +878,6 @@ structure Function =
                       fun make prim (z1: Operand.t, z2: Operand.t) =
                         let
                           val ty = Operand.ty z1
-                          val _ = if (not (Type.equals (ty, Operand.ty z2))) then
-                                    Error.bug("RSSA.dirtyAssist.make prim")
-                                  else ()
                           val tmp = Var.newNoname ()
                         in
                           (PrimApp {args = Vector.new2 (z1, z2),
@@ -913,7 +910,7 @@ structure Function =
                         else
                           let
                             val vWord = word (WordX.fromIntInf (v, WordSize.objptrHeader ()))
-                            val virginShift = word (WordX.fromIntInf (Runtime.virginShift, WordSize.objptrHeader ()))
+                            val virginShift = word (WordX.fromIntInf (Runtime.virginShift, WordSize.shiftArg))
                             val virginMaskInvert = word (WordX.fromIntInf (Runtime.virginMaskInvert,
                                                                            WordSize.objptrHeader ()))
                             val headerOp = Offset {base = base,
@@ -938,7 +935,7 @@ structure Function =
                         val virginMask =
                           word (WordX.fromIntInf (Runtime.virginMask,
                                                   WordSize.objptrHeader ()))
-                        val virginShift = word (WordX.fromIntInf (Runtime.virginShift, WordSize.objptrHeader ()))
+                        val virginShift = word (WordX.fromIntInf (Runtime.virginShift, WordSize.shiftArg))
                         val (s1, tmp) = andb (headerOp, virginMask)
                         val (s2, tmp) = rshift (tmp, virginShift)
                       in
@@ -992,7 +989,7 @@ structure Function =
 
                           val transfer =
                             Transfer.Switch (Switch.T
-                            {cases = Vector.new2 ((make2 1, continue), (make2 0, checkIfZeroRefs)),
+                            {cases = Vector.new2 ((make2 0, checkIfZeroRefs), (make2 1, continue)),
                               default = NONE,
                               size = WordSize.objptr (),
                               test = cond})
@@ -1457,12 +1454,11 @@ structure Program =
                   handlesSignals = handlesSignals,
                   main = Function.dirtyAssist main,
                   objectTypes = objectTypes}
-            (* val p = copyProp p handle e => (print "HELLO2\n"; raise e) *)
-            val () = Trace.always ()
+            val p = copyProp p
             val () = clear p
          in
             p
-         end handle e => (print "HELLO\n"; raise e)
+         end
 
       structure ExnStack =
          struct
@@ -1852,7 +1848,7 @@ structure Program =
                checkOperand
             fun checkOperands v = Vector.foreach (v, checkOperand)
             fun check' (x, name, isOk, layout) =
-               Err.check (name, fn () => (isOk x) handle e => (print "FFGB\n"; raise e), fn () => layout x)
+               Err.check (name, fn () => (isOk x), fn () => layout x)
             val labelKind = Block.kind o labelBlock
             fun statementOk (s: Statement.t): bool =
                let
@@ -1921,7 +1917,7 @@ structure Program =
                   andalso (case kind of
                               Kind.Jump => true
                             | _ => false)
-               end handle e => (print "XXXX\n"; raise e)
+               end
             fun labelIsNullaryJump l = gotoOk {dst = l, args = Vector.new0 ()}
             fun tailIsOk (caller: Type.t vector option,
                           callee: Type.t vector option): bool =
@@ -2072,7 +2068,6 @@ structure Program =
                               Switch.isOk (s, {checkUse = checkOperand,
                                                labelIsOk = labelIsNullaryJump})
                      end
-                      handle e => (print "ASDF\n"; raise e)
                   val transferOk =
                      Trace.trace ("Rssa.transferOk",
                                   Transfer.layout,
@@ -2115,7 +2110,7 @@ structure Program =
                             check' (s, "statement", statementOk,
                                     Statement.layout))
                         val _ = check' (transfer, "transfer", transferOk,
-                                        Transfer.layout) handle e => (print "FFFFF\n"; raise e)
+                                        Transfer.layout)
                      in
                         true
                      end

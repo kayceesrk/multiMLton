@@ -257,6 +257,11 @@ struct
                    ANY_PROC => TID.new ()
                  | ON_PROC n => TID.newOnProc (n)
 
+    val proc = TID.getProcId (tid)
+    val tid = if proc <> PacmlFFI.processorNumber () then
+                PacmlPrim.move (tid, false, true)
+              else tid
+
     (* XXX dummy *)
     val _ = if Primitive.MLton.equal (tid, TID.getCurThreadId ()) then
               print "I should not see this\n"
@@ -275,7 +280,6 @@ struct
                                     MLtonThread.threadStatus t
                                    end
 
-    val proc = TID.getProcId (tid)
     val _ = debug' (fn () => "spawnHostHelperLazy: TID="^(TID.tidToString tid)^
                              " procId="^(Int.toString proc))
     val () =

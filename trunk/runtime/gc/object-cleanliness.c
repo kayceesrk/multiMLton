@@ -79,7 +79,7 @@ bool isSpawnCleanMark (GC_state s, pointer p, pointer parent) {
   if (s->tmpPointer == p)
     isVirgin = (countReferences (h) == ZERO);
   else {
-    isVirgin = (countReferences (h) <= ONE);
+    isVirgin = (countReferences (h) <= LOCAL_MANY);
   }
 
   if (!isVirgin && !objectHasIdentityTransitive(s, h))
@@ -91,18 +91,35 @@ bool isSpawnCleanMark (GC_state s, pointer p, pointer parent) {
 }
 
 
-/* doesPointerToMarkedObject
+/* doesCurrentStackPointerToMarkedObject
  * -------------------------
  * s->tmpPointer is the root of the thread closure
  * s->tmpBool is isClosureVirgin predicate
  * s->tmpInt counts the number of troublesome pointers from stack
  */
-void doesPointToMarkedObject (GC_state s, objptr* opp) {
+void doesCurrentStackPointToMarkedObject (GC_state s, objptr* opp) {
   pointer p = objptrToPointer (*opp, s->heap->start);
   if (isPointerMarked (p) && p != s->tmpPointer &&
-      objectHasIdentity (s, getHeader(p))) {
+      objectHasIdentityTransitive (s, getHeader(p))) {
     s->tmpInt++;
   }
+}
+
+void doesPointToMarkedObject (GC_state s, objptr* opp) {
+  pointer p = objptrToPointer (*opp, s->heap->start);
+  if (isPointerMarked (p) && objectHasIdentityTransitive (s, getHeader(p)))
+    s->tmpInt++;
+}
+
+bool foreachObjptrInUnmarkedObject (GC_state s, pointer p) {
+  GC_header header = getHeader (p);
+  unsigned int objectTypeIndex = (header & TYPE_INDEX_MASK) >> TYPE_INDEX_SHIFT;
+  if (objectTypeIndex == 0 /* If Stack */
+      || isPointerMarked (p))
+    return TRUE; //Contiue with next object
+  foreachObjptrInObject (s, p, doesPointToMarkedObject, TRUE);
+  //return (s->tmpInt == 0);
+  return TRUE;
 }
 
 bool GC_isThreadClosureClean (GC_state s, pointer p) {
@@ -113,9 +130,10 @@ bool GC_isThreadClosureClean (GC_state s, pointer p) {
 bool __GC_isThreadClosureClean (GC_state s, pointer p, size_t* size) {
   bool hasIdentityTransitive, isUnbounded, isClosureVirgin;
   unsigned int numPointersFromStack = -1;
+  unsigned int numPointersFromSession = -1;
+
   GC_header header = getHeader (p);
   GC_objectTypeTag tag;
-  unsigned int objectTypeIndex = (header & TYPE_INDEX_MASK) >> TYPE_INDEX_SHIFT;
   splitHeader (s, header, getHeaderp (p), &tag, NULL,
                NULL, NULL, &hasIdentityTransitive, &isUnbounded);
 
@@ -128,14 +146,23 @@ bool __GC_isThreadClosureClean (GC_state s, pointer p, size_t* size) {
 
     *size = dfsMarkByMode (s, p, isSpawnCleanMark, MARK_MODE,
                            FALSE, FALSE, TRUE, FALSE);
-
-    //Walk the current stack and test if the current stack points to any marked object
-    s->tmpInt = 0;
-    getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
-    getThreadCurrent(s)->exnStack = s->exnStack;
-    foreachObjptrInObject (s, (pointer)getStackCurrent (s), doesPointToMarkedObject, FALSE);
     isClosureVirgin = s->tmpBool;
-    numPointersFromStack = s->tmpInt;
+
+    if (isClosureVirgin) {
+      //Walk the current stack and test if the current stack points to any marked object
+      s->tmpInt = 0;
+      getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
+      getThreadCurrent(s)->exnStack = s->exnStack;
+      foreachObjptrInObject (s, (pointer)getStackCurrent (s), doesCurrentStackPointToMarkedObject, FALSE);
+      numPointersFromStack = s->tmpInt;
+    }
+
+    if (isClosureVirgin && numPointersFromStack == 0) {
+      s->tmpInt = 0;
+      s->tmpBool = TRUE;
+      foreachObjectInRange (s, s->sessionStart, s->frontier, foreachObjptrInUnmarkedObject, TRUE);
+      numPointersFromSession = s->tmpInt;
+    }
 
     dfsMarkByMode (s, p, isSpawnCleanUnmark, UNMARK_MODE,
                   FALSE, FALSE, TRUE, FALSE);
@@ -146,15 +173,14 @@ bool __GC_isThreadClosureClean (GC_state s, pointer p, size_t* size) {
     s->tmpInt = 0;
   }
 
-  if (DEBUG_CLEANLINESS) {
-    fprintf (stderr, "GC_isThreadClosureClean: hasIdentityTransitive = %d "
-                     "isUnbounded = %d objectTypeIndex = %d size = %zu "
-                     "isClosureVirgin = %d numPointerFromStack = %d\n",
-             hasIdentityTransitive, isUnbounded, objectTypeIndex, *size,
-             isClosureVirgin, numPointersFromStack);
+  if (DEBUG_CLEANLINESS || TRUE) {
+    fprintf (stderr, "GC_isThreadClosureClean: size = %zu "
+                     "isClosureVirgin = %d numPointerFromStack = %d "
+                     "numPointersFromSession = %d\n",
+             *size, isClosureVirgin, numPointersFromStack, numPointersFromSession);
   }
 
-  return (isClosureVirgin && (numPointersFromStack == 0));
+  return (isClosureVirgin && (numPointersFromStack == 0) && (numPointersFromSession == 0));
 }
 
 bool GC_isObjectClosureClean (GC_state s, pointer p) {
@@ -195,43 +221,3 @@ static inline GC_numReferences countReferences (GC_header header) {
     return GLOBAL_MANY;
   return (header & VIRGIN_MASK) >> VIRGIN_SHIFT;
 }
-
-void GC_score (GC_state s, pointer lhs, pointer rhs) {
-  GC_header h = getHeader (rhs);
-  GC_header* hp = getHeaderp (rhs);
-  GC_numReferences nr = countReferences (h);
-
-  fprintf (stderr, "GC_score: LHS="FMTPTR" RHS="FMTPTR" %s\n",
-           (uintptr_t)lhs, (uintptr_t)rhs, numReferencesToString (nr));
-}
-
-/* void GC_score (GC_state s, pointer lhs, pointer rhs) {
-  GC_header h = getHeader (rhs);
-  GC_header* hp = getHeaderp (rhs);
-  GC_numReferences nr = countReferences (h);
-
-  assert (isPointerInHeap (s, s->heap, lhs) ||
-          isPointerInHeap (s, s->sharedHeap, lhs));
-  assert (isPointerInHeap (s, s->heap, rhs) ||
-          isPointerInHeap (s, s->sharedHeap, rhs));
-
-  if (nr == ZERO) {
-    *hp = (h & ~VIRGIN_MASK) | ONE_REF;
-    fprintf (stderr, "GC_score: LHS="FMTPTR" RHS="FMTPTR" %s [%d]\n",
-           (uintptr_t)lhs, (uintptr_t)rhs, numReferencesToString (countReferences (*hp)),
-           s->procId);
-    return;
-  }
-
-  bool isLHSInSession = (lhs >= s->sessionStart) && (lhs < s->frontier);
-  bool isRHSInSession = (rhs >= s->sessionStart) && (rhs < s->frontier);
-
-  if ((nr == ONE || nr == LOCAL_MANY) && isLHSInSession && isRHSInSession)
-    *hp = (h & ~VIRGIN_MASK) | LOCAL_MANY_REF;
-  else
-    *hp = (h & ~VIRGIN_MASK) | GLOBAL_MANY_REF;
-
-  fprintf (stderr, "GC_score: LHS="FMTPTR" RHS="FMTPTR" %s [%d]\n",
-           (uintptr_t)lhs, (uintptr_t)rhs, numReferencesToString (countReferences (*hp)),
-           s->procId);
-} */

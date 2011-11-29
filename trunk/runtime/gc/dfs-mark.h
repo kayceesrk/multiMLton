@@ -20,7 +20,7 @@ typedef enum {
 static inline bool isPointerMarked (pointer p);
 static inline bool isPointerMarkedByMode (pointer p, GC_markMode m);
 static size_t dfsMarkByMode (GC_state s, pointer root,
-                             GC_foreachObjectFun f,
+                             GC_foreachObjectDfsFun f,
                              GC_markMode mode,
                              bool shouldHashCons,
                              bool shouldLinkWeaks,

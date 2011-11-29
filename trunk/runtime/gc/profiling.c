@@ -188,6 +188,12 @@ void incForProfiling (GC_state s, size_t amount, GC_sourceSeqIndex sourceSeqInde
              getSourceName (s, topSourceIndex), (uintmax_t)amount,
              Proc_processorNumber (s));
   }
+  /* Must have compiled for profile alloc */
+  if (PROFILE_ALLOC_INSTRUMENT) {
+    fprintf (stderr, "ALLOC "FMTPTR" "FMTPTR" %s [%d]\n",
+             (uintptr_t)s->frontier - amount, (uintptr_t)s->frontier,
+             getSourceName (s, topSourceIndex), s->procId);
+  }
   s->profiling.data->countTop[topSourceIndex] += amount;
   s->profiling.data->countTop[sourceIndexToProfileMasterIndex (s, topSourceIndex)] += amount;
   if (s->profiling.stack)

@@ -41,7 +41,7 @@ bool isPointerMarkedByMode (pointer p, GC_markMode m) {
  * It returns the total size in bytes of the objects marked.
  */
 size_t dfsMarkByMode (GC_state s, pointer root,
-                      GC_foreachObjectFun f,
+                      GC_foreachObjectDfsFun f,
                       GC_markMode mode,
                       bool shouldHashCons,
                       bool shouldLinkWeaks,
