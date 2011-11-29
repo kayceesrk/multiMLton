@@ -58,9 +58,8 @@ bool isWriteCleanMark (GC_state s, pointer p, pointer parent) {
 
   if (s->tmpPointer == p)
     isVirgin = (countReferences (h) == ZERO);
-  else {
+  else
     isVirgin = (countReferences (h) <= ONE);
-  }
 
   if (!isVirgin && !objectHasIdentity(s, h))
     isVirgin = TRUE;
@@ -197,8 +196,16 @@ static inline GC_numReferences countReferences (GC_header header) {
   return (header & VIRGIN_MASK) >> VIRGIN_SHIFT;
 }
 
-
 void GC_score (GC_state s, pointer lhs, pointer rhs) {
+  GC_header h = getHeader (rhs);
+  GC_header* hp = getHeaderp (rhs);
+  GC_numReferences nr = countReferences (h);
+
+  fprintf (stderr, "GC_score: LHS="FMTPTR" RHS="FMTPTR" %s\n",
+           (uintptr_t)lhs, (uintptr_t)rhs, numReferencesToString (nr));
+}
+
+/* void GC_score (GC_state s, pointer lhs, pointer rhs) {
   GC_header h = getHeader (rhs);
   GC_header* hp = getHeaderp (rhs);
   GC_numReferences nr = countReferences (h);
@@ -227,4 +234,4 @@ void GC_score (GC_state s, pointer lhs, pointer rhs) {
   fprintf (stderr, "GC_score: LHS="FMTPTR" RHS="FMTPTR" %s [%d]\n",
            (uintptr_t)lhs, (uintptr_t)rhs, numReferencesToString (countReferences (*hp)),
            s->procId);
-}
+} */

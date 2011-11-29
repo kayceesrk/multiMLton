@@ -92,7 +92,7 @@ void GC_addToMoveOnWBA (GC_state s, pointer p) {
 
 void GC_addToSpawnOnWBA (GC_state s, pointer p, int proc) {
   bool isClosureClean = FALSE;
-  size_t size;
+  size_t size = 0;
   //isClosureClean = __GC_isThreadClosureClean (s, p, &size);
 
   if (isClosureClean) {

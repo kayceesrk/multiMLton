@@ -280,6 +280,11 @@ val lwtgcMask = Word.toIntInf 0wxFFF1FFFF
 val virginMaskLower = Word.toIntInf 0wx00020000
 val pointerMask = Word.toIntInf 0wx00000003
 
+
+val virginMask = Word.toIntInf 0wx00060000
+val virginMaskInvert = Word.toIntInf 0wxfff9ffff
+val virginShift = Word.toIntInf 0wx11
+
 (* see gc/array.h *)
 val arrayLengthSize : unit -> Bytes.t =
    Promise.lazy (Bits.toBytes o Control.Target.Size.seqIndex)

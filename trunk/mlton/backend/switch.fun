@@ -36,7 +36,7 @@ datatype t =
          size: WordSize.t,
          test: Use.t}
 
-fun layout (T {cases, default, test, ...})= 
+fun layout (T {cases, default, test, ...})=
    let
       open Layout
    in
@@ -52,28 +52,34 @@ fun isOk (T {cases, default, size = _, test}, {checkUse, labelIsOk}): bool =
    let
       val () = checkUse test
       val ty = Use.ty test
+      val res =
+        Vector.forall (cases, labelIsOk o #2)
+        andalso (case default of
+                    NONE => true
+                  | SOME l => labelIsOk l)
+        andalso Vector.isSorted (cases, fn ((w, _), (w', _)) =>
+                                WordX.le (w, w', {signed = false}))
+        andalso not (isRedundant
+                    {cases = cases,
+                      equals = fn ((w, _), (w', _)) => WordX.equals (w, w')})
+        andalso
+        if 0 = Vector.length cases
+          then isSome default
+        else
+          let
+              val casesTy =
+                Type.sum (Vector.map (cases, fn (w, _) => Type.ofWordX w))
+          in
+              Bits.equals (Type.width ty, Type.width casesTy)
+              andalso not (Type.isObjptr ty)
+              andalso (isSome default orelse Type.isSubtype (ty, casesTy))
+          end
+     val _ = if not res then
+              print "DDDDDD\n"
+             else
+               ()
    in
-      Vector.forall (cases, labelIsOk o #2)
-      andalso (case default of
-                  NONE => true
-                | SOME l => labelIsOk l)
-      andalso Vector.isSorted (cases, fn ((w, _), (w', _)) =>
-                               WordX.le (w, w', {signed = false}))
-      andalso not (isRedundant
-                   {cases = cases,
-                    equals = fn ((w, _), (w', _)) => WordX.equals (w, w')})
-      andalso
-      if 0 = Vector.length cases
-         then isSome default
-      else
-         let
-            val casesTy =
-               Type.sum (Vector.map (cases, fn (w, _) => Type.ofWordX w))
-         in
-            Bits.equals (Type.width ty, Type.width casesTy)
-            andalso not (Type.isObjptr ty)
-            andalso (isSome default orelse Type.isSubtype (ty, casesTy))
-         end
+     res
    end
 
 fun foldLabelUse (T {cases, default, test, ...}, a: 'a, {label, use}): 'a =
