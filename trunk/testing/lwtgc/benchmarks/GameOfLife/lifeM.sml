@@ -182,6 +182,7 @@ structure Main =
              NONE => ()
            | SOME (gen, s, e, min, max) =>
                 let
+                  val gen = filterRows (s-1) (e+1) gen
                   val u_ngen = mk_nextgen_fn neighbours gen
                   val maxInt = case Int.maxInt of
                                     NONE => 9999
@@ -207,43 +208,27 @@ structure Main =
    let
      val (min,max) = getMinMaxX gen
      val size = (max-min+1) div numSlaves
-     val r = ref ((max-min+1) mod numSlaves)
-     val pos = ref min
+     val r = ((max-min+1) mod numSlaves)
+     val pos = min
      (* Creates a slave, assigns work to it and returns channel *)
-     fun assign pos r ch id =
+     fun assign ((ch, _), (pos, r)) =
       let
         val _ = MLton.size gen
         (* must have 1 row extra at the top and bottom *)
-        val s = !pos
-        val e = if (!r)>0 then (!pos + size) else (!pos + size -1)
-        val _ = if (!r)>0 then (r := !r -1; pos := !pos +1) else ()
-        val g = filterRows (s-1) (e+1) gen
-        val _ = send (ch, SOME (g, s, e, min, max))
-        val _ = pos := !pos + size
+        val s = pos
+        val e = if r > 0 then (pos + size) else (pos + size -1)
+        val (r, pos) = if r > 0 then (r - 1, pos + 1) else (r, pos)
+        val _ = send (ch, SOME (gen, s, e, min, max))
+        val pos = pos + size
       in
-        ()
+        (pos, r)
       end
-     fun collate(a,b) = let
-       val alist = alive a
-       val blist = alive b
-     in
-       mkgen(alist @ blist)
-     end
-     val _ = List.tabulate (numSlaves, fn i =>
-                                           let
-                                             val (ch, _) = Vector.sub (sl, i)
-                                           in
-                                             assign pos r ch i
-                                           end)
-     val resultList = List.tabulate (numSlaves, fn i =>
-                                                  let
-                                                    val (_, ch) = Vector.sub (sl, i)
-                                                  in
-                                                    recv ch
-                                                  end)
-     val result = List.foldr collate (mkgen []) resultList
+
+     val _ = List.foldl assign (pos, r) sl
+     val resultList = List.map (fn (_,ch) => alive (recv ch)) sl
+     val result = List.foldl (fn (a,b) => a@b) [] resultList
    in
-     result
+     mkgen result
    end
 
    fun show pr = (app (fn s => (pr s; pr "\n"))) o plot o alive
@@ -255,16 +240,11 @@ structure Main =
                       print "\n\n";
                       g)
      | nthgen_cml g i sl numSlaves =
-                    (print  (Int.toString(i)^"\n");
-                     printGen g;
+                    (print (Int.toString(i)^" "^(Int.toString(List.length(alive g)))^"\n");
+                     (*printGen g;
                      print "------------------------------------------------\n";
-                     show print g;
+                     show print g; *)
                      nthgen_cml (master g sl numSlaves) (i-1) sl numSlaves)
-
-   fun nthgen g 0 = ((*print "0 : ";printGen g; print "\n\n";*) g)
-     | nthgen g i = ((*print  (Int.toString(i)^": ");
-                     printGen g;*)nthgen (mk_nextgen_fn neighbours g) (i-1))
-
 
     val gun = mkgen
      [(2,20),(3,19),(3,21),(4,18),(4,22),(4,23),(4,32),(5,7),(5,8),(5,18),
@@ -274,16 +254,24 @@ structure Main =
       (9,29),(9,30),(9,31),(9,32)]
 
 
-    fun testit strm = (show (fn c => TextIO.output (strm, c)) (nthgen genB 50))
-
     val alGenB = alive genB
     val genC = mkgen (alGenB at (2,2) @
+                      alGenB at (3,3) @
                       alive(gun) at (4, 4) @
-                      glider at (8, 2))
+                      glider at (8, 2) @
+                      (barberpole 50) at (0,0) @
+                      (barberpole 50) at (5,5) @
+                      (barberpole 50) at (5,10) @
+                      (barberpole 50) at (15,10) @
+                      (barberpole 50) at (5,20) @
+                      (barberpole 50) at (25,20) @
+                      (barberpole 50) at (5,30) @
+                      (barberpole 50) at (35,30) @
+                      (barberpole 50) at (5,40))
 
     fun foo numSlaves gens () =
       let
-        val sl = Vector.tabulate (numSlaves, fn id => slave id ())
+        val sl = List.tabulate (numSlaves, fn id => slave id ())
         val g = (nthgen_cml genC gens sl numSlaves)
       in
         (shutdown OS.Process.success)
