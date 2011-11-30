@@ -62,9 +62,6 @@ struct GC_state {
   size_t tmpSizet;
   int32_t tmpInt;
 
-  volatile int* sendIntent;
-  volatile int* recvIntent;
-
   /* Alphabetized fields follow. */
   size_t alignment; /* */
   bool amInGC;

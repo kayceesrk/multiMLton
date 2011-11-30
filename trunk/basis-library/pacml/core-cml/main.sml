@@ -32,58 +32,6 @@ struct
 
   val h = MLtonSignal.Handler.handler (fn t => t)
 
-  fun closureReceiver () =
-  let
-    val myProcId = PacmlFFI.processorNumber ()
-
-    fun phase1 () =
-    let
-      val sender = PacmlFFI.readIntentArray (PacmlFFI.SEND_INTENT, myProcId)
-    in
-      if sender <> ~1 then
-        (debug' (fn () => "closureReceiver: moving to phase2");
-        phase2 (sender))
-      else
-        (Thread.yieldExplicit {forceToSecondary = false} (); phase1 ())
-    end
-
-    and phase2 (sender) =
-    let
-      val res = PacmlFFI.writeIntentArray (PacmlFFI.RECV_INTENT,
-                                           sender, ~1, myProcId)
-    in
-      if res = ~1 then
-        (debug' (fn () => "closureReceiver: moving to phase3");
-        phase3 (sender))
-      else
-        (Thread.yieldExplicit {forceToSecondary = false} (); phase2 sender)
-    end
-
-    and phase3 (sender) =
-    let
-      val rhost : RepTypes.runnable_host = !(MLtonRcce.recv sender)
-      val _ = S.readyForSpawn (rhost)
-      val res = PacmlFFI.writeIntentArray (PacmlFFI.SEND_INTENT, myProcId, sender, ~1)
-      val _ = if res <> sender then (print "FAIL\n"; raise Fail "closureReceiver.phase3.write1") else ()
-      val res = PacmlFFI.writeIntentArray (PacmlFFI.RECV_INTENT, sender, myProcId, ~1)
-      val _ = if res <> myProcId then (print "FAIL\n"; raise Fail "closureReceiver.phase3.write2") else ()
-    in
-      (debug' (fn () => "closureReceiver: back to phase1");
-      phase1 ())
-    end
-  in
-    phase1 ()
-  end
-
-  fun spawnClosureReceiver () =
-    if Primitive.Controls.directCloXfer then
-      (ignore (Thread.spawnOnProc (closureReceiver, PacmlFFI.processorNumber ()));
-      (* Closure receiver will run forever. Hence, we will decrement num
-      * live threads so that it does not hinder program termination. *)
-      ignore (Config.decrementNumLiveThreads ()))
-    else ()
-
-
   fun thread_main () =
   let
     val _ = MLtonProfile.init ()
@@ -102,7 +50,6 @@ struct
 
     fun loop procNum =
     let
-      val _ = spawnClosureReceiver ()
       val _ = PacmlFFI.maybeWaitForGC ()
     in
       case doAtomic (fn () => SQ.dequeHost (RepTypes.PRI)) of
@@ -200,7 +147,6 @@ struct
           let
             val () = Config.isRunning := true
             val () = debug' (fn () => "lateInit")
-            val () = spawnClosureReceiver ()
             (* Spawn the Non-blocking worker threads *)
             val _ = List.tabulate (numIOThreads * 5, fn _ => NonBlocking.mkNBThread ())
             val _ = List.tabulate (numIOThreads, fn i => PacmlFFI.wakeUp (PacmlFFI.numComputeProcessors + i, 1))
