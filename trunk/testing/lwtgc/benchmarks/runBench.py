@@ -134,17 +134,19 @@ def fullParameters():
 							"MD5": "md5-amd64", \
 							"CountGraphs": "count-graphs-amd64", \
 							"GameOfLife": "lifeM-amd64", \
+							"GameOfLife2": "life-amd64", \
 							"Mergesort": "mergesort-amd64", \
 							"Raytrace": "raytrace-amd64"}
 	args = {"BarnesHut2": "2048 512", \
-					"AllPairs": "512 64", \
+					"AllPairs": "1024 64", \ #Eager spawn, timer 20000
 					"Mandelbrot2": "2048 128", \
 					"KClustering": "0 50 700 70 0", \
 					"TSP2": "", \
 					"Nucleic": "512", \
-					"MD5": "16", \
+					"MD5": "16", \ #eager spawn
 					"CountGraphs": "1", \
 					"GameOfLife": "64 300", \
+					"GameOfLife2": "64", \ #Enable timer 20000, eager spawn...
 					"Mergesort": "10000", \
 					"Raytrace": "48"}
 	numProcs = [16]

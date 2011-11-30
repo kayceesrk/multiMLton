@@ -23,6 +23,7 @@ struct
    * For other processors, preemprtion is enabled when they are scheduled
    *)
   val _ = PacmlFFI.enablePreemption ()
+  val numberOfProcessors = PacmlFFI.numberOfProcessors
 
   (* Dummy signal handler *)
   (* Since signals are handled by a separate pthread, the working threads are
