@@ -146,7 +146,7 @@ void initWorld (GC_state s) {
     s->globals[i] = BOGUS_OBJPTR;
   s->lastSharedMajorStatistics->bytesLive = sizeofInitialBytesLive (s);
   minSize = s->lastSharedMajorStatistics->bytesLive;
-  createHeap (s, s->sharedHeap, sizeofHeapDesired (s, minSize, 0, SHARED_HEAP), minSize);
+  createHeap (s, s->sharedHeap, sizeofHeapDesired (s, max(minSize,131072), 0, SHARED_HEAP), minSize);
 
   //set up shared heap
   start = alignFrontier (s, s->sharedHeap->start);

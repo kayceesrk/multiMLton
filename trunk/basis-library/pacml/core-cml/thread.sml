@@ -193,7 +193,7 @@ struct
 
     val () =
       if proc <> PacmlFFI.processorNumber () then
-        ((* If the newly spawned thread is going to another processor, then move it
+        (* ((* If the newly spawned thread is going to another processor, then move it
           * to the shared heap. We first try to move the thread to the shared heap
           * without needing a GC. If we are not able to do it, we add rhost to
           * moveOnWBA queue and preempt, with the hope that there will be other
@@ -202,11 +202,11 @@ struct
         if (Primitive.Controls.wbUsesCleanliness andalso
             Primitive.Lwtgc.isThreadClosureClean rhost) then
           (ignore (Primitive.Lwtgc.move (rhost, false, true)))
-        else
+        else *)
           (debug' (fn () => "spawnHostHelper.lift(1): tid="^(TID.tidToString tid));
           Primitive.Lwtgc.addToMoveOnWBA (rhost);
           S.preemptOnWriteBarrier ();
-          debug' (fn () => "spawnHostHelper.lift(2): tid="^(TID.tidToString tid))))
+          debug' (fn () => "spawnHostHelper.lift(2): tid="^(TID.tidToString tid))) (* ) *)
       else
         ()
 
