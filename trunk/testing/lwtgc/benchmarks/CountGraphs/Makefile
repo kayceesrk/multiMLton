@@ -43,8 +43,14 @@ LIBS = -L$(MMPATH)/trunk/build/lib/self -lmlton -lgdtoa -L/shared/chandras/rcce/
 .SECONDEXPANSION:
 %-c : $$(subst .c,.o,$$(wildcard $$(subst -c,,$$@).*.c))
 	gcc -o $(subst -c,,$@) $^ $(LIBS)
+	cp $(subst -c,,$@) $(SH)/testingWB
+	rm -rf $(SH)/testingWB/gc
+	cp -r $(MMPATH)/trunk/runtime/gc $(SH)/testingWB/gc
 
 
 .SECONDEXPANSION:
 %-cdebug : $$(subst .c,.o,$$(wildcard $$(subst -cdebug,,$$@).*.c))
 	gcc -o $(subst -cdebug,,$@) $^ $(DEBUG_LIBS)
+	cp $(subst -cdebug,,$@) $(SH)/testingWB
+	rm -rf $(SH)/testingWB/gc
+	cp -r $(MMPATH)/trunk/runtime/gc $(SH)/testingWB/gc

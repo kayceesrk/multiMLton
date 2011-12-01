@@ -44,6 +44,11 @@
 
 #define GPNR(i) (((Pointer*)(GCState + GlobalObjptrNonRootOffset))[i])
 
+PRIVATE extern Pointer GC_forwardBase (struct GC_state* s, Pointer b);
+
+#define FWD(x) (GC_forwardBase (GCState, (x)))
+
+
 #ifdef DEBUG_MEMORY
     #define G(ty, i) (fprintf (stderr, "%s:%d globalXXX [%d] = %018p\n", __FILE__, __LINE__, \
                                         i, (void*) (global##ty [i])), global##ty [i])

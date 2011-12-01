@@ -13,7 +13,7 @@
 void liftAllObjptrsInMoveOnWBA (GC_state s) {
 
   s->cumulativeStatistics->numPreemptGC += s->preemptOnWBASize;
-  if (s->schedulerQueue) {
+  if (s->schedulerQueues) {
     s->cumulativeStatistics->numReadyPrimGC += sizeofSchedulerQueue (s, 0);
     s->cumulativeStatistics->numReadySecGC += sizeofSchedulerQueue (s, 1);
   }

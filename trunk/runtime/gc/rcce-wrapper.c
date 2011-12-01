@@ -9,6 +9,12 @@
 pointer BUFFER_START;
 pointer BUFFER_END;
 
+static assertObjptrNotInBuffer (GC_state s, objptr* opp) {
+  pointer p = objptrToPointer (*opp, s->heap->start);
+  assert (!(p >= BUFFER_START && p < BUFFER_END));
+  p = p;
+}
+
 void MLton_RCCE_send (GC_state s, pointer p, int dest) {
   assert (isPointer (p) && isPointerInHeap (s, s->heap, p));
 
