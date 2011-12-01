@@ -22,7 +22,6 @@ val halt = _prim "MLton_halt": C_Status.t -> unit;
 val hash = _prim "MLton_hash": SeqIndex.int * 'a -> Word32.word;
 (* val serialize = _prim "MLton_serialize": 'a ref -> Word8Vector.vector; *)
 val share = _prim "MLton_share": 'a -> unit;
-val move = _prim "MLton_move": 'a * bool * bool -> 'a;
 val size = _prim "MLton_size": 'a ref -> C_Size.t;
 
 val parallelInit = _prim "MLton_parInit": unit -> unit;
@@ -142,6 +141,14 @@ structure GC =
          _import "GC_setControlsRusageMeasureGC" private: GCState.t * bool -> unit;
       val setSummary = _import "GC_setControlsSummary" private: GCState.t * bool -> unit;
       val unpack = _import "GC_unpack" private: GCState.t -> unit;
+
+      local
+        val setSelectiveDebug' = _import "GC_setSelectiveDebug" private: GCState.t * bool -> unit;
+      in
+        fun setSelectiveDebug p = setSelectiveDebug' (GCState.gcState, p)
+      end
+
+
    end
 
 structure Parallel =
@@ -345,7 +352,7 @@ struct
   let
     val prim_enque = _prim "SQ_enque": ('a * C_Int.t * C_Int.t) -> unit;
     val t = if not (proc = processorNumber ()) then (* we are enqueueing on some other core *)
-              move (t, false, true)
+              Primitive.Lwtgc.move (t, false, true)
             else t
   in
     prim_enque (t, proc, prio)

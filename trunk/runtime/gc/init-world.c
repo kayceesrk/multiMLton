@@ -164,7 +164,7 @@ void initWorld (GC_state s) {
   createHeap (s, s->heap, LOCAL_HEAP, sizeofHeapDesired (s, 65536, 0, LOCAL_HEAP), 0);
   setCardMapAndCrossMap (s);
   start = alignFrontier (s, s->heap->start);
-  s->start = s->frontier = start;
+  s->start = s->frontier = s->sessionStart = start;
   s->limitPlusSlop = s->heap->start + s->heap->size - GC_BONUS_SLOP;
   s->limit = s->limitPlusSlop - GC_HEAP_LIMIT_SLOP;
   assert ((size_t)(s->frontier - start) <= s->lastMajorStatistics->bytesLive);
@@ -185,7 +185,7 @@ void duplicateWorld (GC_state d, GC_state s) {
   initHeap (d, d->heap, LOCAL_HEAP);
   createHeap (d, d->heap, LOCAL_HEAP, sizeofHeapDesired (s, 65536, 0, LOCAL_HEAP), 0);
   start = alignFrontier (d, d->heap->start);
-  d->start = d->frontier = start;
+  d->start = d->frontier = d->sessionStart = start;
   d->limitPlusSlop = d->heap->start + d->heap->size - GC_BONUS_SLOP;
   d->limit = d->limitPlusSlop - GC_HEAP_LIMIT_SLOP;
   d->heap->oldGenSize = d->frontier - d->heap->start;

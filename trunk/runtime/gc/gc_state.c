@@ -120,7 +120,7 @@ void setGCStateCurrentLocalHeap (GC_state s,
   }
   assert (nurseryBytesRequested <= nurserySize);
   s->heap->nursery = nursery;
-  s->frontier = nursery;
+  s->frontier = s->sessionStart = nursery;
   s->start = nursery;
   h->frontier = s->limitPlusSlop;
   assert (s->heap->start + s->heap->oldGenSize <= s->heap->nursery);
@@ -487,4 +487,9 @@ void writeNeedsBarrier (GC_state s, GC_barrierInfo b) {
   RC_cache_invalidate ();
   *s->needsBarrier = b;
   RCCE_foolWCB ();
+}
+
+void GC_setSelectiveDebug (__attribute__((unused)) GC_state *gs, bool b) {
+  GC_state s = pthread_getspecific (gcstate_key);
+  s->selectiveDebug = b;
 }

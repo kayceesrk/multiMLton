@@ -538,9 +538,10 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->sysvals.physMem = GC_physMem ();
   s->weaks = NULL;
   s->saveWorldStatus = true;
-  s->profiling.isProfilingTimeOn = false;
+  s->profiling.isProfilingTimeOn = FALSE;
   s->reachable = NULL;
-
+  s->copyImmutable = FALSE;
+  s->copyObjectMap = NULL;
   s->schedulerQueues = NULL;
 
 
@@ -548,6 +549,7 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->translateState.from = BOGUS_POINTER;
   s->translateState.to = BOGUS_POINTER;
   s->translateState.size = 0;
+
 
   initIntInf (s);
   initSignalStack (s);
@@ -674,13 +676,13 @@ void GC_duplicate (GC_state d, GC_state s) {
   d->copiedSize = s->copiedSize;
   d->saveWorldStatus = s->saveWorldStatus;
   d->reachable = NULL;
-
   d->forwardState.liftingObject = BOGUS_OBJPTR;
   d->translateState.from = BOGUS_POINTER;
   d->translateState.to = BOGUS_POINTER;
   d->translateState.size = 0;
   d->sysvals.ram = s->sysvals.ram;
   d->schedulerQueues = s->schedulerQueues;
+  d->copyObjectMap = NULL;
 
   createAuxDataStructures (d);
 

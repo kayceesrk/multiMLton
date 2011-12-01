@@ -27,12 +27,6 @@ typedef enum {
     SHARED_HEAP
 } GC_heapKind;
 
-typedef enum {
-  ZERO=0,
-  ONE=1,
-  MANY
-} GC_numReferences;
-
 typedef struct GC_heap {
   GC_heapKind kind;
   pointer nursery; /* start of nursery */
@@ -89,6 +83,7 @@ static void growHeap (GC_state s, GC_heap h, size_t desiredSize, size_t minSize)
 static void resizeHeap (GC_state s, GC_heap h, size_t minSize);
 static void resizeLocalHeapSecondary (GC_state s);
 static void resizeSharedHeapSecondary (GC_state s, size_t primarySize);
+
 static inline bool isObjectLifted (GC_header header);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

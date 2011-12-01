@@ -5,7 +5,7 @@ struct
   datatype thread_type = datatype RepTypes.thread_type
 
   fun move (x, forceStackLifting, skipFixingForwaringPointers) =
-    Primitive.MLton.move (x, forceStackLifting, skipFixingForwaringPointers)
+    Primitive.Lwtgc.move (x, forceStackLifting, skipFixingForwaringPointers)
 
   fun initRefUpdate f = Primitive.Ref.preemptFn := f
 
@@ -32,5 +32,6 @@ struct
   end
 
   val unsafeAssign = Primitive.Ref.unsafeAssign
+
 
 end

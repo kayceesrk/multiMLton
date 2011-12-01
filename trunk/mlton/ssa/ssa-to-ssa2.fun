@@ -169,13 +169,15 @@ fun convert (S.Program.T {datatypes, functions, globals, main}) =
                              {base = Base.VectorSub {index = arg 1,
                                                      vector = arg 0},
                               offset = 0,
-                              value = arg 2})
+                              value = arg 2,
+                              needsMove = arg 3})
                        | Ref_assign =>
                             maybeBindUnit
                             (S2.Statement.Update
                              {base = Base.Object (arg 0),
                               offset = 0,
-                              value = arg 1})
+                              value = arg 1,
+                              needsMove = arg 2})
                        | Lwtgc_isObjptr =>
                            let
                              val mty = Vector.sub (targs, 0)
@@ -307,7 +309,7 @@ fun convert (S.Program.T {datatypes, functions, globals, main}) =
       fun convertStatements ss =
          Vector.concatV (Vector.map (ss, convertStatement))
       fun convertFormals xts = Vector.map (xts, fn (x, t) => (x, convertType t))
-      fun convertBlock (S.Block.T {args, label, statements, transfer}) =
+      fun convertBlock (b as S.Block.T {args, label, statements, transfer}) =
          S2.Block.T {args = convertFormals args,
                      label = label,
                      statements = convertStatements statements,
@@ -337,8 +339,9 @@ fun convert (S.Program.T {datatypes, functions, globals, main}) =
                        functions = functions,
                        globals = globals,
                        main = main}
+
    in
-      S2.shrink program
+     S2.shrink program
    end
 
 end

@@ -9,12 +9,6 @@
 pointer BUFFER_START;
 pointer BUFFER_END;
 
-static assertObjptrNotInBuffer (GC_state s, objptr* opp) {
-  pointer p = objptrToPointer (*opp, s->heap->start);
-  assert (!(p >= BUFFER_START && p < BUFFER_END));
-  p = p;
-}
-
 void MLton_RCCE_send (GC_state s, pointer p, int dest) {
   assert (isPointer (p) && isPointerInHeap (s, s->heap, p));
 
@@ -33,7 +27,7 @@ void MLton_RCCE_send (GC_state s, pointer p, int dest) {
   s->forwardState.toStart = s->forwardState.back = buffer;
   s->forwardState.toLimit = (pointer)((char*)buffer + size);
 
-  assert (copyObjectMap == NULL);
+  assert (s->copyObjectMap == NULL);
   ENTER_LOCAL0 (s);
   copyObjptr (s, &op);
   foreachObjptrInRange (s, s->forwardState.toStart, &s->forwardState.back, copyObjptr, TRUE);
@@ -48,11 +42,11 @@ void MLton_RCCE_send (GC_state s, pointer p, int dest) {
   #endif
 
   CopyObjectMap *e, *tmp;
-  HASH_ITER (hh, copyObjectMap, e, tmp) {
-    HASH_DEL (copyObjectMap, e);
+  HASH_ITER (hh, s->copyObjectMap, e, tmp) {
+    HASH_DEL (s->copyObjectMap, e);
     free (e);
   }
-  copyObjectMap = NULL;
+  s->copyObjectMap = NULL;
 
   s->selectiveDebug = FALSE;
   MLton_RCCE_sendRecvControlPacket cp;

@@ -27,8 +27,9 @@ bool isObjptrInToSpace (GC_state s, objptr op) {
 
 void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
   objptr op;
-  pointer p;
+  pointer p, newP = BOGUS_POINTER;
   GC_header header;
+  bool hasIdentity = FALSE;
 
   op = *opp;
   p = objptrToPointer (op, s->heap->start);
@@ -48,12 +49,28 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
 
   if (header != GC_FORWARDED) { /* forward the object */
     size_t size, skip;
-
     size_t headerBytes, objectBytes;
     GC_objectTypeTag tag;
     uint16_t bytesNonObjptrs, numObjptrs;
 
-    splitHeader(s, header, getHeaderp (p), &tag, NULL, &bytesNonObjptrs, &numObjptrs, NULL, NULL);
+    splitHeader(s, header, getHeaderp (p), &tag, &hasIdentity,
+                &bytesNonObjptrs, &numObjptrs, NULL, NULL);
+
+    /* If we are copying immutable objects, we might have already copied the
+     * object. Since we do not modify the original object in that case, we
+     * would have added it to the s->copyObjectMap. Check this map to see if
+     * the obejct has been copied already. */
+    if (s->copyImmutable and (not hasIdentity)) {
+      CopyObjectMap* e = NULL;
+      HASH_FIND_PTR (s->copyObjectMap, &p, e);
+      if (e) { //We have already copied the object to toSpace
+        *opp = (objptr)e->newP;
+        if (DEBUG_DETAILED)
+          fprintf (stderr, "forwardObjptrToSharedHeap: copyImmutable mode: "
+                           "Already copied. newP="FMTPTR"\n", (uintptr_t)*opp);
+        return;
+      }
+    }
 
     /* Compute the space taken by the header and object body. */
     if ((NORMAL_TAG == tag) or (WEAK_TAG == tag)) { /* Fixed size object. */
@@ -186,23 +203,46 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
           fprintf (stderr, "not linking\n");
       }
     }
-    /* Store the forwarding pointer in the old object. */
-    *((GC_header*)(p - GC_HEADER_SIZE)) = GC_FORWARDED;
-    *((objptr*)p) = pointerToObjptr (s->forwardState.back + headerBytes,
-                                     s->forwardState.toStart);
-    if (DEBUG_DETAILED) {
-      fprintf (stderr, "Setting headerp ="FMTPTR" to "FMTHDR"\n",
-               (uintptr_t)(p - GC_HEADER_SIZE), *((GC_header*)(p - GC_HEADER_SIZE)));
-      fprintf (stderr, "Setting p="FMTPTR" to "FMTOBJPTR"\n",
-               (uintptr_t)p, *(objptr*)p);
+
+    if (s->copyImmutable and (not hasIdentity)) {
+      /* Leave the original object as it is if we are copying immutable objects
+       * and the original object is immutable. Add it to the copyObjectMap.
+       */
+      CopyObjectMap* e = (CopyObjectMap*) malloc (sizeof (CopyObjectMap));
+      e->oldP = (pointer)*opp;
+      e->newP = (pointer) s->forwardState.back + headerBytes;
+      newP = e->newP;
+      if (DEBUG_DETAILED)
+        fprintf (stderr, "forwardObjptrToSharedHeap: copyImmutable mode. Adding oldP="FMTPTR" newP="FMTPTR"\n",
+                (uintptr_t)e->oldP, (uintptr_t)e->newP);
+      HASH_ADD_PTR (s->copyObjectMap, oldP, e);
     }
+    else {
+      /* Otherwise, store the forwarding pointer in the old object */
+      *((GC_header*)(p - GC_HEADER_SIZE)) = GC_FORWARDED;
+      *((objptr*)p) = pointerToObjptr (s->forwardState.back + headerBytes,
+                                      s->forwardState.toStart);
+      if (DEBUG_DETAILED) {
+        fprintf (stderr, "Setting headerp ="FMTPTR" to "FMTHDR"\n",
+                (uintptr_t)(p - GC_HEADER_SIZE), *((GC_header*)(p - GC_HEADER_SIZE)));
+        fprintf (stderr, "Setting p="FMTPTR" to "FMTOBJPTR"\n",
+                (uintptr_t)p, *(objptr*)p);
+      }
+    }
+
     /* Update the back of the queue. */
     s->sharedFrontier += size + skip;
-    assert (isAligned ((size_t)s->forwardState.back + GC_NORMAL_HEADER_SIZE,
-                       s->alignment));
+    assert (isAligned ((size_t)s->forwardState.back + GC_NORMAL_HEADER_SIZE, s->alignment));
     s->forwardState.back = s->sharedFrontier;
   }
-  *opp = *((objptr*)p);
+
+  if (s->copyImmutable and (not hasIdentity)) {
+    assert (newP != BOGUS_POINTER);
+    *opp = (objptr)newP;
+  }
+  else
+    *opp = *((objptr*)p);
+
   if (DEBUG_DETAILED)
     fprintf (stderr,
              "forwardObjptrToSharedHeap --> *opp = "FMTPTR"\n",
@@ -217,8 +257,6 @@ void forwardObjptrToSharedHeap (GC_state s, objptr* opp) {
   assert (isObjptrInToSpace (s, *opp) || isObjptrInHeap (s, s->sharedHeap, *opp));
   RCCE_DCMflush ();
 }
-
-CopyObjectMap* copyObjectMap = NULL;
 
 /* copyObjptr (s, opp)
  * Copies the object pointed to by *opp to the toSpace.
@@ -243,7 +281,7 @@ void copyObjptr (GC_state s, objptr *opp) {
     return;
 
   CopyObjectMap* e = NULL;
-  HASH_FIND_PTR (copyObjectMap, &p, e);
+  HASH_FIND_PTR (s->copyObjectMap, &p, e);
   if (e) { //We have already copied the object to toSpace
     *opp = (objptr)e->newP;
     if (DEBUG_DETAILED)
@@ -298,7 +336,7 @@ void copyObjptr (GC_state s, objptr *opp) {
   if (DEBUG_DETAILED)
     fprintf (stderr, "copyObjptr: Adding oldP="FMTPTR" newP="FMTPTR"\n",
              (uintptr_t)e->oldP, (uintptr_t)e->newP);
-  HASH_ADD_PTR (copyObjectMap, oldP, e);
+  HASH_ADD_PTR (s->copyObjectMap, oldP, e);
 
   if (isPointerInToSpace (s, (pointer)opp)) {
     *opp = pointerToObjptr (s->forwardState.back + headerBytes,

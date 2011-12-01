@@ -6,7 +6,7 @@
  * See the file MLton-LICENSE for details.
  *)
 
-functor TypeCheck2 (S: TYPE_CHECK2_STRUCTS): TYPE_CHECK2 = 
+functor TypeCheck2 (S: TYPE_CHECK2_STRUCTS): TYPE_CHECK2 =
 struct
 
 open S
@@ -80,7 +80,7 @@ fun checkScopes (program as
                     CPointer => ()
                   | Datatype tycon => getTycon tycon
                   | IntInf => ()
-                  | Object {args, con, ...} => 
+                  | Object {args, con, ...} =>
                        let
                           val _ = loopObjectCon con
                           val _ = Prod.foreach (args, loopType)
@@ -99,7 +99,7 @@ fun checkScopes (program as
       val bindVar = fn (x, ty) => (loopType ty; bindVar (x, ty))
       fun loopExp exp =
          let
-            val _ = 
+            val _ =
                case exp of
                   Const _ => ()
                 | Inject {sum, variant, ...} => (getTycon sum; getVar variant)
@@ -112,8 +112,8 @@ fun checkScopes (program as
          end
       fun loopStatement (s: Statement.t): unit =
          let
-            val _ = 
-               case s of 
+            val _ =
+               case s of
                   Bind {exp, ty, var, ...} =>
                      let
                         val _ = loopExp exp
@@ -123,7 +123,7 @@ fun checkScopes (program as
                         ()
                      end
                 | Profile _ => ()
-                | Update {base, value, ...} => 
+                | Update {base, value, ...} =>
                      (Base.foreach (base, getVar); getVar value)
          in
             ()
@@ -143,10 +143,10 @@ fun checkScopes (program as
                            Vector.foreach
                            (cases, fn (x, _) =>
                             let
-                               val _ = 
+                               val _ =
                                   HashSet.insertIfNew
                                   (table, toWord x, fn y => equals (x, y),
-                                   fn () => x, 
+                                   fn () => x,
                                    fn _ => Error.bug "Ssa2.TypeCheck2.loopTransfer: redundant branch in case")
                             in
                                ()
@@ -158,7 +158,7 @@ fun checkScopes (program as
                      end
                   fun doitCon cases =
                      let
-                        val numCons = 
+                        val numCons =
                            case Type.dest (getVar' test) of
                               Type.Datatype t => getTycon' t
                             | _ => Error.bug (concat
@@ -187,7 +187,7 @@ fun checkScopes (program as
                   val _ = getVar test
                   val _ =
                      case cases of
-                        Cases.Con cs => doitCon cs 
+                        Cases.Con cs => doitCon cs
                       | Cases.Word (_, cs) =>
                            doit (cs, WordX.equals, Word.fromIntInf o WordX.toIntInf)
                in
@@ -210,7 +210,7 @@ fun checkScopes (program as
                   val _ = Vector.foreach (statements, loopStatement)
                   val _ = loopTransfer transfer
                   val _ = Vector.foreach (children, loop)
-                  val _ = Vector.foreach 
+                  val _ = Vector.foreach
                           (statements, fn s =>
                            Statement.foreachDef (s, unbindVar o #1))
                   val _ = Vector.foreach (args, unbindVar o #1)
@@ -240,11 +240,11 @@ fun checkScopes (program as
       val _ = Vector.foreach
               (datatypes, fn Datatype.T {tycon, cons} =>
                (bindTycon (tycon, Vector.length cons)
-                ; Vector.foreachi (cons, fn (i, {con, ...}) => 
+                ; Vector.foreachi (cons, fn (i, {con, ...}) =>
                                    bindCon (con, i))))
       val _ = Vector.foreach
               (datatypes, fn Datatype.T {cons, ...} =>
-               Vector.foreach (cons, fn {args, ...} => 
+               Vector.foreach (cons, fn {args, ...} =>
                                Prod.foreach (args, loopType)))
       val _ = Vector.foreach (globals, loopStatement)
       val _ = List.foreach (functions, bindFunc o Function.name)
@@ -278,7 +278,7 @@ structure Function =
                let
                   fun bug (msg: string): 'a =
                      let
-                        val _ = 
+                        val _ =
                            Vector.foreach
                            (blocks, fn Block.T {label, ...} =>
                             let
@@ -346,7 +346,7 @@ structure Function =
                                  outputl (List.layout SourceInfo.layout sources,
                                           Out.error)
                               end
-                           val _ = 
+                           val _ =
                               if (case transfer of
                                      Call {return, ...} =>
                                         let
@@ -471,7 +471,7 @@ fun typeCheck (program as Program.T {datatypes, ...}): unit =
          case b of
             Base.Object ty => ty
           | Base.VectorSub {index, vector} =>
-               if Type.isVector vector 
+               if Type.isVector vector
                   then let
                           val _ =
                              if Type.equals (index, Type.word (WordSize.seqIndex ()))
@@ -485,7 +485,7 @@ fun typeCheck (program as Program.T {datatypes, ...}): unit =
          case Type.dest base of
             Type.Object {args, ...} => Prod.elt (args, offset)
           | _ => error ("select of non object", Layout.empty)
-      fun update {base, offset, value} =
+      fun update {base, offset, value, needsMove} =
          case Type.dest base of
             Type.Object {args, ...} =>
                let

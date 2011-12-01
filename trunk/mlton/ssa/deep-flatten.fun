@@ -708,6 +708,7 @@ fun flatten (program as Program.T {datatypes, functions, globals, main}) =
              | MLton_move => dontFlatten ()
              | RCCE_send => dontFlatten ()
              | RCCE_recv => dontFlatten ()
+             | MLton_move2 => dontFlatten ()
              | SQ_enque => dontFlatten ()
              | SQ_deque => dontFlatten ()
              | Thread_setSavedClosure => dontFlatten ()
@@ -721,7 +722,8 @@ fun flatten (program as Program.T {datatypes, functions, globals, main}) =
              | Lwtgc_isObjptr => dontFlatten ()
              | Lwtgc_isObjptrInLocalHeap => dontFlatten ()
              | Lwtgc_isObjptrInSharedHeap => dontFlatten ()
-             | Lwtgc_isClosureVirgin => dontFlatten ()
+             | Lwtgc_isObjectClosureClean => dontFlatten ()
+             | Lwtgc_isThreadClosureClean => dontFlatten ()
              | Weak_get => deWeak (arg 0)
              | Weak_new =>
                   let val a = arg 0
@@ -746,7 +748,7 @@ fun flatten (program as Program.T {datatypes, functions, globals, main}) =
              | Object e => Object.select (Equatable.value e, offset)
              | _ => Error.bug "DeepFlatten.select:"
          end
-      fun update {base, offset, value} =
+      fun update {base, offset, value, needsMove} =
          coerce {from = value,
                  to = select {base = base, offset = offset}}
       fun const c = typeValue (Type.ofConst c)
@@ -986,7 +988,7 @@ fun flatten (program as Program.T {datatypes, functions, globals, main}) =
             case s of
                Bind b => transformBind b
              | Profile _ => simple ()
-             | Update {base, offset, value} =>
+             | Update {base, offset, value, needsMove} =>
                   let
                      val baseVar =
                         case base of
@@ -1006,7 +1008,8 @@ fun flatten (program as Program.T {datatypes, functions, globals, main}) =
                                  if not (TypeTree.isFlat child)
                                     then [Update {base = base,
                                                   offset = offset,
-                                                  value = replaceVar value}]
+                                                  value = replaceVar value,
+                                                  needsMove = needsMove}]
                                  else
                                     let
                                        val (vt, ss') =
@@ -1025,7 +1028,8 @@ fun flatten (program as Program.T {datatypes, functions, globals, main}) =
                                               List.push (us,
                                                          Update {base = base,
                                                                  offset = offset,
-                                                                 value = var})
+                                                                 value = var,
+                                                                 needsMove = needsMove})
                                            end)
                                     in
                                        !us

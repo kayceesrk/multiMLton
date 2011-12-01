@@ -323,6 +323,8 @@ pointer foreachObjptrInRange (GC_state s, pointer front, pointer *back,
   return foreachObjptrInRangeWithFill (s, front, back, f, skipWeaks, FALSE);
 }
 
+
+
 pointer foreachObjptrInRangeWithFill (GC_state s, pointer front, pointer *back,
                                       GC_foreachObjptrFun f, bool skipWeaks, bool fillForwarded) {
   pointer b;
@@ -395,6 +397,72 @@ pointer foreachObjptrInRangeWithFill (GC_state s, pointer front, pointer *back,
   }
   return front;
 }
+
+void foreachObjectInRange (GC_state s, pointer front, pointer back,
+                           GC_foreachObjectFun f, __attribute__((unused)) bool skipWeaks) {
+  pointer b;
+
+  assert (isFrontierAligned (s, front));
+  if (DEBUG_DETAILED)
+    fprintf (stderr,
+             "foreachObjectInRange  front = "FMTPTR"  back = "FMTPTR" [%d]\n",
+             (uintptr_t)front, (uintptr_t)back, s->procId);
+  b = back;
+  assert (front <= b);
+  while (front < b) {
+    if (s->forwardState.rangeListCurrent &&
+        s->forwardState.rangeListCurrent->start == front) {
+      if (DEBUG_DETAILED)
+        fprintf (stderr, "foreachObjectInRange: skipping range from "FMTPTR" to "FMTPTR" [%d]\n",
+                  (uintptr_t)front, (uintptr_t)s->forwardState.rangeListCurrent->end, s->procId);
+      front = s->forwardState.rangeListCurrent->end;
+      s->forwardState.rangeListCurrent = s->forwardState.rangeListCurrent->next;
+    }
+    assert (isAligned ((size_t)front, GC_MODEL_MINALIGN));
+    if (DEBUG_DETAILED)
+      fprintf (stderr,
+                "  front = "FMTPTR"  *back = "FMTPTR" [%d]\n",
+                (uintptr_t)front, (uintptr_t)(*back), s->procId);
+    pointer p = advanceToObjectData (s, front);
+    assert (isAligned ((size_t)p, s->alignment));
+
+    //Skip over forwarded object and may be fill the gap
+    if (getHeader (p) == GC_FORWARDED) {
+      objptr op = (objptr)p;
+      pointer realP;
+      do {
+        op = *(objptr*)op;
+        realP = objptrToPointer (op, s->sharedHeap->start);
+
+        //We might be in the middle of a heap translation in which case,
+        //the realP needs to be translated. We must also be in the middle
+        //of a shared heap collection.
+        if (s->translateState.from != BOGUS_POINTER and
+            Proc_executingInSection (s)) {
+          op = (objptr)realP;
+          translateObjptrShared (s, &op);
+          realP = (pointer)op;
+        }
+        *(objptr*)p = op;
+      } while (getHeader(realP) == GC_FORWARDED);
+
+      GC_objectTypeTag tag;
+      splitHeader (s, getHeader (realP), getHeaderp (realP),
+                    &tag, NULL, NULL, NULL, NULL, NULL);
+
+      if (tag == STACK_TAG)
+        front = p + sizeofObjectNoHeader (s, p);
+      else
+        front = p + sizeofObjectNoHeader (s, realP);
+    }
+    else {
+      bool toContinue = f (s, p);
+      if (not toContinue) return;
+      front += sizeofObject (s, p);
+    }
+  }
+}
+
 
 
 /* Apply f to the frame index of each frame in the current thread's stack. */

@@ -782,17 +782,15 @@ structure Function =
                  start = start}
          end
 
-      fun addressInLocalHeap (addr) =
+      fun addressInCurrentSession (addr) =
       let
         val sz = WordSize.objptr ()
         val indexTy = Type.word sz
         val c1 = Var.newNoname ()
         val c2 = Var.newNoname ()
-        val c3 = Var.newNoname ()
-        val c4 = Var.newNoname ()
         val cond = Var.newNoname ()
         val stmts =
-          [PrimApp {args = Vector.new2 (Operand.cast (Operand.Runtime GCField.LocalHeapStart, indexTy),
+          [PrimApp {args = Vector.new2 (Operand.cast (Operand.Runtime GCField.SessionStart, indexTy),
                                         Operand.cast (addr, indexTy)),
                     dst = SOME (c1, Type.bool),
                     prim = Prim.wordLt (sz, {signed = false})},
@@ -800,20 +798,12 @@ structure Function =
                                         Operand.cast (Operand.Runtime GCField.LimitPlusSlop, indexTy)),
                     dst = SOME (c2, Type.bool),
                     prim = Prim.wordLt (sz, {signed = false})},
-          PrimApp {args = Vector.new2 (Operand.cast (addr, indexTy),
-                                        Operand.cast (Operand.Runtime GCField.LocalHeapStart, indexTy)),
-                    dst = SOME (c3, Type.bool),
-                    prim = Prim.wordEqual sz},
           PrimApp {args = Vector.new2 (Operand.Var {var = c1, ty = Type.bool},
                                         Operand.Var {var = c2, ty = Type.bool}),
-                    dst = SOME (c4, Type.bool),
-                    prim = Prim.wordAndb (WordSize.bool)},
-          PrimApp {args = Vector.new2 (Operand.Var {var = c3, ty = Type.bool},
-                                        Operand.Var {var = c4, ty = Type.bool}),
                     dst = SOME (cond, Type.bool),
-                    prim = Prim.wordOrb (WordSize.bool)}]
+                    prim = Prim.wordAndb (WordSize.bool)}]
       in
-        (stmts, cond)
+        (stmts, Operand.Var {var = cond, ty = Type.bool})
       end
 
 
@@ -874,10 +864,11 @@ structure Function =
                       val stmts =
                         [PrimApp {args = Vector.new2 (Operand.cast (addr, indexTy),
                                                       pointerMask),
-                                  dst = SOME (cond, Type.bool),
+                                  dst = SOME (cond, indexTy),
                                   prim = Prim.wordAndb sz}]
+
                     in
-                      (stmts, cond)
+                      (stmts, Operand.Cast (Operand.Var {var = cond, ty = indexTy}, Type.bits (WordSize.bits (WordSize.objptr ()))))
                     end
 
                     local
@@ -894,12 +885,24 @@ structure Function =
                                     prim = prim (WordSize.fromBits (Type.width ty))},
                            Var {ty = ty, var = tmp})
                         end
+
                       val andb = make Prim.wordAndb
                       val lshift = make Prim.wordLshift
                       val orb = make Prim.wordOrb
                       val rshift = make (fn s => Prim.wordRshift (s, {signed = false}))
 
-                    in
+                      open CFunction
+                      open Type.BuiltInCFunction
+
+                      type t = Type.t CFunction.t
+
+                      datatype z = datatype Convention.t
+                      datatype z = datatype SymbolScope.t
+                      datatype z = datatype Target.t
+
+                      fun make i = WordX.fromIntInf (i, WordSize.objptrHeader ())
+                      fun make2 i = WordX.fromIntInf (i, WordSize.objptr ())
+
                       fun score base =
                       let
                         val headerOp = Offset {base = base,
@@ -918,47 +921,55 @@ structure Function =
                       in
                         Vector.fromList stmts
                       end
-                    end
 
-                    fun maybeScore (continue: Label.t, rhsAddr) =
-                      let
-                        val (stmts, cond) = isNotObjptr rhsAddr
+                    in
 
-                        val scoreBlock =
-                          newBlock
-                          {args = Vector.new0 (),
-                            kind = Kind.Jump,
-                            statements = score rhsAddr,
-                            transfer =
-                              Transfer.Goto {args = Vector.new0 (),
-                                            dst = continue}}
+                      fun maybeScore (continue: Label.t, lhsAddr, rhsAddr) =
+                        let
+
+                          val (stmts, cond) = isNotObjptr rhsAddr
+
+                          val scoreBlock =
+                            newBlock
+                            {args = Vector.new0 (),
+                              kind = Kind.Jump,
+                              statements = score rhsAddr,
+                              transfer =
+                                Transfer.Goto {args = Vector.new0 (),
+                                              dst = continue}}
+
+                          val transfer =
+                            Transfer.Switch (Switch.T
+                            {cases = Vector.new2 ((make2 0, scoreBlock), (make2 1, continue)),
+                              default = NONE,
+                              size = WordSize.objptr (),
+                              test = cond})
+
                       in
-                        (stmts, Transfer.ifBool (Operand.Var {var = cond, ty = Type.bool},
-                                                 {truee = continue, falsee = scoreBlock}))
-
-                      end
-
+                        (stmts, transfer)
+                      end (* maybeScore END *)
+                    end
                   in
                     case s of
                       Move {dst, src} =>
                         let
-                          val ty = case dst of
-                                        Operand.ArrayOffset {ty, ...} => SOME ty
-                                      | Operand.Offset {ty, ...} => SOME ty
-                                      | _ => NONE
+                          val (base, ty) = case dst of
+                                        Operand.ArrayOffset {base, ty, ...} => (SOME base, SOME ty)
+                                      | Operand.Offset {base, ty, ...} => (SOME base, SOME ty)
+                                      | _ => (NONE, NONE)
                           val cond1 = case ty of
                                            NONE => false
                                          | SOME ty => Type.isObjptr ty
-                          fun getCond2 src =
+                          fun notaconst src =
                             case src of
-                                 Operand.Cast (t, _) => getCond2 t
+                                 Operand.Cast (t, _) => notaconst t
                                | Operand.Const _ => false
                                | _ => true
-                          val cond2 = getCond2 src
+                          val cond2 = notaconst src
                         in
                           (if cond1 andalso cond2 then
                              split (Vector.new0 (), Kind.Jump, [s] @ ss,
-                                    fn l => maybeScore (l, src))
+                                    fn l => maybeScore (l, valOf base, src))
                            else
                              add s)
                         end
@@ -1781,7 +1792,7 @@ structure Program =
                checkOperand
             fun checkOperands v = Vector.foreach (v, checkOperand)
             fun check' (x, name, isOk, layout) =
-               Err.check (name, fn () => isOk x, fn () => layout x)
+               Err.check (name, fn () => (isOk x), fn () => layout x)
             val labelKind = Block.kind o labelBlock
             fun statementOk (s: Statement.t): bool =
                let

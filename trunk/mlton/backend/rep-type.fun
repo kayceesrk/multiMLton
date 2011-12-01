@@ -563,6 +563,7 @@ fun ofGCField (f: GCField.t): t =
        | StackBottom => cpointer ()
        | StackLimit => cpointer ()
        | StackTop => cpointer ()
+       | SessionStart => cpointer ()
    end
 
 fun castIsOk {from, to, tyconTy = _} =

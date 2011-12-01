@@ -20,7 +20,7 @@ typedef enum {
 static inline bool isPointerMarked (pointer p);
 static inline bool isPointerMarkedByMode (pointer p, GC_markMode m);
 static size_t dfsMarkByMode (GC_state s, pointer root,
-                             GC_foreachObjectFun f,
+                             GC_foreachObjectDfsFun f,
                              GC_markMode mode,
                              bool shouldHashCons,
                              bool shouldLinkWeaks,
@@ -30,6 +30,6 @@ static inline void dfsMarkWithHashConsWithLinkWeaks (GC_state s, objptr *opp);
 static inline void dfsMarkWithoutHashConsWithLinkWeaks (GC_state s, objptr *opp);
 static inline void dfsMarkTraceShared (GC_state s, objptr *opp);
 static inline void dfsUnmark (GC_state s, objptr *opp);
-static inline void emptyForeachObjectFun (GC_state s, pointer p);
+static inline bool emptyForeachObjectFun (GC_state s, pointer current, pointer parent);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

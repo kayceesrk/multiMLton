@@ -44,6 +44,11 @@ typedef struct {
   ThreadKind kind;
 } PreemptThread;
 
+typedef struct {
+  pointer p;
+  size_t size;
+} ClosureToSpawn;
+
 #endif /* (defined (MLTON_GC_INTERNAL_TYPES)) */
 
 #if (defined (MLTON_GC_INTERNAL_BASIS))

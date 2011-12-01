@@ -29,6 +29,7 @@ struct GC_state {
   pointer localHeapStart;
   pointer sharedHeapStart;
   pointer sharedHeapEnd;
+  pointer sessionStart;
   struct GC_generationalMaps generationalMaps; /* generational maps for this heap */
 
   /* ML arrays and queues */
@@ -143,9 +144,17 @@ struct GC_state {
   struct GC_vectorInit *vectorInits;
   uint32_t vectorInitsLength;
   UT_array* reachable;
+  CopyObjectMap* copyObjectMap;
+  bool copyImmutable;
   GC_weak weaks; /* Linked list of (live) weak pointers */
   char *worldFile;
 
+  /* DEV variables
+   * ------------
+   * The following variables are only used for development purposes. The are to
+   * be removed/not used for production/benchmarking runs.
+   */
+  FILE* fp;
 };
 
 #endif /* (defined (MLTON_GC_INTERNAL_TYPES)) */
@@ -174,6 +183,7 @@ void writeNeedsBarrier (GC_state s, GC_barrierInfo b);
 
 #if (defined (MLTON_GC_INTERNAL_BASIS))
 
+PRIVATE void GC_setSelectiveDebug (GC_state *gs, bool b);
 PRIVATE bool GC_getAmOriginal (GC_state *gs);
 PRIVATE void GC_setAmOriginal (GC_state *gs, bool b);
 PRIVATE bool GC_getIsPCML (void);

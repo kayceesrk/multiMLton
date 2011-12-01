@@ -100,7 +100,7 @@ local
              end)
          end
 
-      val _ = Primitive.MLton.move (ref base, true, false)
+      val _ = Primitive.Lwtgc.move (ref base, true, false)
    in
       fun newThread (f: (unit -> unit)) : Prim.thread =
          let
@@ -137,6 +137,7 @@ in
             (* val _ = mark proc *)
             val r : (unit -> 'a) ref =
                ref (fn () => die "Thread.atomicSwitch didn't set r.\n")
+
             val t: 'a thread ref =
                ref (Paused (fn x => r := x, Prim.current gcState))
             fun fail e = (t := Dead
@@ -169,8 +170,8 @@ in
       (atomicBegin ()
        ; atomicSwitch f)
 
-   val globalNoopThunk : unit -> unit = !(Primitive.MLton.move (ref (fn () => ()), false, false))
-   val globalDead = (Primitive.MLton.move (Dead, false, false))
+   val globalNoopThunk : unit -> unit = !(Primitive.Lwtgc.move (ref (fn () => ()), false, false))
+   val globalDead = (Primitive.Lwtgc.move (Dead, false, false))
 
    fun 'a atomicSwitchForWB f =
    let
@@ -248,7 +249,7 @@ in
                    let
                       val _ =
                          case !r of
-                            Paused (f, _) => f (fn () => ())
+                            Paused (f, _) => f (globalNoopThunk)
                           | _ => raise die "Thread.setSignalHandler saw strange thread"
                    in
                       t

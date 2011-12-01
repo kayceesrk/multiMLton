@@ -6,9 +6,6 @@
  * See the file MLton-LICENSE for details.
  */
 
-
-UT_icd icd = {sizeof(pointer), NULL, NULL, NULL};
-
 void reclaimObjects (GC_state s) {
   assert (s->reachable);
 
@@ -93,7 +90,7 @@ void reclaimObjects (GC_state s) {
   ENTER_LOCAL0 (s);
 }
 
-void addToReachableArray (GC_state s, pointer p) {
+bool addToReachableArray (GC_state s, pointer p, __attribute__((unused)) pointer prev) {
   bool toPush = TRUE;
   assert (s->reachable);
   if (isPointerInHeap (s, s->sharedHeap, p)) {
@@ -111,6 +108,7 @@ void addToReachableArray (GC_state s, pointer p) {
     if (toPush)
       utarray_push_back (s->reachable, &p);
   }
+  return TRUE;
 }
 
 void dfsMarkReachable (GC_state s, objptr* opp) {

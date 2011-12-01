@@ -35,8 +35,9 @@ structure Controls =
       val safe = _command_line_const "MLton.safe": bool = true;
       val bufSize = _command_line_const "TextIO.bufSize": Int32.int = 4096;
 
-      val wbUsesTypeInfo = _command_line_const "MLton.wbTypeInfo": bool = true;
-      val lazySpawn = _command_line_const "MLton.lazySpawn": bool = true;
+      val readBarrier = _command_line_const "MLton.GC.readBarrier": bool = true;
+      val wbUsesCleanliness = _command_line_const "MLton.GC.WB.useCleanliness": bool = true;
+      val lazySpawn = _command_line_const "MLton.GC.WB.lazySpawn": bool = true;
    end
 
 structure Exn =
@@ -77,10 +78,12 @@ struct
   val addToSpawnOnWBA = _prim "Lwtgc_addToSpawnOnWBA": 'a * Int32.int -> unit;
   val isObjptrInLocalHeap = _prim "Lwtgc_isObjptrInLocalHeap": 'a -> bool;
   val isObjptrInSharedHeap = _prim "Lwtgc_isObjptrInSharedHeap": 'a -> bool;
-  val isClosureVirgin = _prim "Lwtgc_isClosureVirgin": 'a -> bool;
+  val isObjectClosureClean = _prim "Lwtgc_isObjectClosureClean": 'a -> bool;
+  val isThreadClosureClean = _prim "Lwtgc_isThreadClosureClean": 'a -> bool;
   val isObjptr = _prim "Lwtgc_isObjptr": 'a -> bool;
   val needPreemption = _prim "Lwtgc_needPreemption": 'a ref * 'a -> bool;
   val move = _prim "MLton_move": 'a * bool * bool -> 'a;
+  val move2 = _prim "MLton_move2": 'a * bool * bool -> 'a;
 end
 
 structure Ref =
@@ -92,36 +95,33 @@ structure Ref =
       val ffiPrint = _import "GC_print": Int32.int -> unit;
       val preemptFn = ref (fn () => ())
       val deref = _prim "Ref_deref": 'a ref -> 'a;
-      val refAssign = _prim "Ref_assign": 'a ref * 'a -> unit;
+      val refAssign = _prim "Ref_assign": 'a ref * 'a * bool -> unit;
       val eq = _prim "MLton_eq": 'a * 'a -> bool;
 
-      fun writeBarrier (r, v) =
-      let
-        val preemptFn = deref preemptFn
-        val v' = if (Lwtgc.isObjptr v) andalso
-                    (Lwtgc.isObjptrInLocalHeap v) andalso
-                    (Lwtgc.isObjptrInSharedHeap r)
-                 then
-                    (if Controls.wbUsesTypeInfo andalso Lwtgc.isClosureVirgin v then
-                      let val _ = Lwtgc.move (v, false, true) in v end
-                     else
-                      (Lwtgc.addToMoveOnWBA v;
-                       preemptFn ();
-                       v))
-                 else v
-      in
-        v'
-      end
+      fun writeBarrierRef (r, v) =
+        (if (Controls.readBarrier) then
+          refAssign (r, v, false)
+        else
+          let
+            val preemptFn = deref preemptFn
+            val needsMove =
+              if (Lwtgc.isObjptr v) andalso
+                 (Lwtgc.isObjptrInLocalHeap v) andalso
+                 (Lwtgc.isObjptrInSharedHeap r) then
+                (if Controls.wbUsesCleanliness andalso
+                    Lwtgc.isObjectClosureClean v then
+                      true
+                else
+                  (Lwtgc.addToMoveOnWBA v;
+                   preemptFn ();
+                   false))
+              else false
+          in
+            refAssign (r, v, needsMove)
+          end)
 
-      fun assign (r, v) =
-      let
-        val v' = writeBarrier (r,v)
-      in
-        refAssign (r, v')
-      end
-
-     val unsafeAssign = refAssign
-
+      fun assign (r, v) = writeBarrierRef (r, v)
+      fun unsafeAssign (r,v) = refAssign (r, v, false)
    end
 
 

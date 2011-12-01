@@ -140,7 +140,9 @@ fun setCommandLineConstant (c as {name, value}) =
          end
       val () =
          case List.peek ([("Exn.keepHistory", make (Bool.fromString, Control.exnHistory)),
-                          ("MLton.wbTypeInfo", make (Bool.fromString, Control.wbUsesTypeInfo))],
+                          ("MLton.GC.WB.useCleanliness", make (Bool.fromString, Control.wbUsesCleanliness)),
+                          ("MLton.GC.readBarrier", make (Bool.fromString, Control.readBarrier)),
+                          ("MLton.GC.RB.stackRB", make (Bool.fromString, Control.stackRB))],
                          fn (s, _) => s = name) of
             NONE => ()
           | SOME (_,set) => set ()
@@ -545,7 +547,8 @@ fun elaborate {input: MLBString.t}: Xml.Program.t =
              signalIsPending = get "signalsInfo.signalIsPending_Offset",
              stackBottom = get "stackBottom_Offset",
              stackLimit = get "stackLimit_Offset",
-             stackTop = get "stackTop_Offset"
+             stackTop = get "stackTop_Offset",
+             sessionStart = get "sessionStart_Offset"
              };
             Runtime.GCField.setSizes
             {
@@ -568,7 +571,8 @@ fun elaborate {input: MLBString.t}: Xml.Program.t =
              signalIsPending = get "signalsInfo.signalIsPending_Size",
              stackBottom = get "stackBottom_Size",
              stackLimit = get "stackLimit_Size",
-             stackTop = get "stackTop_Size"
+             stackTop = get "stackTop_Size",
+             sessionStart = get "sessionStart_Size"
              }
          end
       (* Setup endianness *)

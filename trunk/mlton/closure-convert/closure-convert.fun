@@ -942,6 +942,7 @@ fun closureConvert
                      val v1 = Vector.new1
                      val v2 = Vector.new2
                      val v3 = Vector.new3
+                     val v4 = Vector.new4
                      fun primApp (targs, args) =
                         Dexp.primApp {args = args,
                                       prim = prim,
@@ -983,10 +984,11 @@ fun closureConvert
                                      val v = Value.deArray (VarInfo.value a)
                                   in
                                      primApp (v1 (valueType v),
-                                              v3 (convertVarInfo a,
+                                              v4 (convertVarInfo a,
                                                   convertVarExp (arg 1),
                                                   coerce (convertVarInfo y,
-                                                          VarInfo.value y, v)))
+                                                          VarInfo.value y, v),
+                                                  convertVarExp (arg 3)))
                                   end
                              | MLton_eq =>
                                   let
@@ -1033,9 +1035,10 @@ fun closureConvert
                                      val v = Value.deRef (VarInfo.value r)
                                   in
                                      primApp (v1 (valueType v),
-                                              v2 (convertVarInfo r,
+                                              v3 (convertVarInfo r,
                                                   coerce (convertVarInfo y,
-                                                          VarInfo.value y, v)))
+                                                          VarInfo.value y, v),
+                                                  convertVarExp (arg 2)))
                                   end
                              | Ref_ref =>
                                   let

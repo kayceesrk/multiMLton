@@ -1,8 +1,7 @@
 (* From the SML/NJ benchmark suite. *)
 signature BMARK =
   sig
-    val doit : int -> unit
-    val testit : TextIO.outstream -> unit
+    val doit : int -> OS.Process.status
   end;
 structure Main : BMARK =
   struct
@@ -139,7 +138,7 @@ structure Main : BMARK =
 
     fun show pr = (app (fn s => (pr s; pr "\n"))) o plot o alive
 
-    fun doit () = show (fn _ => ()) (nthgen gun 25000)
+    fun doit () = show print (nthgen gun 5000)
 
     val doit =
        fn size =>
@@ -147,11 +146,29 @@ structure Main : BMARK =
           fun loop n =
              if n = 0
                 then ()
-             else (doit();
+             else (ignore (MLton.Pacml.spawn (doit));
                    loop(n-1))
        in loop size
        end
 
-    fun testit strm = show (fn c => TextIO.output (strm, c)) (nthgen gun 50)
+    val doit = fn size => MLton.Pacml.run (fn () => doit size)
+
 
   end (* Life *)
+
+val n =
+  case CommandLine.arguments () of
+     s1::_ => (case (Int.fromString s1) of
+                        SOME n1=> n1
+                      | _ => 64)
+   | _ => 64
+
+val ts = Time.now ()
+val _ = TextIO.print (concat ["Starting main\n"])
+val _ = TextIO.print (concat ["numThreads = ", Int.toString n, "\n"])
+val _ = Main.doit (n)
+val te = Time.now ()
+val d = Time.-(te, ts)
+val _ = TextIO.print (concat ["Time start: ", Time.toString ts, "\n"])
+val _ = TextIO.print (concat ["Time end:   ", Time.toString te, "\n"])
+val _ = TextIO.print (concat ["Time diff:  ", LargeInt.toString (Time.toMilliseconds d), "ms\n"])

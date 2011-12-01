@@ -178,7 +178,7 @@ structure CFunction =
          T {args = Vector.new2 (Type.gcState (), Type.cint ()),
             bytesNeeded = NONE,
             convention = Cdecl,
-            ensuresBytesFree = true,
+            ensuresBytesFree = false,
             mayGC = true,
             maySwitchThreads = true,
             modifiesFrontier = true,
@@ -195,7 +195,7 @@ structure CFunction =
          T {args = Vector.new2 (Type.gcState (), Type.thread ()),
             bytesNeeded = NONE,
             convention = Cdecl,
-            ensuresBytesFree = true,
+            ensuresBytesFree = false,
             mayGC = true,
             maySwitchThreads = true,
             modifiesFrontier = true,
@@ -301,16 +301,16 @@ structure CFunction =
             bytesNeeded = NONE,
             convention = Cdecl,
             ensuresBytesFree = false,
-            mayGC = false,
+            mayGC = true,
             maySwitchThreads = false,
-            modifiesFrontier = false,
+            modifiesFrontier = true,
             prototype = (Vector.new3 (CType.gcState, CType.cpointer, CType.cint ()),
                          NONE),
-            readsStackTop = false,
+            readsStackTop = true,
             return = Type.unit,
             symbolScope = Private,
             target = Direct "GC_addToSpawnOnWBA",
-            writesStackTop = false}
+            writesStackTop = true}
 
       fun addToMoveOnWBA t =
          T {args = Vector.new2 (Type.gcState (), t),
@@ -343,11 +343,44 @@ structure CFunction =
             target = Direct "GC_addToPreemptOnWBA",
             writesStackTop = false}
 
+      fun score t =
+         T {args = Vector.new3 (Type.gcState (), t, t),
+            bytesNeeded = NONE,
+            convention = Cdecl,
+            ensuresBytesFree = false,
+            mayGC = false,
+            maySwitchThreads = false,
+            modifiesFrontier = false,
+            prototype = (Vector.new3 (CType.gcState, CType.cpointer, CType.cpointer),
+                         NONE),
+            readsStackTop = false,
+            return = Type.unit,
+            symbolScope = Private,
+            target = Direct "GC_score",
+            writesStackTop = false}
+
+
+      fun moveFromWB t =
+         T {args = Vector.new4 (Type.gcState (), t, Type.bool, Type.bool),
+            bytesNeeded = NONE,
+            convention = Cdecl,
+            ensuresBytesFree = false,
+            mayGC = true,
+            maySwitchThreads = false,
+            modifiesFrontier = true,
+            prototype = (Vector.new4 (CType.gcState, CType.cpointer, CType.bool, CType.bool),
+                         SOME CType.cpointer),
+            readsStackTop = true,
+            return = t,
+            symbolScope = Private,
+            target = Direct "GC_moveFromWB",
+            writesStackTop = true}
+
       fun move t =
          T {args = Vector.new4 (Type.gcState (), t, Type.bool, Type.bool),
             bytesNeeded = NONE,
             convention = Cdecl,
-            ensuresBytesFree = true,
+            ensuresBytesFree = false,
             mayGC = true,
             maySwitchThreads = false,
             modifiesFrontier = true,
@@ -375,7 +408,7 @@ structure CFunction =
             target = Direct "GC_isInSharedOrForwarded",
             writesStackTop = false}
 
-      fun isClosureVirgin t =
+      fun isThreadClosureClean t =
          T {args = Vector.new2 (Type.gcState (), t),
             bytesNeeded = NONE,
             convention = Cdecl,
@@ -388,7 +421,23 @@ structure CFunction =
             readsStackTop = true,
             return = Type.bool,
             symbolScope = Private,
-            target = Direct "GC_isClosureVirgin",
+            target = Direct "GC_isThreadClosureClean",
+            writesStackTop = false}
+
+      fun isObjectClosureClean t =
+         T {args = Vector.new2 (Type.gcState (), t),
+            bytesNeeded = NONE,
+            convention = Cdecl,
+            ensuresBytesFree = false,
+            mayGC = false,
+            maySwitchThreads = false,
+            modifiesFrontier = false,
+            prototype = (Vector.new2 (CType.gcState, CType.cpointer),
+                         SOME CType.bool),
+            readsStackTop = true,
+            return = Type.bool,
+            symbolScope = Private,
+            target = Direct "GC_isObjectClosureClean",
             writesStackTop = false}
 
 
@@ -1533,9 +1582,9 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                   in
                      case s of
                         S.Statement.Profile e => add (Statement.Profile e)
-                      | S.Statement.Update {base, offset, value} =>
+                      | S.Statement.Update {base, offset, value, needsMove} =>
                           let
-                            fun updateCard (lhsAddr: Operand.t, rhsAddr, newRhsAddr: Var.t,
+                            fun updateCardRB (lhsAddr: Operand.t, rhsAddr, newRhsAddr: Var.t,
                                             continue: Label.t, returnTy, baseTy):
                                            (Statement.t list * Transfer.t) =
                               let
@@ -1664,6 +1713,142 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                               in
                                 (stmts2, Transfer.Goto {args = Vector.new0 (), dst = isInSharedOrForwardedBlock})
                               end
+
+                            fun updateCardWB (lhsAddr: Operand.t, rhsAddr, newRhsAddr: Var.t,
+                                            continue: Label.t, returnTy, baseTy):
+                                           (Statement.t list * Transfer.t) =
+                              let
+                                  val index = Var.newNoname ()
+                                  (* CHECK; WordSize.objptr or WordSize.cpointer? *)
+                                  val sz = WordSize.objptr ()
+                                  val indexTy = Type.word sz
+                                  val cardElemSize = WordSize.fromBits Bits.inByte
+                                  val cardMarkStmts =
+                                    [PrimApp {args = (Vector.new2
+                                                      (Operand.cast (lhsAddr, Type.bits (WordSize.bits sz)),
+                                                      Operand.word
+                                                      (WordX.fromIntInf (cardSizeLog2, WordSize.shiftArg)))),
+                                              dst = SOME (index, indexTy),
+                                              prim = Prim.wordRshift (sz, {signed = false})},
+                                    Move {dst = (ArrayOffset
+                                                  {base = Runtime GCField.CardMapAbsolute,
+                                                  index = Var {ty = indexTy, var = index},
+                                                  offset = Bytes.zero,
+                                                  scale = Scale.One,
+                                                  ty = Type.word cardElemSize}),
+                                          src = Operand.word (WordX.one cardElemSize)}]
+
+                                val (stmts2, cond2) = addressInLocalHeap (rhsAddr)
+                                val (stmts3, cond3) = addressInSharedHeap (lhsAddr)
+
+                                val newRhsAddrOp =
+                                  Operand.Var {var = newRhsAddr, ty = returnTy}
+
+                                val doesNotScoreBlock =
+                                  newBlock
+                                  {args = Vector.new1 (newRhsAddr, returnTy),
+                                   kind = Kind.Jump,
+                                   statements = Vector.new0 (),
+                                   transfer =
+                                    Transfer.Goto {args = Vector.new0 (),
+                                                   dst = continue}}
+
+                                val origContinue =
+                                  newBlock
+                                  {args = Vector.new0 (),
+                                   kind = Kind.Jump,
+                                   statements = Vector.new0 (),
+                                   transfer =
+                                   Goto {args = Vector.new1 (rhsAddr),
+                                         dst = doesNotScoreBlock}}
+
+
+                                val cReturnVar2 = Var.newNoname ()
+                                val cReturnOp2 = Operand.Var {var = cReturnVar2, ty = returnTy}
+
+                                val returnFromHandler2 =
+                                  newBlock
+                                  {args = Vector.new1 (cReturnVar2, returnTy),
+                                   kind = Kind.CReturn {func = CFunction.moveFromWB returnTy},
+                                   statements = Vector.new0 (),
+                                   transfer =
+                                   Goto {args = Vector.new1 (cReturnOp2),
+                                         dst = doesNotScoreBlock}}
+
+                                val moveBlock2 =
+                                  newBlock
+                                  {args = Vector.new0 (),
+                                   kind = Kind.Jump,
+                                   statements = Vector.new0 (),
+                                   transfer =
+                                    Transfer.CCall
+                                    {args = Vector.new4 (GCState,
+                                                         rhsAddr,
+                                                         Operand.bool false,
+                                                         Operand.bool false),
+                                    func = CFunction.moveFromWB returnTy,
+                                    return = SOME returnFromHandler2}}
+
+                                val cReturnVar1 = Var.newNoname ()
+                                val cReturnOp1 = Operand.Var {var = cReturnVar1, ty = returnTy}
+
+                                val returnFromHandler1 =
+                                  newBlock
+                                  {args = Vector.new1 (cReturnVar1, returnTy),
+                                   kind = Kind.CReturn {func = CFunction.moveFromWB returnTy},
+                                   statements = Vector.new0 (),
+                                   transfer =
+                                   Goto {args = Vector.new1 (cReturnOp1),
+                                         dst = doesNotScoreBlock}}
+
+                                val moveBlock1 =
+                                  newBlock
+                                  {args = Vector.new0 (),
+                                   kind = Kind.Jump,
+                                   statements = Vector.new0 (),
+                                   transfer =
+                                    Transfer.CCall
+                                    {args = Vector.new4 (GCState,
+                                                         rhsAddr,
+                                                         Operand.bool false,
+                                                         Operand.bool false),
+                                    func = CFunction.moveFromWB returnTy,
+                                    return = SOME returnFromHandler1}}
+
+                                val maybeMoveBlock =
+                                  newBlock
+                                  {args = Vector.new0 (),
+                                   kind = Kind.Jump,
+                                   statements = Vector.fromList (stmts2),
+                                   transfer =
+                                    Transfer.ifBool
+                                    (Operand.Var {var = cond2, ty = Type.bool},
+                                     {truee = moveBlock2,
+                                      falsee = origContinue})}
+
+                                val cardMarkBlock =
+                                  newBlock
+                                  {args = Vector.new0 (),
+                                  kind = Kind.Jump,
+                                  statements = Vector.fromList cardMarkStmts,
+                                  transfer =
+                                  Goto {args = Vector.new0 (),
+                                        dst = origContinue}}
+
+                                val checkLHSAddr =
+                                  newBlock
+                                  {args = Vector.new0 (),
+                                   kind = Kind.Jump,
+                                   statements = Vector.fromList (stmts3),
+                                   transfer =
+                                    Transfer.ifBool
+                                    (Operand.Var {var = cond3, ty = Type.bool},
+                                      {truee = maybeMoveBlock,
+                                      falsee = if (!Control.markCards) then cardMarkBlock else origContinue})}
+
+                              in
+                                ([], Transfer.ifBool (Operand.Var {var=needsMove, ty = Type.bool}, {truee=moveBlock1, falsee=checkLHSAddr}))
+                              end
                           in
                            (case toRtype (varType value) of
                                NONE => none ()
@@ -1688,6 +1873,11 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                          baseTy = varType (Base.object base),
                                          offset = offset,
                                          value = valueOp}
+
+                                    val updateCard = if (!Control.readBarrier) then
+                                                       updateCardRB
+                                                     else
+                                                       updateCardWB
 
                                   in
                                     if (Type.isObjptr ty andalso (not isGlobal)) then
@@ -2044,12 +2234,23 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                            else
                                               simpleCCallWithGCState
                                               (CFunction.share (Operand.ty (a 0))))
+                               | MLton_move2 =>
+                                    (case toRtype (varType (arg 0)) of
+                                        NONE => none ()
+                                      | SOME t =>
+                                           if not (Type.isObjptr t) then
+                                             move (a 0)
+                                           else
+                                             ccall {args = Vector.concat
+                                                            [Vector.new1 GCState,
+                                                             vos args],
+                                                    func = CFunction.moveFromWB (Operand.ty (a 0))})
                                | MLton_move =>
                                     (case toRtype (varType (arg 0)) of
                                         NONE => none ()
                                       | SOME t =>
-                                           if not (Type.isObjptr t)
-                                              then none ()
+                                           if not (Type.isObjptr t) then
+                                             move (a 0)
                                            else
                                              ccall {args = Vector.concat
                                                             [Vector.new1 GCState,
@@ -2103,7 +2304,7 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                            if not (Type.isObjptr t) then
                                              move (Operand.bool false)
                                            else isObjptrInSharedHeap (varOp (arg 0)))
-                               | Lwtgc_isClosureVirgin =>
+                               | Lwtgc_isThreadClosureClean =>
                                     (case toRtype (varType (arg 0)) of
                                         NONE => move (Operand.bool false)
                                       | SOME t =>
@@ -2111,7 +2312,16 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                              move (Operand.bool false)
                                            else
                                               simpleCCallWithGCState
-                                              (CFunction.isClosureVirgin (Operand.ty (a 0))))
+                                              (CFunction.isThreadClosureClean (Operand.ty (a 0))))
+                               | Lwtgc_isObjectClosureClean =>
+                                    (case toRtype (varType (arg 0)) of
+                                        NONE => move (Operand.bool false)
+                                      | SOME t =>
+                                           if not (Type.isObjptr t) then
+                                             move (Operand.bool false)
+                                           else
+                                              simpleCCallWithGCState
+                                              (CFunction.isObjectClosureClean (Operand.ty (a 0))))
                                | Lwtgc_isObjptr =>
                                     (case toRtype (varType (arg 0)) of
                                         NONE => move (Operand.bool false)
@@ -2126,17 +2336,17 @@ fun convert (program as S.Program.T {functions, globals, main, ...},
                                     simpleCCallWithGCState
                                     (CFunction.size (Operand.ty (a 0)))
                                | MLton_touch =>
-                                    let
-                                       val a = arg 0
-                                       val args =
-                                          if isSome (toRtype (varType a))
-                                             then Vector.new1 (varOp a)
-                                          else Vector.new0 ()
-                                    in
-                                       add (PrimApp {args = args,
+                                   let
+                                     val a = arg 0
+                                   in
+                                     if isSome (toRtype (varType a)) then
+                                       add (PrimApp {args = Vector.new1 (varOp a),
                                                      dst = NONE,
                                                      prim = prim})
-                                    end
+
+                                     else
+                                       none ()
+                                   end
                                | Thread_atomicBegin =>
                                     (* gcState.atomicState++;
                                      * if (gcState.signalsInfo.signalIsPending)

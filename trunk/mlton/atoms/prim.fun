@@ -90,7 +90,8 @@ datatype 'a t =
  | Lwtgc_isObjptr
  | Lwtgc_isObjptrInLocalHeap
  | Lwtgc_isObjptrInSharedHeap
- | Lwtgc_isClosureVirgin
+ | Lwtgc_isObjectClosureClean
+ | Lwtgc_isThreadClosureClean
  | MLton_bogus (* ssa to rssa *)
  (* of type unit -> 'a.
   * Makes a bogus value of any type.
@@ -119,6 +120,7 @@ datatype 'a t =
  | MLton_serialize (* unused *)
  | MLton_share
  | MLton_move
+ | MLton_move2
  | MLton_size (* ssa to rssa *)
  | MLton_touch (* backend *)
  | RCCE_send (* ssa to rssa *)
@@ -304,7 +306,8 @@ fun toString (n: 'a t): string =
        | Lwtgc_isObjptr => "Lwtgc_isObjptr"
        | Lwtgc_isObjptrInLocalHeap => "Lwtgc_isObjptrInLocalHeap"
        | Lwtgc_isObjptrInSharedHeap => "Lwtgc_isObjptrInSharedHeap"
-       | Lwtgc_isClosureVirgin => "Lwtgc_isClosureVirgin"
+       | Lwtgc_isObjectClosureClean => "Lwtgc_isObjectClosureClean"
+       | Lwtgc_isThreadClosureClean => "Lwtgc_isThreadClosureClean"
        | MLton_bogus => "MLton_bogus"
        | MLton_bug => "MLton_bug"
        | MLton_deserialize => "MLton_deserialize"
@@ -318,6 +321,7 @@ fun toString (n: 'a t): string =
        | MLton_serialize => "MLton_serialize"
        | MLton_share => "MLton_share"
        | MLton_move => "MLton_move"
+       | MLton_move2 => "MLton_move2"
        | MLton_size => "MLton_size"
        | MLton_touch => "MLton_touch"
        | RCCE_send => "RCCE_send"
@@ -475,7 +479,8 @@ val equals: 'a t * 'a t -> bool =
     | (Lwtgc_isObjptr, Lwtgc_isObjptr) => true
     | (Lwtgc_isObjptrInLocalHeap, Lwtgc_isObjptrInLocalHeap) => true
     | (Lwtgc_isObjptrInSharedHeap, Lwtgc_isObjptrInSharedHeap) => true
-    | (Lwtgc_isClosureVirgin, Lwtgc_isClosureVirgin) => true
+    | (Lwtgc_isObjectClosureClean, Lwtgc_isObjectClosureClean) => true
+    | (Lwtgc_isThreadClosureClean, Lwtgc_isThreadClosureClean) => true
     | (MLton_bogus, MLton_bogus) => true
     | (MLton_bug, MLton_bug) => true
     | (MLton_deserialize, MLton_deserialize) => true
@@ -489,6 +494,7 @@ val equals: 'a t * 'a t -> bool =
     | (MLton_serialize, MLton_serialize) => true
     | (MLton_share, MLton_share) => true
     | (MLton_move, MLton_move) => true
+    | (MLton_move2, MLton_move2) => true
     | (MLton_size, MLton_size) => true
     | (MLton_touch, MLton_touch) => true
     | (RCCE_send, RCCE_send) => true
@@ -669,7 +675,8 @@ val map: 'a t * ('a -> 'b) -> 'b t =
     | Lwtgc_isObjptr => Lwtgc_isObjptr
     | Lwtgc_isObjptrInLocalHeap => Lwtgc_isObjptrInLocalHeap
     | Lwtgc_isObjptrInSharedHeap => Lwtgc_isObjptrInSharedHeap
-    | Lwtgc_isClosureVirgin => Lwtgc_isClosureVirgin
+    | Lwtgc_isObjectClosureClean => Lwtgc_isObjectClosureClean
+    | Lwtgc_isThreadClosureClean => Lwtgc_isThreadClosureClean
     | MLton_bogus => MLton_bogus
     | MLton_bug => MLton_bug
     | MLton_deserialize => MLton_deserialize
@@ -683,6 +690,7 @@ val map: 'a t * ('a -> 'b) -> 'b t =
     | MLton_serialize => MLton_serialize
     | MLton_share => MLton_share
     | MLton_move => MLton_move
+    | MLton_move2 => MLton_move2
     | MLton_size => MLton_size
     | MLton_touch => MLton_touch
     | RCCE_send => RCCE_send
@@ -948,7 +956,8 @@ val kind: 'a t -> Kind.t =
        | Lwtgc_isObjptr => Functional
        | Lwtgc_isObjptrInLocalHeap => DependsOnState
        | Lwtgc_isObjptrInSharedHeap => DependsOnState
-       | Lwtgc_isClosureVirgin => DependsOnState
+       | Lwtgc_isObjectClosureClean => DependsOnState
+       | Lwtgc_isThreadClosureClean => DependsOnState
        | MLton_bogus => Functional
        | MLton_bug => SideEffect
        | MLton_deserialize => Moveable
@@ -961,7 +970,8 @@ val kind: 'a t -> Kind.t =
        | MLton_parInit => SideEffect
        | MLton_serialize => DependsOnState
        | MLton_share => SideEffect
-       | MLton_move=> SideEffect
+       | MLton_move => SideEffect
+       | MLton_move2 => SideEffect
        | MLton_size => DependsOnState
        | MLton_touch => SideEffect
        | RCCE_send => SideEffect
@@ -1178,7 +1188,8 @@ in
        Lwtgc_isObjptr,
        Lwtgc_isObjptrInLocalHeap,
        Lwtgc_isObjptrInSharedHeap,
-       Lwtgc_isClosureVirgin,
+       Lwtgc_isObjectClosureClean,
+       Lwtgc_isThreadClosureClean,
        MLton_bogus,
        MLton_bug,
        MLton_deserialize,
@@ -1192,6 +1203,7 @@ in
        MLton_serialize,
        MLton_share,
        MLton_move,
+       MLton_move2,
        MLton_size,
        MLton_touch,
        RCCE_send,
@@ -1335,6 +1347,12 @@ fun 'a checkApp (prim: 'a t,
          andalso equals (arg0', arg 0)
          andalso equals (arg1', arg 1)
          andalso equals (arg2', arg 2)
+      fun fourArgs (arg0', arg1', arg2', arg3') () =
+         4 = Vector.length args
+         andalso equals (arg0', arg 0)
+         andalso equals (arg1', arg 1)
+         andalso equals (arg2', arg 2)
+         andalso equals (arg3', arg 3)
       fun nArgs args' () =
          Vector.equals (args', args, equals)
       fun done (args, result') =
@@ -1402,7 +1420,7 @@ fun 'a checkApp (prim: 'a t,
        | Array_sub => oneTarg (fn t => (twoArgs (array t, seqIndex), t))
        | Array_toVector => oneTarg (fn t => (oneArg (array t), vector t))
        | Array_update =>
-            oneTarg (fn t => (threeArgs (array t, seqIndex, t), unit))
+            oneTarg (fn t => (fourArgs (array t, seqIndex, t, bool), unit))
        | CPointer_add =>
             noTargs (fn () => (twoArgs (cpointer, csize), cpointer))
        | CPointer_diff =>
@@ -1468,7 +1486,8 @@ fun 'a checkApp (prim: 'a t,
        | Lwtgc_isObjptr => oneTarg (fn t => (oneArg t, bool))
        | Lwtgc_isObjptrInLocalHeap => oneTarg (fn t => (oneArg t, bool))
        | Lwtgc_isObjptrInSharedHeap => oneTarg (fn t => (oneArg t, bool))
-       | Lwtgc_isClosureVirgin => oneTarg (fn t => (oneArg t, bool))
+       | Lwtgc_isObjectClosureClean => oneTarg (fn t => (oneArg t, bool))
+       | Lwtgc_isThreadClosureClean => oneTarg (fn t => (oneArg t, bool))
        | MLton_bogus => oneTarg (fn t => (noArgs, t))
        | MLton_bug => noTargs (fn () => (oneArg string, unit))
        | MLton_deserialize => oneTarg (fn t => (oneArg word8Vector, t))
@@ -1482,6 +1501,7 @@ fun 'a checkApp (prim: 'a t,
        | MLton_serialize => oneTarg (fn t => (oneArg t, word8Vector))
        | MLton_share => oneTarg (fn t => (oneArg t, unit))
        | MLton_move => oneTarg (fn t => (threeArgs (t, bool, bool), t))
+       | MLton_move2 => oneTarg (fn t => (threeArgs (t, bool, bool), t))
        | MLton_size => oneTarg (fn t => (oneArg t, csize))
        | MLton_touch => oneTarg (fn t => (oneArg t, unit))
        | RCCE_send => oneTarg (fn t => (twoArgs (t, cint), unit))
@@ -1517,7 +1537,7 @@ fun 'a checkApp (prim: 'a t,
             noTargs (fn () => (oneArg (real s), word s'))
        | Real_round s => realUnary s
        | Real_sub s => realBinary s
-       | Ref_assign => oneTarg (fn t => (twoArgs (reff t, t), unit))
+       | Ref_assign => oneTarg (fn t => (threeArgs (reff t, t, bool), unit))
        | Ref_deref => oneTarg (fn t => (oneArg (reff t), t))
        | Ref_ref => oneTarg (fn t => (oneArg t, reff t))
        | Thread_atomicBegin => noTargs (fn () => (noArgs, unit))
@@ -1633,7 +1653,8 @@ fun ('a, 'b) extractTargs (prim: 'b t,
        | Lwtgc_isObjptr => one (arg 0)
        | Lwtgc_isObjptrInLocalHeap => one (arg 0)
        | Lwtgc_isObjptrInSharedHeap => one (arg 0)
-       | Lwtgc_isClosureVirgin => one (arg 0)
+       | Lwtgc_isObjectClosureClean => one (arg 0)
+       | Lwtgc_isThreadClosureClean => one (arg 0)
        | MLton_bogus => one result
        | MLton_deserialize => one result
        | MLton_eq => one (arg 0)
@@ -1642,6 +1663,7 @@ fun ('a, 'b) extractTargs (prim: 'b t,
        | MLton_serialize => one (arg 0)
        | MLton_share => one (arg 0)
        | MLton_move => one (arg 0)
+       | MLton_move2 => one (arg 0)
        | MLton_size => one (arg 0)
        | MLton_touch => one (arg 0)
        | RCCE_send => one (arg 0)
@@ -2296,6 +2318,7 @@ fun ('a, 'b) layoutApp (p: 'a t,
       open Layout
       fun one name = seq [str name, str " ", arg 0]
       fun two name = seq [arg 0, str " ", str name, str " ", arg 1]
+      fun refLayout name = seq [arg 0, str " ", str name, str " ", arg 2, str "{", arg 3, str "}"]
    in
       case p of
          Array_length => one "length"
@@ -2318,7 +2341,7 @@ fun ('a, 'b) layoutApp (p: 'a t,
        | Real_neg _ => one "-"
        | Real_qequal _ => two "?="
        | Real_sub _ => two "-"
-       | Ref_assign => two ":="
+       | Ref_assign => refLayout ":="
        | Ref_deref => one "!"
        | Ref_ref => one "ref"
        | Vector_length => one "length"

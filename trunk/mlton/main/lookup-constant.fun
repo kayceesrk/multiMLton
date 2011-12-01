@@ -69,7 +69,8 @@ val gcFields =
     "signalsInfo.signalIsPending",
     "stackBottom",
     "stackLimit",
-    "stackTop"
+    "stackTop",
+    "sessionStart"
     ]
 
 val gcFieldsOffsets =

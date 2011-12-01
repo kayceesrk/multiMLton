@@ -7,7 +7,7 @@
  *)
 
 functor ImplementSuffix (S: IMPLEMENT_SUFFIX_STRUCTS):
-   IMPLEMENT_SUFFIX = 
+   IMPLEMENT_SUFFIX =
 struct
 
 open S
@@ -22,6 +22,7 @@ fun doit (Program.T {datatypes, body, overflow, ...}): Program.t =
        *)
       val topLevelSuffixType = Type.arrow (Type.unit, Type.unit)
       val topLevelSuffixVar = Var.newNoname ()
+      val falseVar = Var.newNoname ()
 
       fun loop (e: Exp.t): Exp.t =
          let
@@ -73,8 +74,9 @@ fun doit (Program.T {datatypes, body, overflow, ...}): Program.t =
                         primExp
                         (PrimApp {prim = Prim.assign,
                                   targs = Vector.new1 ty,
-                                  args = Vector.new2 (VarExp.mono var,
-                                                      Vector.sub (args, 0))})
+                                  args = Vector.new3 (VarExp.mono var,
+                                                      Vector.sub (args, 0),
+                                                      VarExp.mono falseVar)})
                   in
                      case Prim.name prim of
                         TopLevel_getSuffix =>
@@ -116,6 +118,13 @@ fun doit (Program.T {datatypes, body, overflow, ...}): Program.t =
                             bodyType = Type.unit,
                             mayInline = true}),
           body = body}
+
+      val body =
+        Dexp.let1
+        {var = falseVar,
+         exp = Dexp.falsee (),
+         body = body}
+
       val body = Dexp.toExp body
    in
       Program.T {datatypes = datatypes,

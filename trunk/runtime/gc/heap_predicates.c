@@ -106,9 +106,3 @@ static inline bool isObjectLifted (GC_header header) {
     return (not (header == GC_FORWARDED)
             && (header & LIFT_MASK));
 }
-
-static inline GC_numReferences countReferences (GC_header header) {
-  if (header == GC_FORWARDED)
-    return MANY;
-  return (header & VIRGIN_MASK) >> VIRGIN_SHIFT;
-}

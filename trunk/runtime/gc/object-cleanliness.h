@@ -6,11 +6,38 @@
  * See the file MLton-LICENSE for details.
  */
 
+#if (defined (MLTON_GC_INTERNAL_TYPES))
+
+struct GC_pointerSet {
+  void* p;
+  UT_hash_handle hh;
+};
+
+typedef enum {
+  ZERO=0,
+  ONE=1,
+  LOCAL_MANY=2,
+  GLOBAL_MANY
+} GC_numReferences;
+
+#define ONE_REF (ONE << VIRGIN_SHIFT)
+#define LOCAL_MANY_REF (LOCAL_MANY << VIRGIN_SHIFT)
+#define GLOBAL_MANY_REF (GLOBAL_MANY << VIRGIN_SHIFT)
+
+#endif /* (defined (MLTON_GC_INTERNAL_TYPES)) */
+
 #if (defined (MLTON_GC_INTERNAL_FUNCS))
 
-static inline bool objectHasIdentity (GC_state s, GC_header h);
-static inline void isObjectPointerVirgin (GC_state s, pointer p);
-static inline void doesPointToTmpPointer (GC_state s, objptr* opp);
-PRIVATE bool GC_isClosureVirgin (GC_state s, pointer p);
+static inline GC_numReferences countReferences (GC_header header);
+static inline bool isWriteCleanMark (GC_state s, pointer current, pointer parent);
+static inline bool isWriteCleanUnmark (GC_state s, pointer current, pointer parent);
+static inline bool isSpawnCleanMark (GC_state s, pointer current, pointer parent);
+static inline bool isSpawnCleanUnmark (GC_state s, pointer current, pointer parent);
+static inline void doesPointToMarkedObject (GC_state s, objptr* opp);
+static inline void doesCurrentStackPointToMarkedObject (GC_state s, objptr* opp);
+PRIVATE bool GC_isObjectClosureClean (GC_state s, pointer p);
+PRIVATE bool GC_isThreadClosureClean (GC_state s, pointer p);
+bool __GC_isThreadClosureClean (GC_state s, pointer p, size_t* size);
+bool foreachObjptrInUnmarkedObject (GC_state s, pointer p);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

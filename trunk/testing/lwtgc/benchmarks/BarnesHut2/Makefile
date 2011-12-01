@@ -38,7 +38,8 @@ LIBS = -L$(MMPATH)/trunk/build/lib/self -lmlton -lgdtoa -L/shared/chandras/rcce/
        -pthread -lrt -m32
 
 %.o: %.c
-	gcc $(FLAGS) -o $@ $<
+	gcc -ggdb3 $(FLAGS) -o $@ $<
+
 
 .SECONDEXPANSION:
 %-c : $$(subst .c,.o,$$(wildcard $$(subst -c,,$$@).*.c))

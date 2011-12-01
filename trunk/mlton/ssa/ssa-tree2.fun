@@ -354,6 +354,7 @@ structure Type =
             case Prim.name prim of
                Lwtgc_needPreemption => true (* HACK *)
              | MLton_move => true (* HACK *)
+             | MLton_move2 => true (* HACK *)
              | Array_array =>
                   oneArg (fn n =>
                           equals (n, seqIndex) andalso isVector result)
@@ -680,7 +681,8 @@ structure Statement =
        | Profile of ProfileExp.t
        | Update of {base: Var.t Base.t,
                     offset: int,
-                    value: Var.t}
+                    value: Var.t,
+                    needsMove: Var.t}
 
       fun layout' (s: t, layoutVar): Layout.t =
          let
@@ -698,12 +700,13 @@ structure Statement =
                                           str " = "]],
                        Exp.layout' (exp, layoutVar)]
              | Profile p => ProfileExp.layout p
-             | Update {base, offset, value} =>
+             | Update {base, offset, value, needsMove} =>
                   seq [(if 0 = offset
                            then empty
                         else seq [str "#", Int.layout offset, str " "]),
                        Base.layout (base, layoutVar),
-                       str " := ", layoutVar value]
+                       str " := ", layoutVar value,
+                       str " {", layoutVar needsMove, str "}"]
          end
 
       fun layout s = layout' (s, Var.layout)
@@ -793,10 +796,11 @@ structure Statement =
                      ty = ty,
                      var = Option.map (var, def)}
           | Profile _ => s
-          | Update {base, offset, value} =>
+          | Update {base, offset, value, needsMove} =>
                Update {base = Base.map (base, use),
                        offset = offset,
-                       value = use value}
+                       value = use value,
+                       needsMove = use needsMove}
 
       fun replaceUses (s, f) = replaceDefsUses (s, {def = fn x => x, use = f})
    end
