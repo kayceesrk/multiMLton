@@ -37,7 +37,6 @@ structure Controls =
 
       val wbUsesTypeInfo = _command_line_const "MLton.wbTypeInfo": bool = true;
       val lazySpawn = _command_line_const "MLton.lazySpawn": bool = true;
-      val directCloXfer = _command_line_const "MLton.directCloXfer": bool = true;
    end
 
 structure Exn =
