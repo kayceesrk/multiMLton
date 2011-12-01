@@ -107,3 +107,7 @@ pointer MLton_RCCE_recv (GC_state s, int src) {
     fprintf (stderr, "MLton_RCCE_recv: returning object "FMTPTR"\n", (uintptr_t)result);
   return result;
 }
+
+double MLton_RCCE_wtime (void) {
+  return RCCE_wtime ();
+}

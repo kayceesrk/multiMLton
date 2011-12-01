@@ -21,6 +21,7 @@ typedef struct {
 
 void MLton_RCCE_send (GC_state s, pointer p, int dest);
 pointer MLton_RCCE_recv (GC_state s, int src);
+double MLton_RCCE_wtime (void);
 
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */

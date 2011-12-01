@@ -6,4 +6,5 @@ struct
   fun recv (coreId) =
     Primitive.dontInline (fn () => Primitive.MLton.Rcce.recv (coreId))
 
+  val wtime = _import "RCCE_wtime": unit -> real;
 end
