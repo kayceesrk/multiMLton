@@ -22,7 +22,7 @@ clean:
 clean-summaries:
 	rm gc-summary.*
 
-MMPATH = $(HOME)/temp/multiMLton
+MMPATH = $(HOME)/multiMLton-WB
 
 FLAGS = -std=gnu99 -c -g -DASSERT=1 -I$(MMPATH)/trunk/build/lib/self/include \
 				-I$(MMPATH)/trunk/build/lib/include -O1 -fno-common -fno-strict-aliasing \
@@ -35,11 +35,12 @@ LIBS = -L$(MMPATH)/trunk/build/lib/self -lmlton -lgdtoa \
 			 -lm -lgmp -m64 -lplpa_included -pthread -lrt
 
 %.o: %.c
-	gcc $(FLAGS) -o $@ $<
+	gcc -ggdb3 $(FLAGS) -o $@ $<
+
 
 .SECONDEXPANSION:
 %-cnd : $$(subst .c,.o,$$(wildcard $$(subst -cnd,,$$@).*.c))
-	gcc -o $(subst -c,,$@) $^ $(LIBS)
+	gcc -o $(subst -cnd,,$@) $^ $(LIBS)
 
 
 .SECONDEXPANSION:
