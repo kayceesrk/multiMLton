@@ -902,51 +902,107 @@ structure Function =
 
                       fun make i = WordX.fromIntInf (i, WordSize.objptrHeader ())
                       fun make2 i = WordX.fromIntInf (i, WordSize.objptr ())
+                    in
 
-                      fun score base =
+                      fun setNumReferences (base, v) =
+                        if (v > 3 orelse v < 1) then
+                          Error.bug ("RSSA.dirtyAssist.setNumReferences")
+                        else
+                          let
+                            val vWord = word (WordX.fromIntInf (v, WordSize.objptrHeader ()))
+                            val virginShift = word (WordX.fromIntInf (Runtime.virginShift, WordSize.shiftArg))
+                            val virginMaskInvert = word (WordX.fromIntInf (Runtime.virginMaskInvert,
+                                                                           WordSize.objptrHeader ()))
+                            val headerOp = Offset {base = base,
+                                                  offset = Runtime.headerOffset (),
+                                                  ty = Type.objptrHeader ()}
+
+                            val (s0, tmp1) = lshift (vWord, virginShift)
+                            val (s1, tmp2) = andb (headerOp, virginMaskInvert)
+                            val (s2, tmp3) = orb (tmp2, tmp1)
+                            val s3 = Move {dst = headerOp, src = tmp3}
+                            val stmts = [s0,s1,s2,s3]
+                          in
+                            Vector.fromList stmts
+                          end
+
+
+                      fun getNumReferences base =
                       let
                         val headerOp = Offset {base = base,
                                                offset = Runtime.headerOffset (),
                                                ty = Type.objptrHeader ()}
-                        val virginMaskLower =
-                          word (WordX.fromIntInf (Runtime.virginMaskLower,
+                        val virginMask =
+                          word (WordX.fromIntInf (Runtime.virginMask,
                                                   WordSize.objptrHeader ()))
-                        val shift = word (WordX.one WordSize.shiftArg)
-                        val (s1, tmp) = andb (headerOp, virginMaskLower)
-                        val (s2, tmp) = lshift (tmp, shift)
-                        val (s3, tmp) = orb (tmp, virginMaskLower)
-                        val (s4, tmp) = orb (headerOp, tmp)
-                        val s5 = Move {dst = headerOp, src = tmp}
-                        val stmts = [s1, s2, s3, s4, s5]
+                        val virginShift = word (WordX.fromIntInf (Runtime.virginShift, WordSize.shiftArg))
+                        val (s1, tmp) = andb (headerOp, virginMask)
+                        val (s2, tmp) = rshift (tmp, virginShift)
                       in
-                        Vector.fromList stmts
+                        (tmp, Vector.new2 (s1, s2))
                       end
-
-                    in
 
                       fun maybeScore (continue: Label.t, lhsAddr, rhsAddr) =
                         let
 
-                          val (stmts, cond) = isNotObjptr rhsAddr
+                          val (numRefs, getNumRefStmts) = getNumReferences rhsAddr
 
-                          val scoreBlock =
+                          fun setVBlock v =
+                            let
+                              val setZeroStmts = setNumReferences (rhsAddr, v)
+                            in
+                              newBlock
+                              {args = Vector.new0 (),
+                              kind = Kind.Jump,
+                              statements = setZeroStmts,
+                              transfer = Transfer.Goto {args = Vector.new0 (), dst = continue}}
+                            end
+
+                          val testSessionBlock =
+                            let
+                              val (lstmts, lcond) = addressInCurrentSession (lhsAddr)
+                              val (rstmts, rcond) = addressInCurrentSession (rhsAddr)
+                              val (lrstmts, cond) = andb (lcond, rcond)
+                              val stmts = Vector.fromList (lstmts @ rstmts @ [lrstmts])
+                            in
+                              newBlock
+                              {args = Vector.new0 (),
+                               kind = Kind.Jump,
+                               transfer = Transfer.ifBool (cond, {truee = setVBlock 2, falsee = setVBlock 3}),
+                               statements = stmts}
+                            end
+
+                          val checkIfZeroRefs =
                             newBlock
                             {args = Vector.new0 (),
-                              kind = Kind.Jump,
-                              statements = score rhsAddr,
-                              transfer =
-                                Transfer.Goto {args = Vector.new0 (),
-                                              dst = continue}}
+                            kind = Kind.Jump,
+                            statements = getNumRefStmts,
+                            transfer =
+                              Transfer.Switch (Switch.T
+                              {cases = Vector.new4 ((make 0, setVBlock 1), (make 1, testSessionBlock),
+                                                    (make 2, testSessionBlock), (make 3, continue)),
+                                default = NONE,
+                                size = WordSize.objptrHeader (),
+                                test = numRefs})}
+
+                          val (stmts, cond) = isNotObjptr rhsAddr
 
                           val transfer =
                             Transfer.Switch (Switch.T
-                            {cases = Vector.new2 ((make2 0, scoreBlock), (make2 1, continue)),
+                            {cases = Vector.new2 ((make2 0, checkIfZeroRefs), (make2 1, continue)),
                               default = NONE,
                               size = WordSize.objptr (),
                               test = cond})
 
+                          val entryBlock =
+                            newBlock
+                            {args = Vector.new0 (),
+                            kind = Kind.Jump,
+                            statements = Vector.fromList stmts,
+                            transfer = transfer}
+
                       in
-                        (stmts, transfer)
+                        ([], Transfer.Goto {args = Vector.new0 (), dst = entryBlock})
                       end (* maybeScore END *)
                     end
                   in
