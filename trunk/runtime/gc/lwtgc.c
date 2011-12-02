@@ -243,6 +243,14 @@ pointer GC_moveFromWB (GC_state s, pointer p,
 pointer GC_move (GC_state s, pointer p,
                  bool forceStackForwarding,
                  bool skipFixForwardingPointers) {
+  return GC_moveWithCopyType (s, p, forceStackForwarding, skipFixForwardingPointers, TRUE);
+
+}
+
+pointer GC_moveWithCopyType (GC_state s, pointer p,
+                             bool forceStackForwarding,
+                             bool skipFixForwardingPointers,
+                             bool copyImmutable) {
 
   size_t gcID = s->lastSharedMajorStatistics->bytesLive;
   assert (s);
@@ -263,7 +271,7 @@ pointer GC_move (GC_state s, pointer p,
 
   if (skipFixForwardingPointers) {
     s->syncReason = SYNC_LIFT_NO_GC;
-    s->copyImmutable = TRUE;
+    s->copyImmutable = copyImmutable;
     s->copyObjectMap = NULL;
   }
   else

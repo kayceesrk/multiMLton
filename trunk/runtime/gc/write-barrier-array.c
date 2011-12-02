@@ -90,19 +90,24 @@ void GC_addToMoveOnWBA (GC_state s, pointer p) {
   s->moveOnWBA[s->moveOnWBASize - 1] = pointerToObjptr (p, s->heap->start);
 }
 
+
+static inline bool foreachObjptrInUnforwardedObject (GC_state s, pointer p);
+bool foreachObjptrInUnforwardedObject (GC_state s, pointer p) {
+  GC_header header = getHeader (p);
+  if (header == GC_FORWARDED)
+    return TRUE;
+  foreachObjptrInObject (s, p, fixFwdObjptr, TRUE);
+  return TRUE;
+}
+
 void GC_addToSpawnOnWBA (GC_state s, pointer p, int proc) {
   bool isClosureClean = FALSE;
   size_t size = 0;
   isClosureClean = __GC_isThreadClosureClean (s, p, &size);
 
-  if (FALSE && isClosureClean) {
-    s->selectiveDebug = TRUE;
-    ClosureToSpawn c;
-    c.p = GC_copyToBuffer (s, p, size);
-    c.size = size;
-    GC_addToDirectCloXferArray (s, c, proc);
-    s->selectiveDebug = FALSE;
-    return;
+  if (isClosureClean) {
+    GC_moveWithCopyType (s, p, FALSE, TRUE, FALSE);
+    foreachObjectInRange (s, s->sessionStart, s->frontier, foreachObjptrInUnforwardedObject, TRUE);
   }
   ++(s->spawnOnWBASize);
   if (s->spawnOnWBASize > s->spawnOnWBAMaxSize) {

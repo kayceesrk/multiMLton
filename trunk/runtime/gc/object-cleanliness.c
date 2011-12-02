@@ -131,8 +131,6 @@ bool GC_isThreadClosureClean (GC_state s, pointer p) {
 
 bool __GC_isThreadClosureClean (GC_state s, pointer p, size_t* size) {
   bool hasIdentityTransitive, isUnbounded, isClosureVirgin;
-  unsigned int numPointersFromStack = -1;
-  unsigned int numPointersFromSession = -1;
 
   GC_header header = getHeader (p);
   GC_objectTypeTag tag;
@@ -149,23 +147,6 @@ bool __GC_isThreadClosureClean (GC_state s, pointer p, size_t* size) {
     *size = dfsMarkByMode (s, p, isSpawnCleanMark, MARK_MODE,
                            FALSE, FALSE, TRUE, FALSE);
     isClosureVirgin = s->tmpBool;
-
-    if (isClosureVirgin) {
-      //Walk the current stack and test if the current stack points to any marked object
-      s->tmpInt = 0;
-      getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
-      getThreadCurrent(s)->exnStack = s->exnStack;
-      foreachObjptrInObject (s, (pointer)getStackCurrent (s), doesCurrentStackPointToMarkedObject, FALSE);
-      numPointersFromStack = s->tmpInt;
-    }
-
-    if (isClosureVirgin && numPointersFromStack == 0) {
-      s->tmpInt = 0;
-      s->tmpBool = TRUE;
-      foreachObjectInRange (s, s->sessionStart, s->frontier, foreachObjptrInUnmarkedObject, TRUE);
-      numPointersFromSession = s->tmpInt;
-    }
-
     dfsMarkByMode (s, p, isSpawnCleanUnmark, UNMARK_MODE,
                   FALSE, FALSE, TRUE, FALSE);
 
@@ -175,14 +156,12 @@ bool __GC_isThreadClosureClean (GC_state s, pointer p, size_t* size) {
     s->tmpInt = 0;
   }
 
-  if (DEBUG_CLEANLINESS || TRUE) {
-    fprintf (stderr, "GC_isThreadClosureClean: sessionSize = %zu objectSize = %zu "
-                     "isClosureVirgin = %d numPointerFromStack = %d "
-                     "numPointersFromSession = %d\n",
-             (size_t)(s->frontier - s->sessionStart), *size, isClosureVirgin, numPointersFromStack, numPointersFromSession);
-  }
+  if (DEBUG_CLEANLINESS || TRUE)
+    fprintf (stderr, "GC_isThreadClosureClean: sessionSize = %zu "
+                     "objectSize = %zu isClosureVirgin = %d [%d]\n",
+             (size_t)(s->frontier - s->sessionStart), *size, isClosureVirgin, s->procId);
 
-  return (isClosureVirgin && (numPointersFromStack == 0) && (numPointersFromSession == 0));
+  return isClosureVirgin;
 }
 
 bool GC_isObjectClosureClean (GC_state s, pointer p) {

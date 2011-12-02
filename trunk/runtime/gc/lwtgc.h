@@ -14,6 +14,10 @@ PRIVATE pointer GC_move (GC_state s, pointer object,
 PRIVATE pointer GC_moveFromWB (GC_state s, pointer object,
                                bool forceStackForwarding,
                                bool skipFixForwardingPointers);
+PRIVATE pointer GC_moveWithCopyType (GC_state s, pointer object,
+                                     bool forceStackForwarding,
+                                     bool skipFixForwardingPointers,
+                                     bool copyImmutable);
 PRIVATE bool GC_isInSharedOrForwarded (GC_state s, pointer p);
 
 static inline void liftObjptr (GC_state s, objptr *opp);
