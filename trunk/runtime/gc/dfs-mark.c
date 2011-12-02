@@ -10,7 +10,7 @@
 /*                       Depth-first Marking                        */
 /* ---------------------------------------------------------------- */
 
-inline bool isPointerMarked (pointer p) {
+bool isPointerMarked (pointer p) {
   return MARK_MASK & getHeader (p);
 }
 
