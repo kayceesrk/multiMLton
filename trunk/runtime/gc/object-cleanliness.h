@@ -28,7 +28,7 @@ typedef enum {
 
 #if (defined (MLTON_GC_INTERNAL_FUNCS))
 
-static inline GC_numReferences countReferences (GC_header header);
+static inline GC_numReferences countReferences (const GC_header header);
 static inline bool isWriteCleanMark (GC_state s, pointer current, pointer parent);
 static inline bool isWriteCleanUnmark (GC_state s, pointer current, pointer parent);
 static inline bool isSpawnCleanMark (GC_state s, pointer current, pointer parent);

@@ -53,18 +53,18 @@ bool isWriteCleanMark (GC_state s, pointer p, pointer parent) {
   parent = parent; //To silence GCC warnings
 
   assert (s->tmpPointer != BOGUS_POINTER);
-  bool isVirgin = FALSE;
+  bool isClean = FALSE;
   GC_header h = getHeader (p);
 
   if (s->tmpPointer == p)
-    isVirgin = (countReferences (h) == ZERO);
+    isClean = (countReferences (h) == ZERO);
   else
-    isVirgin = (countReferences (h) <= ONE);
+    isClean = (countReferences (h) <= ONE);
 
-  if (!isVirgin && !objectHasIdentity(s, h))
-    isVirgin = TRUE;
+  if (!isClean && !objectHasIdentity(s, h))
+    isClean = TRUE;
 
-  s->tmpBool = s->tmpBool && isVirgin;
+  s->tmpBool = s->tmpBool && isClean;
 
   return s->tmpBool;
 }
@@ -73,19 +73,23 @@ bool isSpawnCleanMark (GC_state s, pointer p, pointer parent) {
   parent = parent; //To silence GCC warnings
 
   assert (s->tmpPointer != BOGUS_POINTER);
-  bool isVirgin = FALSE;
+  bool isClean = FALSE;
   GC_header h = getHeader (p);
+  GC_numReferences n = countReferences (h);
 
-  if (s->tmpPointer == p)
-    isVirgin = (countReferences (h) == ZERO);
-  else {
-    isVirgin = (countReferences (h) <= LOCAL_MANY);
-  }
+  if (n == ZERO) //p is clean if it has 0 references
+    isClean = TRUE;
+  else if (n == ONE) //If p not root, p is clean if it has 1 refs
+    isClean = (p != s->tmpPointer);
+  else if (n == LOCAL_MANY) //If p has locally many refs, then p must reside in the current session to be clean
+    isClean = (p > s->sessionStart && p < s->frontier);
+  else //If p has globally many refs, p is not clean
+    isClean = FALSE;
 
-  if (!isVirgin && !objectHasIdentityTransitive(s, h))
-    isVirgin = TRUE;
+  if (!isClean && !objectHasIdentityTransitive(s, h))
+    isClean = TRUE;
 
-  s->tmpBool = s->tmpBool && isVirgin;
+  s->tmpBool = s->tmpBool && isClean;
 
   return s->tmpBool;
 }
@@ -114,11 +118,9 @@ void doesPointToMarkedObject (GC_state s, objptr* opp) {
 bool foreachObjptrInUnmarkedObject (GC_state s, pointer p) {
   GC_header header = getHeader (p);
   unsigned int objectTypeIndex = (header & TYPE_INDEX_MASK) >> TYPE_INDEX_SHIFT;
-  if (objectTypeIndex == 0 /* If Stack */
-      || isPointerMarked (p))
+  if (objectTypeIndex == 0 || isPointerMarked (p))
     return TRUE; //Contiue with next object
   foreachObjptrInObject (s, p, doesPointToMarkedObject, TRUE);
-  //return (s->tmpInt == 0);
   return TRUE;
 }
 
@@ -129,8 +131,6 @@ bool GC_isThreadClosureClean (GC_state s, pointer p) {
 
 bool __GC_isThreadClosureClean (GC_state s, pointer p, size_t* size) {
   bool hasIdentityTransitive, isUnbounded, isClosureVirgin;
-  unsigned int numPointersFromStack = -1;
-  unsigned int numPointersFromSession = -1;
 
   GC_header header = getHeader (p);
   GC_objectTypeTag tag;
@@ -147,23 +147,6 @@ bool __GC_isThreadClosureClean (GC_state s, pointer p, size_t* size) {
     *size = dfsMarkByMode (s, p, isSpawnCleanMark, MARK_MODE,
                            FALSE, FALSE, TRUE, FALSE);
     isClosureVirgin = s->tmpBool;
-
-    if (isClosureVirgin) {
-      //Walk the current stack and test if the current stack points to any marked object
-      s->tmpInt = 0;
-      getStackCurrent(s)->used = sizeofGCStateCurrentStackUsed (s);
-      getThreadCurrent(s)->exnStack = s->exnStack;
-      foreachObjptrInObject (s, (pointer)getStackCurrent (s), doesCurrentStackPointToMarkedObject, FALSE);
-      numPointersFromStack = s->tmpInt;
-    }
-
-    if (isClosureVirgin && numPointersFromStack == 0) {
-      s->tmpInt = 0;
-      s->tmpBool = TRUE;
-      foreachObjectInRange (s, s->sessionStart, s->frontier, foreachObjptrInUnmarkedObject, TRUE);
-      numPointersFromSession = s->tmpInt;
-    }
-
     dfsMarkByMode (s, p, isSpawnCleanUnmark, UNMARK_MODE,
                   FALSE, FALSE, TRUE, FALSE);
 
@@ -173,14 +156,12 @@ bool __GC_isThreadClosureClean (GC_state s, pointer p, size_t* size) {
     s->tmpInt = 0;
   }
 
-  if (DEBUG_CLEANLINESS || TRUE) {
-    fprintf (stderr, "GC_isThreadClosureClean: size = %zu "
-                     "isClosureVirgin = %d numPointerFromStack = %d "
-                     "numPointersFromSession = %d\n",
-             *size, isClosureVirgin, numPointersFromStack, numPointersFromSession);
-  }
+  if (DEBUG_CLEANLINESS || TRUE)
+    fprintf (stderr, "GC_isThreadClosureClean: sessionSize = %zu "
+                     "objectSize = %zu isClosureVirgin = %d [%d]\n",
+             (size_t)(s->frontier - s->sessionStart), *size, isClosureVirgin, s->procId);
 
-  return (isClosureVirgin && (numPointersFromStack == 0) && (numPointersFromSession == 0));
+  return isClosureVirgin;
 }
 
 bool GC_isObjectClosureClean (GC_state s, pointer p) {
@@ -216,7 +197,7 @@ bool GC_isObjectClosureClean (GC_state s, pointer p) {
   return isClosureVirgin;
 }
 
-static inline GC_numReferences countReferences (GC_header header) {
+static inline GC_numReferences countReferences (const GC_header header) {
   if (header == GC_FORWARDED)
     return GLOBAL_MANY;
   return (header & VIRGIN_MASK) >> VIRGIN_SHIFT;

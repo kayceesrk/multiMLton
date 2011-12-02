@@ -202,16 +202,6 @@ struct
 
     val () =
       if proc <> PacmlFFI.processorNumber () then
-        (* ((* If the newly spawned thread is going to another processor, then move it
-          * to the shared heap. We first try to move the thread to the shared heap
-          * without needing a GC. If we are not able to do it, we add rhost to
-          * moveOnWBA queue and preempt, with the hope that there will be other
-          * threads to run on this core. If there are none, we will perform a GC,
-          * after which we will place rhost on the target scheduler. *)
-        if (Primitive.Controls.wbUsesCleanliness andalso
-            Primitive.Lwtgc.isThreadClosureClean rhost) then
-          (ignore (Primitive.Lwtgc.move (rhost, false, true)))
-        else *)
           (debug' (fn () => "spawnHostHelper.lift(1): tid="^(TID.tidToString tid));
           Primitive.Lwtgc.addToMoveOnWBA (rhost);
           S.preemptOnWriteBarrier ();
