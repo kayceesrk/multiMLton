@@ -24,6 +24,7 @@ struct
    *)
   val _ = PacmlFFI.enablePreemption ()
   val numberOfProcessors = PacmlFFI.numberOfProcessors
+  val processorNumber = PacmlFFI.processorNumber
 
   (* Dummy signal handler *)
   (* Since signals are handled by a separate pthread, the working threads are

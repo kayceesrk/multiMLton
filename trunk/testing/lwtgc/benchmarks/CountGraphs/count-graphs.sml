@@ -510,10 +510,10 @@ in fun f maxSize =
 end
 
 fun doOne arg = (
-        print (arg ^ " -> ");
         case Int.fromString arg of
         SOME n =>
-                print ((Int.toString (f n)) ^ "\n")
+                print ((Int.toString (f n))^" "^
+                       (Int.toString (MLton.Pacml.processorNumber ()))^"\n")
         | NONE =>
                 print "NOT A NUMBER\n")
 
@@ -521,9 +521,10 @@ fun doOne arg = (
       struct
          fun doit (numThreads, arg) =
          let
+            val _ = MLton.GC.collect ()
             val l = List.tabulate (numThreads, fn _ => arg)
             val _ =
-             List.map (fn arg => MLton.Pacml.spawn (fn () => doOne arg)) l
+             List.app (fn arg => ignore (MLton.Pacml.spawn (fn () => doOne arg))) l
          in
            ()
          end
