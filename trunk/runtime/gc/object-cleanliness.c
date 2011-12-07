@@ -86,7 +86,7 @@ bool isSpawnCleanMark (GC_state s, pointer p, pointer parent) {
   else //If p has globally many refs, p is not clean
     isClean = FALSE;
 
-  if (!isClean && !objectHasIdentityTransitive(s, h))
+  if (!isClean && !objectHasIdentity(s, h))
     isClean = TRUE;
 
   s->tmpBool = s->tmpBool && isClean;
