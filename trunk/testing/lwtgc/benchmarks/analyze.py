@@ -138,7 +138,7 @@ def fullParameters():
 	args = {"BarnesHut2": "2048 512", \
 					"AllPairs": "1024 64", \
 					"Mandelbrot2": "2048 128", \
-					"KClustering": "0 50 700 70 0", \
+					"KClustering": "0 64 500 70 0", \
 					"TSP2": "", \
 					"Nucleic": "512", \
 					"MD5": "16", \
