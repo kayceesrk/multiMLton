@@ -106,8 +106,11 @@ void GC_addToSpawnOnWBA (GC_state s, pointer p, int proc) {
   isClosureClean = __GC_isThreadClosureClean (s, p, &size);
 
   if (isClosureClean) {
-    GC_moveWithCopyType (s, p, FALSE, TRUE, FALSE);
+    pointer newP = GC_moveWithCopyType (s, p, FALSE, TRUE, FALSE);
     foreachObjectInRange (s, s->sessionStart, s->frontier, foreachObjptrInUnforwardedObject, TRUE);
+    s->sessionStart = s->frontier;
+    GC_sqEnque (s, newP, proc, 0);
+    return;
   }
 
   ++(s->spawnOnWBASize);
@@ -120,6 +123,9 @@ void GC_addToSpawnOnWBA (GC_state s, pointer p, int proc) {
   }
   s->spawnOnWBA[s->spawnOnWBASize - 1].op = pointerToObjptr (p, s->heap->start);
   s->spawnOnWBA[s->spawnOnWBASize - 1].proc = proc;
+
+  if (s->spawnOnWBASize > 16)
+    forceLocalGC (s);
 }
 
 

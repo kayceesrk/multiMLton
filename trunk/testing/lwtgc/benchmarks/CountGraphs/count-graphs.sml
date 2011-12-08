@@ -537,12 +537,14 @@ val (numThreads, arg) =
     | s1::s2::_ => (case Int.fromString s1 of
                          SOME n1 => (n1, s2)
                        | _ => raise Fail "Need 2 arguments")
-val ts = MLton.Rcce.wtime ()
+
+val ts = Time.now ()
 val _ = TextIO.print (concat ["\nStarting main : numThreads = ", Int.toString numThreads,
                               "arg = "^arg^"\n"])
 val _ = Main.doit (numThreads, arg)
-val te = MLton.Rcce.wtime ()
-val d = Real.-(te,ts)
-val _ = TextIO.print (concat ["Time start: ", Real.toString ts, "\n"])
-val _ = TextIO.print (concat ["Time end:   ", Real.toString te, "\n"])
-val _ = TextIO.print (concat ["Time diff:  ", Real.toString d, "s\n"])
+val te = Time.now ()
+
+val d = Time.-(te, ts)
+val _ = TextIO.print (concat ["Time start: ", Time.toString ts, "\n"])
+val _ = TextIO.print (concat ["Time end:   ", Time.toString te, "\n"])
+val _ = TextIO.print (concat ["Time diff:  ", LargeInt.toString (Time.toMilliseconds d), "ms\n"])

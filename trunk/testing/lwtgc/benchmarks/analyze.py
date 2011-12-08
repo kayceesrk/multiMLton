@@ -132,17 +132,19 @@ def fullParameters():
 							"MD5": "md5-amd64", \
 							"CountGraphs": "count-graphs-amd64", \
 							"GameOfLife": "lifeM-amd64", \
+							"GameOfLife2": "life-amd64", \
 							"Mergesort": "mergesort-amd64", \
 							"Raytrace": "raytrace-amd64"}
 	args = {"BarnesHut2": "2048 512", \
-					"AllPairs": "512 64", \
+					"AllPairs": "1024 64", \
 					"Mandelbrot2": "2048 128", \
-					"KClustering": "0 50 700 70 0", \
+					"KClustering": "0 64 500 70 0", \
 					"TSP2": "", \
-					"Nucleic": "512",
+					"Nucleic": "512", \
 					"MD5": "16", \
-					"CountGraphs": "1", \
+					"CountGraphs": "128 9", \
 					"GameOfLife": "64 300", \
+					"GameOfLife2": "64", \
 					"Mergesort": "10000", \
 					"Raytrace": "48"}
 	numProcs = [16]
@@ -224,8 +226,15 @@ def main():
 			x = list (map (lambda v: bytesStringToInt (v[0]), data))
 			if x: #x is not empty
 				shouldPlot = True
-				x = [v/minX for v in x]
 				y = list (map (lambda v: v[1], data))
+
+				#debug
+				z = list (zip (x,y))
+				z.sort ()
+				for (xi,yi) in z:
+					print (str(xi) + " " + str(yi))
+
+				x = [v/minX for v in x]
 				z = list (zip (x,y))
 				z.sort ()
 				x,y = list(zip (*z))

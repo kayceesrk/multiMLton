@@ -1,4 +1,3 @@
-
 structure Main =
 struct
   open MLton.Pacml
@@ -17,8 +16,7 @@ struct
 
     (* tightloop (1000) ~= 1 ms *)
   in
-    tightLoop (workSize);
-    print "done\n"
+    tightLoop (workSize)
   end
 
   fun doit (numThreads, workSize) =
@@ -44,3 +42,4 @@ val d = Time.-(te, ts)
 val _ = TextIO.print (concat ["Time start: ", Time.toString ts, "\n"])
 val _ = TextIO.print (concat ["Time end:   ", Time.toString te, "\n"])
 val _ = TextIO.print (concat ["Time diff:  ", LargeInt.toString (Time.toMilliseconds d), "ms\n"])
+

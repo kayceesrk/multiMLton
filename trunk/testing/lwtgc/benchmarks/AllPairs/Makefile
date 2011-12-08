@@ -19,10 +19,7 @@ all: $(SRC_RULS)
 clean:
 	rm -rf $(SRC_RULS) *~ op *.out *.c *ssa *ssa2 *xml *-ml *machine
 
-clean-summaries:
-	rm gc-summary.*
-
-MMPATH = $(HOME)/multiMLton-WB
+MMPATH = $(HOME)/temp/multiMLton
 
 FLAGS = -std=gnu99 -c -g -DASSERT=1 -I$(MMPATH)/trunk/build/lib/self/include \
 				-I$(MMPATH)/trunk/build/lib/include -O1 -fno-common -fno-strict-aliasing \
@@ -35,12 +32,11 @@ LIBS = -L$(MMPATH)/trunk/build/lib/self -lmlton -lgdtoa \
 			 -lm -lgmp -m64 -lplpa_included -pthread -lrt
 
 %.o: %.c
-	gcc -ggdb3 $(FLAGS) -o $@ $<
-
+	gcc $(FLAGS) -o $@ $<
 
 .SECONDEXPANSION:
 %-cnd : $$(subst .c,.o,$$(wildcard $$(subst -cnd,,$$@).*.c))
-	gcc -o $(subst -cnd,,$@) $^ $(LIBS)
+	gcc -o $(subst -c,,$@) $^ $(LIBS)
 
 
 .SECONDEXPANSION:
