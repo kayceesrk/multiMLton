@@ -138,15 +138,15 @@ def fullParameters():
 							"Mergesort": "mergesort-amd64", \
 							"Raytrace": "raytrace-amd64"}
 	args = {"BarnesHut2": "2048 512", \
-					"AllPairs": "1024 64", \ #Eager spawn, timer 20000
+					"AllPairs": "1024 64", \
 					"Mandelbrot2": "2048 128", \
 					"KClustering": "0 50 700 70 0", \
 					"TSP2": "", \
 					"Nucleic": "512", \
-					"MD5": "16", \ #eager spawn
+					"MD5": "16", \
 					"CountGraphs": "1", \
 					"GameOfLife": "64 300", \
-					"GameOfLife2": "64", \ #Enable timer 20000, eager spawn...
+					"GameOfLife2": "64", \
 					"Mergesort": "10000", \
 					"Raytrace": "48"}
 	numProcs = [16]

@@ -127,25 +127,29 @@ def run (dir, prog, atMLtons, args):
 
 def fullParameters():
 	progName = {"BarnesHut2": "barnes-hut-amd64", \
-							"KClustering": "kclustering-amd64", \
-							"CountGraphs": "count-graphs-amd64", \
+							"AllPairs": "floyd-warshall-amd64", \
 							"Mandelbrot2": "mandelbrot-amd64", \
+							"KClustering": "kclustering-amd64", \
 							"TSP2": "tsp-amd64", \
 							"Nucleic": "nucleic-amd64", \
 							"MD5": "md5-amd64", \
+							"CountGraphs": "count-graphs-amd64", \
 							"GameOfLife": "lifeM-amd64", \
+							"GameOfLife2": "life-amd64", \
 							"Mergesort": "mergesort-amd64", \
 							"Raytrace": "raytrace-amd64"}
 	args = {"BarnesHut2": "2048 512", \
-					"KClustering": "0 50 700 70 0", \
-					"CountGraphs": "1", \
-					"Raytrace": "48", \
+					"AllPairs": "1024 64", \
 					"Mandelbrot2": "2048 128", \
+					"KClustering": "0 50 700 70 0", \
 					"TSP2": "", \
 					"Nucleic": "512", \
 					"MD5": "16", \
+					"CountGraphs": "1", \
 					"GameOfLife": "64 300", \
-					"Mergesort": "10000"}
+					"GameOfLife2": "64", \
+					"Mergesort": "10000", \
+					"Raytrace": "48"}
 	numProcs = [16]
 	return (progName, args, numProcs)
 

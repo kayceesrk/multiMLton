@@ -156,7 +156,7 @@ bool __GC_isThreadClosureClean (GC_state s, pointer p, size_t* size) {
     s->tmpInt = 0;
   }
 
-  if (DEBUG_CLEANLINESS || TRUE)
+  if (DEBUG_CLEANLINESS)
     fprintf (stderr, "GC_isThreadClosureClean: sessionSize = %zu "
                      "objectSize = %zu isClosureVirgin = %d [%d]\n",
              (size_t)(s->frontier - s->sessionStart), *size, isClosureVirgin, s->procId);
