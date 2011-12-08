@@ -180,8 +180,8 @@ def getPointsRec (min, max, numPartitions, pointsPerPartition):
 
 def getPoints (min, max):
 	#Total number of points = numPartitions * pointsPerPartition
-	numPartitions = 3
-	pointsPerPartition = 4
+	numPartitions = 2
+	pointsPerPartition = 3
 
 	if (min > max):
 		return []
@@ -249,7 +249,7 @@ def maxHeapSharedValues (b, n, progName, args, c):
 
 	points = getPoints (maxHeapSharedMin, maxHeapSharedMax)
 	points.sort ()
-	points2 = getPointsInRange (points[0], points[1], 15)
+	points2 = getPointsInRange (points[0], points[1], 5)
 	points += points2
 	points.sort ()
 	print ("values for maxHeapShared: " + str ([bytesIntToString (x, 1) for x in points]))

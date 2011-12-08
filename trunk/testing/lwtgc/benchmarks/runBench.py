@@ -159,7 +159,7 @@ def testParameters():
 	return (progName, args, numProcs)
 
 def main():
-	reruns = 5
+	reruns = 1
 
 	#Parse options
 	parser = OptionParser()
