@@ -180,8 +180,8 @@ def getPointsRec (min, max, numPartitions, pointsPerPartition):
 
 def getPoints (min, max):
 	#Total number of points = numPartitions * pointsPerPartition
-	numPartitions = 2
-	pointsPerPartition = 3
+	numPartitions = 4
+	pointsPerPartition = 4
 
 	if (min > max):
 		return []
