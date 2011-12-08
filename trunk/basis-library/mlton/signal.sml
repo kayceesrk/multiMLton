@@ -159,17 +159,10 @@ val (getHandler, setHandler, handlers) =
      val procNum = PacmlFFI.processorNumber
    in
       (fn s: t => Array.sub (Array.unsafeSub(handlersArr, procNum()), toInt s),
-       fn (s: t, h) => if Primitive.MLton.Profile.isOn andalso s = prof
-                          then raiseInval ()
+       fn (s: t, h) => if Primitive.MLton.Profile.isOn andalso s = prof then
+                         raiseInval ()
                        else
-                         if (PrimWorld.getIsPCML ()) andalso (s = alrm) andalso
-                         (case h of
-                            Handler _ => true
-                          | _ => false)
-                         then
-                           setHandlerForAll h s
-                         else
-                          Array.update (Array.unsafeSub (handlersArr,procNum ()), toInt s, h),
+                         Array.update (Array.unsafeSub (handlersArr,procNum ()), toInt s, h),
        fn () => Array.unsafeSub(handlersArr, procNum()))
    end
 
@@ -253,37 +246,19 @@ val setHandler = fn (s, h) =>
       (InvalidSignal, _) => raiseInval ()
     | (_, InvalidSignal) => raiseInval ()
     | (Default, Default) => ()
-    (* KC don't call into c for CML & SIGALRM *)
     | (_, Default) =>
-         (setHandler (s, Default)
-         (* Prevent this thread from handling C alrm signal if CML since
-          * we have installed a separate signal handler therad.
-          * XXX KC : pthread_sigmask is set in c-main.h. So Is this redundant??
-          *)
-         ; if (PrimWorld.getIsPCML ()) andalso s = alrm then
-                ()
-           else
-                SysCall.simpleRestart (fn () => Prim.default (toRep s)))
-    (* XXX KC modified because the request may be for another processor*)
+         (setHandler (s, Default);
+          SysCall.simpleRestart (fn () => Prim.default (toRep s)))
     | (Handler _, Handler _) =>
          (setHandler (s, h)
-          ; if (PrimWorld.getIsPCML ()) andalso s = alrm then
-                ()
-           else
-                SysCall.simpleRestart (fn () => Prim.handlee (toRep s)))
+          ;SysCall.simpleRestart (fn () => Prim.handlee (toRep s)))
     | (_, Handler _) =>
          (setHandler (s, h)
-          ; if (PrimWorld.getIsPCML ()) andalso s = alrm then
-                ()
-           else
-               SysCall.simpleRestart (fn () => Prim.handlee (toRep s)))
+          ;SysCall.simpleRestart (fn () => Prim.handlee (toRep s)))
     | (Ignore, Ignore) => ()
     | (_, Ignore) =>
          (setHandler (s, Ignore)
-          ;if (PrimWorld.getIsPCML ()) andalso s = alrm then
-                ()
-           else
-                SysCall.simpleRestart (fn () => Prim.ignore (toRep s)))
+          ;SysCall.simpleRestart (fn () => Prim.ignore (toRep s)))
 
 fun suspend m =
    (Mask.write m

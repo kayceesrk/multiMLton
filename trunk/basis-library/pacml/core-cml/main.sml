@@ -25,19 +25,52 @@ struct
   val _ = PacmlFFI.enablePreemption ()
   val numberOfProcessors = PacmlFFI.numberOfProcessors
 
-  (* Dummy signal handler *)
-  (* Since signals are handled by a separate pthread, the working threads are
-  * not interrupted and thus failing to interrupt the syscalls that could be
-  * restarted. Hence, the signal handler thread sends SIGUSR2 to each worker
-  * thread, which corresponds to this handler *)
+  local
+    structure Signal = MLtonSignal
+    structure Itimer = MLtonItimer
 
-  val h = MLtonSignal.Handler.handler (fn t => t)
+    fun getAlrmHandler () =
+      Signal.getHandler Posix.Signal.alrm
+    fun setAlrmHandler h =
+      Signal.setHandler (Posix.Signal.alrm, h)
+
+    fun setItimer t =
+      Itimer.set (Itimer.Real, {value = t, interval = t})
+  in
+    fun prepareAlrmHandler tq =
+      let
+          val origAlrmHandler = getAlrmHandler ()
+          val tq =
+            case tq of
+                SOME tq => tq
+              | NONE => Time.fromMilliseconds 20
+      in
+          (fn alrmHandler =>
+          (setAlrmHandler (Signal.Handler.handler (S.unwrap alrmHandler Thread.reifyHostFromParasite))
+            ; setItimer tq),
+          fn () =>
+          (setItimer Time.zeroTime
+            ; setAlrmHandler origAlrmHandler))
+      end
+  end
+
+  fun alrmHandler thrd =
+    let
+      val () = Assert.assertAtomic' ("RunCML.alrmHandler", SOME 1)
+      val () = debug' (fn () => "alrmHandler(1)") (* Atomic 1 *)
+      val () = S.preempt thrd
+      val () = TO.preemptTime ()
+      val _ = TO.preempt ()
+      val nextThrd = S.next()
+      val () = debug' (fn () => "alrmHandler(2)")
+    in
+      nextThrd
+    end
 
   fun thread_main () =
   let
     val _ = MLtonProfile.init ()
     val _ = PacmlFFI.disablePreemption ()
-    val _ = MLtonSignal.setHandler (Posix.Signal.usr2, h)
 
     fun wait () =
       if !Config.isRunning then
@@ -61,6 +94,8 @@ struct
                        else (loop procNum)
                val _ = atomicBegin ()
                val _ = PacmlFFI.enablePreemption ()
+               (* val (installAlrmHandler, _) = prepareAlrmHandler NONE
+               val _ = installAlrmHandler alrmHandler *)
              in
                S.atomicSwitch (fn _ => t)
              end
@@ -71,18 +106,6 @@ struct
 
   val () = (_export "Parallel_run": (unit -> unit) -> unit;) thread_main
 
-  fun alrmHandler thrd =
-    let
-      val () = Assert.assertAtomic' ("RunCML.alrmHandler", SOME 1)
-      val () = debug' (fn () => "alrmHandler(1)") (* Atomic 1 *)
-      val () = S.preempt thrd
-      val () = TO.preemptTime ()
-      val _ = TO.preempt ()
-      val nextThrd = S.next()
-      val () = debug' (fn () => "alrmHandler(2)")
-    in
-      nextThrd
-    end
 
   fun pause () =
   let
@@ -127,8 +150,6 @@ struct
   let
     val () = PacmlPrim.initRefUpdate (S.preemptOnWriteBarrier)
     val () = Primitive.MLton.parallelInit ()
-    (* Install handler for processor 0*)
-    val _ = MLtonSignal.setHandler (Posix.Signal.usr2, h)
   in
     ()
   end
@@ -138,7 +159,6 @@ struct
   let
     (* DO NOT REMOVE *)
     val _ = runtimeInit ()
-    val installAlrmHandler = fn (h) => MLtonSignal.setHandler (Posix.Signal.alrm, h)
     val status =
         S.switchToNext
         (fn thrd =>
@@ -150,6 +170,8 @@ struct
             (* Spawn the Non-blocking worker threads *)
             val _ = List.tabulate (numIOThreads * 5, fn _ => NonBlocking.mkNBThread ())
             val _ = List.tabulate (numIOThreads, fn i => PacmlFFI.wakeUp (PacmlFFI.numComputeProcessors + i, 1))
+            (* val (installAlrmHandler, _) = prepareAlrmHandler NONE
+            val _ = installAlrmHandler alrmHandler *)
           in
             ()
           end
@@ -157,8 +179,6 @@ struct
           val () = debug' (fn () => concat ["numComputeProcessors = ", Int.toString (PacmlFFI.numComputeProcessors)])
           val () = debug' (fn () => concat ["numIOProcessors = ", Int.toString (PacmlFFI.numIOProcessors)])
           val () = reset true
-          val handler = MLtonSignal.Handler.handler (S.unwrap alrmHandler Thread.reifyHostFromParasite)
-          val () = installAlrmHandler handler
           val () = debug' (fn () => "Main(-2)")
           val () = SH.shutdownHook := PT.prepend (thrd, fn arg => (atomicBegin (); arg))
           val () = debug' (fn () => "Main(-1)")

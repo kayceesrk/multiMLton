@@ -67,40 +67,21 @@ void switchToSignalHandlerThreadIfNonAtomicAndSignalPending (GC_state s) {
  * by Posix_Signal_handle (see Posix/Signal/Signal.c).
  */
 void GC_handler (GC_state s, int signum) {
-  assert ("GC_handler: not implemented" && FALSE);
-  fprintf (stderr, "GC_handler: not implemented\n");
-  exit (1);
-#if 0
   int p = Proc_processorNumber (s);
-  if (DEBUG_SIGNALS)
-    fprintf (stderr, "GC_handler signum = %d [%d]\n", signum,
-             p);
-  //assert (sigismember (&s->signalsInfo.signalsHandled, signum));
+  if (DEBUG_SIGNALS) {
+    fprintf (stderr, "GC_handler signum = %d [%d]\n", signum, p);
+    fprintf(stderr,"For processor %d\n",s->procId);
+    fprintf(stderr,"sigismember? %d\n",sigismember(&s->signalsInfo.signalsHandled, signum));
+    fprintf(stderr,"atomicState = %d\n",s->atomicState);
+  }
+  if(sigismember(&s->signalsInfo.signalsHandled, signum)) {
+    s->signalsInfo.signalIsPending = TRUE;
+    sigaddset (&s->signalsInfo.signalsPending, signum);
 
-  /* Cannot get the correct GC_state in the signal handler. Signals
-   * are delivered to any of the threads which do not mask it. So
-   * search for a GC_state which is registered to receive this signal
-   * if such a GC_state is found, set signalIsPending flag and set
-   * limit to 0 if atomicState is 0
-   */
-  for (int proc = 0; proc < s->numberOfProcs; proc++) {
-    GC_state gcState = &s->procStates[proc];
-    if (DEBUG_SIGNALS) {
-      fprintf(stderr,"For processor %d\n",proc);
-      fprintf(stderr,"sigismember? %d\n",sigismember(&gcState->signalsInfo.signalsHandled, signum));
-      fprintf(stderr,"atomicState = %d\n",gcState->atomicState);
-    }
-    if(sigismember(&gcState->signalsInfo.signalsHandled, signum)) {
-      gcState->signalsInfo.signalIsPending = TRUE;
-      sigaddset (&gcState->signalsInfo.signalsPending, signum);
-
-      if (gcState->atomicState == 0)
-        gcState->limit = 0;
-      break;
-    }
+    if (s->atomicState == 0)
+      s->limit = 0;
   }
 
   if (DEBUG_SIGNALS)
     fprintf (stderr, "GC_handler done [%d]\n", Proc_processorNumber (s));
-#endif
 }
