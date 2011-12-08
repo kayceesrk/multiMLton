@@ -67,6 +67,7 @@ struct GC_state {
   size_t alignment; /* */
   bool amInGC;
   bool amOriginal;
+  size_t bufferSize;
   uint32_t procId;
   char **atMLtons; /* Initial @MLton args, processed before command line. */
   uint32_t atMLtonsLength;

@@ -156,6 +156,11 @@ int processAtMLton (GC_state s, int argc, char **argv,
           if (i == argc)
             die ("@MLton affinity-stride missing argument.");
           s->controls->affinityStride = stringToInt (argv[i++]);
+        } else if (0 == strcmp (arg, "buffer-size")) {
+          i++;
+          if (i == argc)
+            die ("@MLton buffer-size missing argument.");
+          s->controls->bufferSize = stringToInt (argv[i++]);
         } else if (0 == strcmp (arg, "restrict-available")) {
           i++;
           s->controls->restrictAvailableSize = TRUE;
@@ -427,21 +432,21 @@ static inline void* initLastSharedMajorStatistics (void) {
 
 /* create Aux data structures for current processor */
 static inline void createAuxDataStructures (GC_state s) {
-  s->danglingStackList = (objptr*) malloc (sizeof (objptr) * BUFFER_SIZE);
+  s->danglingStackList = (objptr*) malloc (sizeof (objptr) * s->controls->bufferSize);
   s->danglingStackListSize = 0;
-  s->danglingStackListMaxSize = BUFFER_SIZE;
+  s->danglingStackListMaxSize = s->controls->bufferSize;
 
-  s->moveOnWBA = (objptr*) malloc (sizeof (objptr) * BUFFER_SIZE);
+  s->moveOnWBA = (objptr*) malloc (sizeof (objptr) * s->controls->bufferSize);
   s->moveOnWBASize = 0;
-  s->moveOnWBAMaxSize = BUFFER_SIZE;
+  s->moveOnWBAMaxSize = s->controls->bufferSize;
 
-  s->preemptOnWBA = (PreemptThread*) malloc (sizeof (PreemptThread) * BUFFER_SIZE);
+  s->preemptOnWBA = (PreemptThread*) malloc (sizeof (PreemptThread) * s->controls->bufferSize);
   s->preemptOnWBASize = 0;
-  s->preemptOnWBAMaxSize = BUFFER_SIZE;
+  s->preemptOnWBAMaxSize = s->controls->bufferSize;
 
-  s->spawnOnWBA = (SpawnThread*) malloc (sizeof (SpawnThread) * BUFFER_SIZE);
+  s->spawnOnWBA = (SpawnThread*) malloc (sizeof (SpawnThread) * s->controls->bufferSize);
   s->spawnOnWBASize = 0;
-  s->spawnOnWBAMaxSize = BUFFER_SIZE;
+  s->spawnOnWBAMaxSize = s->controls->bufferSize;
 }
 
 
@@ -456,6 +461,7 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->atomicState = 0;
   s->callFromCHandlerThread = BOGUS_OBJPTR;
   s->controls = (struct GC_controls *) GC_shmalloc (sizeof (struct GC_controls));
+  s->controls->bufferSize = 1024;
   s->controls->fixedHeap = 0;
   s->controls->maxHeapLocal = 0;
   s->controls->maxHeapShared = 0;

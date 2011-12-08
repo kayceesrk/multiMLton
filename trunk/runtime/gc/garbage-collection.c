@@ -234,7 +234,7 @@ void performSharedGCCollective (GC_state s,
   ENTER0 (s);
 
   if (Proc_processorNumber (s) == 0) {
-    initPointerToCore (s, BUFFER_SIZE);
+    initPointerToCore (s, s->controls->bufferSize);
     if (DEBUG_DETAILED)
       fprintf (stderr, "Core 0: letting other processors proceed\n");
     RCCE_DCMflush ();

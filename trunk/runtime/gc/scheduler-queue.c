@@ -25,6 +25,12 @@ static inline void CircularBufferClean (CircularBuffer* que) {
 }
 
 static inline CircularBuffer* growCircularBuffer (CircularBuffer* que) {
+  assert ("growCircularBuffer: Circular Buffer cannot be grown on the SCC.\n"
+          "Use @MLton parameter buffer-size to set the size of the buffer.\n"
+          && 0);
+  fprintf (stderr, "growCircularBuffer: Circular Buffer cannot be grown on the SCC.\n"
+                   "Use @MLton parameter buffer-size to set the size of the buffer.\n");
+  exit (1);
   //Double the circular queue size
   CircularBuffer* newBuf;
   CircularBufferInit (&newBuf, que->size * 2);
@@ -75,11 +81,11 @@ static inline int CircularBufferDeque(CircularBuffer* que, KeyType* pK) {
   return(FALSE);
 }
 
-static inline SchedulerQueue* newSchedulerQueue (void) {
+static inline SchedulerQueue* newSchedulerQueue (GC_state s) {
   SchedulerQueue* sq = (SchedulerQueue*) GC_shmalloc (sizeof (SchedulerQueue));
-  CircularBufferInit (&sq->primary, BUFFER_SIZE);
-  CircularBufferInit (&sq->secondary, BUFFER_SIZE);
-  CircularBufferInit (&sq->parasites, BUFFER_SIZE);
+  CircularBufferInit (&sq->primary, s->controls->bufferSize);
+  CircularBufferInit (&sq->secondary, s->controls->bufferSize);
+  CircularBufferInit (&sq->parasites, s->controls->bufferSize);
   return sq;
 }
 
@@ -106,7 +112,7 @@ void GC_sqCreateQueues (GC_state s) {
   }
   s->schedulerQueues = (SchedulerQueue**) GC_shmalloc (sizeof (SchedulerQueue*) * s->numberOfProcs);
   for (int proc=0; proc < s->numberOfProcs; proc++)
-    s->schedulerQueues[proc] = newSchedulerQueue ();
+    s->schedulerQueues[proc] = newSchedulerQueue (s);
 }
 
 void sqEnque (GC_state s, pointer p, int proc, int i) {

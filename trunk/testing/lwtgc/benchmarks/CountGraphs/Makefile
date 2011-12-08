@@ -11,7 +11,7 @@ SRC_RULS := $(subst .sml,-amd64,$(SRCS))
 
 MULTIMLTON=../../../../build/bin/mlton
 
-%-amd64 : $(SRCS)
+%-scc: $(SRCS)
 	$(MULTIMLTON) $(MORE) -keep g -debug $(DEBUG) -profile $(PROFILE) -profile-stack $(STACK) -profile-branch $(BRANCH) -output $@ "$(subst -amd64,,$@).sml"
 
 all: $(SRC_RULS)

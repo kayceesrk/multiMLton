@@ -43,6 +43,7 @@ struct GC_ratios {
 };
 
 struct GC_controls {
+  size_t bufferSize; /* Size of the buffers used for scheduler queues, write barrier arrays, etc. */
   size_t fixedHeap; /* If 0, then no fixed heap-> */
   size_t maxHeapLocal; /* if zero, then unlimited, else limit total heap */
   size_t maxHeapShared; /* if zero, then unlimited, else limit total heap */

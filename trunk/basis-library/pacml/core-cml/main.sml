@@ -25,7 +25,7 @@ struct
   val _ = PacmlFFI.enablePreemption ()
   val numberOfProcessors = PacmlFFI.numberOfProcessors
 
-  local
+  (*local
     structure Signal = MLtonSignal
     structure Itimer = MLtonItimer
 
@@ -52,7 +52,7 @@ struct
           (setItimer Time.zeroTime
             ; setAlrmHandler origAlrmHandler))
       end
-  end
+  end *)
 
   fun alrmHandler thrd =
     let
