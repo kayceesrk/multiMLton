@@ -190,8 +190,8 @@ def getPoints (min, max):
 
 def maxHeapLocalValues (b, n, progName, args, c):
 	atMLtons = ["number-processors " + str(n), \
-							"enable-timer 20000", \
 							"gc-summary individual"]
+							#"enable-timer 20000", \
 	(t, m, ml, ms) = run ("./" + str(b), str(progName[b]), atMLtons, args[b])
 	maxHeapLocalMax = ml
 	if int(t) == 0:
@@ -226,8 +226,8 @@ def maxHeapLocalValues (b, n, progName, args, c):
 
 def maxHeapSharedValues (b, n, progName, args, c):
 	atMLtons = ["number-processors " + str(n), \
-							"enable-timer 20000", \
 							"gc-summary individual"]
+							#"enable-timer 20000", \
 	(t, m, ml, ms) = run ("./" + str(b), str(progName[b]), atMLtons, args[b])
 	maxHeapSharedMax = ms
 	if int(t) == 0:

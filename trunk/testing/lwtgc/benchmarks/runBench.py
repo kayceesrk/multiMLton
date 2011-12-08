@@ -222,8 +222,8 @@ def main():
 				atMLtons = ["number-processors " + str(n), \
 										"max-heap-local " + str(ml), \
 										"max-heap-shared " + str(ms), \
-										"enable-timer 20000", \
 										"gc-summary individual"]
+										#"enable-timer 20000", \
 
 				#run only if required
 				shouldRun = True
