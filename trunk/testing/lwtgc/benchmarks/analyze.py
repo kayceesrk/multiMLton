@@ -142,7 +142,7 @@ def fullParameters():
 					"TSP2": "", \
 					"Nucleic": "512", \
 					"MD5": "16", \
-					"CountGraphs": "1", \
+					"CountGraphs": "128 9", \
 					"GameOfLife": "64 300", \
 					"GameOfLife2": "64", \
 					"Mergesort": "10000", \
@@ -226,8 +226,15 @@ def main():
 			x = list (map (lambda v: bytesStringToInt (v[0]), data))
 			if x: #x is not empty
 				shouldPlot = True
-				x = [v/minX for v in x]
 				y = list (map (lambda v: v[1], data))
+
+				#debug
+				z = list (zip (x,y))
+				z.sort ()
+				for (xi,yi) in z:
+					print (str(xi) + " " + str(yi))
+
+				x = [v/minX for v in x]
 				z = list (zip (x,y))
 				z.sort ()
 				x,y = list(zip (*z))

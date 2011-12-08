@@ -145,7 +145,7 @@ def fullParameters():
 					"TSP2": "", \
 					"Nucleic": "512", \
 					"MD5": "16", \
-					"CountGraphs": "1", \
+					"CountGraphs": "128 9", \
 					"GameOfLife": "64 300", \
 					"GameOfLife2": "64", \
 					"Mergesort": "10000", \
