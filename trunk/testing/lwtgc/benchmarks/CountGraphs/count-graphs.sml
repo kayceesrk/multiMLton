@@ -511,9 +511,7 @@ end
 
 fun doOne arg = (
         case Int.fromString arg of
-        SOME n =>
-                print ((Int.toString (f n))^" "^
-                       (Int.toString (MLton.Pacml.processorNumber ()))^"\n")
+        SOME n => ignore (f n)
         | NONE =>
                 print "NOT A NUMBER\n")
 
