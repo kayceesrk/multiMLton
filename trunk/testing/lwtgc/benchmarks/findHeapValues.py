@@ -145,20 +145,13 @@ def fullParameters():
 					"TSP2": "", \
 					"Nucleic": "512", \
 					"MD5": "16", \
-					"CountGraphs": "128 9", \
+					"CountGraphs": "128 8", \
 					"GameOfLife": "64 300", \
 					"GameOfLife2": "64", \
 					"Mergesort": "10000", \
 					"Raytrace": "48"}
-	numProcs = [16]
+	numProcs = [2]
 	return (progName, args, numProcs)
-
-def testParameters():
-	progName = {"CountGraphs": "count-graphs-amd64"}
-	args = {"CountGraphs": "1"}
-	numProcs = [16]
-	return (progName, args, numProcs)
-
 
 def getPointsInRange (min, max, numPoints):
 	result = []
