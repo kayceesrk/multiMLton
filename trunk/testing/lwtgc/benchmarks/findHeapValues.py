@@ -9,149 +9,7 @@ import os
 import fnmatch
 import locale
 import sqlite3
-
-logging=True
-
-def bytesIntToString (bytes, decimal):
-	bytes = float(bytes)
-	if bytes >= 1099511627776:
-		terabytes = bytes / 1099511627776
-		size = str (round (terabytes, decimal)) + "T"
-	elif bytes >= 1073741824:
-		gigabytes = bytes / 1073741824
-		size = str (round (gigabytes, decimal)) + "G"
-	elif bytes >= 1048576:
-		megabytes = bytes / 1048576
-		size = str (round (megabytes, decimal)) + "M"
-	elif bytes >= 1024:
-		kilobytes = bytes / 1024
-		size = str (round (kilobytes, decimal)) + "K"
-	else:
-		size = str (round (bytes, decimal)) + "b"
-	return size
-
-def bytesIntToString2 (bytes, decimal):
-	bytes = float(bytes)
-	if bytes >= 1099511627776:
-		terabytes = bytes / 1099511627776
-		size = '%.1fT' % terabytes
-		size = str (round (terabytes, decimal)) + "T"
-	elif bytes >= 1073741824:
-		gigabytes = bytes / 1073741824
-		size = '%.1fG' % gigabytes
-	elif bytes >= 1048576:
-		megabytes = bytes / 1048576
-		size = '%.1fM' % megabytes
-	elif bytes >= 1024:
-		kilobytes = bytes / 1024
-		size = '%.1fK' % kilobytes
-	else:
-		size = '%.1fb' % bytes
-	return size
-
-def bytesStringToInt (s):
-	intVal = float(s.replace('K','').replace('M','').replace('G',''))
-	if s.endswith('K'):
-		intVal *= 1024
-	elif s.endswith('M'):
-		intVal *= 1024*1024
-	elif s.endswith('G'):
-		intVal *= 1024*1024*1024
-	return intVal
-
-def log(s):
-    if (logging):
-        print (s)
-
-def getMem(dir):
-	totalLocal = 0
-	shared = 0
-
-	for file in os.listdir (dir):
-		if fnmatch.fnmatch (file, 'gc-summary.*.out') and (not fnmatch.fnmatch (file, 'gc-summary.cumul.out')):
-			infile = open (dir + "/" + file, "r")
-			for line in infile.readlines ():
-				if line.startswith ("max local heap size"):
-					m = re.sub (r'max local heap size: (.*?) bytes', r'\1', line).rstrip ()
-					totalLocal += int (re.sub (r',', r'', m))
-
-	try:
-		infile = open (dir + "/gc-summary.cumul.out", "r")
-		for line in infile.readlines ():
-			if line.startswith ("max shared heap size"):
-				m = re.sub (r'max shared heap size: (.*?) bytes', r'\1', line).rstrip ()
-				shared = int (re.sub (r',', r'', m))
-	except:
-		pass
-
-	return totalLocal + shared, totalLocal, shared
-
-def runAndGetOutput (args, dir):
-	spArgs = shlex.split (args)
-	proc = subprocess.Popen (spArgs, cwd=dir, stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
-	output = proc.communicate()[0]
-	return output
-
-def run (dir, prog, atMLtons, args):
-	print ("\n-------------------------------\n")
-	print ("DIR: " + dir + " PROG: " + prog)
-	atMLtonString = ""
-	for a in atMLtons:
-		log ("\t" + a)
-		atMLtonString += " " + a
-
-	#run the program and capture the output
-	args = "./" + str(prog) + " @MLton" + atMLtonString + " -- " + args
-	log ("\t" + args)
-	runAndGetOutput ("make clean-summaries", dir)
-	output = runAndGetOutput (args, dir)
-
-	#extract statistics from output
-	output = re.sub (r'\n', r' ', str(output))
-	if ("Out of memory" in output):
-		time = "0"
-		(m, ml, ms) = "0", "0", "0"
-	else:
-		time = re.sub (r'.*Time diff:\s*([0-9]*)\s*ms.*', r'\1', output)
-		(m, ml, ms) = getMem (dir)
-	try:
-		int(time)
-	except:
-		time = "0"
-		(m, ml, ms) = "0", "0", "0"
-	print ("\tCompleted in " + str(time) + " ms")
-	print ("\t\tTotal Mem: " + bytesIntToString (m, 1))
-	print ("\t\tTotal Local Mem: " + bytesIntToString(ml, 1))
-	print ("\t\tShared Mem: " + bytesIntToString (ms, 1))
-	return (time, m, ml, ms)
-
-def fullParameters():
-	progName = {"BarnesHut2": "barnes-hut-amd64", \
-							"AllPairs": "floyd-warshall-amd64", \
-							"Mandelbrot2": "mandelbrot-amd64", \
-							"KClustering": "kclustering-amd64", \
-							"TSP2": "tsp-amd64", \
-							"Nucleic": "nucleic-amd64", \
-							"MD5": "md5-amd64", \
-							"CountGraphs": "count-graphs-amd64", \
-							"GameOfLife": "lifeM-amd64", \
-							"GameOfLife2": "life-amd64", \
-							"Mergesort": "mergesort-amd64", \
-							"Raytrace": "raytrace-amd64"}
-	args = {"BarnesHut2": "2048 512", \
-					"AllPairs": "1024 64", \
-					"Mandelbrot2": "2048 128", \
-					"KClustering": "0 64 500 70 0", \
-					"TSP2": "", \
-					"Nucleic": "512", \
-					"MD5": "16", \
-					"CountGraphs": "128 8", \
-					"GameOfLife": "64 300", \
-					"GameOfLife2": "64", \
-					"Mergesort": "10000", \
-					"Raytrace": "48"}
-	numProcs = [2]
-	return (progName, args, numProcs)
+import common
 
 def getPointsInRange (min, max, numPoints):
 	result = []
@@ -185,22 +43,24 @@ def maxHeapLocalValues (b, n, progName, args, c):
 	atMLtons = ["number-processors " + str(n), \
 							"gc-summary individual"]
 							#"enable-timer 20000", \
-	(t, m, ml, ms) = run ("./" + str(b), str(progName[b]), atMLtons, args[b])
+	(t, m, ml, ms) = common.run ("./" + str(b), str(progName[b]), atMLtons, args[b])
 	maxHeapLocalMax = ml
 	if int(t) == 0:
 		sys.exit ("Initial run failed. Exiting....")
 
 	min = 0
 	max = maxHeapLocalMax
-	while (bytesIntToString (min, 0) != bytesIntToString (max, 0)):
-		print (bytesIntToString (min, 0))
-		print (bytesIntToString (max, 0))
+	while (common.bytesIntToString (min, 0) != common.bytesIntToString (max, 0)):
+		print (common.bytesIntToString (min, 0))
+		print (common.bytesIntToString (max, 0))
 		cur = (min + max)/2
-		newAtMLtons = atMLtons + ["max-heap-local " + bytesIntToString (round(cur), 1)]
-		(t, m, ml, ms) = run ("./" + str(b), str(progName[b]), newAtMLtons, args[b])
+		if (cur < 32768):
+			break
+		newAtMLtons = atMLtons + ["max-heap-local " + common.bytesIntToString (round(cur), 1)]
+		(t, m, ml, ms) = common.run ("./" + str(b), str(progName[b]), newAtMLtons, args[b])
 		if int(t) == 0:
 			print ("Repeat")
-			(t, m, ml, ms) = run ("./" + str(b), str(progName[b]), newAtMLtons, args[b])
+			(t, m, ml, ms) = common.run ("./" + str(b), str(progName[b]), newAtMLtons, args[b])
 			if int(t) == 0:
 				min = cur
 			else:
@@ -214,26 +74,28 @@ def maxHeapLocalValues (b, n, progName, args, c):
 	points2 = getPointsInRange (points[0], points[1], 15)
 	points += points2
 	points.sort ()
-	print ("values for maxHeapLocal: " + str ([bytesIntToString (x, 1) for x in points]))
+	print ("values for maxHeapLocal: " + str ([common.bytesIntToString (x, 1) for x in points]))
 	return points
 
 def maxHeapSharedValues (b, n, progName, args, c):
 	atMLtons = ["number-processors " + str(n), \
 							"gc-summary individual"]
 							#"enable-timer 20000", \
-	(t, m, ml, ms) = run ("./" + str(b), str(progName[b]), atMLtons, args[b])
+	(t, m, ml, ms) = common.run ("./" + str(b), str(progName[b]), atMLtons, args[b])
 	maxHeapSharedMax = ms
 	if int(t) == 0:
 		sys.exit ("Initial run failed. Exiting....")
 
 	min = 0
 	max = maxHeapSharedMax
-	while (bytesIntToString (min, 0) != bytesIntToString (max, 0)):
-		print (bytesIntToString (min, 0))
-		print (bytesIntToString (max, 0))
+	while (common.bytesIntToString (min, 0) != common.bytesIntToString (max, 0)):
+		print (common.bytesIntToString (min, 0))
+		print (common.bytesIntToString (max, 0))
 		cur = (min + max)/2
-		newAtMLtons = atMLtons + ["max-heap-shared " + bytesIntToString (round(cur), 1)]
-		(t, m, ml, ms) = run ("./" + str(b), str(progName[b]), newAtMLtons, args[b])
+		if (cur < 32768):
+			break
+		newAtMLtons = atMLtons + ["max-heap-shared " + common.bytesIntToString (round(cur), 1)]
+		(t, m, ml, ms) = common.run ("./" + str(b), str(progName[b]), newAtMLtons, args[b])
 		if int(t) == 0:
 			min = cur
 		else:
@@ -245,7 +107,7 @@ def maxHeapSharedValues (b, n, progName, args, c):
 	points2 = getPointsInRange (points[0], points[1], 5)
 	points += points2
 	points.sort ()
-	print ("values for maxHeapShared: " + str ([bytesIntToString (x, 1) for x in points]))
+	print ("values for maxHeapShared: " + str ([common.bytesIntToString (x, 1) for x in points]))
 
 	return points
 
@@ -270,7 +132,7 @@ def main():
 	c.execute ("create table if not exists heapRanges \
 							(benchmark text, numProcs int, gckind text, args text, maxSHV text, maxLHV text)")
 
-	(progName, args, numProcs) = fullParameters ()
+	(progName, args, numProcs) = common.fullParameters ()
 
 	for b in benchmarks:
 		for n in numProcs:

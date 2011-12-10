@@ -11,11 +11,9 @@ struct
 
   fun get(M, x, y) =
   let
-    (*val _ = print("get: x = "^Int.toString(x)^" y = "^Int.toString(y))*)
     val xRow = Array.sub(M, x)
     val element = Array.sub(xRow, y)
     val ret = !element
-    (*val ret = 0*)
   in
     ret
   end
@@ -25,36 +23,15 @@ struct
     val xRow = Array.sub(M, x)
     val element = Array.sub(xRow, y)
     val _ = element := newVal
-
-    (*val _ = print("writing newVal = \n"^Int.toString(newVal)^"on
-    * ["^Int.toString(x)^"]["^Int.toString(y)^"\n")*)
   in
     ()
   end
 
 
-  fun printMatrix (M,size) =
-(*  let val i = ref 0
-  in
-  while !i < size do
-  (let val j = ref 0
-   in
-   (while !j < size do
-     (print("["^Int.toString(!i)^"]["^Int.toString(!j)^"] = "^Int.toString(get(M,!i,!j))^"\t"); j := (!j)+1);
-     print("\n");
-     i := (!i)+1)
-   end)
-  end*)
-    Array.appi (fn (i, row) => (Array.appi (fn (j, elem) =>
-    print("["^Int.toString(i)^"]["^Int.toString(j)^"] = "^Int.toString(get(M, i,
-    j)))) row; print("\n"))) M
-
   fun floydWarshall (M, size, n) =
   let
     fun innerLoop(i, j, k) =
-      (print'(fn () => "innerloop1: i = "^Int.toString(i)^" j = "^Int.toString(j)
-        ^" k = "^Int.toString(k)^"\n");
-      if (j < size) then
+      (if (j < size) then
         let
           val newPath = get(M, i, k) + get(M, k, j)
         in if(newPath < get(M, i, j))
@@ -66,10 +43,7 @@ struct
       )
 
     fun loop(tid, i, j, k) =
-      if (k < size)
-      then(
-      print'(fn () => "Starting loop: tid = "^Int.toString(tid)^" i = "^Int.toString(i)^" j = "^Int.toString(j)
-        ^" k = "^Int.toString(k)^"\n");
+      if (k < size) then
       if(i*n < (tid+1)*size)
       then (innerLoop(i, j, k);
            loop(tid, i+1, j, k))

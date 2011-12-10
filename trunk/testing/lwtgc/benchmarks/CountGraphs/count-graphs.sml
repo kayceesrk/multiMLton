@@ -510,10 +510,8 @@ in fun f maxSize =
 end
 
 fun doOne arg = (
-        print (arg ^ " -> ");
         case Int.fromString arg of
-        SOME n =>
-                print ((Int.toString (f n)) ^ "\n")
+        SOME n => ignore (f n)
         | NONE =>
                 print "NOT A NUMBER\n")
 
