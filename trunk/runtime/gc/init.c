@@ -124,6 +124,9 @@ int processAtMLton (GC_state s, int argc, char **argv,
         } else if (0 == strcmp (arg, "gc-messages")) {
           i++;
           s->controls->messages = TRUE;
+        } else if (0 == strcmp (arg, "ignore-id-for-cleanliness")) {
+          i++;
+          s->controls->useIdentityForCleanliness = FALSE;
         } else if (0 == strcmp (arg, "gc-summary")) {
           if (i == argc)
               die ("@MLton gc-summary missing argument");
@@ -463,6 +466,7 @@ int GC_init (GC_state s, int argc, char **argv) {
   s->selectiveDebug = FALSE;
   s->controls->summary = SUMMARY_NONE;
   s->controls->reclaimObjects = FALSE;
+  s->controls->useIdentityForCleanliness = TRUE;
 
   s->forwardState.liftingObject = BOGUS_OBJPTR;
 
