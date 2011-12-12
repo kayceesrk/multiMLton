@@ -6,11 +6,12 @@ sig
   val never : 'a sevt
   val alwaysEvt : 'a -> 'a sevt
 
-  val wrap        : ('a sevt * ('a -> 'b)) -> 'b sevt
-  val sWrap        : (('a,'b) aevt * ('a -> 'c)) -> ('c,'b) aevt
-  val aWrap        : (('a,'b) aevt * ('b -> 'c)) -> ('a,'c) aevt
+  val wrap  : ('a sevt * ('a -> 'b)) -> 'b sevt
+  val sWrap : (('a,'b) aevt * ('a -> 'c)) -> ('c,'b) aevt
+  val aWrap : (('a,'b) aevt * ('b -> 'c)) -> ('a,'c) aevt
 
-  val guard    : (unit -> 'a sevt) -> 'a sevt
+  val guard  : (unit -> 'a sevt) -> 'a sevt
+  val aGuard : (unit -> ('a,'b) aevt) -> ('a,'b) aevt
 
   val choose : 'a sevt list -> 'a sevt
   val select : 'a sevt list -> 'a

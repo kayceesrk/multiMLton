@@ -9,7 +9,7 @@ MORE :=
 SRCS := $(wildcard *.sml)
 SRC_RULS := $(subst .sml,-amd64,$(SRCS))
 
-MMPATH = $(HOME)/multiMLton-BoehmGC/multiMLton
+MMPATH = $(HOME)/temp/UT/multiMLton
 MULTIMLTON= $(MMPATH)/trunk/build/bin/mlton
 
 %-amd64 : $(SRCS)
@@ -20,16 +20,19 @@ all: $(SRC_RULS)
 clean:
 	rm -rf $(SRC_RULS) *~ op *.out *.c *ssa *ssa2 *xml *-ml *machine
 
+clean-summaries:
+	rm gc-summary.*
+
 
 FLAGS = -std=gnu99 -c -g -DASSERT=1 -I$(MMPATH)/trunk/build/lib/self/include \
 				-I$(MMPATH)/trunk/build/lib/include -O1 -fno-common -fno-strict-aliasing \
 				-fomit-frame-pointer -w -m64
 
 DEBUG_LIBS = -L$(MMPATH)/trunk/build/lib/self -lmlton-gdb -lgdtoa-gdb \
-			 -lm -lgmp -m64 -lplpa_included -pthread -lrt -lgc
+			 -lm -lgmp -m64 -lplpa_included -pthread -lrt
 
 LIBS = -L$(MMPATH)/trunk/build/lib/self -lmlton -lgdtoa \
-			 -lm -lgmp -m64 -lplpa_included -pthread -lrt -lgc
+			 -lm -lgmp -m64 -lplpa_included -pthread -lrt
 
 %.o: %.c
 	gcc $(FLAGS) -o $@ $<

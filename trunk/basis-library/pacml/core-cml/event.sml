@@ -95,11 +95,15 @@ struct
       wrap' evt
     end
 
-  fun sWrap (PAIR (evt1, evt2) : ('a, 'b) aevt, wfn : 'a -> 'c) : ('c, 'b) aevt =
-        PAIR (wrap (evt1, wfn), evt2)
+  fun sWrap (evt : ('a, 'b) aevt, wfn : 'a -> 'c) : ('c, 'b) aevt =
+    case evt of
+         PAIR (evt1, evt2) => PAIR (wrap (evt1, wfn), evt2)
+       | AGUARD g => AGUARD (fn () => sWrap (g (), wfn))
 
-  fun aWrap (PAIR (evt1, evt2) : ('a, 'b) aevt, wfn : 'b -> 'c) : ('a, 'c) aevt =
-        PAIR (evt1, wrap (evt2, wfn))
+  fun aWrap (evt : ('a, 'b) aevt, wfn : 'b -> 'c) : ('a, 'c) aevt =
+    case evt of
+         PAIR (evt1, evt2) => PAIR (evt1, wrap (evt2, wfn))
+       | AGUARD g => AGUARD (fn () => aWrap (g (), wfn))
 
   fun wrapHandler (evt : 'a sevt, hfn : exn -> 'a) : 'a sevt =
     let
@@ -122,13 +126,18 @@ struct
       wrap' evt
     end
 
-  fun sWrapHandler (PAIR (evt1, evt2) : ('a, 'b) aevt, hfn : exn -> 'a) : ('a, 'b) aevt =
-    PAIR (wrapHandler (evt1, hfn), evt2)
+  fun sWrapHandler (evt : ('a, 'b) aevt, hfn : exn -> 'a) : ('a, 'b) aevt =
+    case evt of
+         PAIR (evt1, evt2) => PAIR (wrapHandler (evt1, hfn), evt2)
+       | AGUARD g => AGUARD (fn () => sWrapHandler (g (), hfn))
 
-  fun aWrapHandler (PAIR (evt1, evt2) : ('a, 'b) aevt, hfn : exn -> 'b) : ('a, 'b) aevt =
-    PAIR (evt1, wrapHandler (evt2, hfn))
+  fun aWrapHandler (evt : ('a, 'b) aevt, hfn : exn -> 'b) : ('a, 'b) aevt =
+    case evt of
+         PAIR (evt1, evt2) => PAIR (evt1, wrapHandler (evt2, hfn))
+       | AGUARD g => AGUARD (fn () => aWrapHandler (g (), hfn))
 
   val guard = GUARD
+  val aGuard = AGUARD
 
   fun choose (evts : 'a sevt list) : 'a sevt =
     let
@@ -407,10 +416,18 @@ struct
           in
               gevt
           end
+
     in
         fun forceHelper (e, t) =
           (case force e of
             BASE bevts => syncOnBEvts (bevts, t))
+
+        fun forceAsync (evt : ('a,'b) aevt) =
+          case evt of
+               AGUARD g => forceAsync (g ())
+             | PAIR (syncHalf, asyncHalf) =>
+                 (ignore (forceHelper (asyncHalf, ASYNC));
+                  forceHelper (syncHalf, SYNC))
 
         fun eventTypeToString (et) =
           case et of
@@ -424,12 +441,7 @@ struct
               val () = Assert.assertNonAtomic' "Event.sync(1)"
               val x = case con_evt of
                         SEVT evt => forceHelper (evt, SYNC)
-                      | AEVT (PAIR (syncHalf, asyncHalf)) =>
-                          let
-                            val () = ignore (forceHelper (asyncHalf, ASYNC))
-                          in
-                            forceHelper (syncHalf, SYNC)
-                          end
+                      | AEVT evt => forceAsync (evt)
               val () = debug' "sync(4)" (* NonAtomic *)
               val () = Assert.assertNonAtomic' "Event.sync(4)"
           in
@@ -454,30 +466,44 @@ struct
           end
 
       (* XXX KC atrans polls the a's pollFn. Make it poll b's pollFn *)
-      fun aTrans (PAIR (a,b) : ('a, 'b) aevt) : 'a sevt =
+      fun aTrans (evt : ('a, 'b) aevt) : 'a sevt =
         let
-          fun atomicATransF e =
-            (atomicEnd (); (ignore o forceHelper) (b, ASYNC); atomicBegin (); e)
-          fun aTransF e =
-            ((ignore o forceHelper) (b, ASYNC); e)
-          fun aTransBaseEvt pollFn () =
-              case pollFn () of
-                ENABLED {prio, doitFn} =>
-                    ENABLED {prio = prio, doitFn = atomicATransF doitFn}
-              | BLOCKED blockFn =>
-                    BLOCKED (atomicATransF blockFn)
-          fun aTrans' evt =
-              case evt of
-                BEVT bevts =>
-                    BEVT(List.map aTransBaseEvt bevts)
-              | CHOOSE evts =>
-                    CHOOSE(List.map aTrans' evts)
-              | GUARD g =>
-                    GUARD(fn () => aTransF (g ()))
+          fun aTrans'' (a,b) =
+          let
+            fun atomicATransF e =
+              (atomicEnd (); (ignore o forceHelper) (b, ASYNC); atomicBegin (); e)
+            fun aTransF e =
+              ((ignore o forceHelper) (b, ASYNC); e)
+            fun aTransBaseEvt pollFn () =
+                case pollFn () of
+                  ENABLED {prio, doitFn} =>
+                      ENABLED {prio = prio, doitFn = atomicATransF doitFn}
+                | BLOCKED blockFn =>
+                      BLOCKED (atomicATransF blockFn)
+            fun aTrans' evt =
+                case evt of
+                  BEVT bevts =>
+                      BEVT(List.map aTransBaseEvt bevts)
+                | CHOOSE evts =>
+                      CHOOSE(List.map aTrans' evts)
+                | GUARD g =>
+                      GUARD(fn () => aTransF (g ()))
+          in
+            aTrans' a
+          end
         in
-          aTrans' a
+          case evt of
+               PAIR (a,b) => aTrans'' (a,b)
+             | AGUARD g => GUARD (fn () =>
+                                    let
+                                      fun force g =
+                                        case g () of
+                                             PAIR (a,b) => aTrans'' (a, b)
+                                           | AGUARD g' => force g'
+                                    in
+                                      force g
+                                    end)
         end
-
       fun sTrans (e) = aevt (e)
     end
 end

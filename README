@@ -9,7 +9,7 @@ various kinds of fine-grained parallelism (safe futures, speculation,
 transactions, etc.), along with a sophisticated runtime system tuned to
 efficiently handle large numbers of lightweight threads.
 
-http://sss.cs.purdue.edu/projects/multiMLton
+http://multimlton.cs.purdue.edu
 
 INSTALL
 -------

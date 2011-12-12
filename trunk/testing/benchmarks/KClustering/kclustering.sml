@@ -656,11 +656,8 @@ let val _ = print("starting test\n")
     val _ = print("gave the start signal\n")
     val _ = MLton.Pacml.recv(finish)
     val t2 = Time.now()
-    open Time
-  val _ = (print "Testing: complete on stream of size: "; print
-(Int.toString(iterations)); print "\n"; print "Run-time: ";
-    print(format(t2-t1)); print" (milliseconds)\n")
-
+    val d = Time.-(t2, t1)
+    val _ = TextIO.print (concat ["Time diff:  ", LargeInt.toString (Time.toMilliseconds d), "ms\n"])
 in
     OS.Process.exit OS.Process.success
 end

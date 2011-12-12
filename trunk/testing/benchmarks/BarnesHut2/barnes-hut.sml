@@ -1,17 +1,3 @@
-(* Barnes-hut N-body simulation - CML
- * -------------------------------------
- *  At every step, acceleration and current position of the bodies are computed
- *  in parallel.
- *
- *  Not all bodies require the same amount of work. Hence, the points are grouped
- *  into blocks of size <workSize>. numBlocks > numProcessors. Each processor is allocated a block
- *  to process. When it completes, it is allocated more blocks, if available.
- *
- *  IMPORTANT NOTE: This implementation requires that numSlaves * worksize <
- *  numPoints.
- *)
-
-
 (* From the SML/NJ benchmark suite. *)
 (* vector-sig.sml
  *
@@ -19,6 +5,8 @@
  *
  * The abstract interface of vectors and matrices in some dimension.
  *)
+
+open MLton.Pacml
 
 signature VECTOR =
   sig
@@ -222,7 +210,7 @@ signature LOAD =
     structure V : VECTOR
       sharing S.V = V
 
-    val makeTree : (S.body array * real V.vec * real) -> S.space
+    val makeTree : (S.body list * real V.vec * real) -> S.space
 
   end; (* LOAD *)
 
@@ -247,7 +235,7 @@ functor Load (S : SPACE) : LOAD =
           val xsc = V.divvs (V.subv(rp, rmin), rsize)
           fun cvt x = if ((0.0 <= x) andalso (x < 1.0))
                 then floor(rIMAX * x)
-                else raise NotIntCoord
+                else (print "\nRaising notIntCoord"; raise NotIntCoord)
           in
             V.mapv cvt xsc
           end
@@ -262,31 +250,42 @@ functor Load (S : SPACE) : LOAD =
           end
 
   (* enlarge cubical "box", salvaging existing tree structure. *)
-    fun expandBox (nd as S.Body{pos, ...}, box as S.Space{rmin, rsize, root}) = (
-          (intcoord (!pos, rmin, rsize); box)
-            handle NotIntCoord => let
-              val rmid = V.addvs (rmin, 0.5 * rsize)
-              val rmin' = V.map3v (fn (x,y,z) =>
-                              if x < y then z - rsize else z) (!pos, rmid, rmin)
-              val rsize' = 2.0 * rsize
-              fun mksub (v, r) = let
-                    val x = intcoord (v, rmin', rsize')
-                    val k = subindex (x, IMAXrs1)
-                    val cell = S.mkCell ()
-                    in
-                      S.putCell (cell, k, r); cell
-                    end
-              val box = (case root
-                     of S.Empty => S.Space{rmin=rmin', rsize=rsize', root=root}
-                      | _ => S.Space{
-                            rmin = rmin',
-                            rsize = rsize',
-                            root = S.mkCellNode (mksub (rmid, root))
-                          }
-                    (* end case *))
-              in
-                expandBox (nd, box)
-              end)
+    fun expandBox (nd as S.Body{pos, ...}, box as S.Space{rmin, rsize, root}) =
+         (let
+           val rp = !pos
+           val xsc = V.divvs (V.subv(rp, rmin), rsize)
+           fun cvt (x, aux) = if ((0.0 <= x) andalso (x < 1.0))
+                then (true andalso aux)
+                else false
+           val res = V.foldv cvt xsc true
+          in
+            if res then
+                box
+            else
+             (let
+                val rmid = V.addvs (rmin, 0.5 * rsize)
+                val rmin' = V.map3v (fn (x,y,z) =>
+                                if x < y then z - rsize else z) (!pos, rmid, rmin)
+                val rsize' = 2.0 * rsize
+                fun mksub (v, r) = let
+                      val x = intcoord (v, rmin', rsize')
+                      val k = subindex (x, IMAXrs1)
+                      val cell = S.mkCell ()
+                      in
+                        S.putCell (cell, k, r); cell
+                      end
+                val box = (case root
+                      of S.Empty => S.Space{rmin=rmin', rsize=rsize', root=root}
+                        | _ => S.Space{
+                              rmin = rmin',
+                              rsize = rsize',
+                              root = S.mkCellNode (mksub (rmid, root))
+                            }
+                      (* end case *))
+                in
+                  expandBox (nd, box)
+                end)
+          end)
 
 
   (* insert a single node into the tree *)
@@ -335,20 +334,16 @@ functor Load (S : SPACE) : LOAD =
 
   (* initialize tree structure for hack force calculation. *)
     fun makeTree (bodies, rmin, rsize) = let
-          fun build (space, ~1) = space
-            | build (space, n) =
-               (let
-                 val body as S.Body{mass, ...} = Array.sub (bodies, n)
-               in
-                 if Real.==(mass, 0.0) then build (space, n-1)
-                 else let
-                        val box = expandBox (body, space)
-                        val box = loadTree(body, box)
-                      in build (box, n-1)
-                      end
-               end)
+          fun build ([], space) = space
+            | build ((body as S.Body{mass, ...}) :: r, space) =
+               if Real.==(mass, 0.0) then build (r, space)
+               else let
+                   val box = expandBox (body, space)
+                   val box = loadTree(body, box)
+                 in build (r, box)
+                 end
           val (space as S.Space{root, ...}) =
-            build (S.Space{rmin=rmin, rsize=rsize, root=S.Empty}, (Array.length bodies) - 1)
+            build (bodies, S.Space{rmin=rmin, rsize=rsize, root=S.Empty})
           in
             hackCofM root;
             space
@@ -487,7 +482,7 @@ signature DATA_IO =
             dtime : real, eps : real, tol : real, dtout : real, tstop : real
           } -> unit
     val output : {
-            nbody : int, bodies : S.body array, n2bcalc : int, nbccalc : int,
+            nbody : int, bodies : S.body list, n2bcalc : int, nbccalc : int,
             selfint : int, tnow : real
           } -> unit
     val stopOutput : unit -> unit
@@ -570,6 +565,7 @@ functor DataIO (S : SPACE) : DATA_IO =
             }
           end
 
+
     type out_state = {
         tout : real,
         dtout : real,
@@ -599,8 +595,7 @@ functor DataIO (S : SPACE) : DATA_IO =
           (* end case *))
 
     fun initOutput {outfile, headline, nbody, tnow, dtime, eps, tol, dtout, tstop} = (
-          (*initTimer();*)
-          (*printf ["\n\t\t", headline, "\n\n"];
+          printf ["\n\t\t", headline, "\n\n"];
           printf (map (pad 12) ["nbody", "dtime", "eps", "tol", "dtout", "tstop"]);
           printf ["\n"];
           printf [fmtInt(12, nbody), fmtReal(12, 5, dtime)];
@@ -608,7 +603,7 @@ functor DataIO (S : SPACE) : DATA_IO =
               fmtInt(12, nbody), fmtReal(12, 5, dtime),
               fmtReal(12, 4, eps), fmtReal(12, 2, tol),
               fmtReal(12, 3, dtout), fmtReal(12, 2, tstop), "\n\n"
-            ];*)
+            ];
           case outfile
            of "" => stopOutput()
             | _ => outState := SOME{
@@ -677,7 +672,6 @@ functor DataIO (S : SPACE) : DATA_IO =
           end;
 
     fun output {nbody, bodies, n2bcalc, nbccalc, selfint, tnow} = let
-          val bodies = Array.toList bodies
           val nttot = n2bcalc + nbccalc
           val nbavg = floor(real n2bcalc / real nbody)
           val ncavg = floor(real nbccalc / real nbody)
@@ -693,7 +687,7 @@ functor DataIO (S : SPACE) : DATA_IO =
                 fmtReal(9, 3, tnow), fmtReal(9, 4, #totKE data + #totPE data),
                 fmtReal(9, 4, #totKE data / #totPE data), fmtInt(9, nttot),
                 fmtInt(9, nbavg), fmtInt(9, ncavg), fmtInt(9, selfint),
-                fmtReal(9, 2, 0.0), "\n\n"
+                fmtReal(9, 2, 1.0), "\n\n"
               ];
             printvec ("cm pos", #cOfMPos data);
             printvec ("cm vel", #cOfMVel data);
@@ -900,16 +894,15 @@ functor Main (V : VECTOR) : sig
     val go : {
             output : {n2bcalc:int, nbccalc:int, nstep:int, selfint:int, tnow:real}
                 -> unit,
-            bodies : S.body array, tnow : real, tstop : real,
+            bodies : S.body list, tnow : real, tstop : real,
             dtime : real, eps : real, tol : real,
-            rmin : real V.vec, rsize : real
+            rmin : real V.vec, rsize : real, numThreads: int
           } -> unit
 
     val doit : unit -> unit
 
   end = struct
 
-    open MLton.Pacml
     structure V = V
     structure S = Space(V)
     structure L = Load(S)
@@ -917,7 +910,7 @@ functor Main (V : VECTOR) : sig
     structure DataIO = DataIO(S)
 
   (* some math utilities *)
-  (** NOTE: these are part of the Math structure in the new basis *)
+(** NOTE: these are part of the Math structure in the new basis *)
     val pi = 3.14159265358979323846
     fun pow(x, y) =
       if Real.==(y, 0.0) then 1.0 else Math.exp (y * Math.ln x)
@@ -938,7 +931,7 @@ functor Main (V : VECTOR) : sig
   (* default parameter values *)
     val defaults = [
           (* file names for input/output                                *)
-            "in=sampleInput",              (* snapshot of initial conditions       *)
+            "in=",              (* snapshot of initial conditions       *)
             "out=",             (* stream of output snapshots           *)
 
           (* params, used if no input specified, to make a Plummer Model*)
@@ -954,7 +947,7 @@ functor Main (V : VECTOR) : sig
             "tstop=2.0",        (* time to stop integration             *)
             "dtout=0.25",       (* data-output interval                 *)
 
-            "debug=true",      (* turn on debugging messages           *)
+            "debug=false",      (* turn on debugging messages           *)
             "VERSION=1.0"       (* JEB  06 March 1988                   *)
           ]
 
@@ -1026,7 +1019,7 @@ functor Main (V : VECTOR) : sig
 
     fun startrun argv = let
           val _ = GetParam.initParam(argv, defaults)
-          val {nbody, bodies, tnow, headline} = (case (*GetParam.getParam "in"*) "sampleInput"
+          val {nbody, bodies, tnow, headline} = (case (GetParam.getParam "in")
                  of "" => let
                       val nbody = GetParam.getIParam "nbody"
                       in
@@ -1044,144 +1037,105 @@ functor Main (V : VECTOR) : sig
                 (* end case *))
           in
             { nbody = nbody,
-              bodies = Array.fromList bodies,
+              bodies = bodies,
               headline = headline,
-              outfile = "",
-              dtime = 0.08  (*0.025GetParam.getRParam "dtime"*),
-              eps = 0.05 (*GetParam.getRParam "eps"*),
-              tol = 1.0 (*getParam.getRParam "tol"*),
-              tnow = 0.0,
-              tstop = 2.0(* GetParam.getRParam "tstop"*),
-              dtout = 0.25(*  GetParam.getRParam "dtout"*),
-              debug = false (*GetParam.getBParam "debug"*),
+              outfile = GetParam.getParam "out",
+              dtime = GetParam.getRParam "dtime",
+              eps = GetParam.getRParam "eps",
+              tol = GetParam.getRParam "tol",
+              tnow = tnow,
+              tstop = GetParam.getRParam "tstop",
+              dtout = GetParam.getRParam "dtout",
+              debug = GetParam.getBParam "debug",
               rmin = V.tabulate (fn _ => ~2.0),
               rsize = 4.0
             }
           end
 
-
-
-  fun work(plist, space, dtime, eps, nstep, rmin, tnow, tol) =
-  let
-    val S.Space{rmin, rsize, root} = space
-    val dthf = 0.5 * dtime
-    (* recalculate accelaration *)
-    fun recalc (~1, n2bcalc, nbccalc, selfint) = (n2bcalc, nbccalc, selfint)
-      | recalc (n, n2bcalc, nbccalc, selfint) = let
-          val p = ArraySlice.sub (plist, n)
-          val S.Body{acc as ref acc1, vel, ...} = p
-          val {n2bterm, nbcterm, skipSelf} = G.hackGrav {
-                  body = p, root = root, rsize = rsize, eps = eps, tol = tol
-                }
-          in
-            if (nstep > 0)
-              then (* use change in accel to make 2nd order *)
-                    (* correction to vel. *)
-                vel := V.addv(!vel, V.mulvs(V.subv(!acc, acc1), dthf))
-              else ();
-            recalc (n-1, n2bcalc+n2bterm, nbccalc+nbcterm,
-              if skipSelf then selfint else (selfint+1))
-          end
-  (* advance bodies *)
-    fun advance (S.Body{pos, acc, vel, ...}) = let
-          val dvel = V.mulvs (!acc, dthf)
-          val vel1 = V.addv (!vel, dvel)
-          val dpos = V.mulvs (vel1, dtime)
-          in
-            pos := V.addv (!pos, dpos);
-            vel := V.addv (vel1, dvel)
-          end
-    val (n2bcalc,nbcalc,selfint) = recalc((ArraySlice.length plist) - 1,0,0,0)
-    val _ = ArraySlice.app advance plist
-  in 0
-  end
-
-
-  datatype msg = WORK | DONE
-
-  fun slave1 (workChan,resultChan,id,space,dtime,eps,nstep,rmin,tnow,tol) =
-	let
-	val (gg, workChunk) = recv workChan
-	val _ = case gg of
-               DONE => ()
-             | WORK =>
-			let
-	 		val result = work (workChunk, space, dtime, eps, nstep, rmin, tnow, tol)
-			val _ = spawn(fn () => ((*print("\nslave "^Int.toString(id)^" Sending the result");*)send(resultChan, result)))
-			val _ = slave1 (workChan,resultChan,id,space,dtime,eps,nstep,rmin,tnow,tol)
-			in (*print ("\n Slave "^Int.toString(id)^" should never reach here before exit")*)() end
-	in () end
-
-
-  fun master1 (plist, dtime, eps, nstep, rmin, rsize, tnow, tol, iter) =
-	let
-    val totalWork = Array.length(plist)
-    val s = L.makeTree (plist, rmin, rsize)
-    val workChunk = 64
-    val totalSlaves = 256
-    val term = []
-    val workChan  = channel ()
-    val resultChan = channel ()
-    val prog = ref 0
-    fun splitWork i =
-		if i > totalWork then ()
-		else
-			let
-			val workLoad =
-              if (i+workChunk) > totalWork then
-                ArraySlice.slice (plist, i, NONE)
-              else
-                ArraySlice.slice (plist, i, SOME workChunk)
-			val _ = spawn(fn () => send(workChan,(WORK,workLoad)))
-			in splitWork (i+workChunk) end
-      val _ = splitWork 0
-
-      fun assignWork j =
-		if j > totalSlaves then ()
-		else (spawn(fn() => slave1 (workChan,resultChan, j,s,dtime,eps,nstep,rmin,tnow,tol)) ; assignWork(j+1))
-
-      val _ = assignWork 0
-      fun recvResult(resultChan, i) =
-		let
-		val _ = if i > totalWork
-			then    (let
-				fun loop i = if i > totalSlaves then
-                              ()
-                             else (spawn(fn ()=> send(workChan,(DONE,ArraySlice.slice (plist, 0, SOME 1))))
-                                   ; loop(i+1))
-				val _ = loop 0
-				in () end )
-			else let val _ = () (*print "\nRecv Result"*) val resultChunk = recv resultChan in recvResult(resultChan, i+workChunk) end
-		in () end
-      val _ = recvResult(resultChan,0)
-  in () end
-
-   val iter = ref 0
   (* advance N-body system one time-step. *)
-    fun stepSystem output {plist, dtime, eps, nstep, rmin, rsize, tnow, tol} =
-    let
-      val _ = master1 (plist, dtime, eps, nstep, rmin, rsize, tnow, tol, !iter)
-    in
-        (nstep+1, tnow + dtime)
-    end
+    fun stepSystem output {plist, dtime, eps, nstep, rmin, rsize, tnow, tol, numThreads} = let
+          val dthf = 0.5 * dtime
+          val S.Space{rmin, rsize, root} = L.makeTree (plist, rmin, rsize)
+          val numPoints = List.length plist
+          val (_, (partitions : S.body list list)) =
+            List.foldl (fn (e, (i, acc : S.body list list)) =>
+              let
+                val (hLst, tLst) = if i mod numThreads = 0 then
+                                      ([], acc)
+                                  else
+                                    (hd acc, tl acc)
+                val hLst = e::hLst
+              in
+                (i+1, hLst::tLst)
+              end) (0, [[]]) plist
 
-val count = ref 0
+        (* recalculate accelaration *)
+          fun recalc ([], n2bcalc, nbccalc, selfint, ch) = send (ch, (n2bcalc, nbccalc, selfint))
+            | recalc (p::r, n2bcalc, nbccalc, selfint, ch) = let
+                val S.Body{acc as ref acc1, vel, ...} = p
+                val {n2bterm, nbcterm, skipSelf} = G.hackGrav {
+                        body = p, root = root, rsize = rsize, eps = eps, tol = tol
+                      }
+                in
+                  if (nstep > 0)
+                    then (* use change in accel to make 2nd order *)
+                         (* correction to vel. *)
+                      vel := V.addv(!vel, V.mulvs(V.subv(!acc, acc1), dthf))
+                    else ();
+                  recalc (r, n2bcalc+n2bterm, nbccalc+nbcterm,
+                    if skipSelf then selfint else (selfint+1), ch)
+                end
+        (* advance bodies *)
+          fun advance (S.Body{pos, acc, vel, ...}) = let
+                val dvel = V.mulvs (!acc, dthf)
+                val vel1 = V.addv (!vel, dvel)
+                val dpos = V.mulvs (vel1, dtime)
+                in
+                  pos := V.addv (!pos, dpos);
+                  vel := V.addv (vel1, dvel)
+                end
+          val chList = List.map (fn plist =>
+                                    let
+                                      val ch = channel ()
+                                      val _ = spawn (fn () => recalc (plist, 0, 0, 0, ch))
+                                    in
+                                      ch
+                                    end) partitions
+          val (n2bcalc, nbccalc, selfint) = List.foldl (fn (ch, (a, b, c)) =>
+                                                let
+                                                  val (a1,b1,c1) = recv ch
+                                                in
+                                                  (a+a1, b+b1, c+c1)
+                                                end) (0,0,0) chList
+
+          val _ = output {nstep=nstep, tnow=tnow, n2bcalc=n2bcalc, nbccalc=nbccalc, selfint=selfint}
+          val chList = List.map (fn plist =>
+                                      let
+                                        val ch = channel ()
+                                        val _ = spawn (fn () => (app advance plist; send (ch, ())))
+                                      in
+                                        ch
+                                      end) partitions
+          val _ = List.app recv chList
+          in
+            (nstep+1, tnow + dtime)
+          end
+
   (* given an initial configuration, run the simulation *)
-    fun go {
-          output, bodies, tnow, tstop,
-          dtime, eps, tol, rsize, rmin
-        } = let
-          val step = stepSystem output
-          fun loop (nstep, tnow) = if (*(tnow < tstop + (0.1 * dtime))*)!count < 25
-                then (count := !count + 1;
-                      print (concat ["Count=", Int.toString (!count), "\n"]);
-                      loop (step { plist = bodies, dtime = dtime, eps = eps, nstep = nstep,
-                                   rmin = rmin, rsize = rsize, tnow = tnow, tol = tol
-                  }))
-                else ()
-        in
-        loop (0, tnow)
-	end
+    fun go {output, bodies, tnow, tstop, dtime,
+            eps, tol, rsize, rmin, numThreads } =
+          let
+            val step = stepSystem output
+            fun loop (nstep, tnow) = if (tnow < tstop + (0.1 * dtime))
+                  then loop (step {
+                      plist = bodies, dtime = dtime, eps = eps, nstep = nstep,
+                      rmin = rmin, rsize = rsize, tnow = tnow, tol = tol,
+                      numThreads = numThreads
+                    })
+                  else ()
+          in
+            loop (0, tnow)
+          end
 
     fun doit () = let
           val { nbody, bodies, headline, outfile,
@@ -1200,7 +1154,8 @@ val count = ref 0
               };
             go {
                 output=output, bodies=bodies, tnow=tnow, tstop=tstop,
-                dtime=dtime, eps=eps, tol=tol, rsize=rsize, rmin=rmin
+                dtime=dtime, eps=eps, tol=tol, rsize=rsize, rmin=rmin,
+                numThreads = 1
               };
             DataIO.stopOutput()
           end (* doit *)
@@ -1308,7 +1263,7 @@ app use [
     "vector3.sml"
   ];
 *)
-structure Main : BMARK =
+structure Main =
   struct
     structure M3 = Main(Vector3);
 
@@ -1316,26 +1271,44 @@ structure Main : BMARK =
 
     fun testit strm = ()
 
-    fun doit n =
+    fun getTestData n =
     let
       val _ = M3.srand 123
-      (*val arg = {
-              output = fn x => (),
-              bodies = M3.testdata n,
-              tnow = 0.0, tstop = 2.0,
-              dtime = 0.025, eps = 0.05, tol = 1.0,
-              rmin = M3.S.V.tabulate (fn _ => ~2.0),
-              rsize = 4.0
-            }*)
     in
-        MLton.Pacml.run (fn()=>(M3.doit() )); ()
+      M3.testdata n
     end
 
-end;
+    fun doit _ = ()
+    fun myDoit (nt, td) = (
+          M3.go {
+              output = fn _ => (),
+              bodies = td,
+              tnow = 0.0, tstop = 2.0,
+              dtime = 0.025, eps = 0.000001, tol = 1.0,
+              rmin = M3.S.V.tabulate (fn _ => ~2.0),
+              rsize = 4.0,
+              numThreads = nt
+            })
 
+  end
+
+fun myDoit (nt, td) =
+  run (fn () => Main.myDoit (nt, td))
+
+val (n, numThreads) =
+  case CommandLine.arguments () of
+     s1::s2::_ => (case (Int.fromString s1,
+                         Int.fromString s2) of
+                        (SOME n1, SOME n2) => (n1, n2)
+                      | _ => (64, 16))
+   | _ => (64, 16)
+
+val testData = Main.getTestData n
 val ts = Time.now ()
-val _ = TextIO.print (concat ["\nStarting main"])
-val _ = Main.doit 0
+val _ = TextIO.print (concat ["Starting main\n"])
+val _ = TextIO.print (concat ["dataSize = ", Int.toString n, "\n"])
+val _ = TextIO.print (concat ["numThreads = ", Int.toString n, "\n"])
+val _ = myDoit (numThreads, testData)
 val te = Time.now ()
 val d = Time.-(te, ts)
 val _ = TextIO.print (concat ["Time start: ", Time.toString ts, "\n"])

@@ -27,7 +27,7 @@ struct
     fun doit n =
       run (fn()=>
       let
-        val ch = tak(35, 10, 5)
+        val ch = tak(25, 10, 5)
         val x = recv ch
         val _ = print (Int.toString(x)^"\n")
       in
