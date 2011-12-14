@@ -116,6 +116,8 @@ struct GC_cumulativeStatistics {
   uintmax_t numParasitesCreated;
 
   uintmax_t numComms;
+  uintmax_t numRBChecks;
+  uintmax_t numRBChecksForwarded;
 };
 
 struct GC_lastMajorStatistics {

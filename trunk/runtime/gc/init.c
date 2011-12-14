@@ -389,6 +389,8 @@ static inline void* initCumulativeStatistics (void) {
   cumul->bytesParasiteClosure = 0;
   cumul->numParasitesReified = 0;
   cumul->numParasitesCreated = 0;
+  cumul->numRBChecks = 0;
+  cumul->numRBChecksForwarded = 0;
 
   cumul->numComms = 0;
 

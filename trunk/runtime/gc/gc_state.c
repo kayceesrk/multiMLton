@@ -424,10 +424,12 @@ void GC_print (int i) {
 }
 
 pointer GC_forwardBase (const GC_state s, const pointer p) {
+  if (MEASURE_RB) s->cumulativeStatistics->numRBChecks++;
   if (!isPointer (p) || p == (pointer)s->generationalMaps.cardMapAbsolute)
     return p;
 
   if (*(GC_header*)(p - GC_HEADER_SIZE) == GC_FORWARDED) {
+    if (MEASURE_RB) s->cumulativeStatistics->numRBChecksForwarded++;
     if (DEBUG)
       fprintf (stderr, "GC_forwardBase: forwarding "FMTPTR" to "FMTPTR" [%d]\n",
                (uintptr_t)p, (uintptr_t)*(pointer*)p, s->procId);
