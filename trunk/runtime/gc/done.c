@@ -259,6 +259,17 @@ static void summaryWrite (GC_state s,
   fprintf (out, "----------------\n");
   fprintf (out, "num Communication actions: %s\n", uintmaxToCommaString (cumul->numComms));
 
+
+  fprintf (out, "\nREAD BARRIER\n");
+  fprintf (out, "--------------\n");
+  fprintf (out, "num read barrier checks: %s\n", uintmaxToCommaString (cumul->numRBChecks));
+  fprintf (out, "num read barrier checks fwded: %s (%lf)\n",
+           uintmaxToCommaString (cumul->numRBChecksForwarded),
+           (0 == cumul->numRBChecks)
+           ? 0.0
+           : 100.0 * ((double) cumul->numRBChecksForwarded) / (double)cumul->numRBChecks);
+  fprintf (out, "cycles: %s\n", uintmaxToCommaString (cumul->cyclesRB));
+
 }
 
 static inline void initStat (struct GC_cumulativeStatistics* cumul) {
@@ -316,7 +327,9 @@ static inline void initStat (struct GC_cumulativeStatistics* cumul) {
   cumul->bytesParasiteClosure = 0;
   cumul->numParasitesReified =0;
   cumul->numParasitesCreated =0;
-
+  cumul->numRBChecks = 0;
+  cumul->cyclesRB = 0;
+  cumul->numRBChecksForwarded = 0;
   cumul->numComms = 0;
 
   timevalZero (&cumul->ru_gc);
@@ -428,6 +441,9 @@ void GC_summaryWrite (GC_state procStates) {
       cumul.bytesParasiteClosure += d->bytesParasiteClosure;
       cumul.numParasitesReified += d->numParasitesReified;
       cumul.numParasitesCreated += d->numParasitesCreated;
+      cumul.numRBChecks += d->numRBChecks;
+      cumul.cyclesRB += d->cyclesRB;
+      cumul.numRBChecksForwarded += d->numRBChecksForwarded;
 
       cumul.numComms += d->numComms;
 

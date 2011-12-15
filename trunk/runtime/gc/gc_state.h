@@ -220,3 +220,5 @@ PRIVATE bool GC_getGCSignalPending (GC_state *gs);
 PRIVATE void GC_setGCSignalPending (GC_state *gs, bool b);
 PRIVATE sigset_t* GC_getSignalsSet (GC_state *gs);
 PRIVATE void GC_commEvent (void);
+
+

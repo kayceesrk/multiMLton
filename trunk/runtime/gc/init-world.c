@@ -146,7 +146,13 @@ void initWorld (GC_state s) {
     s->globals[i] = BOGUS_OBJPTR;
   s->lastSharedMajorStatistics->bytesLive = sizeofInitialBytesLive (s);
   minSize = s->lastSharedMajorStatistics->bytesLive;
-  createHeap (s, s->sharedHeap, SHARED_HEAP, sizeofHeapDesired (s, minSize, 0, SHARED_HEAP), minSize);
+  if (s->controls->maxHeapShared != 0 && s->controls->maxHeapShared < minSize) {
+    fprintf (stderr, "Unable to create shared heap with maxHeapShared %zu\n", minSize);
+    exit (1);
+  }
+  size_t initSize = (s->controls->maxHeapShared != 0 && (s->controls->maxHeapShared < 131072))?
+                     s->controls->maxHeapShared : 131072;
+  createHeap (s, s->sharedHeap, SHARED_HEAP, sizeofHeapDesired (s, max(minSize,initSize), 0, SHARED_HEAP), minSize);
 
   //set up shared heap
   start = alignFrontier (s, s->sharedHeap->start);
@@ -161,7 +167,9 @@ void initWorld (GC_state s) {
   //setGCStateCurrentSharedHeap (s, 0, 0, true);
 
   //set up local heap
-  createHeap (s, s->heap, LOCAL_HEAP, sizeofHeapDesired (s, 65536, 0, LOCAL_HEAP), 0);
+  initSize = (s->controls->maxHeapLocal != 0 && (s->controls->maxHeapLocal < 65536))?
+                    s->controls->maxHeapLocal:65536;
+  createHeap (s, s->heap, LOCAL_HEAP, sizeofHeapDesired (s, initSize, 0, LOCAL_HEAP), 0);
   setCardMapAndCrossMap (s);
   start = alignFrontier (s, s->heap->start);
   s->start = s->frontier = s->sessionStart = start;
@@ -183,7 +191,9 @@ void duplicateWorld (GC_state d, GC_state s) {
   //set up local heap
   d->heap = (GC_heap) malloc (sizeof (struct GC_heap));
   initHeap (d, d->heap, LOCAL_HEAP);
-  createHeap (d, d->heap, LOCAL_HEAP, sizeofHeapDesired (s, 65536, 0, LOCAL_HEAP), 0);
+  size_t initSize = (s->controls->maxHeapLocal != 0 && (s->controls->maxHeapLocal < 65536))?
+                    s->controls->maxHeapLocal:65536;
+  createHeap (d, d->heap, LOCAL_HEAP, sizeofHeapDesired (s, initSize, 0, LOCAL_HEAP), 0);
   start = alignFrontier (d, d->heap->start);
   d->start = d->frontier = d->sessionStart = start;
   d->limitPlusSlop = d->heap->start + d->heap->size - GC_BONUS_SLOP;

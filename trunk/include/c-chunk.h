@@ -46,7 +46,7 @@
 
 PRIVATE extern Pointer GC_forwardBase (struct GC_state* s, Pointer b);
 
-#define FWD(x) (GC_forwardBase (GCState, (x)))
+#define FWD(x) GC_forwardBase (GCState, (x))
 
 
 #ifdef DEBUG_MEMORY
