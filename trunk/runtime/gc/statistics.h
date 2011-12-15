@@ -118,6 +118,7 @@ struct GC_cumulativeStatistics {
   uintmax_t numComms;
   uintmax_t numRBChecks;
   uintmax_t numRBChecksForwarded;
+  uintmax_t cyclesRB;
 };
 
 struct GC_lastMajorStatistics {

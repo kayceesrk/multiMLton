@@ -391,6 +391,7 @@ static inline void* initCumulativeStatistics (void) {
   cumul->numParasitesCreated = 0;
   cumul->numRBChecks = 0;
   cumul->numRBChecksForwarded = 0;
+  cumul->cyclesRB = 0;
 
   cumul->numComms = 0;
 

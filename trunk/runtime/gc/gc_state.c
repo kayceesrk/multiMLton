@@ -423,19 +423,34 @@ void GC_print (int i) {
   printf ("GC_print (%d)[%d]\n", i, s->procId);
 }
 
-pointer GC_forwardBase (const GC_state s, const pointer p) {
-  if (MEASURE_RB) s->cumulativeStatistics->numRBChecks++;
-  if (!isPointer (p) || p == (pointer)s->generationalMaps.cardMapAbsolute)
-    return p;
 
-  if (*(GC_header*)(p - GC_HEADER_SIZE) == GC_FORWARDED) {
-    if (MEASURE_RB) s->cumulativeStatistics->numRBChecksForwarded++;
+
+pointer GC_forwardBase (const GC_state s, const pointer p) {
+  unsigned long start, end;
+  pointer retP;
+  if (MEASURE_RB_CYCLE)
+    rdtscll (start);
+
+  if (MEASURE_RB_MISS) s->cumulativeStatistics->numRBChecks++;
+
+  if (!isPointer (p) || p == (pointer)s->generationalMaps.cardMapAbsolute) {
+    retP = p;
+  }
+  else if (*(GC_header*)(p - GC_HEADER_SIZE) == GC_FORWARDED) {
+    if (MEASURE_RB_MISS) s->cumulativeStatistics->numRBChecksForwarded++;
     if (DEBUG)
       fprintf (stderr, "GC_forwardBase: forwarding "FMTPTR" to "FMTPTR" [%d]\n",
                (uintptr_t)p, (uintptr_t)*(pointer*)p, s->procId);
-    return *(pointer*)p;
+    retP = *(pointer*)p;
   }
-  return p;
+  else {
+    retP = p;
+  }
+  if (MEASURE_RB_CYCLE) {
+    rdtscll (end);
+    s->cumulativeStatistics->cyclesRB += (end-start);
+  }
+  return retP;
 }
 
 void GC_commEvent (void) {
