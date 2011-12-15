@@ -188,10 +188,11 @@ fun toMachine (program: Ssa.Program.t, codegen) =
                else pass ({name = name, doit = doit}, p)
             val p = maybePass ({name = "rssaShrink1",
                                 doit = Program.shrink}, p)
-            val p = if (not (!Control.readBarrier) andalso
+            val p = if ((not (!Control.readBarrier)) andalso
                             (!Control.wbUsesCleanliness)) then
+                      (print "Invoking pass dirty assist\n";
                       pass ({name = "dirtyAssist",
-                             doit = Program.dirtyAssist}, p)
+                             doit = Program.dirtyAssist}, p))
                     else p
             val p = pass ({name = "insertLimitChecks",
                            doit = LimitCheck.insert}, p)

@@ -122,6 +122,9 @@ void GC_addToSpawnOnWBA (GC_state s, pointer p, int proc) {
   }
   s->spawnOnWBA[s->spawnOnWBASize - 1].op = pointerToObjptr (p, s->heap->start);
   s->spawnOnWBA[s->spawnOnWBASize - 1].proc = proc;
+
+  if (s->spawnOnWBASize > 16 && s->controls->useIdentityForCleanliness)
+    forceLocalGC (s);
 }
 
 

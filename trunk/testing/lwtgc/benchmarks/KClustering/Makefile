@@ -35,11 +35,12 @@ LIBS = -L$(MMPATH)/trunk/build/lib/self -lmlton -lgdtoa \
 			 -lm -lgmp -m64 -lplpa_included -pthread -lrt
 
 %.o: %.c
-	gcc $(FLAGS) -o $@ $<
+	gcc -ggdb3 $(FLAGS) -o $@ $<
+
 
 .SECONDEXPANSION:
-%-c : $$(subst .c,.o,$$(wildcard $$(subst -c,,$$@).*.c))
-	gcc -o $(subst -c,,$@) $^ $(LIBS)
+%-cnd : $$(subst .c,.o,$$(wildcard $$(subst -cnd,,$$@).*.c))
+	gcc -o $(subst -cnd,,$@) $^ $(LIBS)
 
 
 .SECONDEXPANSION:

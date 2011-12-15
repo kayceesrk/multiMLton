@@ -1021,9 +1021,14 @@ structure Function =
                                  Operand.Cast (t, _) => notaconst t
                                | Operand.Const _ => false
                                | _ => true
+                          fun notGlobal base =
+                            case base of
+                                 Operand.Var{var, ...} =>
+                                  (not (String.hasPrefix (Var.toString var, {prefix="global"})))
+                               | _ => true
                           val cond2 = notaconst src
                         in
-                          (if cond1 andalso cond2 then
+                          (if cond1 andalso cond2 andalso (notGlobal (valOf base)) then
                              split (Vector.new0 (), Kind.Jump, [s] @ ss,
                                     fn l => maybeScore (l, valOf base, src))
                            else

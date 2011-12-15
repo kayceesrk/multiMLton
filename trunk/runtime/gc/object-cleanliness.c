@@ -61,7 +61,7 @@ bool isWriteCleanMark (GC_state s, pointer p, pointer parent) {
   else
     isClean = (countReferences (h) <= ONE);
 
-  if (!isClean && !objectHasIdentity(s, h))
+  if (!isClean && !objectHasIdentity(s, h) && s->controls->useIdentityForCleanliness)
     isClean = TRUE;
 
   s->tmpBool = s->tmpBool && isClean;
@@ -86,7 +86,7 @@ bool isSpawnCleanMark (GC_state s, pointer p, pointer parent) {
   else //If p has globally many refs, p is not clean
     isClean = FALSE;
 
-  if (!isClean && !objectHasIdentityTransitive(s, h))
+  if (!isClean && !objectHasIdentity(s, h) && s->controls->useIdentityForCleanliness)
     isClean = TRUE;
 
   s->tmpBool = s->tmpBool && isClean;
@@ -156,7 +156,7 @@ bool __GC_isThreadClosureClean (GC_state s, pointer p, size_t* size) {
     s->tmpInt = 0;
   }
 
-  if (DEBUG_CLEANLINESS || TRUE)
+  if (DEBUG_CLEANLINESS)
     fprintf (stderr, "GC_isThreadClosureClean: sessionSize = %zu "
                      "objectSize = %zu isClosureVirgin = %d [%d]\n",
              (size_t)(s->frontier - s->sessionStart), *size, isClosureVirgin, s->procId);
