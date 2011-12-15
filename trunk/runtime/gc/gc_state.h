@@ -162,7 +162,6 @@ static void setGCStateCurrentLocalHeap (GC_state s,
 
 static GC_state getGCStateFromPointer (GC_state s, pointer p);
 
-
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */
 
 #if (defined (MLTON_GC_INTERNAL_BASIS))
@@ -203,3 +202,5 @@ PRIVATE bool GC_getGCSignalPending (GC_state *gs);
 PRIVATE void GC_setGCSignalPending (GC_state *gs, bool b);
 PRIVATE sigset_t* GC_getSignalsSet (GC_state *gs);
 PRIVATE void GC_commEvent (void);
+
+

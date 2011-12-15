@@ -48,7 +48,7 @@
 
 PRIVATE extern Pointer GC_forwardBase (struct GC_state* s, Pointer b);
 
-#define FWD(x) (GC_forwardBase (GCState, (x)))
+#define FWD(x) GC_forwardBase (GCState, (x))
 
 #ifdef DEBUG_MEMORY
     #define O_RB(ty, b, o) (fprintf (stderr, "%s:%d O_RB: Addr=%018p Val=%018p\n", __FILE__, __LINE__, \

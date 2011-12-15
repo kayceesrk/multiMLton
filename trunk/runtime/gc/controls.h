@@ -59,6 +59,7 @@ struct GC_controls {
   struct GC_ratios ratios;
   bool rusageMeasureGC;
   int32_t summary; /* Print a summary of gc info when program exits. */
+  bool useIdentityForCleanliness;
 };
 
 #endif /* (defined (MLTON_GC_INTERNAL_TYPES)) */

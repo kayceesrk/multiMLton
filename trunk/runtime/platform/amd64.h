@@ -8,3 +8,9 @@
 #else
 #define ADDRESS_BITS 40
 #endif
+
+#define rdtscll(val) do { \
+       unsigned int __a,__d; \
+       asm volatile("rdtsc" : "=a" (__a), "=d" (__d)); \
+       (val) = ((unsigned long)__a) | (((unsigned long)__d)<<32); \
+} while(0)
