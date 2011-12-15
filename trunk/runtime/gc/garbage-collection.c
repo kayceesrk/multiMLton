@@ -414,8 +414,7 @@ void performSharedGCCollective (GC_state s,
     majorCheneyCopySharedGC (s);
   else {
     fprintf (stderr, "majorMarkCompactSharedGC: not ported\n");
-    exit (1);
-    majorMarkCompactSharedGC (s);
+    kind = GC_COPYING;
   }
 
   if (Proc_processorNumber (s) == 0) {
