@@ -517,13 +517,19 @@ fun doOne arg = (
         | NONE =>
                 print "NOT A NUMBER\n")
 
+fun doN count arg =
+  if count = 0 then ()
+  else
+    (doOne arg;
+    doN (count - 1) arg)
+
    structure Main =
       struct
-         fun doit (numThreads, arg) =
+         fun doit (numThreads, count, arg) =
          let
             val l = List.tabulate (numThreads, fn _ => arg)
             val _ =
-             List.map (fn arg => MLton.Pacml.spawn (fn () => doOne arg)) l
+             List.map (fn arg => MLton.Pacml.spawn (fn () => doN count arg)) l
          in
            ()
          end
@@ -531,17 +537,18 @@ fun doOne arg = (
         val doit = fn n => MLton.Pacml.run (fn () => doit n)
       end
 
-val (numThreads, arg) =
+val (numThreads, count, arg) =
    case CommandLine.arguments () of
-      [] => raise Fail "Need 2 arguments"
-    | s1::s2::_ => (case Int.fromString s1 of
-                         SOME n1 => (n1, s2)
-                       | _ => raise Fail "Need 2 arguments")
+      [] => raise Fail "Need 3 arguments"
+    | s1::s2::s3::_ => (case (Int.fromString s1,
+                             Int.fromString s2) of
+                         (SOME n1, SOME n2) => (n1, n2, s3)
+                       | _ => raise Fail "Need 3 arguments")
 
 val ts = Time.now ()
 val _ = TextIO.print (concat ["\nStarting main : numThreads = ", Int.toString numThreads,
                               "arg = "^arg^"\n"])
-val _ = Main.doit (numThreads, arg)
+val _ = Main.doit (numThreads, count, arg)
 val te = Time.now ()
 
 val d = Time.-(te, ts)
