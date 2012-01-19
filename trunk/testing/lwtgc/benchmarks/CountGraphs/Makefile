@@ -59,7 +59,7 @@ endif
 	azg++ -o $(subst -cdebug,,$@) $^ $(DEBUG_LIBS)
 
 %-azul: $(SRCS)
-	$(MULTIMLTON) $(MORE) -keep g -debug $(DEBUG) -profile $(PROFILE) -profile-stack $(STACK) -profile-branch $(BRANCH) -output $@ -stop g "$(subst -azul,,$@).sml"
+	$(MULTIMLTON) $(MORE) -align 8 -keep g -debug $(DEBUG) -profile $(PROFILE) -profile-stack $(STACK) -profile-branch $(BRANCH) -output $@ -stop g "$(subst -azul,,$@).sml"
 
 clean:
 	rm -rf $(SRC_RULS) *~ op *.out *.c *ssa *ssa2 *xml *-ml *machine
