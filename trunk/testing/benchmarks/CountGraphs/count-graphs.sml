@@ -519,35 +519,31 @@ fun doOne arg = (
 
    structure Main =
       struct
-        val l = List.tabulate (128, fn _ => "9")
-         fun doit() =
-            List.map (fn arg => MLton.Pacml.spawnHost (fn () => doOne arg)) l
-
-         val doit =
-            fn size =>
-            let
-               fun loop n =
-                  if n = 0
-                     then ()
-                  else (doit();
-                        loop(n-1))
-            in loop size
-            end
+         fun doit (numThreads, arg) =
+         let
+            val l = List.tabulate (numThreads, fn _ => arg)
+            val _ =
+             List.map (fn arg => MLton.Pacml.spawn (fn () => doOne arg)) l
+         in
+           ()
+         end
 
         val doit = fn n => MLton.Pacml.run (fn () => doit n)
       end
 
-val n =
-  case CommandLine.arguments () of
-       [] => 1
-     | s::_ => (case Int.fromString s of
-                     NONE => 1
-                   | SOME n => n)
+val (numThreads, arg) =
+   case CommandLine.arguments () of
+      [] => raise Fail "Need 2 arguments"
+    | s1::s2::_ => (case Int.fromString s1 of
+                         SOME n1 => (n1, s2)
+                       | _ => raise Fail "Need 2 arguments")
 
 val ts = Time.now ()
-val _ = TextIO.print (concat ["\nStarting main : n = ", Int.toString n, "\n"])
-val _ = Main.doit n
+val _ = TextIO.print (concat ["\nStarting main : numThreads = ", Int.toString numThreads,
+                              "arg = "^arg^"\n"])
+val _ = Main.doit (numThreads, arg)
 val te = Time.now ()
+
 val d = Time.-(te, ts)
 val _ = TextIO.print (concat ["Time start: ", Time.toString ts, "\n"])
 val _ = TextIO.print (concat ["Time end:   ", Time.toString te, "\n"])

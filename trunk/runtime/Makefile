@@ -32,7 +32,7 @@ GCC_VERSION := $(GCC_MAJOR_VERSION).$(GCC_MINOR_VERSION)
 
 FLAGS := -fno-common
 EXE :=
-OPTFLAGS := -O3 -fomit-frame-pointer
+OPTFLAGS := -O3 -fomit-frame-pointer -g
 DEBUGFLAGS := -O1 -fno-inline -fkeep-inline-functions -g2
 PICFLAGS := -DPIC
 GCOPTFLAGS :=

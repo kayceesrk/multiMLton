@@ -9,7 +9,7 @@ MORE :=
 SRCS := $(wildcard *.sml)
 SRC_RULS := $(subst .sml,-amd64,$(SRCS))
 
-MMPATH = $(HOME)/PLDI/multiMLton-UT
+MMPATH = $(HOME)/multiMLton-BoehmGC
 MULTIMLTON= $(MMPATH)/trunk/build/bin/mlton
 
 %-amd64 : $(SRCS)
