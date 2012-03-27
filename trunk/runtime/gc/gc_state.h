@@ -190,6 +190,8 @@ PRIVATE void GC_setSignalHandlerThread (GC_state *gs, pointer p);
 
 PRIVATE void GC_print (int);
 PRIVATE inline pointer GC_forwardBase (const GC_state s, const pointer p);
+PRIVATE void GC_markCleanliness (const GC_state s, pointer target, pointer source,
+                                 char* file, int line);
 
 #endif /* (defined (MLTON_GC_INTERNAL_BASIS)) */
 
@@ -202,5 +204,3 @@ PRIVATE bool GC_getGCSignalPending (GC_state *gs);
 PRIVATE void GC_setGCSignalPending (GC_state *gs, bool b);
 PRIVATE sigset_t* GC_getSignalsSet (GC_state *gs);
 PRIVATE void GC_commEvent (void);
-
-

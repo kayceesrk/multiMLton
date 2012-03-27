@@ -6,7 +6,6 @@
  * See the file MLton-LICENSE for details.
  */
 
-const char* numReferencesToString (GC_numReferences n);
 const char* numReferencesToString (GC_numReferences n) {
   switch (n) {
     case 0:
@@ -57,9 +56,9 @@ bool isWriteCleanMark (GC_state s, pointer p, pointer parent) {
   GC_header h = getHeader (p);
 
   if (s->tmpPointer == p)
-    isClean = (countReferences (h) == ZERO);
+    isClean = (getNumReferences (h) == ZERO);
   else
-    isClean = (countReferences (h) <= ONE);
+    isClean = (getNumReferences (h) <= ONE);
 
   if (!isClean && !objectHasIdentity(s, h) && s->controls->useIdentityForCleanliness)
     isClean = TRUE;
@@ -75,7 +74,7 @@ bool isSpawnCleanMark (GC_state s, pointer p, pointer parent) {
   assert (s->tmpPointer != BOGUS_POINTER);
   bool isClean = FALSE;
   GC_header h = getHeader (p);
-  GC_numReferences n = countReferences (h);
+  GC_numReferences n = getNumReferences (h);
 
   if (n == ZERO) //p is clean if it has 0 references
     isClean = TRUE;
@@ -197,8 +196,13 @@ bool GC_isObjectClosureClean (GC_state s, pointer p) {
   return isClosureVirgin;
 }
 
-static inline GC_numReferences countReferences (const GC_header header) {
+static inline GC_numReferences getNumReferences (const GC_header header) {
   if (header == GC_FORWARDED)
     return GLOBAL_MANY;
   return (header & VIRGIN_MASK) >> VIRGIN_SHIFT;
+}
+
+void setNumReferences (GC_header* headerp, GC_numReferences count) {
+  GC_header h = *headerp;
+  *headerp = (h & ~VIRGIN_MASK) | (count << VIRGIN_SHIFT);
 }

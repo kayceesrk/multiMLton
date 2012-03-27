@@ -942,7 +942,7 @@ structure Function =
                         (tmp, Vector.new2 (s1, s2))
                       end
 
-                      fun maybeScore (continue: Label.t, lhsAddr, rhsAddr) =
+                      fun maybeScore (s : Statement.t, continue: Label.t, lhsAddr, rhsAddr) =
                         let
 
                           val (numRefs, getNumRefStmts) = getNumReferences rhsAddr
@@ -1002,8 +1002,22 @@ structure Function =
                             transfer = transfer}
 
                       in
-                        ([], Transfer.Goto {args = Vector.new0 (), dst = entryBlock})
+                        ([s], Transfer.Goto {args = Vector.new0 (), dst = entryBlock})
                       end (* maybeScore END *)
+
+                      fun maybeScoreC (s : Statement.t, continue: Label.t, lhsAddr, rhsAddr) =
+                      let
+                        val t1 = Operand.ty lhsAddr
+                        val t2 = Operand.ty rhsAddr
+                        val returnBlock = newBlock {args = Vector.new0 (),
+                                                    kind = Kind.CReturn {func = Type.BuiltInCFunction.markCleanliness (t1, t2)},
+                                                    statements = Vector.new0 (),
+                                                    transfer = Transfer.Goto {args = Vector.new0 (), dst = continue}}
+                      in
+                        ([s], Transfer.CCall {args = Vector.new5 (Operand.GCState, lhsAddr, rhsAddr, Operand.File, Operand.Line),
+                                             func = Type.BuiltInCFunction.markCleanliness (t1, t2),
+                                             return = SOME returnBlock})
+                      end
                     end
                   in
                     case s of
@@ -1029,8 +1043,8 @@ structure Function =
                           val cond2 = notaconst src
                         in
                           (if cond1 andalso cond2 andalso (notGlobal (valOf base)) then
-                             split (Vector.new0 (), Kind.Jump, [s] @ ss,
-                                    fn l => maybeScore (l, valOf base, src))
+                             split (Vector.new0 (), Kind.Jump, ss,
+                                    fn l => maybeScoreC (s, l, valOf base, src))
                            else
                              add s)
                         end

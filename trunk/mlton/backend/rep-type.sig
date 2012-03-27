@@ -106,6 +106,7 @@ signature REP_TYPE =
 
       structure BuiltInCFunction:
          sig
+            val markCleanliness: (t * t) -> t CFunction.t
             val bug: unit -> t CFunction.t
             val gc: {maySwitchThreads: bool} -> t CFunction.t
          end

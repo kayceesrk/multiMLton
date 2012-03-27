@@ -453,6 +453,33 @@ pointer GC_forwardBase (const GC_state s, const pointer p) {
   return retP;
 }
 
+void GC_markCleanliness (const GC_state s, pointer target, pointer source,
+                         char* file, int line) {
+  if (!isPointer (source)) return;
+  GC_header h = getHeader (source);
+  GC_numReferences oldCount, newCount;
+  oldCount = getNumReferences (h);
+  if (oldCount == GLOBAL_MANY) return;
+  if (oldCount == ZERO)
+    newCount = ONE;
+  else if ((oldCount == ONE || oldCount == LOCAL_MANY) &&
+           target > s->sessionStart && target < s->limitPlusSlop &&
+           source > s->sessionStart && source < s->limitPlusSlop)
+    newCount = LOCAL_MANY;
+  else
+    newCount = GLOBAL_MANY;
+
+  if (oldCount == newCount) return;
+
+  if (DEBUG_CLEANLINESS)
+    fprintf (stderr, "%s %d: GC_markCleanliness: target "FMTPTR" source "FMTPTR""
+                     " oldCount %s newCount %s\n", file, line, (uintptr_t)target,
+                     (uintptr_t)source, numReferencesToString (oldCount),
+                     numReferencesToString (newCount));
+  setNumReferences (getHeaderp (source), newCount);
+  return;
+}
+
 void GC_commEvent (void) {
   GC_state s = pthread_getspecific (gcstate_key);
   s->cumulativeStatistics->numComms++;

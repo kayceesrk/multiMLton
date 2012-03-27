@@ -872,6 +872,16 @@ structure BuiltInCFunction =
       datatype z = datatype Convention.t
       datatype z = datatype Target.t
 
+      fun markCleanliness (t1, t2) =
+        vanilla {args = Vector.new5 (Type.gcState (), t1, t2, Type.cpointer (),
+                                     Type.word WordSize.word32),
+                 name = "GC_markCleanliness",
+                 prototype = (Vector.new5 (CType.cpointer, CType.cpointer,
+                                           CType.cpointer, CType.cpointer,
+                                           CType.Int32),
+                              NONE),
+                 return = unit}
+
       fun bug () =
          vanilla {args = Vector.new1 (string ()),
                   name = "MLton_bug",

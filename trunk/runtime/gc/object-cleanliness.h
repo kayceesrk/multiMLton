@@ -17,7 +17,7 @@ typedef enum {
   ZERO=0,
   ONE=1,
   LOCAL_MANY=2,
-  GLOBAL_MANY
+  GLOBAL_MANY=3
 } GC_numReferences;
 
 #define ONE_REF (ONE << VIRGIN_SHIFT)
@@ -28,7 +28,8 @@ typedef enum {
 
 #if (defined (MLTON_GC_INTERNAL_FUNCS))
 
-static inline GC_numReferences countReferences (const GC_header header);
+static inline GC_numReferences getNumReferences (const GC_header header);
+void setNumReferences (GC_header* headerp, GC_numReferences count);
 static inline bool isWriteCleanMark (GC_state s, pointer current, pointer parent);
 static inline bool isWriteCleanUnmark (GC_state s, pointer current, pointer parent);
 static inline bool isSpawnCleanMark (GC_state s, pointer current, pointer parent);
@@ -39,5 +40,6 @@ PRIVATE bool GC_isObjectClosureClean (GC_state s, pointer p);
 PRIVATE bool GC_isThreadClosureClean (GC_state s, pointer p);
 bool __GC_isThreadClosureClean (GC_state s, pointer p, size_t* size);
 bool foreachObjptrInUnmarkedObject (GC_state s, pointer p);
+const char* numReferencesToString (GC_numReferences n);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */
