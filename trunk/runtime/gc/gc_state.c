@@ -458,19 +458,15 @@ void GC_markCleanliness (const GC_state s, pointer target, pointer source,
   if (!isPointer (source)) return;
   GC_header h = getHeader (source);
   GC_numReferences oldCount, newCount;
+
   oldCount = getNumReferences (h);
-  if (oldCount == GLOBAL_MANY) return;
-  if (oldCount == ZERO) {
-    if (target < s->sessionStart)
-      newCount = GLOBAL_MANY;
-    else
-      newCount = ONE;
-  }
-  else if ((oldCount == ONE || oldCount == LOCAL_MANY) &&
-           target > s->sessionStart && target < s->limitPlusSlop &&
-           source > s->sessionStart && source < s->limitPlusSlop)
+  if (target < s->sessionStart || target > s->limitPlusSlop)
+    newCount = GLOBAL_MANY;
+  else if (oldCount == ZERO)
+    newCount = ONE;
+  else if (oldCount == ONE || oldCount == LOCAL_MANY)
     newCount = LOCAL_MANY;
-  else
+  else //if (oldCount == GLOBAL_MANY)
     newCount = GLOBAL_MANY;
 
   if (oldCount == newCount) return;

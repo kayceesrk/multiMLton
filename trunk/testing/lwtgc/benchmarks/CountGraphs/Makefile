@@ -24,7 +24,7 @@ clean-summaries:
 
 MMPATH = $(HOME)/multiMLton-WB
 
-FLAGS = -std=gnu99 -c -g -DASSERT=1 -I$(MMPATH)/trunk/build/lib/self/include \
+FLAGS = -std=gnu99 -c -g3 -DASSERT=1 -I$(MMPATH)/trunk/build/lib/self/include \
 				-I$(MMPATH)/trunk/build/lib/include -O1 -fno-common -fno-strict-aliasing \
 				-fomit-frame-pointer -w -m64
 
