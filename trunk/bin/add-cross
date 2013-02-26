@@ -132,7 +132,7 @@ darwin)
         osOpts='-I/opt/local/include -I/sw/include -L/opt/local/lib -L/sw/lib -lgmp'
 ;;
 freebsd)
-        osOpts='-I/usr/local/include -L/usr/local/lib/ -lgmp'
+        osOpts='-I/usr/local/include -L/usr/local/lib/ -lgmp -lpthread -lexecinfo'
 ;;
 hpux)
         osOpts=''
