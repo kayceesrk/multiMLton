@@ -82,9 +82,9 @@ COMPILE_TIME_ASSERT(sizeof_objptr__eq__sizeof_header,
 
 #if (defined (MLTON_GC_INTERNAL_FUNCS))
 
-static inline GC_header* getHeaderp (pointer p);
-static inline GC_header getHeader (pointer p);
-static inline GC_header buildHeaderFromTypeIndex (uint32_t t);
+inline GC_header* getHeaderp (pointer p);
+inline GC_header getHeader (pointer p);
+inline GC_header buildHeaderFromTypeIndex (uint32_t t);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */
 
@@ -188,8 +188,8 @@ static inline void splitHeader (GC_state s, GC_header header, __attribute__((unu
                                 GC_objectTypeTag *tagRet, bool *hasIdentityRet,
                                 uint16_t *bytesNonObjptrsRet, uint16_t *numObjptrsRet,
                                 bool *hasIdentityTransitiveRet, bool* isUnboundedRet);
-static inline bool objectHasIdentity (GC_state s, GC_header h);
-static inline bool objectHasIdentityTransitive (GC_state s, GC_header header);
+bool objectHasIdentity (GC_state s, GC_header h);
+bool objectHasIdentityTransitive (GC_state s, GC_header header);
 static inline pointer advanceToObjectData (GC_state s, pointer p);
 static inline pointer getBeginningOfObject (GC_state s, pointer p);
 PRIVATE void checkHeader (GC_state s, pointer p, char* file, int line);

@@ -17,8 +17,8 @@ static inline void callIfIsObjptr (GC_state s, GC_foreachObjptrFun f, objptr *op
  *
  * Apply f to each global object pointer into the heap.
  */
-static inline void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f);
-static inline void foreachGlobalObjptrInScope (GC_state s, GC_foreachObjptrFun f);
+static void foreachGlobalObjptr (GC_state s, GC_foreachObjptrFun f);
+static void foreachGlobalObjptrInScope (GC_state s, GC_foreachObjptrFun f);
 /* foreachObjptrInObject (s, p, skipWeaks, f)
  *
  * Applies f to each object pointer in the object pointed to by p.
@@ -26,8 +26,8 @@ static inline void foreachGlobalObjptrInScope (GC_state s, GC_foreachObjptrFun f
  *
  * If skipWeaks, then the object pointer in weak objects is skipped.
  */
-static inline pointer foreachObjptrInObject (GC_state s, pointer p,
-                                             GC_foreachObjptrFun f, bool skipWeaks);
+static pointer foreachObjptrInObject (GC_state s, pointer p,
+                                      GC_foreachObjptrFun f, bool skipWeaks);
 
 static pointer foreachObjptrInRangeWithFill (GC_state s, pointer front,
                                              pointer *back, GC_foreachObjptrFun f,

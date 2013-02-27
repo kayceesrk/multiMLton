@@ -17,19 +17,19 @@ typedef enum {
 
 #if (defined (MLTON_GC_INTERNAL_FUNCS))
 
-static inline bool isPointerMarked (pointer p);
-static inline bool isPointerMarkedByMode (pointer p, GC_markMode m);
-static size_t dfsMarkByMode (GC_state s, pointer root,
-                             GC_foreachObjectDfsFun f,
-                             GC_markMode mode,
-                             bool shouldHashCons,
-                             bool shouldLinkWeaks,
-                             bool ignoreSharedHeap,
-                             bool sizeEstimationForLifting);
-static inline void dfsMarkWithHashConsWithLinkWeaks (GC_state s, objptr *opp);
-static inline void dfsMarkWithoutHashConsWithLinkWeaks (GC_state s, objptr *opp);
-static inline void dfsMarkTraceShared (GC_state s, objptr *opp);
-static inline void dfsUnmark (GC_state s, objptr *opp);
-static inline bool emptyForeachObjectFun (GC_state s, pointer current, pointer parent);
+bool isPointerMarked (pointer p);
+bool isPointerMarkedByMode (pointer p, GC_markMode m);
+size_t dfsMarkByMode (GC_state s, pointer root,
+                      GC_foreachObjectDfsFun f,
+                      GC_markMode mode,
+                      bool shouldHashCons,
+                      bool shouldLinkWeaks,
+                      bool ignoreSharedHeap,
+                      bool sizeEstimationForLifting);
+void dfsMarkWithHashConsWithLinkWeaks (GC_state s, objptr *opp);
+void dfsMarkWithoutHashConsWithLinkWeaks (GC_state s, objptr *opp);
+void dfsMarkTraceShared (GC_state s, objptr *opp);
+void dfsUnmark (GC_state s, objptr *opp);
+bool emptyForeachObjectFun (GC_state s, pointer current, pointer parent);
 
 #endif /* (defined (MLTON_GC_INTERNAL_FUNCS)) */
