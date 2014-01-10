@@ -8,7 +8,7 @@ sig
   val spawnParasite : (unit -> unit) -> unit
   val spawn : (unit -> unit) -> thread_id
   val spawnOnProc : ((unit -> unit) * int) -> thread_id
-
+  val processorNumber : unit -> int
 end
 
 signature THREAD_EXTRA =

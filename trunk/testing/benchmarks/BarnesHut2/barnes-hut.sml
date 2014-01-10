@@ -1307,7 +1307,7 @@ val testData = Main.getTestData n
 val ts = Time.now ()
 val _ = TextIO.print (concat ["Starting main\n"])
 val _ = TextIO.print (concat ["dataSize = ", Int.toString n, "\n"])
-val _ = TextIO.print (concat ["numThreads = ", Int.toString n, "\n"])
+val _ = TextIO.print (concat ["numThreads = ", Int.toString numThreads, "\n"])
 val _ = myDoit (numThreads, testData)
 val te = Time.now ()
 val d = Time.-(te, ts)

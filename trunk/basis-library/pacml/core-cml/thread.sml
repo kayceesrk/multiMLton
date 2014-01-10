@@ -17,6 +17,8 @@ struct
   datatype thread = datatype RepTypes.thread
   datatype rdy_thread = datatype RepTypes.rdy_thread
 
+  val processorNumber = PacmlFFI.processorNumber
+
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
   fun debug' msg = debug (fn () => msg^"."^(PT.getThreadTypeString())
                                    ^" : "^Int.toString(PacmlFFI.processorNumber()))
