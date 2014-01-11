@@ -15,3 +15,7 @@ Note: SIZE must be a multiple of 8.
 * mandelbrot.ghc-2.hs
 		Haskell version. Compiled with GHC. Run as ./mandelbrot.ghc-2.ghc_run +RTS
 		-N<NUM_PROC> -RTS <SIZE>.
+
+* mandelbrot.java
+		Java version. Run as java  -server -XX:+TieredCompilation
+		-XX:+AggressiveOpts mandelbrot <SIZE> <NUM_PROC>.

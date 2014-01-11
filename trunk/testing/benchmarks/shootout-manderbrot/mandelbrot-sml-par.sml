@@ -59,15 +59,23 @@ let
     client ()
   end
 
+  fun receiver () =
+  let
+    val _ = repeat numChunks (fn _ =>
+              let val (index, buf) = recv oc
+              in Array.update (resultArray, index, buf)
+              end)
+    val _ = Array.app (fn buf => List.app out buf) resultArray
+  in
+    OS.Process.exit OS.Process.success
+  end
+
+
   val _ = repeat nt (fn _ => spawn client)
+  val _ = spawn receiver
   val _ = repeat numChunks (fn i => aSend (ic, (n, n, i*8, i*8+8)))
-  val _ = repeat numChunks (fn _ =>
-            let val (index, buf) = recv oc
-            in Array.update (resultArray, index, buf)
-            end)
-  val _ = Array.app (fn buf => List.app out buf) resultArray
 in
- OS.Process.exit OS.Process.success
+  ()
 end
 
 
