@@ -16,4 +16,4 @@ c:
 	gcc -pipe -Wall -O3 -fomit-frame-pointer -march=native -fopenmp -mfpmath=sse -msse2 spectralnorm.gcc-5.c -o spectralnorm.gcc-5.gcc_run -lm
 
 clean:
-	rm -f spectralnorm-seq spectralnorm-par *.ghc_run *.o *~ *.class *.hi
+	rm -f spectralnorm-seq spectralnorm-par *.ghc_run *.o *~ *.class *.hi *gcc_run
