@@ -1,0 +1,30 @@
+Performance Comparison -- KNucleotide
+=====================================
+
+Input files can be generated using the fasta benchmark. "make fasta" builds the
+haskell version of fasta benchmark under fasta directory. Run
+./fasta.ghc-2.ghc_run <SIZE> > knucleotide-input-<SIZE>.txt to generate the
+input of required size. For more information, see
+http://benchmarksgame.alioth.debian.org/.
+
+
+* knucleotide-seq.mlb
+		Standard ML version, compiled with MLton. Should be run as
+		./knucleotide-seq < <INPUT_FILE_TXT>.
+
+* knucleotide-par.mlb
+		MultiMLton version. Should be run as ./knucleotide-par @MLton
+		number-processors <N> -- < <INPUT_FILE_TXT>.
+
+* knucleotide.ghc-2.hs
+		Haskell version. Compiled with GHC. Run as ./knucleotide.ghc-2.ghc_run +RTS
+		-N<NUM_PROC> -RTS < <INPUT_FILE_TXT>.
+
+* knucleotide.java
+		Java version. Run as java -Xmx2048m -server -XX:+TieredCompilation
+		-XX:+AggressiveOpts knucleotide 0 < <INPUT_FILE_TXT>. By default, 8
+		threads. Can be updated using the NUM_PROC variable in the source file.
+
+* knucleotide.gpp-3.c++
+		G++ + Pthreads. Run ./knucleotide.gpp-3.gpp_run < <INPUT_FILE_TXT>. Default
+		is 8 cores. Can be updated using the NUM_PROC variable in the source file.

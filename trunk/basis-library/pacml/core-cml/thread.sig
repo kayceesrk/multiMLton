@@ -9,6 +9,7 @@ sig
   val spawn : (unit -> unit) -> thread_id
   val spawnOnProc : ((unit -> unit) * int) -> thread_id
   val processorNumber : unit -> int
+  val numberOfProcessors : unit -> int
 end
 
 signature THREAD_EXTRA =

@@ -17,3 +17,8 @@ Performance Comparison -- Spectralnorm
 * spectralnorm.java
 		Java version. Run as java  -server -XX:+TieredCompilation
 		-XX:+AggressiveOpts spectralnorm <SIZE> <NUM_PROC>.
+
+* spectralnorm.gcc-4.c
+		GCC + OpenMP version. Run as ./spectralnorm.gcc-4.gcc_run <SIZE>. By
+		default, runs with 48 threads, which can be changed using the NUM_THREADS
+		macro.

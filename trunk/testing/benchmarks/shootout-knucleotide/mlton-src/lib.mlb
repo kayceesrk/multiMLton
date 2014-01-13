@@ -1,0 +1,13 @@
+(* *)
+$(SML_LIB)/basis/basis.mlb
+$(SML_LIB)/basis/mlton.mlb
+$(SML_LIB)/basis/unsafe.mlb
+
+int.sml
+word.sml
+array.sml
+list.sml
+string.sml
+hash-table.sml
+insertion-sort.sml
+quick-sort.sml

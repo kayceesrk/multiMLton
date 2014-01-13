@@ -1,4 +1,4 @@
-all: mlton multiMLton ghc java
+all: mlton multiMLton ghc java c
 
 mlton: spectralnorm-seq.sml
 	mlton spectralnorm-seq.sml
@@ -11,6 +11,9 @@ ghc: spectralnorm.ghc-4.hs
 
 java:
 	javac spectralnorm.java
+
+c:
+	gcc -pipe -Wall -O3 -fomit-frame-pointer -march=native -fopenmp -mfpmath=sse -msse2 spectralnorm.gcc-5.c -o spectralnorm.gcc-5.gcc_run -lm
 
 clean:
 	rm -f spectralnorm-seq spectralnorm-par *.ghc_run *.o *~ *.class *.hi

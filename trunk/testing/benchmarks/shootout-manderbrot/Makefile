@@ -1,4 +1,4 @@
-all: mlton multiMLton ghc java
+all: mlton multiMLton ghc java c
 
 mlton: mandelbrot-sml-seq.sml
 	mlton mandelbrot-sml-seq.sml

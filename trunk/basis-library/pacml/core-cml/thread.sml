@@ -19,6 +19,13 @@ struct
 
   val processorNumber = PacmlFFI.processorNumber
 
+  val np = ref ~1
+  fun numberOfProcessors () =
+    if !np = ~1 then
+      (np := PacmlFFI.numberOfProcessors; !np)
+    else !np
+
+
   fun debug msg = Debug.sayDebug ([atomicMsg, TID.tidMsg], msg)
   fun debug' msg = debug (fn () => msg^"."^(PT.getThreadTypeString())
                                    ^" : "^Int.toString(PacmlFFI.processorNumber()))

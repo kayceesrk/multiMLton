@@ -19,3 +19,7 @@ Note: SIZE must be a multiple of 8.
 * mandelbrot.java
 		Java version. Run as java  -server -XX:+TieredCompilation
 		-XX:+AggressiveOpts mandelbrot <SIZE> <NUM_PROC>.
+
+* mandelbrot.gcc-3.c
+    GCC + Pthreads. ./mandelbrot.gcc-3.gcc_run <SIZE>. By default, 4 threads,
+    which can be updated using NWORKERS macro.
