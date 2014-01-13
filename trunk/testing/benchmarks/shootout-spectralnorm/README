@@ -1,0 +1,19 @@
+Performance Comparison -- Spectralnorm
+====================================
+
+* spectralnorm-seq.sml
+		Standard ML version, compiled with MLton. Should be run as
+		./spectralnorm-seq <SIZE>.
+
+* spectralnorm-par.sml
+		MultiMLton version. Should be run as ./spectralnorm-par @MLton
+		number-processors <N> -- <SIZE> <NUM_THEADS>. For best performance, use
+		NUM_THREADS = 2 * N - 1.
+
+* spectralnorm.ghc-2.hs
+		Haskell version. Compiled with GHC. Run as ./spectralnorm.ghc-4.ghc_run +RTS
+		-N<NUM_PROC> -RTS <SIZE>.
+
+* spectralnorm.java
+		Java version. Run as java  -server -XX:+TieredCompilation
+		-XX:+AggressiveOpts spectralnorm <SIZE> <NUM_PROC>.
