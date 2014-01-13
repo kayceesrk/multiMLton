@@ -12,5 +12,8 @@ ghc: mandelbrot.ghc-2.hs
 java:
 	javac mandelbrot.java
 
+c:
+	gcc -pipe -Wall -O3 -fomit-frame-pointer -march=native -std=c99 -mfpmath=sse -msse2 -fopenmp mandelbrot.gcc-3.c -o mandelbrot.gcc-3.gcc_run
+
 clean:
-	rm -f mandelbrot-sml-seq mandelbrot-sml-par mandelbrot.ghc-2.ghc_run *.o *~ *.class *.hi
+	rm -f mandelbrot-sml-seq mandelbrot-sml-par mandelbrot.ghc-2.ghc_run *.o *~ *.class *.hi mandelbrot.gcc-3.gcc_run
