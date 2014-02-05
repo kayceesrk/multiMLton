@@ -18,7 +18,7 @@ typedef double v2df __attribute__ ((vector_size(16))); /* vector of two doubles 
 typedef int v4si __attribute__ ((vector_size(16))); /* vector of four ints */
 
 /* 3 workers + the main thread to get a total of 4 active threads */
-#define NWORKERS 3
+#define NWORKERS 7
 
 int N;
 int bytes_per_row;

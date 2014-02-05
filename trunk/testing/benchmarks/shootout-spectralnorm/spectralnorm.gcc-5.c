@@ -12,7 +12,7 @@
 #include <malloc.h>
 #include <emmintrin.h>
 
-#define NUM_THREADS 48
+#define NUM_THREADS 8
 
 inline double A(int i, int j) {
    return ((i+j) * (i+j+1) / 2 + i + 1);

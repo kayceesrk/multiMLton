@@ -15,7 +15,7 @@ java:
 	javac knucleotide.java
 
 c:
-	g++ -c -pipe -O3 -fomit-frame-pointer -march=native  -std=c++0x knucleotide.gpp-3.c++ -o knucleotide.gpp-3.c++.o &&  \
+	g++ -std=gnu++0x -c -pipe -O3 -fomit-frame-pointer -march=native  -std=c++0x knucleotide.gpp-3.c++ -o knucleotide.gpp-3.c++.o &&  \
 		        /usr/bin/g++ knucleotide.gpp-3.c++.o -o knucleotide.gpp-3.gpp_run -Wl,--no-as-needed -lpthread
 
 fasta:

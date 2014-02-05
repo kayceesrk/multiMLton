@@ -38,7 +38,7 @@ struct
     fun barrierCore () =
     let
       val _ = for (0, count, fn _ => recv ic)
-      val _ = for (0, count, fn _ => send (oc, ()))
+      val _ = for (0, count, fn _ => aSend (oc, ()))
     in
       barrierCore ()
     end
@@ -49,7 +49,7 @@ struct
 
   fun await (ic, oc) =
   let
-    val _ = send (ic, ())
+    val _ = aSend (ic, ())
     val _ = recv oc
   in ()
   end
