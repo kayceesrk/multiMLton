@@ -1,0 +1,6 @@
+local
+   $(SML_LIB)/basis/basis.mlb
+   $(SML_LIB)/cml/cml.mlb
+in
+  spawn-sml-seq.sml
+end
