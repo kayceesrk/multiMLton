@@ -2,7 +2,7 @@ structure Main =
 struct
    open CML
 
-    fun prod c 0 = OS.Process.exit OS.Process.success
+    fun prod c 0 = ()
       | prod c n = (send (c,1); prod c (n-1))
 
     fun cons c 0 = ()
