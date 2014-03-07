@@ -11,6 +11,10 @@ multiMLton: knucleotide-par.sml knucleotide-par.mlb
 ghc: knucleotide.ghc-2.hs
 	ghc --make -O2 -XBangPatterns -threaded -rtsopts -funbox-strict-fields knucleotide.ghc-2.hs -o knucleotide.ghc-2.ghc_run
 
+ghc-cml: knucleotide-ghc-cml.hs
+	ghc --make -O2 -XBangPatterns -threaded -rtsopts -funbox-strict-fields $<
+
+
 java:
 	javac knucleotide.java
 
@@ -22,5 +26,5 @@ fasta:
 	make -C fasta all
 
 clean:
-	rm -f knucleotide-seq knucleotide-par *.ghc_run *.o *~ *.class *.hi
+	rm -f knucleotide-seq knucleotide-par *.ghc_run *.o *~ *.class *.hi *-ghc-cml
 	make -C fasta clean

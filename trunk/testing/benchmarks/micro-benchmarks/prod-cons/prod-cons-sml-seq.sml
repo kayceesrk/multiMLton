@@ -2,7 +2,8 @@ structure Main =
 struct
    open CML
 
-    fun prod c 0 = ()
+    val c2 = channel ()
+    fun prod c 0 = send (c2, "DONE")
       | prod c n = (send (c,1); prod c (n-1))
 
     fun cons c 0 = ()
@@ -16,7 +17,7 @@ struct
          val _ = spawn (fn () => prod c n)
          val _ = spawn (fn () => cons c n)
        in
-          ()
+         ignore( recv c2 )
        end,
        SOME (Time.fromMilliseconds 10))
 end

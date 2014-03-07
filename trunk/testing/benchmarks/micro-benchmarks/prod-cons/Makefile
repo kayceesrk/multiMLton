@@ -17,4 +17,4 @@ ghc-cml: prod-cons-ghc-cml.hs
 
 
 clean:
-	rm -f prod-cons-sml-seq prod-cons-sml-host prod-cons-ghc prod-cons-sml-par *.o *.hi *~ prof-cons-ghc-cml
+	rm -f prod-cons-sml-seq prod-cons-sml-host prod-cons-ghc prod-cons-sml-par *.o *.hi *~ prof-cons-ghc-cml *-ghc-cml
