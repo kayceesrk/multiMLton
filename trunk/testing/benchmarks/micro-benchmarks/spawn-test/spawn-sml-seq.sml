@@ -5,6 +5,7 @@ struct
 
     fun spawnHelper 0 = RunCML.shutdown OS.Process.success
       | spawnHelper n = (ignore (spawn (fn () => ()));
+                         if n mod 64 = 0 then yield () else ();
                          spawnHelper (n-1))
 
    fun doit n =
